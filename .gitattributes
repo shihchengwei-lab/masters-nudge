@@ -1,0 +1,11 @@
+* text=auto
+
+# Shell scripts must stay LF on all platforms — CRLF breaks #! shebangs.
+*.sh text eol=lf
+
+# Python prefers LF.
+*.py text eol=lf
+
+# Windows batch / cmd stays CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -1,0 +1,27 @@
+{
+  "_comment": "Merge these entries into the 'hooks' section of ~/.claude/settings.json. Do NOT replace your whole settings.json with this file — it only shows the buddy-related hooks. If you already have other Stop or UserPromptSubmit hooks, keep them and add ours alongside.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/scripts/buddy/buddy.sh",
+            "timeout": 90000
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/scripts/buddy/inject.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
