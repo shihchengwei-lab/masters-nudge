@@ -31,13 +31,14 @@ possible.
 
 ## 3. Trigger throttling / smart gating
 
-**Why kept:** Right now every Stop fires a Sonnet 4.6 call. Token cost adds up;
-reactions on trivial turns are noise. Future: rate limit (one reaction per N
-minutes), or only trigger on certain shapes (errors, long turns, user expressed
-confusion, tool calls that failed).
+**Why kept:** Every Stop fires a GPT-5.5 call via Codex CLI（or Claude CLI if
+`BUDDY_PROVIDER=anthropic`）. Both sides are subscription-based, so direct
+token cost is zero under current plans. The only real cost is noise — if
+Buddy's reactions on trivial turns start getting skipped over, throttling
+would help. Future options: rate limit (one reaction per N minutes), or only
+trigger on certain shapes (errors, long turns, tool calls that failed).
 
-**Trigger to do:** When token cost or noise rate becomes annoying enough to
-measure. The first symptom is usually skipping over Buddy's injected blocks
+**Trigger to do:** When you start skipping over Buddy's injected blocks
 because they're too frequent or too generic.
 
 ## 4. Multi-model switching — ✅ SHIPPED (cross-vendor)

@@ -314,53 +314,6 @@ class TestInjectState(unittest.TestCase):
         self.assertEqual(len(pending), 2)
 
 
-# ── 6. Trigger inference ─────────────────────────────────────────────
-
-class TestInferTrigger(unittest.TestCase):
-
-    def setUp(self):
-        import buddy
-        self.infer = buddy.infer_trigger
-
-    def test_missing_file(self):
-        self.assertEqual(self.infer("/nonexistent"), "turn")
-
-    def test_error_trigger(self):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        for i in range(10):
-            line = {"type": "assistant", "message": {"content": "normal"}}
-            fd.write(json.dumps(line) + "\n")
-        fd.write(json.dumps({"type": "assistant", "message": {"content": "Traceback error: something broke"}}) + "\n")
-        fd.close()
-        try:
-            self.assertEqual(self.infer(fd.name), "error")
-        finally:
-            os.unlink(fd.name)
-
-    def test_test_fail_trigger(self):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        fd.write(json.dumps({"type": "assistant", "message": {"content": "3 tests failed: assertion error"}}) + "\n")
-        fd.close()
-        try:
-            self.assertEqual(self.infer(fd.name), "test-fail")
-        finally:
-            os.unlink(fd.name)
-
-    def test_normal_turn(self):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        fd.write(json.dumps({"type": "user", "message": {"content": "幫我寫函式"}}) + "\n")
-        fd.close()
-        try:
-            self.assertEqual(self.infer(fd.name), "turn")
-        finally:
-            os.unlink(fd.name)
-
 
 if __name__ == "__main__":
     unittest.main()

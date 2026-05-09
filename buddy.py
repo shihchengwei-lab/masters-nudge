@@ -130,39 +130,6 @@ def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
     return "\n\n".join(reversed(blocks))
 
 
-def infer_trigger(transcript_path: str) -> str:
-    """Infer what happened this turn (context hint, not model routing)."""
-    if not transcript_path or not os.path.exists(transcript_path):
-        return "turn"
-    try:
-        TAIL = 16384
-        size = os.path.getsize(transcript_path)
-        with open(transcript_path, "rb") as f:
-            if size > TAIL:
-                f.seek(size - TAIL)
-                f.readline()
-            data = f.read().decode("utf-8", errors="replace")
-    except Exception:
-        return "turn"
-
-    lines = [l.strip() for l in data.splitlines() if l.strip()]
-    last_entries = lines[-10:]
-    combined = " ".join(last_entries).lower()
-
-    if any(kw in combined for kw in [
-        "error:", "exception:", "traceback", "stderr",
-        "command failed", "exit code", "exitcode",
-        "panic:", "fatal:", "segfault",
-    ]):
-        return "error"
-    if any(kw in combined for kw in [
-        "test fail", "tests failed", "test_fail",
-        "assertion", "assert", "expect(",
-        "failed:", "failures:", "failing",
-    ]):
-        return "test-fail"
-    return "turn"
-
 
 def read_recent_reactions(session_id: str, max_count: int = 3, max_chars: int = 200) -> list[str]:
     """Read last N Buddy reactions from this session's log."""
@@ -430,12 +397,10 @@ def main() -> None:
     if not system_prompt:
         return
 
-    # --- trigger + recent reactions context ---
-    trigger = infer_trigger(transcript_path)
+    # --- recent reactions context ---
     recent = read_recent_reactions(session_id)
 
     context_parts = []
-    context_parts.append(f"[trigger: {trigger}]")
     if recent:
         context_parts.append("[你最近說過]")
         for r in recent:
