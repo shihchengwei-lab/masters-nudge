@@ -10,9 +10,12 @@ Code's chat frame to put bubbles back. What this project does instead:
 
 - Runs as a Stop hook after every Claude Code session turn (background mode —
   zero perceived latency)
-- Reads the most recent transcript snippet, sends it to a model in a
-  **different vendor family from the main agent** (default: GPT-5.5 via Codex
-  CLI), with a Cinder personality prompt, and writes the reaction to
+- Reads the most recent transcript snippet (~5000 chars), infers a trigger
+  signal (turn / error / test-fail) from the last few lines, appends the
+  session's last 3 Buddy reactions (so the model avoids repeating itself),
+  sends the bundle to a model in a **different vendor family from the main
+  agent** (default: GPT-5.5 via Codex CLI), sanitizes the response (strip
+  markdown, cap length, remove wrapper-collision markers), and writes it to
   `~/.claude/buddy/<session_id>.log`
 - On your next prompt, the UserPromptSubmit hook injects the latest reaction
   into main Claude's context (system-reminder)
@@ -44,7 +47,7 @@ not to replace your whole settings.json.)
 |---|---|---|
 | `BUDDY_PROVIDER` | `openai` | Which vendor voices Buddy. `openai` (uses `codex exec`) or `anthropic` (uses `claude -p`) |
 | `BUDDY_MODEL` | `gpt-5.5` (openai) / `sonnet` (anthropic) | Specific model name passed to the chosen CLI |
-| `BUDDY_MAX_TRANSCRIPT` | `2000` | Char budget for the transcript snippet sent to Buddy |
+| `BUDDY_MAX_TRANSCRIPT` | `5000` | Char budget for the transcript snippet sent to Buddy |
 | `BUDDY_TIMEOUT` | `60` | Seconds before giving up on the model call |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |
 
@@ -68,6 +71,7 @@ agent's reasoning.
 | `start_buddy_window.bat` | Windows launcher (uses `pythonw` so no console pops up) |
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
+| `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer, trigger) |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 
 ## Runtime files (created on first use)
@@ -77,6 +81,26 @@ agent's reasoning.
 | `~/.claude/buddy/<session_id>.log` | JSONL of Buddy reactions for one session |
 | `~/.claude/buddy/<session_id>.state.json` | inject.py read pointer (last consumed timestamp) for one session |
 | `~/.claude/buddy-error.log` | Errors from any of the scripts (shared across sessions) |
+
+## Privacy
+
+**Buddy sends your conversation data to an external model provider.**
+
+Every time Claude Code's Stop hook fires, Buddy reads the most recent ~5000
+characters of your session transcript and sends them to the configured
+provider (default: OpenAI via Codex CLI; alternative: Anthropic via Claude
+CLI). This means:
+
+- Code snippets, file paths, error messages, and anything else in your recent
+  conversation will leave your machine and reach the provider's API.
+- If you switch providers (`BUDDY_PROVIDER`), the data goes to that vendor
+  instead.
+- Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text
+  JSONL. Anyone with read access to your home directory can see them.
+
+If you are working on sensitive or proprietary code, consider whether this
+data flow is acceptable under your organization's policies before enabling
+Buddy.
 
 ## Known limitations
 
@@ -88,10 +112,10 @@ agent's reasoning.
 - Recursion is guarded by the `BUDDY_ACTIVE` env var, but if you have other
   hooks calling `claude`/`codex` recursively without similar guards, watch
   for loops.
-- Buddy reactions are NOT visible in the Claude Code chat transcript —
-  CC's hook surface doesn't render them to the user UI on this version
-  regardless of plain-stdout vs `additionalContext`. The floating window
-  (`buddy_window.py`) is the actual user-side visibility channel.
+- Buddy reactions appear in the Claude Code transcript as
+  `UserPromptSubmit hook success:` system-reminder messages. They are
+  visible to both you and main Claude. The floating window
+  (`buddy_window.py`) is an additional, unmediated visibility channel.
 
 See `ROADMAP.md` for the full list of follow-on items and what's already shipped.
 
@@ -100,7 +124,7 @@ See `ROADMAP.md` for the full list of follow-on items and what's already shipped
 Built by reading
 [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer)'s
 hook + Claude CLI invocation patterns, then writing fresh from the Cinder
-personality string the user used in April 2026 (preserved verbatim in
+personality string the user used in April 2026 (adapted in
 `buddy-prompt.txt`).
 
 ## License

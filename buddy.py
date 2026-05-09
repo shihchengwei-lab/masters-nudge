@@ -10,6 +10,7 @@ Never raises out of main() — hook must not block on our errors.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -362,6 +363,36 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             pass
 
 
+_WRAPPER_RE = re.compile(r"\[(?:end )?Buddy[^\]]*\]")
+_CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
+_INLINE_CODE_RE = re.compile(r"`([^`]*)`")
+_MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
+_MD_HEADER_RE = re.compile(r"^#{1,6}\s*", re.MULTILINE)
+MAX_REACTION_CHARS = 80
+
+
+def sanitize_reaction(raw: str) -> str:
+    """Clean model output before logging.
+
+    - Strip code blocks and markdown formatting
+    - Remove wrapper collision markers ([end Buddy], [Buddy ...])
+    - Collapse whitespace
+    - Hard truncate to MAX_REACTION_CHARS
+    """
+    text = raw.strip()
+    if not text:
+        return ""
+    text = _CODEBLOCK_RE.sub("", text)
+    text = _INLINE_CODE_RE.sub(r"\1", text)
+    text = _MD_BOLD_RE.sub(r"\1", text)
+    text = _MD_HEADER_RE.sub("", text)
+    text = _WRAPPER_RE.sub("", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) > MAX_REACTION_CHARS:
+        text = text[:MAX_REACTION_CHARS]
+    return text
+
+
 def dispatch_call(system_prompt: str, transcript_text: str) -> str:
     """Route to the right provider based on BUDDY_PROVIDER."""
     if PROVIDER in ("openai", "codex"):
@@ -415,7 +446,8 @@ def main() -> None:
 
     enriched_text = "\n".join(context_parts)
 
-    reaction = dispatch_call(system_prompt, enriched_text)
+    raw_reaction = dispatch_call(system_prompt, enriched_text)
+    reaction = sanitize_reaction(raw_reaction)
     if reaction:
         append_buddy_log(session_id, PROVIDER, MODEL, reaction)
     else:
