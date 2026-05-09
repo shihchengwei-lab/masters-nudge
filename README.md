@@ -63,6 +63,20 @@ The window auto-tails whichever session is currently active. Closing it does
 **not** disable Buddy; the Stop hook keeps writing to the log and the
 UserPromptSubmit hook keeps injecting into main Claude. Reopen any time.
 
+### Custom sprite
+
+`install.sh` ships a default Cinder spritesheet (`spritesheet.webp`) and the
+window loads it from the same directory as `buddy_window.py`. To use your
+own, point `BUDDY_SPRITE_PATH` at any transparent-background spritesheet —
+the auto-frame detector handles arbitrary frame counts and row layouts:
+
+```bash
+export BUDDY_SPRITE_PATH=/path/to/your/spritesheet.png
+```
+
+If the file is missing, the window still opens with the speech bubble — you
+just won't see the sprite.
+
 ## Configure
 
 | Env var | Default | Effect |

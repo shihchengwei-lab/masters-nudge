@@ -23,6 +23,7 @@ cp "$SRC_DIR/inject.py" "$TARGET_DIR/"
 cp "$SRC_DIR/buddy-prompt.txt" "$TARGET_DIR/"
 cp "$SRC_DIR/buddy_window.py" "$TARGET_DIR/"
 cp "$SRC_DIR/start_buddy_window.bat" "$TARGET_DIR/"
+cp "$SRC_DIR/spritesheet.webp" "$TARGET_DIR/"
 
 chmod +x "$TARGET_DIR/buddy.sh" "$TARGET_DIR/inject.sh" 2>/dev/null || true
 

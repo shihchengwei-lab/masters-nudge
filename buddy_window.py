@@ -13,7 +13,10 @@ Run:
 
 Env:
     BUDDY_CLAUDE_DIR    override location of .claude (default ~/.claude)
-    BUDDY_SPRITE_PATH   override spritesheet path
+    BUDDY_SPRITE_PATH   override spritesheet path (default: spritesheet.webp
+                        next to this script). Point at any spritesheet you
+                        prefer — the auto-frame detector handles arbitrary
+                        transparent-background sheets.
 """
 
 import json
@@ -33,7 +36,7 @@ CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.clau
 BUDDY_DIR = CLAUDE_DIR / "buddy"
 SPRITESHEET_PATH = Path(os.environ.get(
     "BUDDY_SPRITE_PATH",
-    os.path.expanduser("~/.codex/pets/cinder/spritesheet.webp"),
+    Path(__file__).resolve().parent / "spritesheet.webp",
 ))
 
 POLL_MS = 1000
