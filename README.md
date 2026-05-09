@@ -76,7 +76,7 @@ agent's reasoning.
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
 | `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer, trigger) |
-| `BUDDY_FORENSICS_REPORT.md` | Reverse-engineering investigation into the original Cinder/Buddy implementation |
+| `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 — binary 逆向、API 探測、366 筆盲截取產出分析、跨廠商對照實驗（GPT-5.5 vs Cinder） |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 
 ## Runtime files (created on first use)
