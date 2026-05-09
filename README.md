@@ -44,6 +44,25 @@ Then open `~/.claude/settings.json` and merge the `hooks` section from
 `settings-snippet.json` into it. (The snippet's `_comment` field reminds you
 not to replace your whole settings.json.)
 
+## Launch the Buddy window
+
+Hooks alone already inject Buddy into main Claude's context — but the
+floating sprite window is the main visible artefact for **you**. To open it:
+
+```bash
+pip install Pillow      # one-time, required by buddy_window.py
+```
+
+Then:
+
+- **Windows** — double-click `~/.claude/scripts/buddy/start_buddy_window.bat`
+  (uses `pythonw`, no console pops up).
+- **macOS / Linux** — run `python3 ~/.claude/scripts/buddy/buddy_window.py &`.
+
+The window auto-tails whichever session is currently active. Closing it does
+**not** disable Buddy; the Stop hook keeps writing to the log and the
+UserPromptSubmit hook keeps injecting into main Claude. Reopen any time.
+
 ## Configure
 
 | Env var | Default | Effect |
