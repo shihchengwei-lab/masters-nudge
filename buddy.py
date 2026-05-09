@@ -34,9 +34,32 @@ MAX_TRANSCRIPT_CHARS = int(os.environ.get("BUDDY_MAX_TRANSCRIPT", "5000"))
 TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
 
 
+MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
+
+
+def _rotate_error_log() -> None:
+    """If error log exceeds MAX_ERROR_LOG_BYTES, keep only the last half."""
+    try:
+        if not ERROR_LOG.exists():
+            return
+        size = ERROR_LOG.stat().st_size
+        if size <= MAX_ERROR_LOG_BYTES:
+            return
+        keep = size // 2
+        with ERROR_LOG.open("rb") as f:
+            f.seek(size - keep)
+            f.readline()  # skip partial line
+            tail = f.read()
+        with ERROR_LOG.open("wb") as f:
+            f.write(tail)
+    except Exception:
+        pass
+
+
 def log_error(msg: str) -> None:
     try:
         ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
+        _rotate_error_log()
         with ERROR_LOG.open("a", encoding="utf-8") as f:
             f.write(f"[{datetime.now().isoformat()}] buddy: {msg}\n")
     except Exception:

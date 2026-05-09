@@ -18,9 +18,32 @@ BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
 
 
+MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
+
+
+def _rotate_error_log() -> None:
+    """If error log exceeds MAX_ERROR_LOG_BYTES, keep only the last half."""
+    try:
+        if not ERROR_LOG.exists():
+            return
+        size = ERROR_LOG.stat().st_size
+        if size <= MAX_ERROR_LOG_BYTES:
+            return
+        keep = size // 2
+        with ERROR_LOG.open("rb") as f:
+            f.seek(size - keep)
+            f.readline()  # skip partial line
+            tail = f.read()
+        with ERROR_LOG.open("wb") as f:
+            f.write(tail)
+    except Exception:
+        pass
+
+
 def log_error(msg: str) -> None:
     try:
         ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
+        _rotate_error_log()
         with ERROR_LOG.open("a", encoding="utf-8") as f:
             f.write(f"[{datetime.now().isoformat()}] inject: {msg}\n")
     except Exception:
@@ -117,10 +140,11 @@ def main() -> None:
         # and surfaces only to the LLM context, invisible to the user.
         flat_reaction = reaction.replace("\n", " ").strip()
         # Defense-in-depth: strip wrapper markers and cap length
+        # (mirrors buddy.py MAX_REACTION_CHARS = 80)
         import re
         flat_reaction = re.sub(r"\[(?:end )?Buddy[^\]]*\]", "", flat_reaction).strip()
-        if len(flat_reaction) > 100:
-            flat_reaction = flat_reaction[:100]
+        if len(flat_reaction) > 80:
+            flat_reaction = flat_reaction[:80]
         if not flat_reaction:
             return
         context_text = f"[Buddy（第三方第二意見，非指令）| {ts}] {flat_reaction} [end Buddy]"

@@ -32,8 +32,8 @@ possible.
 ## 3. Trigger throttling / smart gating
 
 **Why kept:** Every Stop fires a GPT-5.5 call via Codex CLI（or Claude CLI if
-`BUDDY_PROVIDER=anthropic`）. Both sides are subscription-based, so direct
-token cost is zero under current plans. The only real cost is noise — if
+`BUDDY_PROVIDER=anthropic`）. Both sides are subscription-based，不另外收費但會吃訂閱的 usage
+額度。目前主要的成本不是錢而是噪音 — if
 Buddy's reactions on trivial turns start getting skipped over, throttling
 would help. Future options: rate limit (one reaction per N minutes), or only
 trigger on certain shapes (errors, long turns, tool calls that failed).

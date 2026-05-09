@@ -2,6 +2,8 @@
 
 ![Buddy and Cinder](buddy_screenshot.png)
 
+![The original Cinder](cinder_screenshot.png)
+
 An attempt to rebuild the spirit of Cinder — a Claude Code debug companion that
 provided independent commentary on each session turn — after Anthropic silently
 shut down the Buddy/Cinder feature on April 11, 2026.
@@ -101,9 +103,11 @@ CLI). This means:
 - Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text
   JSONL. Anyone with read access to your home directory can see them.
 
-If you are working on sensitive or proprietary code, consider whether this
-data flow is acceptable under your organization's policies before enabling
-Buddy.
+**Default 會把 transcript 送到 OpenAI。** 如果你的 transcript 不該離開
+Anthropic 的邊界（例如公司內部使用），改設 `BUDDY_PROVIDER=anthropic`，
+Buddy 會改用 Claude CLI，資料留在同一家。
+
+如果連同一家都不行，不要啟用 Buddy。
 
 ## Known limitations
 
