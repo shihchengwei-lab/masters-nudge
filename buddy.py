@@ -90,8 +90,20 @@ def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
     if not transcript_path or not os.path.exists(transcript_path):
         return ""
     try:
-        with open(transcript_path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        # Read only the tail of the JSONL file. Long sessions can produce
+        # many-MB transcripts; we only need the last few turns. 64 KB tail
+        # comfortably exceeds MAX_TRANSCRIPT_CHARS even after the per-block
+        # 1500-char cap in format_transcript_entry.
+        TAIL_BYTES = 65536
+        size = os.path.getsize(transcript_path)
+        with open(transcript_path, "rb") as f:
+            if size > TAIL_BYTES:
+                f.seek(size - TAIL_BYTES)
+                # Drop the (likely partial) first line from the seek point
+                # so JSON parsing below doesn't choke on a half-line.
+                f.readline()
+            data = f.read()
+        lines = data.decode("utf-8", errors="replace").splitlines()
     except Exception as e:
         log_error(f"transcript read failed: {e}")
         return ""

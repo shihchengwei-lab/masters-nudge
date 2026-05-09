@@ -13,6 +13,10 @@ export PYTHONIOENCODING=utf-8
 # --- Recursion guard ---
 [[ "${BUDDY_ACTIVE:-}" == "1" ]] && exit 0
 
+# --- Hook duration instrumentation (T_START captured after recursion guard
+#     so guard exits don't pollute the measurement) ---
+T_START=$(date +%s%3N)
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUDDY_PY="$SCRIPT_DIR/buddy.py"
 ERROR_LOG="${BUDDY_CLAUDE_DIR:-$HOME/.claude}/buddy-error.log"
@@ -45,5 +49,10 @@ INPUT=$(head -c 1048576)
 # buddy reaction surfaces on the turn AFTER, not the next one.
 ( echo "$INPUT" | "$PYTHON_CMD" "$BUDDY_PY" >/dev/null 2>>"$ERROR_LOG" ) &
 disown 2>/dev/null || true
+
+# --- Log hook duration. With background fork this should be near-zero;
+#     if it's not, the fork itself or something upstream is blocking. ---
+T_END=$(date +%s%3N)
+echo "[$(date -Iseconds)] buddy.sh: hook duration $((T_END - T_START))ms" >> "$ERROR_LOG"
 
 exit 0
