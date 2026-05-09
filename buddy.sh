@@ -43,15 +43,12 @@ fi
 # --- Read hook input (1 MB cap) ---
 INPUT=$(head -c 1048576)
 
-# --- Fire buddy.py in background, return immediately ---
-# Tradeoff: zero perceived latency for the user, but if the next prompt is
-# submitted before buddy.py finishes (typically 5-15s on Sonnet), that turn's
-# buddy reaction surfaces on the turn AFTER, not the next one.
-( echo "$INPUT" | "$PYTHON_CMD" "$BUDDY_PY" >/dev/null 2>>"$ERROR_LOG" ) &
-disown 2>/dev/null || true
+# --- Run buddy.py synchronously ---
+# Background execution is handled by Claude Code's native async: true in
+# settings-snippet.json. No need to fork here.
+echo "$INPUT" | "$PYTHON_CMD" "$BUDDY_PY" >/dev/null 2>>"$ERROR_LOG"
 
-# --- Log hook duration. With background fork this should be near-zero;
-#     if it's not, the fork itself or something upstream is blocking. ---
+# --- Log hook duration ---
 T_END=$(date +%s%3N)
 echo "[$(date -Iseconds)] buddy.sh: hook duration $((T_END - T_START))ms" >> "$ERROR_LOG"
 
