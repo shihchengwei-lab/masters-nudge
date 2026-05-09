@@ -1,5 +1,7 @@
 # Buddy_similar
 
+![Buddy and Cinder](buddy_screenshot.png)
+
 An attempt to rebuild the spirit of Cinder — a Claude Code debug companion that
 provided independent commentary on each session turn — after Anthropic silently
 shut down the Buddy/Cinder feature on April 11, 2026.
@@ -72,6 +74,7 @@ agent's reasoning.
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
 | `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer, trigger) |
+| `BUDDY_FORENSICS_REPORT.md` | Reverse-engineering investigation into the original Cinder/Buddy implementation |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 
 ## Runtime files (created on first use)
