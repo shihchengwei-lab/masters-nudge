@@ -28,6 +28,12 @@ done
 # Pipe the UserPromptSubmit JSON input through to inject.py — it needs
 # session_id from the hook input to read the per-session log.
 INPUT=$(head -c 1048576)
-echo "$INPUT" | "$PYTHON_CMD" "$INJECT_PY" 2>>"$ERROR_LOG" || true
+# Only append stderr if error log is under 256 KB (matches Python-side rotation)
+LOG_SIZE=$(stat -c%s "$ERROR_LOG" 2>/dev/null || echo 0)
+if [[ "$LOG_SIZE" -lt 262144 ]]; then
+  echo "$INPUT" | "$PYTHON_CMD" "$INJECT_PY" 2>>"$ERROR_LOG" || true
+else
+  echo "$INPUT" | "$PYTHON_CMD" "$INJECT_PY" 2>/dev/null || true
+fi
 
 exit 0

@@ -48,9 +48,10 @@ because they're too frequent or too generic.
 independent from the main agent's Anthropic Sonnet — different blind spots.
 
 Smart routing (different models per turn type) was evaluated and cut —
-reason-based model routing adds complexity without clear benefit. The trigger
-signal (turn/error/test-fail) is scene context for the model, not a routing
-decision.
+reason-based model routing adds complexity without clear benefit. Trigger
+signal (turn/error/test-fail) was also removed — keyword matching had high
+false positive rate, and the model can judge context directly from the
+transcript.
 
 ## 5. Reaction quality eval
 

@@ -14,8 +14,7 @@ Code's chat frame to put bubbles back. What this project does instead:
 
 - Runs as a Stop hook after every Claude Code session turn (background mode —
   zero perceived latency)
-- Reads the most recent transcript snippet (~5000 chars), infers a trigger
-  signal (turn / error / test-fail) from the last few lines, appends the
+- Reads the most recent transcript snippet (~5000 chars), appends the
   session's last 3 Buddy reactions (so the model avoids repeating itself),
   sends the bundle to a model in a **different vendor family from the main
   agent** (default: GPT-5.5 via Codex CLI), sanitizes the response (strip
@@ -75,7 +74,7 @@ agent's reasoning.
 | `start_buddy_window.bat` | Windows launcher (uses `pythonw` so no console pops up) |
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
-| `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer, trigger) |
+| `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer) |
 | `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 — binary 逆向、API 探測、366 筆盲截取產出分析、跨廠商對照實驗（GPT-5.5 vs Cinder） |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 

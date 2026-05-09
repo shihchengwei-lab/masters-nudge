@@ -46,10 +46,15 @@ INPUT=$(head -c 1048576)
 # --- Run buddy.py synchronously ---
 # Background execution is handled by Claude Code's native async: true in
 # settings-snippet.json. No need to fork here.
-echo "$INPUT" | "$PYTHON_CMD" "$BUDDY_PY" >/dev/null 2>>"$ERROR_LOG"
+# Capture stderr in a variable so we can size-check before appending.
+BUDDY_STDERR=$(echo "$INPUT" | "$PYTHON_CMD" "$BUDDY_PY" 2>&1 >/dev/null) || true
 
-# --- Log hook duration ---
+# --- Log hook duration + any stderr (only if error log is under 256 KB) ---
 T_END=$(date +%s%3N)
-echo "[$(date -Iseconds)] buddy.sh: hook duration $((T_END - T_START))ms" >> "$ERROR_LOG"
+LOG_SIZE=$(stat -c%s "$ERROR_LOG" 2>/dev/null || echo 0)
+if [[ "$LOG_SIZE" -lt 262144 ]]; then
+  [[ -n "$BUDDY_STDERR" ]] && echo "[$(date -Iseconds)] buddy.sh: $BUDDY_STDERR" >> "$ERROR_LOG"
+  echo "[$(date -Iseconds)] buddy.sh: hook duration $((T_END - T_START))ms" >> "$ERROR_LOG"
+fi
 
 exit 0
