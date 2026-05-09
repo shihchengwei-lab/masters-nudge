@@ -2,7 +2,7 @@
 # Buddy_similar — Stop hook entry
 #
 # Triggered after every Claude Code session turn.
-# Pipes the hook input JSON to buddy.py, which calls the Claude CLI as Cinder.
+# Pipes the hook input JSON to buddy.py, which calls the Claude CLI as Buddy.
 #
 # Recursion guard: BUDDY_ACTIVE=1 set by buddy.py before the inner claude call.
 # Inner Stop hook re-enters this script, sees the flag, exits immediately.

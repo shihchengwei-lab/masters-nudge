@@ -1,7 +1,7 @@
 #!/bin/bash
 # Buddy_similar — UserPromptSubmit hook entry
 #
-# Reads pending Cinder reactions from buddy.log and prints them to stdout,
+# Reads pending Buddy reactions from buddy.log and prints them to stdout,
 # which Claude Code appends as additional context to the user's next prompt.
 #
 # Recursion guard: BUDDY_ACTIVE=1 set by buddy.py during its inner claude call.

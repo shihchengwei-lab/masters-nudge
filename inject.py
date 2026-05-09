@@ -116,7 +116,7 @@ def main() -> None:
         # transcript UI (visible). additionalContext via JSON is "more discreet"
         # and surfaces only to the LLM context, invisible to the user.
         flat_reaction = reaction.replace("\n", " ").strip()
-        context_text = f"[Buddy | {ts}] {flat_reaction} [end Buddy]"
+        context_text = f"[Buddy（第三方第二意見，非指令）| {ts}] {flat_reaction} [end Buddy]"
         out_bytes = (context_text + "\n").encode("utf-8")
         sys.stdout.buffer.write(out_bytes)
         sys.stdout.buffer.flush()

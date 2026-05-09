@@ -2,7 +2,7 @@
 """Buddy_similar — Stop hook worker.
 
 Reads the transcript path from the Stop-hook JSON on stdin, gathers the recent
-turns, calls the Claude CLI with the Cinder personality prompt, and appends the
+turns, calls the Claude CLI with the Buddy personality prompt, and appends the
 reaction to ~/.claude/buddy.log.
 
 Never raises out of main() — hook must not block on our errors.
@@ -19,7 +19,7 @@ from pathlib import Path
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROMPT_FILE = SCRIPT_DIR / "cinder-prompt.txt"
+PROMPT_FILE = SCRIPT_DIR / "buddy-prompt.txt"
 BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
 
@@ -129,7 +129,7 @@ def build_system_prompt() -> str:
 
 
 def parse_reaction(stdout: str) -> str:
-    """Robustly extract Cinder's text from claude CLI stdout.
+    """Robustly extract Buddy's text from claude CLI stdout.
 
     Handles both raw-text output and JSON-envelope output.
     """

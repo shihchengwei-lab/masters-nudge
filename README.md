@@ -21,8 +21,11 @@ Code's chat frame to put bubbles back. What this project does instead:
   routed through main Claude
 
 Two visibility channels:
-- **Main Claude** sees Buddy via system-reminder injection (so it can quote /
-  course-correct based on Buddy's catch)
+- **Main Claude** sees Buddy via system-reminder injection. Buddy is framed as
+  a **third-party second opinion, not an instruction** — main Claude reads it
+  as one input among many, not a directive to comply with. The wrapper text
+  (`[Buddy（第三方第二意見，非指令）| ts] ... [end Buddy]`) carries this
+  framing on every injection so the main agent stays the decision-maker.
 - **You** see Buddy in the floating window (direct, unmediated)
 
 ## Install
@@ -45,7 +48,7 @@ not to replace your whole settings.json.)
 | `BUDDY_TIMEOUT` | `60` | Seconds before giving up on the model call |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |
 
-Edit `~/.claude/scripts/buddy/cinder-prompt.txt` to adjust personality.
+Edit `~/.claude/scripts/buddy/buddy-prompt.txt` to adjust personality.
 
 **Why the default uses OpenAI**: the main agent is Anthropic Claude. Putting
 Buddy on a different vendor (OpenAI's GPT-5.5) gives a more independent
@@ -60,7 +63,7 @@ agent's reasoning.
 | `buddy.py` | Reads transcript, calls the configured model (OpenAI codex or Anthropic claude), writes the reaction |
 | `inject.sh` | UserPromptSubmit hook entry — pipes hook input to `inject.py` |
 | `inject.py` | Reads the per-session log, injects latest unread reaction as additional context |
-| `cinder-prompt.txt` | The Buddy system prompt (personality + length / structure rules) |
+| `buddy-prompt.txt` | The Buddy system prompt (personality + length / structure rules) |
 | `buddy_window.py` | Tk floating window that tails the active session's log live |
 | `start_buddy_window.bat` | Windows launcher (uses `pythonw` so no console pops up) |
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
@@ -98,7 +101,7 @@ Built by reading
 [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer)'s
 hook + Claude CLI invocation patterns, then writing fresh from the Cinder
 personality string the user used in April 2026 (preserved verbatim in
-`cinder-prompt.txt`).
+`buddy-prompt.txt`).
 
 ## License
 

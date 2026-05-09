@@ -8,7 +8,7 @@ The point of this file is to keep ideas warm without bloating v1. If you're
 reading this much later and an item still has no trigger reached, that's
 evidence to delete it, not to do it.
 
-## 1. Floating window UI (closest to original Cinder feel) — ✅ SHIPPED 2026-05-09
+## 1. Floating window UI (closest to original Buddy feel) — ✅ SHIPPED 2026-05-09
 
 `buddy_window.py` + `start_buddy_window.bat`. Single-file Tk app, watches
 `~/.claude/buddy/` and tails the most-recently-modified per-session log file.
@@ -37,7 +37,7 @@ minutes), or only trigger on certain shapes (errors, long turns, user expressed
 confusion, tool calls that failed).
 
 **Trigger to do:** When token cost or noise rate becomes annoying enough to
-measure. The first symptom is usually skipping over Cinder's injected blocks
+measure. The first symptom is usually skipping over Buddy's injected blocks
 because they're too frequent or too generic.
 
 ## 4. Multi-model switching — ✅ PARTIAL (cross-vendor, not cross-tier)
@@ -54,10 +54,10 @@ quality/cost per turn type, not just per-vendor independence.
 
 ## 5. Reaction quality eval
 
-**Why kept:** Currently no measurement of whether Cinder's reactions are good.
+**Why kept:** Currently no measurement of whether Buddy's reactions are good.
 Could borrow `cold-eyes-reviewer`'s eval framework — case fixtures + score cards.
 
-**Trigger to do:** When you suspect the Cinder prompt has drifted, or you've
+**Trigger to do:** When you suspect the Buddy prompt has drifted, or you've
 changed the personality and want to compare versions A vs B.
 
 ## 6. Background mode — ✅ SHIPPED 2026-05-09
@@ -71,7 +71,7 @@ generation time.
 
 **Why kept:** `buddy.log` is JSONL — easy to parse but you have to open it
 manually. A small tool that summarizes hit rate, common reaction types,
-sessions where Cinder said something useful vs. filler.
+sessions where Buddy said something useful vs. filler.
 
 **Trigger to do:** When you want to know "is this thing actually adding value
 over the past month".
@@ -111,9 +111,9 @@ layout refactors cleanly. Open the file and see before estimating.
 
 These were considered and removed by the user during the v1 scope discussion:
 
-- **Multi-personality switching** — only Cinder is wanted; switching dilutes the
+- **Multi-personality switching** — only Buddy is wanted; switching dilutes the
   project's identity.
 - **Cross-session memory** — buddy doesn't need to remember things across days;
   one-turn reactions are enough.
-- **Personality CLI** — editing `cinder-prompt.txt` directly is fine; a CLI
+- **Personality CLI** — editing `buddy-prompt.txt` directly is fine; a CLI
   layer adds surface area for no real benefit.
