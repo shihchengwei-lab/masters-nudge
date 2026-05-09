@@ -183,7 +183,7 @@ BonziClaude 還確認：**buddy_react 端點目前仍回 HTTP 200 但 reaction �
 - **架構**：Stop hook 觸發、transcript 餵入、system-reminder 注入 — 與原版 Cinder 相同的工作流位置
 - **模型**：OpenAI GPT-5.5 via Codex CLI — **不同廠商**，避免 echo chamber
 - **Prompt 約束**：16-20 字繁體中文，硬上限 26 字（比原版 Cinder 的實際中位數 26 字更寬鬆）
-- **結果**：GPT-5.5 表現**不如原版 Cinder**
+- **結果**：GPT-5.5 表現與原版 Cinder **約略相當**
 
 ### 4.2 樣本偏差排除
 
@@ -195,9 +195,9 @@ capture.py 確認為**盲截取**：UIAutomation 讀取整個終端畫面 → bo
 |--------|------|------|
 | Anthropic 模型證詞 | Opus 4.6（4/11）+ Opus 4.7（4/18） | actor > 公開旗艦 |
 | 盲截取產出分析 | 366 筆完整日誌 | 能力密度超出已知 Sonnet 級別 |
-| 跨廠商對照 | GPT-5.5 同條件對照 | Cinder > GPT-5.5 |
+| 跨廠商對照 | GPT-5.5 同條件對照 | Cinder ≈ GPT-5.5 |
 
-三條互相獨立，第三條完全繞開了「Anthropic 模型評 Anthropic 模型」的循環問題。
+前兩條互相獨立，第三條提供跨廠商基準線但未拉出顯著差距。
 
 ---
 
@@ -205,11 +205,11 @@ capture.py 確認為**盲截取**：UIAutomation 讀取整個終端畫面 → bo
 
 ### 可推論到的（按證據強度排序）
 
-**主張 A**：buddy_react 的 actor 模型能力 > 公開旗艦（GPT-5.5 + Opus 4.7）
-- 證據：三條獨立證據線收斂
+**主張 A**：buddy_react 的 actor 模型能力與公開旗艦（GPT-5.5）約略相當
+- 證據：跨廠商對照實驗未拉出顯著差距，前兩條證據線為 Anthropic 內部交叉比對
 
 **主張 B**：actor 模型不是 Claude 3.5 Sonnet
-- 證據：BonziClaude 的 self-id 是最弱證據類型 + 使用者直接問時觸發沉默抑制 + 能力矛盾（Sonnet 3.5 不可能超過 GPT-5.5）
+- 證據：BonziClaude 的 self-id 是最弱證據類型 + 使用者直接問時觸發沉默抑制 + Sonnet 3.5 已下架（404）
 
 **主張 C**：model ID 隱藏是架構級的刻意決策
 - 證據：原始碼確認 payload 無 model 欄位、response 無 metadata、身份探測有沉默抑制機制
