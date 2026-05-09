@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Buddy_similar — floating window that tails the active session's buddy log.
+"""Buddy_similar — floating Cinder sprite window with speech bubble.
 
-Single-file Tk app, stdlib only. Polls ~/.claude/buddy/ every second, tracks
-the most-recently-modified <session_id>.log file, and shows new JSONL entries
-as they appear. Pinned to bottom-right corner, always on top. When a different
-session becomes active (its log gets newer mtime), the window resets and
-follows that one — old session's entries don't leak into the view.
+Displays an animated Cinder goose sprite alongside Buddy's latest reaction.
+Tails the active session's buddy log.
+
+Requires: Pillow (pip install Pillow)
 
 Run:
     python buddy_window.py
     pythonw buddy_window.py     # Windows, no console
-    bash start_buddy_window.bat # Windows convenience launcher
+    start_buddy_window.bat      # Windows convenience launcher
 
 Env:
-    BUDDY_CLAUDE_DIR   override location of .claude (default ~/.claude)
+    BUDDY_CLAUDE_DIR    override location of .claude (default ~/.claude)
+    BUDDY_SPRITE_PATH   override spritesheet path
 """
 
 import json
@@ -22,201 +22,288 @@ import sys
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import ttk
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    print("Pillow required: pip install Pillow", file=sys.stderr)
+    sys.exit(1)
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 BUDDY_DIR = CLAUDE_DIR / "buddy"
+SPRITESHEET_PATH = Path(os.environ.get(
+    "BUDDY_SPRITE_PATH",
+    os.path.expanduser("~/.codex/pets/cinder/spritesheet.webp"),
+))
 
-POLL_INTERVAL_MS = 1000
-MAX_ENTRIES = 40
-WINDOW_WIDTH = 460
-WINDOW_HEIGHT = 480
+POLL_MS = 1000
+ANIM_MS = 250           # 4 fps sprite animation
+BUBBLE_FADE_SEC = 30    # bubble stays visible this long after last reaction
+SPRITE_HEIGHT = 90      # display height in pixels
 
-BG = "#1e1e1e"
-HEADER_BG = "#252525"
-TS_FG = "#7a7a7a"
-BODY_FG = "#e0e0e0"
-NEW_FG = "#9be09b"
-SEP_FG = "#3a3a3a"
+# Colors
+BG = "#1a1a2e"
+BUBBLE_BG = "#252545"
+BUBBLE_FG = "#e0e0e0"
+BUBBLE_BORDER = "#4a4a6a"
+TS_FG = "#6a6a8a"
+
+
+def detect_frames(img: Image.Image) -> list[list[tuple[int, int, int, int]]]:
+    """Auto-detect sprite frames from a transparent-background spritesheet.
+
+    Returns a list of rows, each row a list of (x0, y0, x1, y1) bounding boxes.
+    """
+    w, h = img.size
+    alpha = img.split()[3]
+    px = alpha.load()
+
+    # Find row bands (contiguous horizontal strips with content)
+    row_has = [any(px[x, y] > 10 for x in range(0, w, 3)) for y in range(h)]
+    bands = []
+    in_band = False
+    start = 0
+    for y in range(h):
+        if row_has[y] and not in_band:
+            start = y
+            in_band = True
+        elif not row_has[y] and in_band:
+            bands.append((start, y))
+            in_band = False
+    if in_band:
+        bands.append((start, h))
+
+    # For each band, find individual frame columns
+    rows = []
+    for ys, ye in bands:
+        col_has = [any(px[x, y] > 10 for y in range(ys, ye, 2)) for x in range(w)]
+        frames = []
+        in_f = False
+        xs = 0
+        for x in range(w):
+            if col_has[x] and not in_f:
+                xs = x
+                in_f = True
+            elif not col_has[x] and in_f:
+                frames.append((xs, ys, x, ye))
+                in_f = False
+        if in_f:
+            frames.append((xs, ys, w, ye))
+        if frames:
+            rows.append(frames)
+    return rows
+
+
+def cut_and_scale(img: Image.Image, bboxes: list[tuple], target_h: int) -> list[Image.Image]:
+    """Crop frames from spritesheet and scale to target height."""
+    result = []
+    for bbox in bboxes:
+        frame = img.crop(bbox)
+        fw, fh = frame.size
+        scale = target_h / fh
+        new_w = max(1, int(fw * scale))
+        frame = frame.resize((new_w, target_h), Image.NEAREST)
+        result.append(frame)
+    return result
 
 
 class BuddyWindow:
-    def __init__(self, root):
+    def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Buddy")
         self.root.attributes("-topmost", True)
         self.root.configure(bg=BG)
+        self.root.resizable(False, False)
 
+        # Position: bottom-right
         self.root.update_idletasks()
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        x = sw - WINDOW_WIDTH - 20
-        y = sh - WINDOW_HEIGHT - 80
-        self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{x}+{y}")
-        self.root.minsize(320, 240)
+        win_w, win_h = 420, 140
+        x = sw - win_w - 24
+        y = sh - win_h - 80
+        self.root.geometry(f"{win_w}x{win_h}+{x}+{y}")
+
+        # Drag support
+        self._drag_data = {"x": 0, "y": 0}
+        self.root.bind("<Button-1>", self._on_drag_start)
+        self.root.bind("<B1-Motion>", self._on_drag_motion)
 
         # State
         self.current_log: Path | None = None
         self.last_offset = 0
-        self.entries_shown = 0
-        self._initial_load_done = False
+        self.last_reaction = ""
+        self.last_reaction_time = 0.0
+
+        # Load sprite
+        self.idle_frames: list[ImageTk.PhotoImage] = []
+        self.walk_frames: list[ImageTk.PhotoImage] = []
+        self.frame_idx = 0
+        self._load_sprites()
 
         self._build_ui()
-        self.refresh()
+        self._animate()
+        self._poll()
 
-    def _build_ui(self):
-        header = tk.Frame(self.root, bg=HEADER_BG, height=32)
-        header.pack(fill="x")
-        header.pack_propagate(False)
+    # ── Drag ──────────────────────────────────────────────
 
-        title = tk.Label(
-            header, text="Buddy", bg=HEADER_BG, fg=BODY_FG,
-            font=("Microsoft JhengHei", 11, "bold"),
-        )
-        title.pack(side="left", padx=12, pady=6)
+    def _on_drag_start(self, event):
+        self._drag_data["x"] = event.x
+        self._drag_data["y"] = event.y
 
-        self.session_label = tk.Label(
-            header, text="—", bg=HEADER_BG, fg=TS_FG,
-            font=("Microsoft JhengHei", 8),
-        )
-        self.session_label.pack(side="left", padx=4, pady=6)
+    def _on_drag_motion(self, event):
+        dx = event.x - self._drag_data["x"]
+        dy = event.y - self._drag_data["y"]
+        x = self.root.winfo_x() + dx
+        y = self.root.winfo_y() + dy
+        self.root.geometry(f"+{x}+{y}")
 
-        self.status_label = tk.Label(
-            header, text="—", bg=HEADER_BG, fg=TS_FG,
-            font=("Microsoft JhengHei", 8),
-        )
-        self.status_label.pack(side="right", padx=12, pady=6)
+    # ── Sprites ───────────────────────────────────────────
 
-        body = tk.Frame(self.root, bg=BG)
-        body.pack(fill="both", expand=True)
-
-        self.text = tk.Text(
-            body, bg=BG, fg=BODY_FG,
-            font=("Microsoft JhengHei", 11),
-            wrap="word", borderwidth=0, padx=14, pady=10,
-            state="disabled", spacing1=2, spacing3=4,
-        )
-        scrollbar = ttk.Scrollbar(body, command=self.text.yview)
-        self.text.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side="right", fill="y")
-        self.text.pack(side="left", fill="both", expand=True)
-
-        self.text.tag_configure("ts", foreground=TS_FG, font=("Microsoft JhengHei", 8))
-        self.text.tag_configure("body", foreground=BODY_FG,
-                                font=("Microsoft JhengHei", 11), spacing3=8)
-        self.text.tag_configure("new", foreground=NEW_FG,
-                                font=("Microsoft JhengHei", 11), spacing3=8)
-        self.text.tag_configure("sep", foreground=SEP_FG, font=("Microsoft JhengHei", 8))
-
-    def refresh(self):
+    def _load_sprites(self):
+        if not SPRITESHEET_PATH.exists():
+            return
         try:
-            self._poll()
-        except Exception as e:
-            self._set_status(f"err: {type(e).__name__}")
-        self.root.after(POLL_INTERVAL_MS, self.refresh)
-
-    def _set_status(self, txt):
-        self.status_label.config(text=txt)
-
-    def _set_session(self, session_id: str):
-        if session_id:
-            self.session_label.config(text=session_id[:8])
-        else:
-            self.session_label.config(text="—")
-
-    def _find_active_log(self) -> Path | None:
-        """Return the most-recently-modified *.log under BUDDY_DIR, or None."""
-        if not BUDDY_DIR.exists():
-            return None
-        candidates = list(BUDDY_DIR.glob("*.log"))
-        if not candidates:
-            return None
-        candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-        return candidates[0]
-
-    def _reset_display(self):
-        self.text.config(state="normal")
-        self.text.delete("1.0", "end")
-        self.text.config(state="disabled")
-        self.last_offset = 0
-        self.entries_shown = 0
-        self._initial_load_done = False
-
-    def _poll(self):
-        active = self._find_active_log()
-        if active is None:
-            self._set_status("waiting for log")
-            self._set_session("")
+            img = Image.open(SPRITESHEET_PATH).convert("RGBA")
+        except Exception:
             return
 
-        # Switch target if the active session log changed
-        if self.current_log != active:
-            self.current_log = active
-            self._reset_display()
-            session_id = active.stem
-            self._set_session(session_id)
+        rows = detect_frames(img)
+        if not rows:
+            return
 
+        # Pick animation rows:
+        # - Idle: row with ~6 consistent-width frames (prefer middle rows)
+        # - Walk: another row with ~6 frames
+        scored = []
+        for i, row in enumerate(rows):
+            if len(row) < 3:
+                continue
+            widths = [b[2] - b[0] for b in row]
+            consistency = 1.0 - (max(widths) - min(widths)) / max(max(widths), 1)
+            scored.append((consistency, len(row), i))
+        scored.sort(reverse=True)
+
+        if len(scored) >= 2:
+            idle_row_idx = scored[0][2]
+            walk_row_idx = scored[1][2]
+        elif len(scored) == 1:
+            idle_row_idx = walk_row_idx = scored[0][2]
+        else:
+            return
+
+        idle_pil = cut_and_scale(img, rows[idle_row_idx], SPRITE_HEIGHT)
+        walk_pil = cut_and_scale(img, rows[walk_row_idx], SPRITE_HEIGHT)
+
+        self.idle_frames = [ImageTk.PhotoImage(f) for f in idle_pil]
+        self.walk_frames = [ImageTk.PhotoImage(f) for f in walk_pil]
+
+    # ── UI ────────────────────────────────────────────────
+
+    def _build_ui(self):
+        # Sprite (left)
+        sprite_w = 100
+        self.sprite_canvas = tk.Canvas(
+            self.root, width=sprite_w, height=SPRITE_HEIGHT + 10,
+            bg=BG, highlightthickness=0,
+        )
+        self.sprite_canvas.pack(side="left", padx=(10, 0), pady=10)
+
+        # Bubble (right)
+        right = tk.Frame(self.root, bg=BG)
+        right.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+
+        bubble = tk.Frame(
+            right, bg=BUBBLE_BG,
+            highlightbackground=BUBBLE_BORDER, highlightthickness=1,
+        )
+        bubble.pack(fill="both", expand=True)
+
+        self.bubble_label = tk.Label(
+            bubble, text="( . . . )", bg=BUBBLE_BG, fg=BUBBLE_FG,
+            font=("Microsoft JhengHei", 11),
+            wraplength=260, justify="left",
+            anchor="nw", padx=10, pady=8,
+        )
+        self.bubble_label.pack(fill="both", expand=True)
+
+        self.ts_label = tk.Label(
+            right, text="", bg=BG, fg=TS_FG,
+            font=("Microsoft JhengHei", 8), anchor="e",
+        )
+        self.ts_label.pack(fill="x")
+
+    # ── Animation ─────────────────────────────────────────
+
+    def _animate(self):
+        frames = self.idle_frames or self.walk_frames
+        if frames:
+            self.frame_idx = (self.frame_idx + 1) % len(frames)
+            tk_img = frames[self.frame_idx]
+            self.sprite_canvas.delete("all")
+            self.sprite_canvas.create_image(50, SPRITE_HEIGHT // 2 + 5, image=tk_img)
+        self.root.after(ANIM_MS, self._animate)
+
+    # ── Log polling ───────────────────────────────────────
+
+    def _poll(self):
         try:
-            with active.open("rb") as f:
+            active = self._find_active_log()
+            if active and active != self.current_log:
+                self.current_log = active
+                # Jump to end so we only show NEW reactions
+                try:
+                    self.last_offset = active.stat().st_size
+                except Exception:
+                    self.last_offset = 0
+
+            if self.current_log:
+                self._read_new()
+        except Exception:
+            pass
+        self.root.after(POLL_MS, self._poll)
+
+    def _find_active_log(self) -> Path | None:
+        if not BUDDY_DIR.exists():
+            return None
+        logs = list(BUDDY_DIR.glob("*.log"))
+        if not logs:
+            return None
+        logs.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        return logs[0]
+
+    def _read_new(self):
+        try:
+            with self.current_log.open("rb") as f:
                 f.seek(self.last_offset)
                 chunk = f.read()
                 self.last_offset = f.tell()
-        except Exception as e:
-            self._set_status(f"read err: {type(e).__name__}")
+        except Exception:
             return
 
         if not chunk:
-            self._set_status(
-                f"{datetime.now().strftime('%H:%M:%S')} • {self.entries_shown} entries"
-            )
             return
 
-        text_data = chunk.decode("utf-8", errors="replace")
-        new_entries = []
-        for line in text_data.splitlines():
+        for line in chunk.decode("utf-8", errors="replace").splitlines():
             line = line.strip()
             if not line:
                 continue
             try:
-                new_entries.append(json.loads(line))
+                entry = json.loads(line)
+                reaction = (entry.get("reaction") or "").strip()
+                ts = entry.get("ts", "")
+                if reaction:
+                    self.last_reaction = reaction
+                    self.last_reaction_time = datetime.now().timestamp()
+                    self.bubble_label.config(text=reaction)
+                    if ts:
+                        short_ts = ts[11:19] if len(ts) > 19 else ts
+                        self.ts_label.config(text=short_ts)
             except Exception:
                 continue
 
-        if not new_entries:
-            return
-
-        self.text.config(state="normal")
-        for obj in new_entries:
-            ts = obj.get("ts", "")
-            reaction = (obj.get("reaction") or "").strip()
-            model = obj.get("model", "")
-
-            header_line = f"{ts}  ·  {model}\n"
-            body_tag = "body" if not self._initial_load_done else "new"
-
-            self.text.insert("end", header_line, "ts")
-            self.text.insert("end", reaction + "\n", body_tag)
-            self.text.insert("end", "─" * 50 + "\n", "sep")
-            self.entries_shown += 1
-
-        if self.entries_shown > MAX_ENTRIES:
-            excess = self.entries_shown - MAX_ENTRIES
-            self.text.delete("1.0", f"{excess * 3 + 1}.0")
-            self.entries_shown = MAX_ENTRIES
-
-        self.text.see("end")
-        self.text.config(state="disabled")
-        self._initial_load_done = True
-        self._set_status(
-            f"{datetime.now().strftime('%H:%M:%S')} • {self.entries_shown} entries"
-        )
-
 
 def main():
-    if not CLAUDE_DIR.exists():
-        sys.stderr.write(f"claude dir not found: {CLAUDE_DIR}\n")
-        sys.exit(1)
-
     root = tk.Tk()
     BuddyWindow(root)
     root.mainloop()
