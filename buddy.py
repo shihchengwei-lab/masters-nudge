@@ -29,7 +29,7 @@ PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
 #   openai/codex: gpt-5.5 (default), other model names codex CLI accepts
 _DEFAULT_MODELS = {"anthropic": "sonnet", "openai": "gpt-5.5", "codex": "gpt-5.5"}
 MODEL = os.environ.get("BUDDY_MODEL", _DEFAULT_MODELS.get(PROVIDER, "sonnet"))
-MAX_TRANSCRIPT_CHARS = int(os.environ.get("BUDDY_MAX_TRANSCRIPT", "2000"))
+MAX_TRANSCRIPT_CHARS = int(os.environ.get("BUDDY_MAX_TRANSCRIPT", "5000"))
 TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
 
 
@@ -127,6 +127,66 @@ def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
         total += len(block)
 
     return "\n\n".join(reversed(blocks))
+
+
+def infer_trigger(transcript_path: str) -> str:
+    """Infer what happened this turn (context hint, not model routing)."""
+    if not transcript_path or not os.path.exists(transcript_path):
+        return "turn"
+    try:
+        TAIL = 16384
+        size = os.path.getsize(transcript_path)
+        with open(transcript_path, "rb") as f:
+            if size > TAIL:
+                f.seek(size - TAIL)
+                f.readline()
+            data = f.read().decode("utf-8", errors="replace")
+    except Exception:
+        return "turn"
+
+    lines = [l.strip() for l in data.splitlines() if l.strip()]
+    last_entries = lines[-10:]
+    combined = " ".join(last_entries).lower()
+
+    if any(kw in combined for kw in [
+        "error:", "exception:", "traceback", "stderr",
+        "command failed", "exit code", "exitcode",
+        "panic:", "fatal:", "segfault",
+    ]):
+        return "error"
+    if any(kw in combined for kw in [
+        "test fail", "tests failed", "test_fail",
+        "assertion", "assert", "expect(",
+        "failed:", "failures:", "failing",
+    ]):
+        return "test-fail"
+    return "turn"
+
+
+def read_recent_reactions(session_id: str, max_count: int = 3, max_chars: int = 200) -> list[str]:
+    """Read last N Buddy reactions from this session's log."""
+    log_path = BUDDY_DIR / f"{session_id}.log"
+    if not log_path.exists():
+        return []
+    try:
+        lines = log_path.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        return []
+    reactions = []
+    for line in reversed(lines):
+        if not line.strip():
+            continue
+        try:
+            entry = json.loads(line)
+            r = entry.get("reaction", "").strip()
+            if r:
+                reactions.append(r[:max_chars])
+        except Exception:
+            continue
+        if len(reactions) >= max_count:
+            break
+    reactions.reverse()
+    return reactions
 
 
 def build_system_prompt() -> str:
@@ -339,7 +399,23 @@ def main() -> None:
     if not system_prompt:
         return
 
-    reaction = dispatch_call(system_prompt, transcript_text)
+    # --- trigger + recent reactions context ---
+    trigger = infer_trigger(transcript_path)
+    recent = read_recent_reactions(session_id)
+
+    context_parts = []
+    context_parts.append(f"[trigger: {trigger}]")
+    if recent:
+        context_parts.append("[你最近說過]")
+        for r in recent:
+            context_parts.append(f"- {r}")
+        context_parts.append("[避免重複上面的話，可以接著講]")
+    context_parts.append("")
+    context_parts.append(transcript_text)
+
+    enriched_text = "\n".join(context_parts)
+
+    reaction = dispatch_call(system_prompt, enriched_text)
     if reaction:
         append_buddy_log(session_id, PROVIDER, MODEL, reaction)
     else:
