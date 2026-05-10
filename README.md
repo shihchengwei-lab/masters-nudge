@@ -37,6 +37,25 @@ Two visibility channels:
   framing on every injection so the main agent stays the decision-maker.
 - **You** see Buddy in the floating window (direct, unmediated)
 
+## Who this is for
+
+**Suitable**: individual users comfortable with Claude Code hooks who
+accept that transcript content — including tool output, file contents
+returned by `Read`, command output, and error messages — leaves the
+machine and reaches OpenAI by default (or Anthropic via
+`BUDDY_PROVIDER=anthropic`).
+
+**Not suitable**:
+- Environments where conversation content cannot leave the machine
+  (corporate confidential code, regulated industries, classified work).
+- Setups where manually editing `~/.claude/settings.json` to merge hook
+  entries is not acceptable.
+- Anyone who would not be comfortable with file contents and command
+  output reaching a third-party API on every Stop hook.
+
+If any of those apply, do not install. See [Privacy](#privacy) below for
+the full data-flow disclosure.
+
 ## Install
 
 ```bash
