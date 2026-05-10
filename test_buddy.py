@@ -75,6 +75,55 @@ class TestTranscriptParser(unittest.TestCase):
         text_part = result.split("\n", 1)[1]
         self.assertLessEqual(len(text_part), 1520)
 
+    # ── tool_result branch (added when format_transcript_entry started
+    #    surfacing tool output instead of emitting just "[tool_result]") ──
+
+    def _tool_result_entry(self, content, is_error=False):
+        block = {"type": "tool_result", "content": content}
+        if is_error:
+            block["is_error"] = True
+        return {
+            "type": "user",
+            "message": {"role": "user", "content": [block]},
+        }
+
+    def test_format_tool_result_string_content(self):
+        result = self.buddy.format_transcript_entry(
+            self._tool_result_entry("OK done")
+        )
+        self.assertIn("[tool_result]", result)
+        self.assertIn("OK done", result)
+        self.assertNotIn("error", result)
+
+    def test_format_tool_result_list_of_text_blocks(self):
+        result = self.buddy.format_transcript_entry(
+            self._tool_result_entry([
+                {"type": "text", "text": "line one"},
+                {"type": "text", "text": "line two"},
+            ])
+        )
+        self.assertIn("line one", result)
+        self.assertIn("line two", result)
+
+    def test_format_tool_result_is_error_label(self):
+        result = self.buddy.format_transcript_entry(
+            self._tool_result_entry("boom", is_error=True)
+        )
+        self.assertIn("[tool_result error]", result)
+        self.assertIn("boom", result)
+
+    def test_format_tool_result_tail_truncation_keeps_end(self):
+        head_marker = "HEAD_OF_OUTPUT"
+        tail_marker = "TAIL_OF_OUTPUT"
+        # head + 1000 chars of filler + tail = 1028 chars; tail-cap is 800
+        long_content = head_marker + ("x" * 1000) + tail_marker
+        result = self.buddy.format_transcript_entry(
+            self._tool_result_entry(long_content)
+        )
+        self.assertIn("...[truncated]", result)
+        self.assertIn(tail_marker, result)
+        self.assertNotIn(head_marker, result)
+
     def test_read_recent_transcript_from_fixture(self):
         fd = tempfile.NamedTemporaryFile(
             mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
