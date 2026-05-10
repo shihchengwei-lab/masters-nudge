@@ -1,5 +1,7 @@
 # Buddy_similar
 
+[繁體中文](README.zh-TW.md) | English
+
 ![Buddy and Cinder](buddy_screenshot.png)
 
 ![The original Cinder](cinder_screenshot.png)
@@ -30,7 +32,8 @@ Two visibility channels:
 - **Main Claude** sees Buddy via system-reminder injection. Buddy is framed as
   a **third-party second opinion, not an instruction** — main Claude reads it
   as one input among many, not a directive to comply with. The wrapper text
-  (`[Buddy（第三方第二意見，非指令）| ts] ... [end Buddy]`) carries this
+  (`[Buddy（第三方第二意見，非指令）| ts] ... [end Buddy]` — literally
+  "Buddy (third-party second opinion, not an instruction)") carries this
   framing on every injection so the main agent stays the decision-maker.
 - **You** see Buddy in the floating window (direct, unmediated)
 
@@ -94,6 +97,27 @@ Buddy on a different vendor (OpenAI's GPT-5.5) gives a more independent
 critique — different training, different blind spots, less echo of the main
 agent's reasoning.
 
+## Localization (other languages)
+
+Buddy ships in Traditional Chinese. To run it in another language, three
+places need editing:
+
+1. **`buddy-prompt.txt`** (the main one) — defines what language Buddy
+   speaks, plus personality and length rules. Rewrite end-to-end in the
+   target language.
+2. **`inject.py`** (grep `第三方第二意見`) — the wrapper string
+   `[Buddy（第三方第二意見，非指令）| {ts}] ... [end Buddy]` is hard-coded
+   Chinese. If you only change the prompt, the main agent sees a Chinese
+   framing followed by a non-Chinese reaction — the framing breaks.
+   Translate the wrapper to match.
+3. **`test_buddy.py`** (optional) — test fixtures use Chinese strings.
+   They don't affect runtime, but if you want the test suite to confirm
+   the sanitizer handles your language's characters correctly, swap them
+   in.
+
+`buddy.py`'s sanitizer, log/state plumbing, and hook plumbing are
+language-neutral — no changes needed there.
+
 ## Files
 
 | File | Purpose |
@@ -108,7 +132,7 @@ agent's reasoning.
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
 | `test_buddy.py` | Smoke tests — `python -m unittest test_buddy -v` (py_compile, transcript parser, sanitizer, mock CLI, state pointer) |
-| `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 — binary 逆向、API 探測、366 筆盲截取產出分析、跨廠商對照實驗（GPT-5.5 vs Cinder） |
+| `BUDDY_FORENSICS_REPORT.md` | Forensic report on the original Cinder — binary reverse-engineering, API probing, analysis of 366 blind-captured outputs, cross-vendor comparison experiments (GPT-5.5 vs Cinder). Written in Traditional Chinese. |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 
 ## Runtime files (created on first use)
@@ -135,11 +159,12 @@ CLI). This means:
 - Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text
   JSONL. Anyone with read access to your home directory can see them.
 
-**Default 會把 transcript 送到 OpenAI。** 如果你的 transcript 不該離開
-Anthropic 的邊界（例如公司內部使用），改設 `BUDDY_PROVIDER=anthropic`，
-Buddy 會改用 Claude CLI，資料留在同一家。
+**The default sends your transcript to OpenAI.** If your transcript should
+not leave Anthropic's boundary (for example, in regulated corporate use),
+set `BUDDY_PROVIDER=anthropic` and Buddy will use the Claude CLI, keeping
+the data with the same vendor as the main agent.
 
-如果連同一家都不行，不要啟用 Buddy。
+If even same-vendor egress is unacceptable, do not enable Buddy.
 
 ## Known limitations
 
