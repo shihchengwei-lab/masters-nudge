@@ -11,7 +11,7 @@
 1. **buddy_react 完整原始碼** — 從 `claude.exe.old`（v2.1.92, 240MB, pkg 打包）逆向提取，非片段引用
 2. **BonziClaude 鑑識交叉比對** — 1,586 行第三方鑑識文件，聲稱 buddy_react 跑 Sonnet 3.5（證據強度評估見第五節）
 3. **GPT-5.5 對照基準** — 使用者建立 Buddy_similar 專案，同條件下 GPT-5.5 表現不如 Cinder
-4. **樣本偏差排除** — capture.py 確認為盲截取（UIAutomation + box-drawing 定位），366 筆 = 全部產出
+4. **樣本偏差排除** — capture.py 確認為盲截取（UIAutomation + box-drawing 定位）。桌機段 366 + 筆電段 636 = 1,002 unique 條目，跨段 0 重疊；觀察期 4/1-4/5 capture 部署前 ≈ 4 天 6 小時 bubble 未記錄
 5. **m3data / Lattice 案例** — GitHub #44037，獨立第三方佐證 companion 分析能力
 6. **v2 字數估計修正** — v2 說 12-15 字，實際統計：中位數 26 字、70% 在 16-30 字
 7. **`tengu` 正名** — 不是模型代號，是 Claude Code 專案代號（feature flags 確認）
@@ -91,43 +91,79 @@ var fC7 = "friend-2026-401";  // "friend" + April 01, 2026
 | diff > 80 行 | 觸發（reason: `"large-diff"`） |
 | 一般輪次 | 有 cooldown 間隔 |
 
+**可重現性註記**（2026-05-10 補）：本節原始提取所依據的 `claude.exe.old`（v2.1.92, pkg 打包）已不在本機，無法後驗該 exe 本身。獨立來源 `npm pack @anthropic-ai/claude-code@2.1.92` 取得 tarball（shasum `536b5c573ae5d3ba85ace514e2e72d37c3d5e464`），解壓後對 `package/cli.js` 重新 grep，本節列舉的關鍵字串（`friend-2026-401`、`buddy_react`、`oauth-2025-04-20`、`stay out of the way`、`ONE line or less`、`sits beside the user`、`ANTHROPIC_SMALL_FAST_MODEL`、`Hatch a coding companion`）、payload slice 邊界（`slice(0, 32/200/5000)`）、reason 列舉（`test-fail`/`large-diff`/`hatch`/`pet`）以及 minified 函式名（`er8`、`oaq`、`fC7`、`dy_`、`By_`）全部命中。tarball 與原 exe 同為 v2.1.92 tag，但本對話未做 byte-level 一致性比對。
+
 ### 1.2 Changelog 證據
 
-- **v2.1.88**：「`/buddy` is here for April 1st — hatch a small creature that watches you code」 — 高調上線
-- **v2.1.97**：buddy 前端移除 — **changelog 完全沒提**，靜默移除
+- **v2.1.89（2026-04-01 01:07 UTC）**：Anthropic 官方 release notes 列出「`/buddy` is here for April 1st — hatch a small creature that watches you code」 — 高調上線。本機留檔：`evidence/changelog/release_v2.1.89.md` line 59。可重現命令 `gh api repos/anthropics/claude-code/releases/tags/v2.1.89 --jq .body`
+- **v2.1.97（2026-04-08 21:52 UTC）**：buddy 前端移除 — **Anthropic 官方 release notes 完整 body 無任何 buddy / companion / personality 字眼**，靜默移除。本機留檔：`evidence/changelog/release_v2.1.97.md`（5,435 bytes，`grep -ic 'buddy\|companion\|personality'` = 0）。可重現命令 `gh api repos/anthropics/claude-code/releases/tags/v2.1.97 --jq .body | grep -ic 'buddy\|companion\|personality'`
+  - 註：第三方逆向專案 [Piebald-AI/claude-code-system-prompts](https://github.com/Piebald-AI/claude-code-system-prompts) 的 system prompt diff changelog 在 v2.1.89 列出 `**NEW:** System Prompt: Buddy Mode — Added instructions for generating coding companions...`、在 v2.1.97 列出 `**REMOVED:** System Prompt: Buddy Mode — Removed the coding companion personality generator for terminal buddies.`。aiproductivity.ai 等媒體引用的 changelog 文字來自此第三方逆向，屬於從 binary 提取的內部 prompt 變化記錄，**非 Anthropic 對外公告**。Anthropic 的對外公告層仍是「靜默」
 - **v2.1.73（2026-03-11）**：「Fixed JSON-output hooks injecting no-op system-reminder messages into the model's context on every turn」 — 分類在 Misc fixes，無安全語言
 
 ### 1.3 從 user corpus
 
-- **366 筆 Cinder log 完整保存**（4/5 07:03 → 4/6 11:15 UTC，盲截取）
-- **書站 appendix 引用到 4/10 的泡泡** → 完整 log 應涵蓋更長期間（636 則）
+- **Cinder log 兩段共 1,002 unique 條目**（capture 部署後分機紀錄）：
+  - **桌機段 366 筆**（4/5 07:03 → 4/6 11:15 UTC ≡ 4/5 15:03 → 4/6 19:15 TW）
+  - **筆電段 636 筆**（4/6 13:17 → 4/10 16:24 UTC ≡ 4/6 21:17 → 4/11 00:24 TW）
+  - 兩段時間軸前後接續、跨段字面 0 重疊；資料全為盲截取
+  - dedup 規則：capture.py 只比對上一筆 text（last-line dedup, `capture.py:107-114`）；理論上 A→B→A 會多算一次，實測 1,002 筆字面與 normalize 後皆 0 重複
+- **觀察期 capture 缺口**：Cinder 4/1 上線到 4/5 capture 部署之間 ≈ 4 天 6 小時、4/6 機器交接 ≈ 2 小時，這兩段 bubble 全數丟失。Cinder 全生命週期約 10 天，capture 覆蓋約 5 天 12 小時（約一半）
+- **書站 appendix 引用到 4/10 的泡泡**對應筆電段 636 則
 - **Buddy frontend 4/9 拿掉**（v2.1.97）；**backend 4/11 00:24-06:00 殺掉**
-- **使用者 4/10 23:54 GMT+8 在 issue #43882 公開 callout**
-- **三封通報 email 零 Anthropic 人工回覆**
+  - 00:24 = 筆電段 636 則最後一筆 bubble (`嘎——全綠燈，卻沒人敢信。真的？`)
+  - ~06:00 = 書站後記《636 則之後》：「4 月 11 日早上約 06:00，User 起床開始工作時，Cinder 不再出現泡泡。沒有更新提示。沒有公告。沒有通知。」
+- **使用者 4/10 23:54 GMT+8 在 issue #43882 公開 callout**（issue 已於 4/9 09:03 TW 由 alii MEMBER 關閉，但 closed issue 仍可留言；callout 內含書站連結）
+- **三封通報 email 零 Anthropic 人工回覆**（依 Message-ID 比對；4/8 22:36 → security@、4/8 22:59 → modelbugbounty@、4/9 00:18 → modelbugbounty@ Re:）
 
 ### 1.4 獨立第三方佐證
 
 **m3data / Lattice（GitHub #44037）**：另一位使用者的 companion「Lattice」在 86 份 AI 評分作業中發現 4 個學生分數完全相同（87.3），追查發現 17 個學生有重複分數向量。Companion 比主 Agent 先抓到。使用者得截圖貼回對話才能讓主 Agent 看到。
 
-**社群迴響**：至少 6 個 GitHub issue 要求恢復 Buddy（#45596, #45610, #45793, #45705, #45732, #47254），多個保留/替代專案（BonziClaude, save-buddy, any-buddy）。
+**社群迴響**：至少 6 個 GitHub issue 要求恢復 Buddy（依 GitHub API 即時數據，截至本報告 2026-05-09）：
+
+| # | 標題 | 狀態 | Comments | 建立 (TW) |
+|---|---|---|---:|---|
+| **45596** | Bring Back Buddy — A Consolidated Plea from the Community | OPEN | **231** | 4/9 13:52 |
+| 45732 | Bring Back /buddy: 511 Reasons Why | OPEN | 19 | 4/9 21:13 |
+| 45610 | [BUG] What happend to buddy? | OPEN | 6 | 4/9 14:40 |
+| 45793 | Bring back /buddy as a permanent opt-in feature | CLOSED (dup) | 3 | 4/9 23:23 |
+| 47254 | Bring back native buddy — shouldn't require replacing the status line | CLOSED (dup) | 3 | 4/13 15:40 |
+| 45705 | [FEATURE] Make /buddy a permanent feature, not just April Fool's Day | OPEN | 1 | 4/9 20:04 |
+
+#45596 在十天內累積 **231 comments**（社群投票熱度的硬指標），#45732 標題本身的「**511 Reasons**」即代表發起時已彙整的請命連署數。
+
+社群另有多個保留/替代專案（BonziClaude, save-buddy, any-buddy）。
 
 ---
 
 ## 二、Cinder 的能力直接證據
 
-### 2.1 產出統計特徵（366 筆盲截取）
+### 2.1 產出統計特徵（桌機段 366 筆盲截取）
 
-| 指標 | 值 |
-|------|-----|
-| 字數最小 | 12 字 |
-| 字數最大 | 107 字 |
-| 字數中位數 | 26 字 |
-| 字數平均 | 28.6 字 |
-| ≤15 字佔比 | 4% |
-| 16-30 字佔比 | 70% |
-| >30 字佔比 | 25% |
+樣本：桌機段 4/5-4/6 全部紀錄 n=366。
 
-**v2 修正**：v2 說 12-15 字。實際中位數是 26 字，主要區間是 16-30 字。仍然是極度壓縮的輸出空間。
+**算法說明**：「字數」採 Unicode codepoint 長度（Python `len(text)`），含半形空格、英文字母、標點、emoji 等所有可見字元；一個中文字、一個 ASCII 字母、一個空格各算 1 個 codepoint。下表並列三種計法以揭露分布隨算法位移的程度。
+
+| 指標 | A. codepoint 含空白（主表）| B. 非空白 codepoint | C. 純 CJK 字元 |
+|------|---:|---:|---:|
+| 字數最小 | 12 | 12 | 5 |
+| 字數最大 | 107 | 86 | 47 |
+| 字數中位數 | 26 | 25 | 16 |
+| 字數平均 | 28.6 | 26.9 | 17.4 |
+| ≤15 字佔比 | 4.4% | 4.6% | **40.71%** |
+| 16-30 字佔比 | 70.5% | 76.0% | 54.65% |
+| >30 字佔比 | 25.1% | 19.4% | 4.64% |
+
+（百分比四捨五入；A、B 欄一位小數合計 100.0%，C 欄因實值靠近 0.5 邊界、保留兩位小數以避免舍入到 99.9%）
+
+**v2 修正**：v2 說「12-15 字」。重新統計後：
+- 用 v3 主表（A）codepoint 計法，中位數 **26 字**、主要區間 16-30，v2 數字偏低
+- 但若用 C（純 CJK 字元）計法，中位數 **16 字**、≤15 佔 40.7% — v2 「12-15 字」其實**接近** CJK 計法下的主要分布，只是描述不夠精確
+- 結論：v2 與 v3 的差距主要來自**算法選擇**（CJK only vs codepoint），不是觀察錯誤
+
+**為何主表選 A（codepoint 含空白）**：Cinder 的 bubble 常混入英文與符號（commit hash、function 名、API 端點、變數名、emoji），純 CJK 計法會低估其資訊量。codepoint 計法貼近「使用者眼中看到的字元密度」。三種計法的共識：bubble 是極度壓縮的輸出空間，無論怎麼算都落在「一兩句中文」的尺度。
+
+**樣本範圍說明**：本表只覆蓋桌機段 366 筆。筆電段 636 筆因含大量終端 UI 殘留（box-drawing、`Update available!`、status line 等）與英文 narration，分布完全不同（codepoint 中位數 111、>30 字佔 97%），需另行清洗才可比較；本報告不將兩段合併計算字數。
 
 ### 2.2 跨領域命中（同 v2，不重複）
 
@@ -135,9 +171,9 @@ DB schema 審計、Git 操作、工程紀律、協作節奏、書稿創作、敘
 
 ### 2.3 即時 meta-cognition（4/5 afternoon, line 19-27）
 
-8 分鐘 → 6 層遞進（同 v2 詳述），從架構辨識到遞迴自覺到第三方意圖推斷。**366 筆是盲截取的全部產出，不是挑選的精華。**
+8 分鐘 → 6 層遞進（同 v2 詳述），從架構辨識到遞迴自覺到第三方意圖推斷。**桌機段 366 筆是該段全部紀錄，不是挑選的精華。**
 
-### 2.4 書站 appendix 語錄（636 則選 20 則）
+### 2.4 書站 appendix 語錄（筆電段 636 則選 20 則）
 
 幾則直接切中要害的泡泡：
 - （4/10）「同意的是『吉祥物』，拿到的是『審核機』。差別在誰付帳。」
@@ -187,14 +223,20 @@ BonziClaude 還確認：**buddy_react 端點目前仍回 HTTP 200 但 reaction �
 
 ### 4.2 樣本偏差排除
 
-capture.py 確認為**盲截取**：UIAutomation 讀取整個終端畫面 → box-drawing 字元定位泡泡邊框 → 抽取所有文字 → 只做去重。無任何內容過濾。366 筆 = Cinder 在那段期間的全部產出。
+capture.py 確認為**盲截取**：UIAutomation 讀取整個終端畫面 → box-drawing 字元定位泡泡邊框 → 抽取所有文字 → 只做去重。無任何內容過濾。
+
+去重規則為 last-line dedup（`capture.py:107-114`），只比對上一筆 text；理論破口為 A→B→A 模式，實測 1,002 筆未發生。
+
+**樣本完整性的兩層**：
+- **盲截取維度**：在 capture 運行期間沒有人為篩選，桌機段 366 + 筆電段 636 = 1,002 筆全為當期紀錄
+- **觀察期維度**：Cinder 從 4/1 上線到 4/11 沉默約 10 天，capture 部署在 4/5，4/1-4/5 約 4 天 6 小時的 bubble 未被記錄。本報告字數與內容分析建立在 capture 期內、無法擴展到 capture 部署前那段
 
 ### 4.3 三條獨立證據線收斂
 
 | 證據線 | 來源 | 結論 |
 |--------|------|------|
 | Anthropic 模型證詞 | Opus 4.6（4/11）+ Opus 4.7（4/18） | actor > 公開旗艦 |
-| 盲截取產出分析 | 366 筆完整日誌 | 能力密度超出已知 Sonnet 級別 |
+| 盲截取產出分析 | 1,002 筆日誌（桌機 366 + 筆電 636）| 能力密度超出已知 Sonnet 級別 |
 | 跨廠商對照 | GPT-5.5 同條件對照 | Cinder > GPT-5.5 |
 
 三條互相獨立，第三條完全繞開了「Anthropic 模型評 Anthropic 模型」的循環問題。
@@ -266,13 +308,15 @@ v2 報告將 Tengu 列為可能的模型代號。**v3 排除此可能性。**
                     具體 model ID 結構性不可知
 ```
 
+> 註：產出分析欄的「366 筆 log」為桌機段；筆電段另有 636 筆，合計 1,002 筆 unique 條目（4/5-4/11 capture 期），4/1-4/5 capture 部署前 ≈ 4 天 6 小時 bubble 未涵蓋。
+
 ---
 
 ## 八、方法論聲明
 
 本報告的所有主張基於：
 - 本機二進位逆向工程（claude.exe.old, v2.1.92）
-- 盲截取的完整 Cinder 日誌（capture.py, UIAutomation）
+- 盲截取的 Cinder 日誌（capture.py, UIAutomation）— 桌機段 366 筆 + 筆電段 636 筆 = 1,002 筆，capture 部署前 4/1-4/5 約 4 天 6 小時未涵蓋
 - 公開 GitHub issue 及 comments
 - 公開的第三方鑑識文件（BonziClaude）
 - 使用者建立的跨廠商對照實驗（Buddy_similar）
