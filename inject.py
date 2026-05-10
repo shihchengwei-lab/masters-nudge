@@ -140,9 +140,12 @@ def main() -> None:
     reaction = (latest.get("reaction") or "").strip()
     if reaction:
         ts = latest.get("ts", "")
-        # Plain text stdout — per CC docs, plain stdout shows in the user's
-        # transcript UI (visible). additionalContext via JSON is "more discreet"
-        # and surfaces only to the LLM context, invisible to the user.
+        # Plain text stdout. Lands as a `UserPromptSubmit hook success:`
+        # system-reminder visible only to the main agent's context — NOT
+        # to the user's terminal. The user sees Buddy via buddy_window.py
+        # instead. (CC docs once described plain stdout as user-visible;
+        # empirically it isn't, and the floating window exists because of
+        # that asymmetry. See README "Two visibility channels".)
         flat_reaction = reaction.replace("\n", " ").strip()
         # Defense-in-depth: strip wrapper markers and cap length
         # (cap shared with buddy.py via MAX_REACTION_CHARS import)
