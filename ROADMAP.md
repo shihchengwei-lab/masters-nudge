@@ -15,10 +15,10 @@ evidence to delete it, not to do it.
 Pinned to bottom-right, always on top. Switches automatically when a different
 session's log gets newer activity.
 
-Hook delivery to user UI works via `UserPromptSubmit hook success:`
-system-reminder messages — both user and main Claude can see Buddy's reactions
-in the transcript. The floating window is an additional, unmediated visibility
-channel.
+Hook delivery works via `UserPromptSubmit hook success:` system-reminder
+messages — main Claude sees the injected reaction in its context, but
+system-reminders don't render in the user's terminal. The floating window
+is the user's only direct visibility channel.
 
 ## 2. Plugin format packaging (`plugin.json`)
 
