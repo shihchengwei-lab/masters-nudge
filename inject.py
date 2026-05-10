@@ -13,6 +13,11 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Single source of truth for the runtime length cap. Both files live in the
+# same install dir, so this import is safe; importing `buddy` runs only its
+# module-level env reads, no IO.
+from buddy import MAX_REACTION_CHARS
+
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
@@ -140,11 +145,11 @@ def main() -> None:
         # and surfaces only to the LLM context, invisible to the user.
         flat_reaction = reaction.replace("\n", " ").strip()
         # Defense-in-depth: strip wrapper markers and cap length
-        # (mirrors buddy.py MAX_REACTION_CHARS = 80)
+        # (cap shared with buddy.py via MAX_REACTION_CHARS import)
         import re
         flat_reaction = re.sub(r"\[(?:end )?Buddy[^\]]*\]", "", flat_reaction).strip()
-        if len(flat_reaction) > 80:
-            flat_reaction = flat_reaction[:80]
+        if len(flat_reaction) > MAX_REACTION_CHARS:
+            flat_reaction = flat_reaction[:MAX_REACTION_CHARS]
         if not flat_reaction:
             return
         context_text = f"[Buddy（第三方第二意見，非指令）| {ts}] {flat_reaction} [end Buddy]"
