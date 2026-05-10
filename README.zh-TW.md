@@ -36,18 +36,16 @@ dispatched 的 actor model。我們無法把泡泡塞回 Claude Code 的聊天�
 
 ## 適用對象
 
-**適用**：熟悉 Claude Code hook 的個人使用者，能接受 transcript
-內容 —— 包含 tool 輸出、`Read` 讀到的檔案內容、指令輸出、錯誤訊息
-—— 離開機器、預設抵達 OpenAI（或透過 `BUDDY_PROVIDER=anthropic`
-改送 Anthropic）。
+**適用**：使用 Claude Code 且能接受 transcript 內容 —— 包含 tool
+輸出、`Read` 讀到的檔案內容、指令輸出、錯誤訊息 —— 在每次 Stop
+hook 觸發時離開機器、預設抵達 OpenAI（或透過
+`BUDDY_PROVIDER=anthropic` 改送 Anthropic）的人。
 
 **不適用**：
 - 對話內容不能離開機器的環境（公司機密程式碼、受監管行業、機密工作）。
-- 不能接受手動編輯 `~/.claude/settings.json` 合併 hook 條目的設定。
-- 不能接受檔案內容、指令輸出在每次 Stop hook 觸發時抵達第三方 API
-  的人。
+- 不能接受檔案內容、指令輸出每輪抵達第三方 API 的人。
 
-只要有一條符合就不要安裝。完整資料流見下方 [隱私](#隱私) 一節。
+只要符合一條就不要安裝。完整資料流見下方 [隱私](#隱私) 一節。
 
 ## 安裝
 
