@@ -2,8 +2,10 @@
 """Buddy_similar — Stop hook worker.
 
 Reads the transcript path from the Stop-hook JSON on stdin, gathers the recent
-turns, calls the Claude CLI with the Buddy personality prompt, and appends the
-reaction to ~/.claude/buddy.log.
+turns, dispatches to the configured provider's CLI (OpenAI Codex by default,
+or Anthropic Claude via BUDDY_PROVIDER=anthropic) with the Buddy personality
+prompt, and appends the reaction to the per-session log at
+~/.claude/buddy/<session_id>.log.
 
 Never raises out of main() — hook must not block on our errors.
 """
