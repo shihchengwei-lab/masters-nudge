@@ -23,7 +23,6 @@ import json
 import os
 import sys
 import tkinter as tk
-from datetime import datetime
 from pathlib import Path
 
 try:
@@ -41,7 +40,6 @@ SPRITESHEET_PATH = Path(os.environ.get(
 
 POLL_MS = 1000
 ANIM_MS = 250           # 4 fps sprite animation
-BUBBLE_FADE_SEC = 30    # bubble stays visible this long after last reaction
 SPRITE_HEIGHT = 90      # display height in pixels
 
 # Colors
@@ -136,7 +134,6 @@ class BuddyWindow:
         self.current_log: Path | None = None
         self.last_offset = 0
         self.last_reaction = ""
-        self.last_reaction_time = 0.0
 
         # Load sprite
         self.idle_frames: list[ImageTk.PhotoImage] = []
@@ -297,7 +294,6 @@ class BuddyWindow:
                 ts = entry.get("ts", "")
                 if reaction:
                     self.last_reaction = reaction
-                    self.last_reaction_time = datetime.now().timestamp()
                     self.bubble_label.config(text=reaction)
                     if ts:
                         short_ts = ts[11:19] if len(ts) > 19 else ts
