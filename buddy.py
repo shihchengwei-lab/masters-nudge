@@ -99,7 +99,21 @@ def format_transcript_entry(obj: dict) -> str:
                 name = block.get("name", "?")
                 parts.append(f"[tool_use: {name}]")
             elif btype == "tool_result":
-                parts.append("[tool_result]")
+                raw = block.get("content", "")
+                if isinstance(raw, list):
+                    text_parts = []
+                    for item in raw:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            text_parts.append(item.get("text", ""))
+                    result_text = "\n".join(text_parts)
+                else:
+                    result_text = str(raw)
+                label = "[tool_result error]" if block.get("is_error") else "[tool_result]"
+                # Tail-bias: tracebacks, exit codes, stderr, test summaries
+                # all tend to land at the end of tool output.
+                if len(result_text) > 800:
+                    result_text = "...[truncated]\n" + result_text[-800:]
+                parts.append(f"{label}\n{result_text}" if result_text else label)
         text = "\n".join(p for p in parts if p)
     else:
         text = str(content)

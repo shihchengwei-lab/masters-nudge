@@ -139,11 +139,16 @@ Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
 **Buddy 會把你的對話資料送到外部模型廠商。**
 
 每次 Claude Code 的 Stop hook 觸發時，Buddy 會讀取 session transcript
-最近約 5000 字元並送到設定的廠商（預設：透過 Codex CLI 送 OpenAI；
-備選：透過 Claude CLI 送 Anthropic）。這代表：
+最近約 5000 字元 —— **包含每個 tool_result 的尾段（Read 讀到的檔案
+內容、指令輸出、stderr、錯誤訊息、diff）** —— 並送到設定的廠商
+（預設：透過 Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。
+這代表：
 
-- 程式碼片段、檔案路徑、錯誤訊息、以及最近對話中的任何內容都會離開
-  你的機器、抵達廠商的 API。
+- 程式碼片段、檔案路徑、錯誤訊息、指令輸出，以及最近對話中的任何
+  內容，都會離開你的機器、抵達廠商的 API。
+- Tool result 在送出前會尾端截到約 800 字，所以大檔案 Read 或長指令
+  輸出不會全送 —— 但每個 result 的結尾（錯誤、exit code 通常在這）
+  會送。
 - 如果你切換廠商（`BUDDY_PROVIDER`），資料就改送到那家廠商。
 - Buddy 反應以純文字 JSONL 形式存在本機 `~/.claude/buddy/`。任何能讀取
   你 home 目錄的人都看得到。

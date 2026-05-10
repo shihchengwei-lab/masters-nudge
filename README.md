@@ -148,12 +148,17 @@ language-neutral — no changes needed there.
 **Buddy sends your conversation data to an external model provider.**
 
 Every time Claude Code's Stop hook fires, Buddy reads the most recent ~5000
-characters of your session transcript and sends them to the configured
-provider (default: OpenAI via Codex CLI; alternative: Anthropic via Claude
-CLI). This means:
+characters of your session transcript — **including the tail of each tool
+result (file contents returned by Read, command output, stderr, error
+messages, diffs)** — and sends them to the configured provider (default:
+OpenAI via Codex CLI; alternative: Anthropic via Claude CLI). This means:
 
-- Code snippets, file paths, error messages, and anything else in your recent
-  conversation will leave your machine and reach the provider's API.
+- Code snippets, file paths, error messages, command output, and anything
+  else in your recent conversation will leave your machine and reach the
+  provider's API.
+- Tool results are tail-truncated to ~800 chars each before sending, so
+  large file reads or long command output are not sent in full — but the
+  end of each result (where errors and exit codes typically land) is.
 - If you switch providers (`BUDDY_PROVIDER`), the data goes to that vendor
   instead.
 - Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text
