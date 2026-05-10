@@ -163,9 +163,11 @@ Buddy 會改用 Claude CLI，資料留在同一家廠商。
   在繁忙的日子 token 費用會累積。
 - 遞迴用 `BUDDY_ACTIVE` 環境變數防護，但如果你還有其他 hook 會遞迴
   呼叫 `claude`/`codex` 又沒做類似防護，要小心無窮迴圈。
-- Buddy 反應會以 `UserPromptSubmit hook success:` 的 system-reminder
-  訊息出現在 Claude Code transcript。你跟主 Claude 都看得到。浮動視窗
-  （`buddy_window.py`）是另一條額外、未經中介的可見性管道。
+- Buddy 反應以 `UserPromptSubmit hook success:` 的 system-reminder
+  訊息注入 Claude Code。**只有主 Agent 看得到** —— system-reminder
+  不會 render 在使用者的終端機畫面上。這個不對稱正是
+  `buddy_window.py` 存在的理由：浮動視窗是你唯一能直接看到 Buddy
+  的管道。
 
 完整的後續項目清單與已完成項目見 `ROADMAP.md`。
 

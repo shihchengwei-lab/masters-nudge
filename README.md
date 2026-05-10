@@ -176,10 +176,11 @@ If even same-vendor egress is unacceptable, do not enable Buddy.
 - Recursion is guarded by the `BUDDY_ACTIVE` env var, but if you have other
   hooks calling `claude`/`codex` recursively without similar guards, watch
   for loops.
-- Buddy reactions appear in the Claude Code transcript as
-  `UserPromptSubmit hook success:` system-reminder messages. They are
-  visible to both you and main Claude. The floating window
-  (`buddy_window.py`) is an additional, unmediated visibility channel.
+- Buddy reactions are injected into Claude Code as
+  `UserPromptSubmit hook success:` system-reminder messages. **Only the
+  main agent sees them** — system-reminders don't render in the user's
+  terminal. That asymmetry is the whole reason `buddy_window.py` exists:
+  the floating window is your only channel to see Buddy directly.
 
 See `ROADMAP.md` for the full list of follow-on items and what's already shipped.
 
