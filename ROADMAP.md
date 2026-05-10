@@ -87,3 +87,4 @@ These were considered and removed by the user during the v1 scope discussion:
   layer adds surface area for no real benefit.
 - **buddy.log dashboard** — JSONL 可以直接看，trigger 沒到過，log 量不大。
 - **Smart model routing** — reason-based 路由被明確拒絕，trigger 是場景上下文不是路由信號。
+- **Integration-layer tests** — shell hooks (`buddy.sh`/`inject.sh`), `settings-snippet.json` validation, real Claude Code hook payload schema, Tk window startup, rate-limiting behavior. The smoke tests + `py_compile` CI cover the parser / sanitizer / state-pointer pure-logic layer; adding more is over-engineering for a one-person tool. CI exists because the repo is public; the public-repo bar is met by what's already there.
