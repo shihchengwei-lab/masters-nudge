@@ -149,27 +149,40 @@ Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
 
 ## 隱私
 
-**Buddy 會把你的對話資料送到外部模型廠商。**
+**每一輪 Buddy 都會把你的對話資料送給外部模型廠商。** 每次 Stop hook
+觸發時，Buddy 會組裝 payload 送到設定的廠商（預設：透過 Codex CLI 送
+OpenAI；備選：透過 Claude CLI 送 Anthropic）。每次送出的內容包含：
 
-每次 Claude Code 的 Stop hook 觸發時，Buddy 會讀取 session transcript
-最近 12 則 user/assistant 訊息（每則開頭 ≤ 300 字元）—— **加上這 12
-則裡所有 tool_result（Read 讀到的檔案內容、指令輸出、stderr、錯誤訊息、
-diff）串成一塊、保留末段 1000 字元** —— 並送到設定的廠商（預設：
-透過 Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。這代表：
+1. **最近 12 則 user/assistant 訊息**（每則開頭頭截 300 字元）。
+2. **一個尾段 `[tool output]` 區塊**：上述 12 則內所有 `tool_result`
+   串接後尾截到約 1000 字元。內含 Read 讀到的檔案內容、指令輸出、
+   stderr、錯誤訊息、diff。
+3. **本 session 最近 3 句 Buddy 自己的回應**（每句 ≤ 200 字元），預先
+   黏在訊息前面，讓模型避免重複自己。這些回應原本就是某次廠商呼叫
+   產生的，但會在同 session 後續每次呼叫被**重新送出**。
+4. **Buddy 人格 prompt**（`buddy-prompt.txt` 全文），每次呼叫作為 system
+   prompt 送出。內含 Buddy 的指令，不含使用者資料。
+
+這代表：
 
 - 程式碼片段、檔案路徑、錯誤訊息、指令輸出，以及最近對話中的任何
   內容，都會離開你的機器、抵達廠商的 API。
-- 工具輸出會整體尾端截到約 1000 字，所以大檔案 Read 或長指令輸出
+- 長 session 會產生多次外送事件 —— 每輪一次。
+- 工具輸出會串接後整體尾截到約 1000 字，所以大檔案 Read 或長指令輸出
   不會全送 —— 但結尾（錯誤、exit code 通常在這）會送。
-- 如果你切換廠商（`BUDDY_PROVIDER`），資料就改送到那家廠商。
-- Buddy 反應以純文字 JSONL 形式存在本機 `~/.claude/buddy/`。任何能讀取
-  你 home 目錄的人都看得到。
+- 預設 `BUDDY_PROVIDER=openai` 代表你跟 Anthropic Claude 的對話
+  transcript 會被轉送到 OpenAI。如果這對你是合規紅線，設
+  `BUDDY_PROVIDER=anthropic` 讓資料留在跟主 agent 同一家廠商。
+- 如果你在 session 中途切換 `BUDDY_PROVIDER`，廠商 A 之前產生的 Buddy
+  回應，會在下次呼叫時跟著當作「最近 3 句」context 送給廠商 B。
+- 廠商的資料保留與訓練政策各家不同、會隨時間變動。請查閱所選廠商目前的
+  API 使用條款。
 
-**預設會把 transcript 送到 OpenAI。** 如果你的 transcript 不該離開
-Anthropic 的邊界（例如公司內部使用），改設 `BUDDY_PROVIDER=anthropic`，
-Buddy 會改用 Claude CLI，資料留在同一家廠商。
+**本機保存：** Buddy 反應以純文字 JSONL 形式存在
+`~/.claude/buddy/<session_id>.log`，錯誤寫到 `~/.claude/buddy-error.log`。
+任何能讀取你 home 目錄的人都看得到。
 
-如果連同一家都不行，不要啟用 Buddy。
+如果連同一家廠商外送都不能接受，不要啟用 Buddy。
 
 ## 已知限制
 

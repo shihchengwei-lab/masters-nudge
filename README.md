@@ -162,31 +162,47 @@ language-neutral — no changes needed there.
 
 ## Privacy
 
-**Buddy sends your conversation data to an external model provider.**
+**Buddy sends your conversation data to an external model provider on every
+turn.** Each Stop-hook call assembles a payload and ships it to the
+configured provider (default: OpenAI via Codex CLI; alternative: Anthropic
+via Claude CLI). The payload contains:
 
-Every time Claude Code's Stop hook fires, Buddy reads the last 12
-user/assistant messages from your session transcript (each capped at 300
-chars) — **plus a single trailing block containing the tail (~1000 chars)
-of all tool_result content concatenated together: file contents returned
-by Read, command output, stderr, error messages, diffs** — and sends them
-to the configured provider (default: OpenAI via Codex CLI; alternative:
-Anthropic via Claude CLI). This means:
+1. **The last 12 user/assistant messages** from your session transcript,
+   head-truncated to 300 chars each.
+2. **A trailing `[tool output]` block**: every `tool_result` from those 12
+   messages concatenated together, tail-truncated to ~1000 chars total.
+   This includes file contents returned by Read, command output, stderr,
+   error messages, and diffs.
+3. **Up to 3 of Buddy's previous reactions** in this session (each ≤200
+   chars), prepended so the model avoids repeating itself. These reactions
+   originated from a previous provider call and are re-sent on every
+   subsequent call in the same session.
+4. **The Buddy persona prompt** (`buddy-prompt.txt`), sent as the system
+   prompt every call. Contains Buddy's instructions, not user data.
+
+This means:
 
 - Code snippets, file paths, error messages, command output, and anything
   else in your recent conversation will leave your machine and reach the
   provider's API.
-- All tool output in the 12-message window is concatenated and tail-truncated
-  to ~1000 chars total, so large file reads or long command output are not
-  sent in full — but the end (where errors and exit codes typically land) is.
-- If you switch providers (`BUDDY_PROVIDER`), the data goes to that vendor
-  instead.
-- Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text
-  JSONL. Anyone with read access to your home directory can see them.
+- A long session generates many separate egress events — one per turn.
+- Tool output is concatenated and tail-truncated to ~1000 chars total, so
+  large file reads or long command output are not sent in full — but the
+  end (where errors and exit codes typically land) is.
+- The default `BUDDY_PROVIDER=openai` means your Anthropic-Claude
+  conversation transcript is forwarded to OpenAI. If that crosses a
+  compliance line for you, set `BUDDY_PROVIDER=anthropic` to keep the data
+  with the same vendor as the main agent.
+- If you switch `BUDDY_PROVIDER` mid-session, Buddy's earlier reactions
+  (made by vendor A) get sent to vendor B as part of the next call's
+  recent-reactions context.
+- Provider data-retention and training policies vary and change over time.
+  Check your provider's current API terms.
 
-**The default sends your transcript to OpenAI.** If your transcript should
-not leave Anthropic's boundary (for example, in regulated corporate use),
-set `BUDDY_PROVIDER=anthropic` and Buddy will use the Claude CLI, keeping
-the data with the same vendor as the main agent.
+**Local persistence:** Buddy reactions are stored in
+`~/.claude/buddy/<session_id>.log` as plain-text JSONL. Errors land in
+`~/.claude/buddy-error.log`. Anyone with read access to your home directory
+can see them.
 
 If even same-vendor egress is unacceptable, do not enable Buddy.
 
