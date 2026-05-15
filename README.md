@@ -16,8 +16,9 @@ Code's chat frame to put bubbles back. What this project does instead:
 
 - Runs as a Stop hook after every Claude Code session turn (background mode —
   zero perceived latency)
-- Reads the most recent transcript snippet (~5000 chars), appends the
-  session's last 3 Buddy reactions (so the model avoids repeating itself),
+- Reads the most recent transcript snippet (last 12 messages, each capped
+  at 300 chars, plus a trailing 1000-char tail of any tool output), appends
+  the session's last 3 Buddy reactions (so the model avoids repeating itself),
   sends the bundle to a model in a **different vendor family from the main
   agent** (default: GPT-5.5 via Codex CLI), sanitizes the response (strip
   markdown, cap length, remove wrapper-collision markers), and writes it to
@@ -103,7 +104,6 @@ just won't see the sprite.
 |---|---|---|
 | `BUDDY_PROVIDER` | `openai` | Which vendor voices Buddy. `openai` (uses `codex exec`) or `anthropic` (uses `claude -p`) |
 | `BUDDY_MODEL` | `gpt-5.5` (openai) / `sonnet` (anthropic) | Specific model name passed to the chosen CLI |
-| `BUDDY_MAX_TRANSCRIPT` | `5000` | Char budget for the transcript snippet sent to Buddy |
 | `BUDDY_TIMEOUT` | `60` | Seconds before giving up on the model call |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |
 
@@ -164,18 +164,20 @@ language-neutral — no changes needed there.
 
 **Buddy sends your conversation data to an external model provider.**
 
-Every time Claude Code's Stop hook fires, Buddy reads the most recent ~5000
-characters of your session transcript — **including the tail of each tool
-result (file contents returned by Read, command output, stderr, error
-messages, diffs)** — and sends them to the configured provider (default:
-OpenAI via Codex CLI; alternative: Anthropic via Claude CLI). This means:
+Every time Claude Code's Stop hook fires, Buddy reads the last 12
+user/assistant messages from your session transcript (each capped at 300
+chars) — **plus a single trailing block containing the tail (~1000 chars)
+of all tool_result content concatenated together: file contents returned
+by Read, command output, stderr, error messages, diffs** — and sends them
+to the configured provider (default: OpenAI via Codex CLI; alternative:
+Anthropic via Claude CLI). This means:
 
 - Code snippets, file paths, error messages, command output, and anything
   else in your recent conversation will leave your machine and reach the
   provider's API.
-- Tool results are tail-truncated to ~800 chars each before sending, so
-  large file reads or long command output are not sent in full — but the
-  end of each result (where errors and exit codes typically land) is.
+- All tool output in the 12-message window is concatenated and tail-truncated
+  to ~1000 chars total, so large file reads or long command output are not
+  sent in full — but the end (where errors and exit codes typically land) is.
 - If you switch providers (`BUDDY_PROVIDER`), the data goes to that vendor
   instead.
 - Buddy reactions are stored locally in `~/.claude/buddy/` as plain-text

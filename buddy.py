@@ -32,8 +32,14 @@ PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
 #   openai/codex: gpt-5.5 (default), other model names codex CLI accepts
 _DEFAULT_MODELS = {"anthropic": "sonnet", "openai": "gpt-5.5", "codex": "gpt-5.5"}
 MODEL = os.environ.get("BUDDY_MODEL", _DEFAULT_MODELS.get(PROVIDER, "sonnet"))
-MAX_TRANSCRIPT_CHARS = int(os.environ.get("BUDDY_MAX_TRANSCRIPT", "5000"))
 TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
+
+# Cinder-style transcript shaping: last 12 user/assistant entries, each
+# head-truncated to 300 chars, with all tool_result content collected into
+# one trailing block tail-truncated to 1000 chars.
+MAX_MESSAGES = 12
+PER_MESSAGE_CHARS = 300
+TOOL_OUTPUT_TAIL_CHARS = 1000
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
@@ -79,61 +85,72 @@ def read_hook_input() -> dict:
         return {}
 
 
-def format_transcript_entry(obj: dict) -> str:
-    """Render one transcript JSONL entry into a prompt-friendly block."""
+def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
+    """Pull (prefix, text, tool_results) from one transcript JSONL entry.
+
+    - prefix: "user" or "claude"
+    - text: concatenated text-block content (no truncation here — the
+      per-message head-cap is applied by read_recent_transcript)
+    - tool_results: raw tool_result content strings, in encounter order
+    Returns None for non-user/assistant entries. tool_use blocks are dropped.
+    """
     typ = obj.get("type")
     if typ not in ("user", "assistant"):
-        return ""
+        return None
 
+    prefix = "user" if typ == "user" else "claude"
     msg = obj.get("message", {}) or {}
-    role = msg.get("role", typ)
     content = msg.get("content", "")
 
+    text_parts: list[str] = []
+    tool_results: list[str] = []
+
     if isinstance(content, list):
-        parts = []
         for block in content:
             if not isinstance(block, dict):
                 continue
             btype = block.get("type")
             if btype == "text":
-                parts.append(block.get("text", ""))
-            elif btype == "tool_use":
-                name = block.get("name", "?")
-                parts.append(f"[tool_use: {name}]")
+                text_parts.append(block.get("text", ""))
             elif btype == "tool_result":
                 raw = block.get("content", "")
                 if isinstance(raw, list):
-                    text_parts = []
+                    inner = []
                     for item in raw:
                         if isinstance(item, dict) and item.get("type") == "text":
-                            text_parts.append(item.get("text", ""))
-                    result_text = "\n".join(text_parts)
+                            inner.append(item.get("text", ""))
+                    tool_results.append("\n".join(inner))
                 else:
-                    result_text = str(raw)
-                label = "[tool_result error]" if block.get("is_error") else "[tool_result]"
-                # Tail-bias: tracebacks, exit codes, stderr, test summaries
-                # all tend to land at the end of tool output.
-                if len(result_text) > 800:
-                    result_text = "...[truncated]\n" + result_text[-800:]
-                parts.append(f"{label}\n{result_text}" if result_text else label)
-        text = "\n".join(p for p in parts if p)
+                    tool_results.append(str(raw))
+            # tool_use blocks are dropped entirely (Cinder-style)
     else:
-        text = str(content)
+        text_parts.append(str(content))
 
-    if len(text) > 1500:
-        text = text[:1500] + "\n...[truncated]"
-
-    return f"[{role}]\n{text}"
+    text = "\n".join(p for p in text_parts if p).strip()
+    return prefix, text, tool_results
 
 
-def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
+def read_recent_transcript(transcript_path: str) -> str:
+    """Build the Cinder-style transcript snippet for Buddy's prompt.
+
+    Output shape:
+        user: <text up to PER_MESSAGE_CHARS>
+        claude: <text up to PER_MESSAGE_CHARS>
+        ...
+        [tool output]
+        <last TOOL_OUTPUT_TAIL_CHARS chars of all tool_result content concatenated>
+
+    Only the last MAX_MESSAGES user/assistant entries are kept. The
+    [tool output] block appears only if those entries contained any
+    tool_result data.
+    """
     if not transcript_path or not os.path.exists(transcript_path):
         return ""
     try:
         # Read only the tail of the JSONL file. Long sessions can produce
         # many-MB transcripts; we only need the last few turns. 64 KB tail
-        # comfortably exceeds MAX_TRANSCRIPT_CHARS even after the per-block
-        # 1500-char cap in format_transcript_entry.
+        # comfortably covers MAX_MESSAGES at PER_MESSAGE_CHARS plus the
+        # tool-output tail.
         TAIL_BYTES = 65536
         size = os.path.getsize(transcript_path)
         with open(transcript_path, "rb") as f:
@@ -148,9 +165,8 @@ def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
         log_error(f"transcript read failed: {e}")
         return ""
 
-    blocks = []
-    total = 0
-    for line in reversed(lines):
+    entries: list[tuple[str, str, list[str]]] = []
+    for line in lines:
         line = line.strip()
         if not line:
             continue
@@ -158,15 +174,29 @@ def read_recent_transcript(transcript_path: str, max_chars: int) -> str:
             obj = json.loads(line)
         except Exception:
             continue
-        block = format_transcript_entry(obj)
-        if not block:
+        parsed = parse_transcript_entry(obj)
+        if parsed is None:
             continue
-        if total + len(block) > max_chars:
-            break
-        blocks.append(block)
-        total += len(block)
+        entries.append(parsed)
 
-    return "\n\n".join(reversed(blocks))
+    entries = entries[-MAX_MESSAGES:]
+
+    out_lines: list[str] = []
+    tool_buffer: list[str] = []
+    for prefix, text, tool_results in entries:
+        snippet = text[:PER_MESSAGE_CHARS]
+        # Skip empty message lines (typically tool_result-only entries that
+        # the Claude API frames as user messages). Their tool_result content
+        # still flows into the [tool output] block below.
+        if snippet:
+            out_lines.append(f"{prefix}: {snippet}")
+        tool_buffer.extend(tool_results)
+
+    if tool_buffer:
+        joined = "\n".join(tool_buffer)
+        out_lines.append(f"[tool output]\n{joined[-TOOL_OUTPUT_TAIL_CHARS:]}")
+
+    return "\n".join(out_lines)
 
 
 
@@ -427,7 +457,7 @@ def main() -> None:
     transcript_path = hook.get("transcript_path", "")
     session_id = hook.get("session_id", "unknown")
 
-    transcript_text = read_recent_transcript(transcript_path, MAX_TRANSCRIPT_CHARS)
+    transcript_text = read_recent_transcript(transcript_path)
     if not transcript_text:
         log_error("empty transcript, skipping")
         return

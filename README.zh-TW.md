@@ -16,9 +16,10 @@ dispatched 的 actor model。我們無法把泡泡塞回 Claude Code 的聊天�
 
 - 作為 Stop hook 在每一輪 Claude Code 對話後觸發（背景模式 ——
   使用者感受不到延遲）
-- 讀取最近的 transcript 片段（約 5000 字元），附上本 session 最近 3 筆
-  Buddy 反應（讓模型避免重複自己），把整包送到一個 **與主 agent 不同
-  廠商家族** 的模型（預設：透過 Codex CLI 呼叫 GPT-5.5），對回應做
+- 讀取最近的 transcript 片段（最近 12 則訊息，每則 ≤ 300 字元，加上工具
+  輸出末段 ≤ 1000 字元），附上本 session 最近 3 筆 Buddy 反應（讓模型避免
+  重複自己），把整包送到一個 **與主 agent 不同廠商家族** 的模型（預設：
+  透過 Codex CLI 呼叫 GPT-5.5），對回應做
   sanitize（去 markdown、限制長度、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的 Buddy 反應
@@ -95,7 +96,6 @@ export BUDDY_SPRITE_PATH=/path/to/your/spritesheet.png
 |---|---|---|
 | `BUDDY_PROVIDER` | `openai` | 由哪一家廠商發聲。`openai`（用 `codex exec`）或 `anthropic`（用 `claude -p`） |
 | `BUDDY_MODEL` | `gpt-5.5`（openai）/ `sonnet`（anthropic） | 傳給選定 CLI 的具體模型名 |
-| `BUDDY_MAX_TRANSCRIPT` | `5000` | 送給 Buddy 的 transcript 片段字元上限 |
 | `BUDDY_TIMEOUT` | `60` | 模型呼叫的逾時秒數 |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態檔放在哪 |
 
@@ -152,16 +152,15 @@ Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
 **Buddy 會把你的對話資料送到外部模型廠商。**
 
 每次 Claude Code 的 Stop hook 觸發時，Buddy 會讀取 session transcript
-最近約 5000 字元 —— **包含每個 tool_result 的尾段（Read 讀到的檔案
-內容、指令輸出、stderr、錯誤訊息、diff）** —— 並送到設定的廠商
-（預設：透過 Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。
-這代表：
+最近 12 則 user/assistant 訊息（每則開頭 ≤ 300 字元）—— **加上這 12
+則裡所有 tool_result（Read 讀到的檔案內容、指令輸出、stderr、錯誤訊息、
+diff）串成一塊、保留末段 1000 字元** —— 並送到設定的廠商（預設：
+透過 Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。這代表：
 
 - 程式碼片段、檔案路徑、錯誤訊息、指令輸出，以及最近對話中的任何
   內容，都會離開你的機器、抵達廠商的 API。
-- Tool result 在送出前會尾端截到約 800 字，所以大檔案 Read 或長指令
-  輸出不會全送 —— 但每個 result 的結尾（錯誤、exit code 通常在這）
-  會送。
+- 工具輸出會整體尾端截到約 1000 字，所以大檔案 Read 或長指令輸出
+  不會全送 —— 但結尾（錯誤、exit code 通常在這）會送。
 - 如果你切換廠商（`BUDDY_PROVIDER`），資料就改送到那家廠商。
 - Buddy 反應以純文字 JSONL 形式存在本機 `~/.claude/buddy/`。任何能讀取
   你 home 目錄的人都看得到。

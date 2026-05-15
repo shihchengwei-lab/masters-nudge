@@ -51,111 +51,187 @@ class TestTranscriptParser(unittest.TestCase):
         import buddy
         self.buddy = buddy
 
-    def test_format_user_entry(self):
-        result = self.buddy.format_transcript_entry(FIXTURE_LINES[0])
-        self.assertEqual(result, "[user]\n幫我修 bug")
+    # ── parse_transcript_entry ────────────────────────────────────────
 
-    def test_format_assistant_with_blocks(self):
-        result = self.buddy.format_transcript_entry(FIXTURE_LINES[1])
-        self.assertIn("[tool_use: Read]", result)
-        self.assertIn("我來看看程式碼", result)
+    def test_parse_user_string_content(self):
+        result = self.buddy.parse_transcript_entry(FIXTURE_LINES[0])
+        self.assertEqual(result, ("user", "幫我修 bug", []))
 
-    def test_format_system_ignored(self):
-        result = self.buddy.format_transcript_entry(FIXTURE_LINES[2])
-        self.assertEqual(result, "")
+    def test_parse_assistant_drops_tool_use(self):
+        # tool_use blocks are now silently dropped (not turned into [tool_use: X])
+        result = self.buddy.parse_transcript_entry(FIXTURE_LINES[1])
+        self.assertEqual(result, ("claude", "我來看看程式碼", []))
 
-    def test_format_truncates_long_content(self):
-        long_entry = {
-            "type": "user",
-            "message": {"role": "user", "content": "x" * 2000},
-        }
-        result = self.buddy.format_transcript_entry(long_entry)
-        self.assertIn("...[truncated]", result)
-        # The text portion should be capped at 1500 + truncation marker
-        text_part = result.split("\n", 1)[1]
-        self.assertLessEqual(len(text_part), 1520)
+    def test_parse_assistant_string_content(self):
+        result = self.buddy.parse_transcript_entry(FIXTURE_LINES[3])
+        self.assertEqual(result, ("claude", "修好了", []))
 
-    # ── tool_result branch (added when format_transcript_entry started
-    #    surfacing tool output instead of emitting just "[tool_result]") ──
+    def test_parse_system_returns_none(self):
+        result = self.buddy.parse_transcript_entry(FIXTURE_LINES[2])
+        self.assertIsNone(result)
 
-    def _tool_result_entry(self, content, is_error=False):
+    # tool_result content is now extracted into the third tuple element,
+    # not merged into the text portion.
+
+    def _tool_result_entry(self, content):
         block = {"type": "tool_result", "content": content}
-        if is_error:
-            block["is_error"] = True
         return {
             "type": "user",
             "message": {"role": "user", "content": [block]},
         }
 
-    def test_format_tool_result_string_content(self):
-        result = self.buddy.format_transcript_entry(
+    def test_parse_tool_result_string_content(self):
+        prefix, text, tool_results = self.buddy.parse_transcript_entry(
             self._tool_result_entry("OK done")
         )
-        self.assertIn("[tool_result]", result)
-        self.assertIn("OK done", result)
-        self.assertNotIn("error", result)
+        self.assertEqual(prefix, "user")
+        self.assertEqual(text, "")
+        self.assertEqual(tool_results, ["OK done"])
 
-    def test_format_tool_result_list_of_text_blocks(self):
-        result = self.buddy.format_transcript_entry(
+    def test_parse_tool_result_list_of_text_blocks(self):
+        _, text, tool_results = self.buddy.parse_transcript_entry(
             self._tool_result_entry([
                 {"type": "text", "text": "line one"},
                 {"type": "text", "text": "line two"},
             ])
         )
-        self.assertIn("line one", result)
-        self.assertIn("line two", result)
+        self.assertEqual(text, "")
+        self.assertEqual(tool_results, ["line one\nline two"])
 
-    def test_format_tool_result_is_error_label(self):
-        result = self.buddy.format_transcript_entry(
-            self._tool_result_entry("boom", is_error=True)
-        )
-        self.assertIn("[tool_result error]", result)
-        self.assertIn("boom", result)
+    def test_parse_text_and_tool_result_in_same_entry(self):
+        entry = {
+            "type": "user",
+            "message": {"role": "user", "content": [
+                {"type": "text", "text": "see below"},
+                {"type": "tool_result", "content": "RESULT"},
+            ]},
+        }
+        prefix, text, tool_results = self.buddy.parse_transcript_entry(entry)
+        self.assertEqual(prefix, "user")
+        self.assertEqual(text, "see below")
+        self.assertEqual(tool_results, ["RESULT"])
 
-    def test_format_tool_result_tail_truncation_keeps_end(self):
-        head_marker = "HEAD_OF_OUTPUT"
-        tail_marker = "TAIL_OF_OUTPUT"
-        # head + 1000 chars of filler + tail = 1028 chars; tail-cap is 800
-        long_content = head_marker + ("x" * 1000) + tail_marker
-        result = self.buddy.format_transcript_entry(
-            self._tool_result_entry(long_content)
-        )
-        self.assertIn("...[truncated]", result)
-        self.assertIn(tail_marker, result)
-        self.assertNotIn(head_marker, result)
+    # ── read_recent_transcript ────────────────────────────────────────
 
-    def test_read_recent_transcript_from_fixture(self):
+    def _write_jsonl(self, entries):
         fd = tempfile.NamedTemporaryFile(
             mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
         )
-        for line in FIXTURE_LINES:
-            fd.write(json.dumps(line, ensure_ascii=False) + "\n")
+        for e in entries:
+            fd.write(json.dumps(e, ensure_ascii=False) + "\n")
         fd.close()
+        return fd.name
+
+    def test_read_recent_transcript_uses_cinder_format(self):
+        path = self._write_jsonl(FIXTURE_LINES)
         try:
-            result = self.buddy.read_recent_transcript(fd.name, 5000)
-            self.assertIn("幫我修 bug", result)
-            self.assertIn("修好了", result)
-            # system entry should be absent
+            result = self.buddy.read_recent_transcript(path)
+            # New format: "user: ..." / "claude: ..." prefix, single newline join
+            self.assertIn("user: 幫我修 bug", result)
+            self.assertIn("claude: 我來看看程式碼", result)
+            self.assertIn("claude: 修好了", result)
+            # system entry should still be absent
             self.assertNotIn("ignored", result)
+            # tool_use placeholder must be gone
+            self.assertNotIn("tool_use", result)
+            # No tool_result in fixture, so no tool output block
+            self.assertNotIn("[tool output]", result)
         finally:
-            os.unlink(fd.name)
+            os.unlink(path)
 
-    def test_read_recent_transcript_respects_char_budget(self):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        for i in range(50):
-            line = {"type": "user", "message": {"role": "user", "content": f"msg {i} " + "a" * 100}}
-            fd.write(json.dumps(line, ensure_ascii=False) + "\n")
-        fd.close()
+    def test_read_recent_transcript_caps_at_12_messages(self):
+        entries = [
+            {"type": "user", "message": {"role": "user", "content": f"msg-{i:02d}"}}
+            for i in range(20)
+        ]
+        path = self._write_jsonl(entries)
         try:
-            result = self.buddy.read_recent_transcript(fd.name, 500)
-            self.assertLessEqual(len(result), 600)  # some overhead from joining
+            result = self.buddy.read_recent_transcript(path)
+            # Last 12: msg-08 through msg-19
+            self.assertNotIn("msg-07", result)
+            self.assertIn("msg-08", result)
+            self.assertIn("msg-19", result)
+            # Exactly 12 lines (no tool output present)
+            self.assertEqual(len(result.splitlines()), 12)
         finally:
-            os.unlink(fd.name)
+            os.unlink(path)
+
+    def test_read_recent_transcript_per_message_head_cap_300(self):
+        long_text = "A" * 500
+        entries = [{"type": "user", "message": {"role": "user", "content": long_text}}]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            # Keeps the FIRST 300 (head-bias), drops the rest
+            self.assertEqual(result, "user: " + ("A" * 300))
+        finally:
+            os.unlink(path)
+
+    def test_read_recent_transcript_tool_output_concatenated(self):
+        # Two separate tool_results inside the 12-message window.
+        entries = [
+            {"type": "user", "message": {"role": "user", "content": [
+                {"type": "tool_result", "content": "AAA"},
+            ]}},
+            {"type": "user", "message": {"role": "user", "content": [
+                {"type": "tool_result", "content": "BBB"},
+            ]}},
+        ]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            self.assertIn("[tool output]", result)
+            self.assertIn("AAA", result)
+            self.assertIn("BBB", result)
+            # Tool output block goes last
+            self.assertTrue(result.rstrip().endswith("BBB"))
+        finally:
+            os.unlink(path)
+
+    def test_read_recent_transcript_tool_output_tail_1000(self):
+        head = "HEAD_MARKER"
+        tail = "TAIL_MARKER"
+        long = head + ("x" * 1500) + tail   # 1521 chars total
+        entries = [{"type": "user", "message": {"role": "user", "content": [
+            {"type": "tool_result", "content": long},
+        ]}}]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            # Tail-truncation keeps the end, drops the head
+            self.assertIn(tail, result)
+            self.assertNotIn(head, result)
+            # The tool output payload itself is at most 1000 chars
+            payload = result.split("[tool output]\n", 1)[1]
+            self.assertLessEqual(len(payload), 1000)
+        finally:
+            os.unlink(path)
+
+    def test_read_recent_transcript_skips_empty_message_lines(self):
+        # A tool_result-only entry has empty text after parsing. Its
+        # `prefix:` line should be suppressed (no naked "user: " in output),
+        # but the tool_result content still flows into the tool output block.
+        entries = [
+            {"type": "user", "message": {"role": "user", "content": "real text"}},
+            {"type": "user", "message": {"role": "user", "content": [
+                {"type": "tool_result", "content": "TOOL_DATA"},
+            ]}},
+        ]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            self.assertIn("user: real text", result)
+            # No naked "user: " line for the tool_result-only entry
+            self.assertNotIn("user: \n", result)
+            self.assertFalse(result.startswith("user: \n") or "\nuser: \n" in result)
+            # tool_result content still surfaces
+            self.assertIn("[tool output]", result)
+            self.assertIn("TOOL_DATA", result)
+        finally:
+            os.unlink(path)
 
     def test_read_recent_transcript_missing_file(self):
-        result = self.buddy.read_recent_transcript("/nonexistent/path.jsonl", 5000)
+        result = self.buddy.read_recent_transcript("/nonexistent/path.jsonl")
         self.assertEqual(result, "")
 
 
@@ -265,8 +341,6 @@ class TestCallCodex(unittest.TestCase):
         mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
         # call_codex writes to a temp file then reads it — we need to
         # intercept the output file path and write to it during the mock
-        original_run = mock_run.side_effect
-
         def fake_run(cmd, **kwargs):
             # Find the -o flag and write reaction to that file
             cmd_list = cmd if isinstance(cmd, list) else cmd.split()
