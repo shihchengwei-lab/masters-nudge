@@ -438,5 +438,103 @@ class TestInjectState(unittest.TestCase):
 
 
 
+# ── 6. agentcam report integration ───────────────────────────────────
+
+class TestAgentcamReport(unittest.TestCase):
+    """buddy.read_latest_agentcam_report walks up to git root and finds
+    the newest AGENT_RUN_REPORT.md under .git/agentcam/runs/.
+    Dedup state functions round-trip the last seen mtime per session."""
+
+    def setUp(self):
+        if "buddy" not in sys.modules:
+            import buddy  # noqa: F401
+        self.buddy = sys.modules["buddy"]
+        self.tmpdir = tempfile.mkdtemp()
+        # patch BUDDY_DIR so state writes don't touch the real ~/.claude
+        self._orig_buddy_dir = self.buddy.BUDDY_DIR
+        self.buddy.BUDDY_DIR = Path(self.tmpdir) / "_state"
+
+    def tearDown(self):
+        self.buddy.BUDDY_DIR = self._orig_buddy_dir
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _make_fake_repo(self) -> Path:
+        repo = Path(self.tmpdir) / "fakerepo"
+        (repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude").mkdir(parents=True)
+        return repo
+
+    def test_returns_none_when_not_in_repo(self):
+        # tmpdir itself is not a git repo
+        result = self.buddy.read_latest_agentcam_report(self.tmpdir)
+        self.assertIsNone(result)
+
+    def test_returns_none_when_repo_has_no_runs(self):
+        repo = Path(self.tmpdir) / "emptyrepo"
+        (repo / ".git").mkdir(parents=True)
+        result = self.buddy.read_latest_agentcam_report(str(repo))
+        self.assertIsNone(result)
+
+    def test_finds_latest_report(self):
+        repo = self._make_fake_repo()
+        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
+        report_path.write_text("# Agent Run Report\n\n## Risk Flags\n| HIGH | ... |\n", encoding="utf-8")
+        result = self.buddy.read_latest_agentcam_report(str(repo))
+        self.assertIsNotNone(result)
+        self.assertIn("Risk Flags", result["content"])
+        self.assertEqual(result["path"], str(report_path))
+        self.assertGreater(result["mtime"], 0)
+
+    def test_finds_report_from_subdirectory(self):
+        """cwd inside a subdir of the repo still finds .git/agentcam/runs at root."""
+        repo = self._make_fake_repo()
+        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
+        report_path.write_text("report", encoding="utf-8")
+        subdir = repo / "src" / "auth"
+        subdir.mkdir(parents=True)
+        result = self.buddy.read_latest_agentcam_report(str(subdir))
+        self.assertIsNotNone(result)
+        self.assertEqual(result["path"], str(report_path))
+
+    def test_picks_newest_by_mtime(self):
+        repo = self._make_fake_repo()
+        runs = repo / ".git" / "agentcam" / "runs"
+        r1 = runs / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
+        r1.write_text("first", encoding="utf-8")
+        (runs / "20260516-100500-200-claude").mkdir()
+        r2 = runs / "20260516-100500-200-claude" / "AGENT_RUN_REPORT.md"
+        r2.write_text("second", encoding="utf-8")
+        # bump r2's mtime above r1's even on fast filesystems
+        os.utime(r2, (r2.stat().st_atime, r2.stat().st_mtime + 10))
+        result = self.buddy.read_latest_agentcam_report(str(repo))
+        self.assertEqual(result["path"], str(r2))
+        self.assertEqual(result["content"], "second")
+
+    def test_content_is_tail_truncated(self):
+        repo = self._make_fake_repo()
+        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
+        # Make a report longer than AGENTCAM_REPORT_TAIL_CHARS
+        big = "X" * (self.buddy.AGENTCAM_REPORT_TAIL_CHARS + 500) + "TAIL_MARKER"
+        report_path.write_text(big, encoding="utf-8")
+        result = self.buddy.read_latest_agentcam_report(str(repo))
+        self.assertEqual(len(result["content"]), self.buddy.AGENTCAM_REPORT_TAIL_CHARS)
+        # Tail should be preserved (truncation is from the front)
+        self.assertTrue(result["content"].endswith("TAIL_MARKER"))
+
+    def test_state_roundtrip(self):
+        sid = "test-session-xyz"
+        self.assertEqual(self.buddy.load_agentcam_last_mtime(sid), 0.0)
+        self.buddy.save_agentcam_last_mtime(sid, 1234567.89)
+        self.assertAlmostEqual(self.buddy.load_agentcam_last_mtime(sid), 1234567.89, places=2)
+
+    def test_state_handles_corrupt_file(self):
+        sid = "test-corrupt"
+        self.buddy.BUDDY_DIR.mkdir(parents=True, exist_ok=True)
+        state_path = self.buddy.BUDDY_DIR / f"{sid}.agentcam.state.json"
+        state_path.write_text("not json", encoding="utf-8")
+        # Should return 0.0 silently, not raise
+        self.assertEqual(self.buddy.load_agentcam_last_mtime(sid), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
