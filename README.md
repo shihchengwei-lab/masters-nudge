@@ -17,7 +17,9 @@ Code's chat frame to put bubbles back. What this project does instead:
 - Runs as a Stop hook after every Claude Code session turn (background mode —
   zero perceived latency)
 - Reads the most recent transcript snippet (last 12 messages, each capped
-  at 300 chars, plus a trailing 1000-char tail of any tool output), appends
+  to the trailing 300 chars with a "…" prefix when clipped, plus a trailing
+  1000-char tail of any tool output, each in its own `[transcript]` /
+  `[tool output]` block so the boundary is explicit), appends
   the session's last 3 Buddy reactions (so the model avoids repeating itself),
   sends the bundle to a model in a **different vendor family from the main
   agent** (default: GPT-5.5 via Codex CLI), sanitizes the response (strip
@@ -114,6 +116,35 @@ Buddy on a different vendor (OpenAI's GPT-5.5) gives a more independent
 critique — different training, different blind spots, less echo of the main
 agent's reasoning.
 
+## Optional: agentcam integration
+
+Buddy can optionally pick up reports from
+[agentcam](https://github.com/shihchengwei-lab/agentcam) — a separate tool
+that records what an AI agent actually did in a run (git changes, files
+touched, exit codes, risk flags). If agentcam is installed and you use it
+to record agent runs, Buddy will automatically include the latest
+`AGENT_RUN_REPORT.md` in its payload as additional evidence for the
+second-opinion model to cite.
+
+**You do not need to install agentcam to use Buddy.** This integration
+is purely additive:
+
+- **Without agentcam**: Buddy works exactly as described above — reads
+  transcript + tool output, sends to the reviewer model. No errors, no
+  warnings, no setup required.
+- **With agentcam**: each fresh `AGENT_RUN_REPORT.md` under
+  `<repo>/.git/agentcam/runs/*/` is appended to Buddy's payload (tail-
+  truncated to ~2000 chars), giving the reviewer git-porcelain-based
+  evidence about what the run actually touched.
+
+Detection is automatic: Buddy walks up from the current working directory
+to find `.git`, looks for `.git/agentcam/runs/*/AGENT_RUN_REPORT.md`, and
+silently skips if the directory or any report file is missing. Per-session
+dedup ensures the same report is never sent twice.
+
+See the [agentcam repo](https://github.com/shihchengwei-lab/agentcam) for
+installation and usage.
+
 ## Localization (other languages)
 
 Buddy ships in Traditional Chinese. To run it in another language, three
@@ -168,9 +199,14 @@ configured provider (default: OpenAI via Codex CLI; alternative: Anthropic
 via Claude CLI). The payload contains:
 
 1. **The last 12 user/assistant messages** from your session transcript,
-   head-truncated to 300 chars each.
-2. **A trailing `[tool output]` block**: every `tool_result` from those 12
-   messages concatenated together, tail-truncated to ~1000 chars total.
+   wrapped in a `[transcript] … [end transcript]` block. Each message is
+   tail-truncated to 300 chars (the latest 300 chars of a long message
+   survive, the head is dropped), prefixed with "…" when clipped so the
+   reviewer can see truncation happened.
+2. **A trailing `[tool output] … [end tool output]` block**: every
+   `tool_result` from those 12 messages concatenated together, tail-truncated
+   to ~1000 chars total. This block is explicitly separated from the
+   transcript so the reviewer doesn't confuse tool output with conversation.
    This includes file contents returned by Read, command output, stderr,
    error messages, and diffs.
 3. **Up to 3 of Buddy's previous reactions** in this session (each ≤200

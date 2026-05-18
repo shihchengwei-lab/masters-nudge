@@ -16,8 +16,10 @@ dispatched 的 actor model。我們無法把泡泡塞回 Claude Code 的聊天�
 
 - 作為 Stop hook 在每一輪 Claude Code 對話後觸發（背景模式 ——
   使用者感受不到延遲）
-- 讀取最近的 transcript 片段（最近 12 則訊息，每則 ≤ 300 字元，加上工具
-  輸出末段 ≤ 1000 字元），附上本 session 最近 3 筆 Buddy 反應（讓模型避免
+- 讀取最近的 transcript 片段（最近 12 則訊息，每則只保留**末尾** 300 字，
+  被截過時開頭加上「…」標記；加上工具輸出末段 ≤ 1000 字元；對話跟工具輸出
+  分別包在 `[transcript]` / `[tool output]` 區塊裡，讓 reviewer 能分清楚），
+  附上本 session 最近 3 筆 Buddy 反應（讓模型避免
   重複自己），把整包送到一個 **與主 agent 不同廠商家族** 的模型（預設：
   透過 Codex CLI 呼叫 GPT-5.5），對回應做
   sanitize（去 markdown、限制長度、移除會撞到包裝標記的字串），寫入
@@ -105,6 +107,29 @@ export BUDDY_SPRITE_PATH=/path/to/your/spritesheet.png
 不同廠商（OpenAI 的 GPT-5.5）能得到更獨立的批評 —— 不同訓練、不同盲點、
 較少回音主 agent 的推理。
 
+## 選用：agentcam 整合
+
+Buddy 可以選擇性接收
+[agentcam](https://github.com/shihchengwei-lab/agentcam) 產生的報告 ——
+agentcam 是另一個獨立工具，會記錄 AI agent 一次 run 實際做了什麼（git
+變更、動到的檔案、exit code、風險旗標）。如果你裝了 agentcam 並用它
+記錄 agent run，Buddy 會自動把最新的 `AGENT_RUN_REPORT.md` 一起送進
+payload，讓第二意見模型可以引用作為證據。
+
+**你不需要裝 agentcam 才能用 Buddy。** 這個整合是純加值：
+
+- **沒裝 agentcam**：Buddy 照上面描述運作 —— 讀 transcript + tool
+  output，送到 reviewer 模型。不會錯誤、不會警告、無需任何設定。
+- **裝了 agentcam**：每次在 `<repo>/.git/agentcam/runs/*/` 下產生新的
+  `AGENT_RUN_REPORT.md`，Buddy 會把它（尾截到約 2000 字）併入 payload，
+  讓 reviewer 拿到基於 git porcelain 的客觀證據看 run 動了什麼。
+
+偵測完全自動：Buddy 從 cwd 往上找 `.git`，再找
+`.git/agentcam/runs/*/AGENT_RUN_REPORT.md`，目錄或檔案不存在就靜默跳過。
+Per-session 去重確保同一份 report 不會被送兩次。
+
+安裝與用法請看 [agentcam repo](https://github.com/shihchengwei-lab/agentcam)。
+
 ## 其他語系（在地化）
 
 Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
@@ -153,10 +178,14 @@ Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
 觸發時，Buddy 會組裝 payload 送到設定的廠商（預設：透過 Codex CLI 送
 OpenAI；備選：透過 Claude CLI 送 Anthropic）。每次送出的內容包含：
 
-1. **最近 12 則 user/assistant 訊息**（每則開頭頭截 300 字元）。
-2. **一個尾段 `[tool output]` 區塊**：上述 12 則內所有 `tool_result`
-   串接後尾截到約 1000 字元。內含 Read 讀到的檔案內容、指令輸出、
-   stderr、錯誤訊息、diff。
+1. **最近 12 則 user/assistant 訊息**，包在
+   `[transcript] … [end transcript]` 區塊內。每則訊息**尾截 300 字元**
+   （保留最新講的部分，前面的丟掉），被截過時開頭加「…」標記，讓
+   reviewer 知道有東西被砍掉。
+2. **一個尾段 `[tool output] … [end tool output]` 區塊**：上述 12 則內
+   所有 `tool_result` 串接後尾截到約 1000 字元。這個區塊跟 transcript
+   明確分開，避免 reviewer 把工具輸出當成對話。內含 Read 讀到的檔案
+   內容、指令輸出、stderr、錯誤訊息、diff。
 3. **本 session 最近 3 句 Buddy 自己的回應**（每句 ≤ 200 字元），預先
    黏在訊息前面，讓模型避免重複自己。這些回應原本就是某次廠商呼叫
    產生的，但會在同 session 後續每次呼叫被**重新送出**。

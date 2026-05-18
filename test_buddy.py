@@ -134,8 +134,13 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertNotIn("ignored", result)
             # tool_use placeholder must be gone
             self.assertNotIn("tool_use", result)
+            # Transcript section must be explicitly bounded so Buddy can tell
+            # the boundary between conversation and other payload pieces.
+            self.assertIn("[transcript", result)
+            self.assertIn("[end transcript]", result)
             # No tool_result in fixture, so no tool output block
-            self.assertNotIn("[tool output]", result)
+            self.assertNotIn("[tool output", result)
+            self.assertNotIn("[end tool output]", result)
         finally:
             os.unlink(path)
 
@@ -151,19 +156,53 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertNotIn("msg-07", result)
             self.assertIn("msg-08", result)
             self.assertIn("msg-19", result)
-            # Exactly 12 lines (no tool output present)
-            self.assertEqual(len(result.splitlines()), 12)
+            # Exactly 12 user lines (count "user: msg-" occurrences,
+            # framing headers/footers add additional lines but don't
+            # contain "user: msg-")
+            user_lines = [l for l in result.splitlines() if l.startswith("user: msg-")]
+            self.assertEqual(len(user_lines), 12)
         finally:
             os.unlink(path)
 
-    def test_read_recent_transcript_per_message_head_cap_300(self):
-        long_text = "A" * 500
+    def test_read_recent_transcript_per_message_tail_cap_300(self):
+        # Each message keeps the LAST 300 chars (tail-bias), prefixed with
+        # "…" so Buddy can see that the head was elided. Short messages
+        # pass through untouched.
+        long_text = "HEAD" + ("A" * 500) + "TAIL"
         entries = [{"type": "user", "message": {"role": "user", "content": long_text}}]
         path = self._write_jsonl(entries)
         try:
             result = self.buddy.read_recent_transcript(path)
-            # Keeps the FIRST 300 (head-bias), drops the rest
-            self.assertEqual(result, "user: " + ("A" * 300))
+            # The HEAD marker should be dropped (it's at the start of a
+            # 508-char message and we keep only the last 300).
+            self.assertNotIn("HEAD", result)
+            # The TAIL marker (at the very end) must survive.
+            self.assertIn("TAIL", result)
+            # A truncation marker must appear so Buddy knows this message
+            # was clipped (the leading "…" before the snippet).
+            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            self.assertEqual(len(user_lines), 1)
+            payload = user_lines[0][len("user: "):]
+            self.assertTrue(
+                payload.startswith("…"),
+                f"expected truncation marker '…' at start, got: {payload[:20]!r}",
+            )
+            # And the payload (snippet + marker) must respect the cap.
+            # 300 content chars + 1 marker char = 301
+            self.assertLessEqual(len(payload), 301)
+        finally:
+            os.unlink(path)
+
+    def test_read_recent_transcript_short_message_not_marked(self):
+        # Messages that fit inside the cap should NOT get a "…" marker on
+        # their own line. (The framing header may legitimately mention "…",
+        # so check only the user/claude line itself.)
+        entries = [{"type": "user", "message": {"role": "user", "content": "短訊息"}}]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            self.assertEqual(user_lines, ["user: 短訊息"])
         finally:
             os.unlink(path)
 
@@ -180,11 +219,15 @@ class TestTranscriptParser(unittest.TestCase):
         path = self._write_jsonl(entries)
         try:
             result = self.buddy.read_recent_transcript(path)
-            self.assertIn("[tool output]", result)
+            # Tool output section is explicitly bounded.
+            self.assertIn("[tool output", result)
+            self.assertIn("[end tool output]", result)
             self.assertIn("AAA", result)
             self.assertIn("BBB", result)
-            # Tool output block goes last
-            self.assertTrue(result.rstrip().endswith("BBB"))
+            # The closing [end tool output] tag goes last.
+            self.assertTrue(result.rstrip().endswith("[end tool output]"))
+            # AAA appears before BBB (encounter order preserved).
+            self.assertLess(result.index("AAA"), result.index("BBB"))
         finally:
             os.unlink(path)
 
@@ -201,8 +244,14 @@ class TestTranscriptParser(unittest.TestCase):
             # Tail-truncation keeps the end, drops the head
             self.assertIn(tail, result)
             self.assertNotIn(head, result)
-            # The tool output payload itself is at most 1000 chars
-            payload = result.split("[tool output]\n", 1)[1]
+            # The tool output payload (between the opening and closing tags)
+            # is at most 1000 chars.
+            lines = result.splitlines()
+            opening_idx = next(
+                i for i, l in enumerate(lines) if l.startswith("[tool output")
+            )
+            closing_idx = lines.index("[end tool output]")
+            payload = "\n".join(lines[opening_idx + 1:closing_idx])
             self.assertLessEqual(len(payload), 1000)
         finally:
             os.unlink(path)
@@ -224,8 +273,9 @@ class TestTranscriptParser(unittest.TestCase):
             # No naked "user: " line for the tool_result-only entry
             self.assertNotIn("user: \n", result)
             self.assertFalse(result.startswith("user: \n") or "\nuser: \n" in result)
-            # tool_result content still surfaces
-            self.assertIn("[tool output]", result)
+            # tool_result content still surfaces in the bounded tool output block
+            self.assertIn("[tool output", result)
+            self.assertIn("[end tool output]", result)
             self.assertIn("TOOL_DATA", result)
         finally:
             os.unlink(path)

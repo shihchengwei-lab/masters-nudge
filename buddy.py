@@ -133,16 +133,23 @@ def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
 def read_recent_transcript(transcript_path: str) -> str:
     """Build the Cinder-style transcript snippet for Buddy's prompt.
 
-    Output shape:
-        user: <text up to PER_MESSAGE_CHARS>
-        claude: <text up to PER_MESSAGE_CHARS>
-        ...
-        [tool output]
-        <last TOOL_OUTPUT_TAIL_CHARS chars of all tool_result content concatenated>
+    Output shape (sections are explicitly delimited so Buddy can tell where
+    the conversation ends and tool output begins):
 
-    Only the last MAX_MESSAGES user/assistant entries are kept. The
-    [tool output] block appears only if those entries contained any
-    tool_result data.
+        [transcript — user/claude 對話；長訊息只保留末 PER_MESSAGE_CHARS 字，以…開頭]
+        user: <text — kept tail PER_MESSAGE_CHARS chars, "…" prefix if clipped>
+        claude: <text — kept tail PER_MESSAGE_CHARS chars, "…" prefix if clipped>
+        ...
+        [end transcript]
+        [tool output — 工具回傳合併後尾部 TOOL_OUTPUT_TAIL_CHARS 字；非對話本身]
+        <last TOOL_OUTPUT_TAIL_CHARS chars of all tool_result content concatenated>
+        [end tool output]
+
+    Only the last MAX_MESSAGES user/assistant entries are kept. The tool
+    output block appears only if those entries contained any tool_result
+    data. The transcript block appears only if any of those entries had
+    user/claude text (a tool-result-only window suppresses the transcript
+    framing but keeps the tool output framing).
     """
     if not transcript_path or not os.path.exists(transcript_path):
         return ""
@@ -181,20 +188,41 @@ def read_recent_transcript(transcript_path: str) -> str:
 
     entries = entries[-MAX_MESSAGES:]
 
-    out_lines: list[str] = []
+    transcript_lines: list[str] = []
     tool_buffer: list[str] = []
     for prefix, text, tool_results in entries:
-        snippet = text[:PER_MESSAGE_CHARS]
+        # Tail-bias: keep the END of long messages (the latest stuff said),
+        # not the beginning. Mark clipped messages with a leading "…" so
+        # Buddy can see the head was elided rather than assuming the
+        # snippet is the whole utterance.
+        if len(text) > PER_MESSAGE_CHARS:
+            snippet = "…" + text[-PER_MESSAGE_CHARS:]
+        else:
+            snippet = text
         # Skip empty message lines (typically tool_result-only entries that
         # the Claude API frames as user messages). Their tool_result content
         # still flows into the [tool output] block below.
         if snippet:
-            out_lines.append(f"{prefix}: {snippet}")
+            transcript_lines.append(f"{prefix}: {snippet}")
         tool_buffer.extend(tool_results)
+
+    out_lines: list[str] = []
+    if transcript_lines:
+        out_lines.append(
+            "[transcript — user/claude 對話；長訊息只保留末 "
+            f"{PER_MESSAGE_CHARS} 字，以…開頭]"
+        )
+        out_lines.extend(transcript_lines)
+        out_lines.append("[end transcript]")
 
     if tool_buffer:
         joined = "\n".join(tool_buffer)
-        out_lines.append(f"[tool output]\n{joined[-TOOL_OUTPUT_TAIL_CHARS:]}")
+        out_lines.append(
+            "[tool output — 工具回傳合併後尾部 "
+            f"{TOOL_OUTPUT_TAIL_CHARS} 字；非對話本身]"
+        )
+        out_lines.append(joined[-TOOL_OUTPUT_TAIL_CHARS:])
+        out_lines.append("[end tool output]")
 
     return "\n".join(out_lines)
 
