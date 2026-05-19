@@ -16,15 +16,19 @@ Code's chat frame to put bubbles back. What this project does instead:
 
 - Runs as a Stop hook after every Claude Code session turn (background mode —
   zero perceived latency)
-- Reads the most recent transcript snippet (last 12 messages, each capped
-  to the trailing 300 chars with a "…" prefix when clipped, plus a trailing
-  1000-char tail of any tool output, each in its own `[transcript]` /
-  `[tool output]` block so the boundary is explicit), appends
-  the session's last 3 Buddy reactions (so the model avoids repeating itself),
-  sends the bundle to a model in a **different vendor family from the main
-  agent** (default: GPT-5.5 via Codex CLI), sanitizes the response (strip
-  markdown, cap length, remove wrapper-collision markers), and writes it to
-  `~/.claude/buddy/<session_id>.log`
+- Reads the most recent transcript snippet using a 4000-char budget
+  filled backwards from the newest user/assistant entry (each entry kept
+  whole up to a 1500-char per-message cap; the oldest included entry may
+  itself be tail-truncated if at least 200 chars of budget remain).
+  `tool_result` content from the selected entries flows into a separate
+  trailing block tail-truncated to 1000 chars. Both pieces are wrapped in
+  explicit `[transcript]` / `[tool output]` blocks so the reviewer can
+  tell where conversation ends and tool output begins. Appends the
+  session's last 3 Buddy reactions (so the model avoids repeating
+  itself), sends the bundle to a model in a **different vendor family
+  from the main agent** (default: GPT-5.5 via Codex CLI), sanitizes the
+  response (strip markdown, hard-cap at 25 chars, remove wrapper-collision
+  markers), and writes it to `~/.claude/buddy/<session_id>.log`
 - On your next prompt, the UserPromptSubmit hook injects the latest reaction
   into main Claude's context (system-reminder)
 - A floating Tk window (`buddy_window.py`) tails the active session's log
@@ -198,17 +202,21 @@ turn.** Each Stop-hook call assembles a payload and ships it to the
 configured provider (default: OpenAI via Codex CLI; alternative: Anthropic
 via Claude CLI). The payload contains:
 
-1. **The last 12 user/assistant messages** from your session transcript,
-   wrapped in a `[transcript] … [end transcript]` block. Each message is
-   tail-truncated to 300 chars (the latest 300 chars of a long message
-   survive, the head is dropped), prefixed with "…" when clipped so the
-   reviewer can see truncation happened.
+1. **Recent user/assistant messages** from your session transcript,
+   wrapped in a `[transcript] … [end transcript]` block. The window
+   walks backwards from the newest entry filling a 4000-char total
+   budget, keeping each entry whole up to a 1500-char per-message cap.
+   The oldest entry that doesn't fit whole may itself be tail-truncated
+   (with a "…" prefix) when at least 200 chars of budget remain. Long
+   single entries are tail-biased — the latest content survives, the
+   head is dropped, "…" prefix marks the clip.
 2. **A trailing `[tool output] … [end tool output]` block**: every
-   `tool_result` from those 12 messages concatenated together, tail-truncated
-   to ~1000 chars total. This block is explicitly separated from the
-   transcript so the reviewer doesn't confuse tool output with conversation.
-   This includes file contents returned by Read, command output, stderr,
-   error messages, and diffs.
+   `tool_result` from the entries selected by the transcript budget,
+   concatenated together and tail-truncated to ~1000 chars total. This
+   block is explicitly separated from the transcript so the reviewer
+   doesn't confuse tool output with conversation. This includes file
+   contents returned by Read, command output, stderr, error messages,
+   and diffs.
 3. **Up to 3 of Buddy's previous reactions** in this session (each ≤200
    chars), prepended so the model avoids repeating itself. These reactions
    originated from a previous provider call and are re-sent on every
@@ -225,6 +233,9 @@ This means:
 - Tool output is concatenated and tail-truncated to ~1000 chars total, so
   large file reads or long command output are not sent in full — but the
   end (where errors and exit codes typically land) is.
+- Buddy's own reaction is hard-capped to 25 chars before logging and
+  before injection, so what the main agent sees per turn is short by
+  design.
 - The default `BUDDY_PROVIDER=openai` means your Anthropic-Claude
   conversation transcript is forwarded to OpenAI. If that crosses a
   compliance line for you, set `BUDDY_PROVIDER=anthropic` to keep the data

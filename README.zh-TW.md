@@ -16,13 +16,16 @@ dispatched 的 actor model。我們無法把泡泡塞回 Claude Code 的聊天�
 
 - 作為 Stop hook 在每一輪 Claude Code 對話後觸發（背景模式 ——
   使用者感受不到延遲）
-- 讀取最近的 transcript 片段（最近 12 則訊息，每則只保留**末尾** 300 字，
-  被截過時開頭加上「…」標記；加上工具輸出末段 ≤ 1000 字元；對話跟工具輸出
-  分別包在 `[transcript]` / `[tool output]` 區塊裡，讓 reviewer 能分清楚），
-  附上本 session 最近 3 筆 Buddy 反應（讓模型避免
-  重複自己），把整包送到一個 **與主 agent 不同廠商家族** 的模型（預設：
-  透過 Codex CLI 呼叫 GPT-5.5），對回應做
-  sanitize（去 markdown、限制長度、移除會撞到包裝標記的字串），寫入
+- 讀取最近的 transcript 片段：從最新一則 user/assistant 開始往回填，
+  總字數預算 4000 字；每則訊息整則保留，但單則上限 1500 字（超過尾截
+  +「…」前綴）；最舊的一則若放不下整則，剩餘預算 ≥ 200 字時會裁進來
+  （尾截 +「…」），< 200 字就整則丟掉。`tool_result` 內容從被選中的
+  訊息範圍蒐集，串接後尾截到 1000 字、另外包成一個 `[tool output]`
+  區塊。對話跟工具輸出分別包在 `[transcript]` / `[tool output]` 區塊
+  裡，讓 reviewer 能分清楚。附上本 session 最近 3 筆 Buddy 反應（讓
+  模型避免重複自己），把整包送到一個 **與主 agent 不同廠商家族** 的
+  模型（預設：透過 Codex CLI 呼叫 GPT-5.5），對回應做 sanitize（去
+  markdown、硬上限 25 字、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的 Buddy 反應
   注入主 Claude 的 context（system-reminder）
@@ -178,14 +181,17 @@ Buddy 預設使用繁體中文。要切換到其他語言，需要改三處：
 觸發時，Buddy 會組裝 payload 送到設定的廠商（預設：透過 Codex CLI 送
 OpenAI；備選：透過 Claude CLI 送 Anthropic）。每次送出的內容包含：
 
-1. **最近 12 則 user/assistant 訊息**，包在
-   `[transcript] … [end transcript]` 區塊內。每則訊息**尾截 300 字元**
-   （保留最新講的部分，前面的丟掉），被截過時開頭加「…」標記，讓
-   reviewer 知道有東西被砍掉。
-2. **一個尾段 `[tool output] … [end tool output]` 區塊**：上述 12 則內
-   所有 `tool_result` 串接後尾截到約 1000 字元。這個區塊跟 transcript
-   明確分開，避免 reviewer 把工具輸出當成對話。內含 Read 讀到的檔案
-   內容、指令輸出、stderr、錯誤訊息、diff。
+1. **最近的 user/assistant 訊息**，包在
+   `[transcript] … [end transcript]` 區塊內。視窗從最新一則往回填，
+   總字數預算 4000 字；每則整則保留，單則上限 1500 字（超過尾截
+   +「…」前綴）；最舊的一則若放不下整則，剩餘預算 ≥ 200 字時會
+   裁進來（尾截 +「…」），< 200 字就整則丟掉。單則超過上限時保留
+   最新講的部分、前面的丟掉，開頭加「…」標記讓 reviewer 知道有東西
+   被砍掉。
+2. **一個尾段 `[tool output] … [end tool output]` 區塊**：上面被預算
+   選中的訊息範圍內，所有 `tool_result` 串接後尾截到約 1000 字元。
+   這個區塊跟 transcript 明確分開，避免 reviewer 把工具輸出當成對話。
+   內含 Read 讀到的檔案內容、指令輸出、stderr、錯誤訊息、diff。
 3. **本 session 最近 3 句 Buddy 自己的回應**（每句 ≤ 200 字元），預先
    黏在訊息前面，讓模型避免重複自己。這些回應原本就是某次廠商呼叫
    產生的，但會在同 session 後續每次呼叫被**重新送出**。
@@ -199,6 +205,8 @@ OpenAI；備選：透過 Claude CLI 送 Anthropic）。每次送出的內容包�
 - 長 session 會產生多次外送事件 —— 每輪一次。
 - 工具輸出會串接後整體尾截到約 1000 字，所以大檔案 Read 或長指令輸出
   不會全送 —— 但結尾（錯誤、exit code 通常在這）會送。
+- Buddy 自己的反應會在 log 寫入前 + 注入前硬截斷到 25 字，所以主 agent
+  每輪看到的內容刻意短。
 - 預設 `BUDDY_PROVIDER=openai` 代表你跟 Anthropic Claude 的對話
   transcript 會被轉送到 OpenAI。如果這對你是合規紅線，設
   `BUDDY_PROVIDER=anthropic` 讓資料留在跟主 agent 同一家廠商。

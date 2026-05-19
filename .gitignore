@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# Local-only handoff notes between Agent sessions; never committed.
+HANDOFF.md
