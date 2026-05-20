@@ -144,52 +144,94 @@ class TestTranscriptParser(unittest.TestCase):
         finally:
             os.unlink(path)
 
-    def test_read_recent_transcript_caps_at_12_messages(self):
+    def test_read_recent_transcript_caps_at_char_budget(self):
+        # Five messages each filled to PER_MESSAGE_MAX_CHARS — the total
+        # comfortably exceeds TRANSCRIPT_CHAR_BUDGET so the budget walk
+        # must drop or partially truncate the oldest ones. Newest entries
+        # must be kept in full.
+        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
         entries = [
-            {"type": "user", "message": {"role": "user", "content": f"msg-{i:02d}"}}
-            for i in range(20)
+            {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    # Each message is uniquely tagged at head AND tail so we
+                    # can tell which ones survived and whether they were cut.
+                    "content": f"HEAD-{i:02d}-" + ("X" * (per_msg - 14)) + f"-TAIL-{i:02d}",
+                },
+            }
+            for i in range(5)
         ]
         path = self._write_jsonl(entries)
         try:
             result = self.buddy.read_recent_transcript(path)
-            # Last 12: msg-08 through msg-19
-            self.assertNotIn("msg-07", result)
-            self.assertIn("msg-08", result)
-            self.assertIn("msg-19", result)
-            # Exactly 12 user lines (count "user: msg-" occurrences,
-            # framing headers/footers add additional lines but don't
-            # contain "user: msg-")
-            user_lines = [l for l in result.splitlines() if l.startswith("user: msg-")]
-            self.assertEqual(len(user_lines), 12)
+            # Newest message (i=4) must survive complete — TAIL-04 is the
+            # last 7 chars so it's always preserved.
+            self.assertIn("TAIL-04", result)
+            # Oldest message (i=0) cannot fit — its TAIL-00 must be absent.
+            self.assertNotIn("TAIL-00", result)
+            # Sum of kept user lines must respect the budget.
+            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            total = sum(len(l[len("user: "):]) for l in user_lines)
+            self.assertLessEqual(total, self.buddy.TRANSCRIPT_CHAR_BUDGET)
         finally:
             os.unlink(path)
 
-    def test_read_recent_transcript_per_message_tail_cap_300(self):
-        # Each message keeps the LAST 300 chars (tail-bias), prefixed with
-        # "…" so Buddy can see that the head was elided. Short messages
-        # pass through untouched.
-        long_text = "HEAD" + ("A" * 500) + "TAIL"
+    def test_read_recent_transcript_per_message_cap(self):
+        # A single message longer than PER_MESSAGE_MAX_CHARS is tail-
+        # truncated and marked with "…". Short messages pass through
+        # untouched (covered by test_short_message_not_marked).
+        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
+        long_text = "HEAD" + ("A" * (per_msg + 200)) + "TAIL"
         entries = [{"type": "user", "message": {"role": "user", "content": long_text}}]
         path = self._write_jsonl(entries)
         try:
             result = self.buddy.read_recent_transcript(path)
-            # The HEAD marker should be dropped (it's at the start of a
-            # 508-char message and we keep only the last 300).
+            # HEAD is at offset 0 of a >per_msg-char message — must be dropped.
             self.assertNotIn("HEAD", result)
-            # The TAIL marker (at the very end) must survive.
+            # TAIL is the last 4 chars — must survive.
             self.assertIn("TAIL", result)
-            # A truncation marker must appear so Buddy knows this message
-            # was clipped (the leading "…" before the snippet).
             user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
             self.assertEqual(len(user_lines), 1)
             payload = user_lines[0][len("user: "):]
             self.assertTrue(
                 payload.startswith("…"),
-                f"expected truncation marker '…' at start, got: {payload[:20]!r}",
+                f"expected '…' marker at start, got: {payload[:20]!r}",
             )
-            # And the payload (snippet + marker) must respect the cap.
-            # 300 content chars + 1 marker char = 301
-            self.assertLessEqual(len(payload), 301)
+            # per_msg content chars + 1 marker char = per_msg + 1
+            self.assertLessEqual(len(payload), per_msg + 1)
+        finally:
+            os.unlink(path)
+
+    def test_read_recent_transcript_oldest_entry_partially_truncated(self):
+        # When the next-oldest entry doesn't fit whole but enough budget
+        # remains (>= MIN_REMAINING_TO_INCLUDE), it should be tail-cut into
+        # the leftover space rather than dropped outright.
+        budget = self.buddy.TRANSCRIPT_CHAR_BUDGET
+        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
+        # First entry fills most of the budget; second entry can't fit in
+        # full but should slot into the leftover slice.
+        big = "X" * per_msg            # will be kept whole (per_msg <= budget)
+        older = "OLDER_HEAD" + ("Y" * per_msg) + "OLDER_TAIL"
+        entries = [
+            {"type": "user", "message": {"role": "user", "content": older}},
+            {"type": "user", "message": {"role": "user", "content": big}},
+        ]
+        path = self._write_jsonl(entries)
+        try:
+            result = self.buddy.read_recent_transcript(path)
+            # Newest (big) survives intact.
+            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            self.assertEqual(len(user_lines), 2)
+            # Older entry should appear truncated: head dropped, tail kept,
+            # with the "…" marker.
+            older_line = user_lines[0][len("user: "):]
+            self.assertTrue(older_line.startswith("…"))
+            self.assertIn("OLDER_TAIL", older_line)
+            self.assertNotIn("OLDER_HEAD", older_line)
+            # Total transcript chars must still respect budget.
+            total = sum(len(l[len("user: "):]) for l in user_lines)
+            self.assertLessEqual(total, budget)
         finally:
             os.unlink(path)
 
@@ -231,10 +273,16 @@ class TestTranscriptParser(unittest.TestCase):
         finally:
             os.unlink(path)
 
-    def test_read_recent_transcript_tool_output_tail_1000(self):
+    def test_read_recent_transcript_tool_output_tail_capped(self):
+        # Build a tool_result longer than TOOL_OUTPUT_TAIL_CHARS so the
+        # head is guaranteed to be cut off, then assert the payload between
+        # the framing tags doesn't exceed the cap. Reads the constant from
+        # buddy directly so this test tracks future cap changes.
+        cap = self.buddy.TOOL_OUTPUT_TAIL_CHARS
         head = "HEAD_MARKER"
         tail = "TAIL_MARKER"
-        long = head + ("x" * 1500) + tail   # 1521 chars total
+        # 500 chars past the cap is plenty to force truncation.
+        long = head + ("x" * (cap + 500)) + tail
         entries = [{"type": "user", "message": {"role": "user", "content": [
             {"type": "tool_result", "content": long},
         ]}}]
@@ -245,14 +293,14 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertIn(tail, result)
             self.assertNotIn(head, result)
             # The tool output payload (between the opening and closing tags)
-            # is at most 1000 chars.
+            # is at most TOOL_OUTPUT_TAIL_CHARS.
             lines = result.splitlines()
             opening_idx = next(
                 i for i, l in enumerate(lines) if l.startswith("[tool output")
             )
             closing_idx = lines.index("[end tool output]")
             payload = "\n".join(lines[opening_idx + 1:closing_idx])
-            self.assertLessEqual(len(payload), 1000)
+            self.assertLessEqual(len(payload), cap)
         finally:
             os.unlink(path)
 

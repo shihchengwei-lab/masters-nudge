@@ -34,12 +34,28 @@ _DEFAULT_MODELS = {"anthropic": "sonnet", "openai": "gpt-5.5", "codex": "gpt-5.5
 MODEL = os.environ.get("BUDDY_MODEL", _DEFAULT_MODELS.get(PROVIDER, "sonnet"))
 TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
 
-# Cinder-style transcript shaping: last 12 user/assistant entries, each
-# head-truncated to 300 chars, with all tool_result content collected into
-# one trailing block tail-truncated to 1000 chars.
-MAX_MESSAGES = 12
-PER_MESSAGE_CHARS = 300
-TOOL_OUTPUT_TAIL_CHARS = 1000
+# Transcript shaping: fill a char budget walking backwards from the newest
+# user/assistant entry. Each entry kept in full unless it exceeds the per-
+# message cap (then tail-truncated with a "…" prefix). The oldest entry
+# included may itself be tail-truncated when only partial budget remains.
+# tool_result content from the SAME selected window is collected into one
+# trailing block tail-truncated to TOOL_OUTPUT_TAIL_CHARS.
+#
+# Sizing rationale:
+# - Prior PER_MESSAGE_MAX_CHARS=1500 regularly truncated long Claude
+#   responses mid-sentence — Buddy then surfaced "content looks incomplete"
+#   findings that were actually budget artifacts, not real delivery gaps.
+#   5000 lets a typical 2000-4000-char Claude response survive whole.
+# - TRANSCRIPT_CHAR_BUDGET capped at 6000 because read_recent_reactions
+#   only carries forward the last 3 of Buddy's own reactions — letting the
+#   transcript window walk farther back than ~3 turns means Buddy sees old
+#   Claude content without knowing what it itself said about it, which
+#   degrades into hallucinated or repeated findings.
+# - TRANSCRIPT + TOOL_OUTPUT held at 8000 total (user-set ceiling).
+TRANSCRIPT_CHAR_BUDGET = 6000
+PER_MESSAGE_MAX_CHARS = 5000
+MIN_REMAINING_TO_INCLUDE = 400
+TOOL_OUTPUT_TAIL_CHARS = 2000
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
@@ -131,33 +147,42 @@ def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
 
 
 def read_recent_transcript(transcript_path: str) -> str:
-    """Build the Cinder-style transcript snippet for Buddy's prompt.
+    """Build the transcript snippet for Buddy's prompt using a char budget.
+
+    Walk backwards from the newest user/assistant entry, including each one
+    in full until the TRANSCRIPT_CHAR_BUDGET is consumed. Entries longer
+    than PER_MESSAGE_MAX_CHARS are tail-truncated (with a "…" prefix) before
+    the budget check. The oldest included entry may itself be tail-truncated
+    to fit the remaining budget — provided at least MIN_REMAINING_TO_INCLUDE
+    chars remain (otherwise it is dropped). tool_result content from the
+    same selected window flows into a separate trailing block, tail-cropped
+    to TOOL_OUTPUT_TAIL_CHARS.
 
     Output shape (sections are explicitly delimited so Buddy can tell where
     the conversation ends and tool output begins):
 
-        [transcript — user/claude 對話；長訊息只保留末 PER_MESSAGE_CHARS 字，以…開頭]
-        user: <text — kept tail PER_MESSAGE_CHARS chars, "…" prefix if clipped>
-        claude: <text — kept tail PER_MESSAGE_CHARS chars, "…" prefix if clipped>
+        [transcript — 從最新往回填，總長 ≤ TRANSCRIPT_CHAR_BUDGET 字；
+         單則超過 PER_MESSAGE_MAX_CHARS 字者以…起頭]
+        user: <text>
+        claude: <text>
         ...
         [end transcript]
         [tool output — 工具回傳合併後尾部 TOOL_OUTPUT_TAIL_CHARS 字；非對話本身]
-        <last TOOL_OUTPUT_TAIL_CHARS chars of all tool_result content concatenated>
+        <last TOOL_OUTPUT_TAIL_CHARS chars of selected tool_result content>
         [end tool output]
 
-    Only the last MAX_MESSAGES user/assistant entries are kept. The tool
-    output block appears only if those entries contained any tool_result
-    data. The transcript block appears only if any of those entries had
-    user/claude text (a tool-result-only window suppresses the transcript
-    framing but keeps the tool output framing).
+    The tool output block appears only if any selected entry contained
+    tool_result data. The transcript block appears only if any selected
+    entry had user/claude text (a tool-result-only window suppresses the
+    transcript framing but keeps the tool output framing).
     """
     if not transcript_path or not os.path.exists(transcript_path):
         return ""
     try:
         # Read only the tail of the JSONL file. Long sessions can produce
         # many-MB transcripts; we only need the last few turns. 64 KB tail
-        # comfortably covers MAX_MESSAGES at PER_MESSAGE_CHARS plus the
-        # tool-output tail.
+        # comfortably covers TRANSCRIPT_CHAR_BUDGET plus the tool-output
+        # tail even when entries arrive as wide JSON envelopes.
         TAIL_BYTES = 65536
         size = os.path.getsize(transcript_path)
         with open(transcript_path, "rb") as f:
@@ -186,22 +211,43 @@ def read_recent_transcript(transcript_path: str) -> str:
             continue
         entries.append(parsed)
 
-    entries = entries[-MAX_MESSAGES:]
+    # Walk newest → oldest, filling the char budget. tool_result-only
+    # entries cost nothing against the transcript budget (they have no
+    # text), but their tool_results are still collected in encounter order
+    # so the [tool output] block matches the [transcript] window.
+    selected: list[tuple[str, str, list[str]]] = []
+    remaining = TRANSCRIPT_CHAR_BUDGET
+    for prefix, text, tool_results in reversed(entries):
+        if not text:
+            selected.append((prefix, "", tool_results))
+            continue
+
+        # Hard cap on any single message — tail-bias keeps the end.
+        if len(text) > PER_MESSAGE_MAX_CHARS:
+            snippet = "…" + text[-PER_MESSAGE_MAX_CHARS:]
+        else:
+            snippet = text
+
+        cost = len(snippet)
+        if cost <= remaining:
+            selected.append((prefix, snippet, tool_results))
+            remaining -= cost
+            continue
+
+        # Snippet won't fit. If there's still meaningful space, truncate
+        # this one entry to fit; otherwise stop walking back.
+        if remaining >= MIN_REMAINING_TO_INCLUDE:
+            # Reserve 1 char for the "…" marker.
+            tail = text[-(remaining - 1):]
+            selected.append((prefix, "…" + tail, tool_results))
+            remaining = 0
+        break
+
+    selected.reverse()
 
     transcript_lines: list[str] = []
     tool_buffer: list[str] = []
-    for prefix, text, tool_results in entries:
-        # Tail-bias: keep the END of long messages (the latest stuff said),
-        # not the beginning. Mark clipped messages with a leading "…" so
-        # Buddy can see the head was elided rather than assuming the
-        # snippet is the whole utterance.
-        if len(text) > PER_MESSAGE_CHARS:
-            snippet = "…" + text[-PER_MESSAGE_CHARS:]
-        else:
-            snippet = text
-        # Skip empty message lines (typically tool_result-only entries that
-        # the Claude API frames as user messages). Their tool_result content
-        # still flows into the [tool output] block below.
+    for prefix, snippet, tool_results in selected:
         if snippet:
             transcript_lines.append(f"{prefix}: {snippet}")
         tool_buffer.extend(tool_results)
@@ -209,8 +255,9 @@ def read_recent_transcript(transcript_path: str) -> str:
     out_lines: list[str] = []
     if transcript_lines:
         out_lines.append(
-            "[transcript — user/claude 對話；長訊息只保留末 "
-            f"{PER_MESSAGE_CHARS} 字，以…開頭]"
+            "[transcript — 從最新往回填，總長 ≤ "
+            f"{TRANSCRIPT_CHAR_BUDGET} 字；單則超過 "
+            f"{PER_MESSAGE_MAX_CHARS} 字者以…起頭]"
         )
         out_lines.extend(transcript_lines)
         out_lines.append("[end transcript]")
@@ -512,7 +559,7 @@ _CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
 _INLINE_CODE_RE = re.compile(r"`([^`]*)`")
 _MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
 _MD_HEADER_RE = re.compile(r"^#{1,6}\s*", re.MULTILINE)
-MAX_REACTION_CHARS = 40
+MAX_REACTION_CHARS = 25
 
 
 def sanitize_reaction(raw: str) -> str:
