@@ -27,7 +27,7 @@ dispatched 的 actor model。我們無法把泡泡塞回 Claude Code 的聊天�
   裡，讓 reviewer 能分清楚。附上本 session 最近 3 筆 Buddy 反應（讓
   模型避免重複自己），把整包送到一個 **與主 agent 不同廠商家族** 的
   模型（預設：透過 Codex CLI 呼叫 GPT-5.5），對回應做 sanitize（去
-  markdown、硬上限 25 字、移除會撞到包裝標記的字串），寫入
+  markdown、硬上限 28 字、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的 Buddy 反應
   注入主 Claude 的 context（system-reminder）
@@ -207,7 +207,7 @@ OpenAI；備選：透過 Claude CLI 送 Anthropic）。每次送出的內容包�
 - 長 session 會產生多次外送事件 —— 每輪一次。
 - 工具輸出會串接後整體尾截到約 2000 字，所以大檔案 Read 或長指令輸出
   不會全送 —— 但結尾（錯誤、exit code 通常在這）會送。
-- Buddy 自己的反應會在 log 寫入前 + 注入前硬截斷到 25 字，所以主 agent
+- Buddy 自己的反應會在 log 寫入前 + 注入前硬截斷到 28 字，所以主 agent
   每輪看到的內容刻意短。
 - 預設 `BUDDY_PROVIDER=openai` 代表你跟 Anthropic Claude 的對話
   transcript 會被轉送到 OpenAI。如果這對你是合規紅線，設

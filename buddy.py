@@ -559,7 +559,7 @@ _CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
 _INLINE_CODE_RE = re.compile(r"`([^`]*)`")
 _MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
 _MD_HEADER_RE = re.compile(r"^#{1,6}\s*", re.MULTILINE)
-MAX_REACTION_CHARS = 25
+MAX_REACTION_CHARS = 28
 
 
 def sanitize_reaction(raw: str) -> str:

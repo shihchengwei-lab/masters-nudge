@@ -27,7 +27,7 @@ Code's chat frame to put bubbles back. What this project does instead:
   session's last 3 Buddy reactions (so the model avoids repeating
   itself), sends the bundle to a model in a **different vendor family
   from the main agent** (default: GPT-5.5 via Codex CLI), sanitizes the
-  response (strip markdown, hard-cap at 25 chars, remove wrapper-collision
+  response (strip markdown, hard-cap at 28 chars, remove wrapper-collision
   markers), and writes it to `~/.claude/buddy/<session_id>.log`
 - On your next prompt, the UserPromptSubmit hook injects the latest reaction
   into main Claude's context (system-reminder)
@@ -233,7 +233,7 @@ This means:
 - Tool output is concatenated and tail-truncated to ~2000 chars total, so
   large file reads or long command output are not sent in full — but the
   end (where errors and exit codes typically land) is.
-- Buddy's own reaction is hard-capped to 25 chars before logging and
+- Buddy's own reaction is hard-capped to 28 chars before logging and
   before injection, so what the main agent sees per turn is short by
   design.
 - The default `BUDDY_PROVIDER=openai` means your Anthropic-Claude
