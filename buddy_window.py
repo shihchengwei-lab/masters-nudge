@@ -20,6 +20,7 @@ Env:
 """
 
 import json
+import math
 import os
 import sys
 import tkinter as tk
@@ -41,6 +42,13 @@ SPRITESHEET_PATH = Path(os.environ.get(
 POLL_MS = 1000
 ANIM_MS = 250           # 4 fps sprite animation
 SPRITE_HEIGHT = 90      # display height in pixels
+WINDOW_WIDTH = 460
+WINDOW_MIN_HEIGHT = 150
+WINDOW_MAX_HEIGHT = 220
+BUBBLE_WRAP_LENGTH = 300
+APPROX_CHARS_PER_LINE = 16
+TEXT_LINE_HEIGHT = 22
+WINDOW_NON_TEXT_HEIGHT = 84
 
 # Colors
 BG = "#1a1a2e"
@@ -48,6 +56,16 @@ BUBBLE_BG = "#252545"
 BUBBLE_FG = "#e0e0e0"
 BUBBLE_BORDER = "#4a4a6a"
 TS_FG = "#6a6a8a"
+
+
+def window_height_for_reaction(reaction: str) -> int:
+    """Estimate enough window height for a bounded nudge without clipping."""
+    lines = reaction.splitlines() or [""]
+    wrapped_lines = sum(
+        max(1, math.ceil(len(line) / APPROX_CHARS_PER_LINE)) for line in lines
+    )
+    estimated = WINDOW_NON_TEXT_HEIGHT + wrapped_lines * TEXT_LINE_HEIGHT
+    return min(WINDOW_MAX_HEIGHT, max(WINDOW_MIN_HEIGHT, estimated))
 
 
 def detect_frames(img: Image.Image) -> list[list[tuple[int, int, int, int]]]:
@@ -120,7 +138,8 @@ class BuddyWindow:
         self.root.update_idletasks()
         sw = self.root.winfo_screenwidth()
         sh = self.root.winfo_screenheight()
-        win_w, win_h = 420, 140
+        win_w, win_h = WINDOW_WIDTH, WINDOW_MIN_HEIGHT
+        self.window_height = win_h
         x = sw - win_w - 24
         y = sh - win_h - 80
         self.root.geometry(f"{win_w}x{win_h}+{x}+{y}")
@@ -157,6 +176,18 @@ class BuddyWindow:
         x = self.root.winfo_x() + dx
         y = self.root.winfo_y() + dy
         self.root.geometry(f"+{x}+{y}")
+
+    def _resize_for_reaction(self, reaction: str):
+        """Grow upward so a longer nudge keeps the window's bottom position."""
+        new_height = window_height_for_reaction(reaction)
+        if new_height == self.window_height:
+            return
+        self.root.update_idletasks()
+        x = self.root.winfo_x()
+        bottom = self.root.winfo_y() + self.root.winfo_height()
+        y = max(0, bottom - new_height)
+        self.root.geometry(f"{WINDOW_WIDTH}x{new_height}+{x}+{y}")
+        self.window_height = new_height
 
     # ── Sprites ───────────────────────────────────────────
 
@@ -222,7 +253,7 @@ class BuddyWindow:
         self.bubble_label = tk.Label(
             bubble, text="( . . . )", bg=BUBBLE_BG, fg=BUBBLE_FG,
             font=("Microsoft JhengHei", 11),
-            wraplength=260, justify="left",
+            wraplength=BUBBLE_WRAP_LENGTH, justify="left",
             anchor="nw", padx=10, pady=8,
         )
         self.bubble_label.pack(fill="both", expand=True)
@@ -295,6 +326,7 @@ class BuddyWindow:
                 if reaction:
                     self.last_reaction = reaction
                     self.bubble_label.config(text=reaction)
+                    self._resize_for_reaction(reaction)
                     if ts:
                         short_ts = ts[11:19] if len(ts) > 19 else ts
                         self.ts_label.config(text=short_ts)

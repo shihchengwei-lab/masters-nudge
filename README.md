@@ -35,8 +35,9 @@ names remain as a compatibility layer for current installations.
   the session's last 3 reactions (so the model avoids repeating itself), sends
   the bundle to a model in a **different vendor family from the main agent**
   (default: GPT-5.5 via Codex CLI), sanitizes the
-  response (strip markdown, hard-cap at 28 chars, remove wrapper-collision
-  markers), and writes it to `~/.claude/buddy/<session_id>.log`
+  response (strip markdown and common social filler, hard-cap at 52 chars,
+  remove wrapper-collision markers), and writes it to
+  `~/.claude/buddy/<session_id>.log`
 - On your next prompt, the UserPromptSubmit hook injects the latest reaction
   into main Claude's context (system-reminder)
 - A floating Tk window (`buddy_window.py`) tails the active session's log
@@ -103,6 +104,8 @@ Then:
 The window auto-tails whichever session is currently active. Closing it does
 **not** disable Masters’ Nudge; the Stop hook keeps writing to the log and the
 UserPromptSubmit hook keeps injecting into main Claude. Reopen any time.
+The window wraps longer nudges and grows upward from 150 to 220 pixels so the
+52-character maximum remains visible without moving its bottom edge.
 
 ### Custom sprite
 
@@ -167,7 +170,7 @@ $env:BUDDY_PERSONA = "linus"
 
 The selected file in `personas/` is appended to the shared
 `buddy-prompt.txt`. The selected lens changes what Masters’ Nudge checks first;
-it does not replace the evidence, observer, single-finding, or 28-character
+it does not replace the evidence, observer, single-finding, or 52-character
 rules. These cues are not a demonstrated accuracy or capability improvement.
 
 **Why the default uses OpenAI**: the main agent is Anthropic Claude. Putting
@@ -297,7 +300,8 @@ This means:
 - Long evidence fields keep their beginning and end rather than only their
   tail. The middle is omitted and explicitly marked, so omitted details can
   still matter.
-- Each reaction is hard-capped to 28 chars before logging and
+- Each reaction targets 48–52 useful characters when a finding needs that space
+  and is hard-capped to 52 chars before logging and
   before injection, so what the main agent sees per turn is short by
   design.
 - The default `BUDDY_PROVIDER=openai` means your Anthropic-Claude

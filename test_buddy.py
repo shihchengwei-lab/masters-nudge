@@ -178,6 +178,29 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn("優先保留問題與位置", base_prompt)
         self.assertIn("不犧牲前兩者", base_prompt)
 
+    def test_base_prompt_targets_48_to_52_useful_characters_without_filler(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("目標 48–52 字", base_prompt)
+        self.assertIn("硬上限 52 字", base_prompt)
+        self.assertIn("客套話", base_prompt)
+        self.assertIn("角色自介", base_prompt)
+        self.assertNotIn("28 字", base_prompt)
+
+        examples = base_prompt.split("# 可以參考的語氣", 1)[1].split(
+            "# 送出前只問一件事", 1
+        )[0]
+        finding_examples = [
+            line.strip()
+            for line in examples.splitlines()
+            if line.strip() and line.strip() != "這輪沒看到明顯問題。"
+        ]
+        self.assertTrue(finding_examples)
+        for example in finding_examples:
+            with self.subTest(example=example):
+                self.assertGreaterEqual(len(example), 48)
+                self.assertLessEqual(len(example), 52)
+
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
@@ -980,7 +1003,35 @@ class TestSanitizer(unittest.TestCase):
         import buddy
         raw = "字" * 200
         result = self.sanitize(raw)
+        self.assertEqual(buddy.MAX_REACTION_CHARS, 52)
+        self.assertEqual(len(result), 52)
         self.assertLessEqual(len(result), buddy.MAX_REACTION_CHARS)
+
+    def test_removes_leading_and_trailing_boilerplate_before_truncation(self):
+        raw = (
+            "整體來說，值得注意的是，checkpoint.py 的失敗分支沒有釋放 claim，"
+            "重試會一直被去重。供參考。希望這對你有幫助。"
+        )
+
+        result = self.sanitize(raw)
+
+        self.assertEqual(
+            result,
+            "checkpoint.py 的失敗分支沒有釋放 claim，重試會一直被去重。",
+        )
+
+    def test_removes_role_intro_and_praise_without_losing_finding(self):
+        raw = (
+            "作為第三方 reviewer，我認為，做得很好！"
+            "source_context.py 的 fallback 沒標來源，Agent 會把舊內容當本輪證據。供參考。"
+        )
+
+        result = self.sanitize(raw)
+
+        self.assertTrue(result.startswith("source_context.py"))
+        self.assertNotIn("第三方 reviewer", result)
+        self.assertNotIn("做得很好", result)
+        self.assertNotIn("供參考", result)
 
     def test_empty_input(self):
         self.assertEqual(self.sanitize(""), "")
@@ -991,6 +1042,26 @@ class TestSanitizer(unittest.TestCase):
         self.assertNotIn("\n", result)
         self.assertNotIn("\t", result)
         self.assertNotIn("  ", result)
+
+
+class TestFloatingWindowLayout(unittest.TestCase):
+
+    def test_window_grows_for_a_52_character_reaction(self):
+        import buddy_window
+
+        short_height = buddy_window.window_height_for_reaction("短提醒。")
+        long_height = buddy_window.window_height_for_reaction("字" * 52)
+
+        self.assertEqual(short_height, buddy_window.WINDOW_MIN_HEIGHT)
+        self.assertGreater(long_height, short_height)
+        self.assertLessEqual(long_height, buddy_window.WINDOW_MAX_HEIGHT)
+
+    def test_window_wrap_width_and_resize_hook_cover_long_reactions(self):
+        import buddy_window
+
+        source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
+        self.assertGreaterEqual(buddy_window.BUBBLE_WRAP_LENGTH, 300)
+        self.assertIn("self._resize_for_reaction(reaction)", source)
 
 
 # ── 7. Mock CLI calls ────────────────────────────────────────────────

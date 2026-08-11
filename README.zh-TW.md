@@ -30,7 +30,7 @@ Leslie Lamport 或 John Carmack 所代表的工程鏡頭，在值得介入的 ch
   Masters’ Nudge 反應（讓模型避免重複自己），送到一個
   **與主 agent 不同廠商家族** 的
   模型（預設：透過 Codex CLI 呼叫 GPT-5.5），對回應做 sanitize（去
-  markdown、硬上限 28 字、移除會撞到包裝標記的字串），寫入
+  markdown 與常見套話、硬上限 52 字、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的
   Masters’ Nudge 反應
@@ -92,6 +92,8 @@ pip install Pillow      # 一次性安裝，buddy_window.py 需要
 視窗會自動 tail 當前作用中的 session。關掉視窗 **不會** 停用 Masters’ Nudge；
 Stop hook 仍會繼續寫 log，UserPromptSubmit hook 仍會繼續注入主 Claude。
 隨時可以重新開啟。
+較長的 nudge 會自動換行，視窗會從 150px 向上增高到最多 220px，讓 52 字
+上限完整顯示，同時維持視窗底部位置。
 
 ### 自訂 sprite
 
@@ -153,7 +155,7 @@ $env:BUDDY_PERSONA = "linus"
 
 Masters’ Nudge 會把 `personas/` 中選定的檔案附加到共用 `buddy-prompt.txt`。
 選定的 lens 只改變優先檢查的問題，不會取代原本的證據、旁觀者、單一
-finding 與 28 字限制。這些提示尚未證明能提升正確率或能力。
+finding 與 52 字限制。這些提示尚未證明能提升正確率或能力。
 
 **為什麼預設用 OpenAI**：主 agent 是 Anthropic Claude。把 Masters’ Nudge 放在
 不同廠商（OpenAI 的 GPT-5.5）能得到更獨立的批評 —— 不同訓練、不同盲點、
@@ -265,7 +267,8 @@ Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。內容包�
   `test-fail`，以及首次 `large-diff` checkpoint。
 - 長證據欄位會同時保留開頭與結尾，不再只留尾端；中段會被省略並明確
   標記，因此中段細節仍可能影響判斷。
-- 每句反應會在 log 寫入前 + 注入前硬截斷到 28 字，所以主 agent
+- 有可靠 finding 時，每句反應以 48–52 個有效字為目標，並會在 log 寫入前
+  與注入前硬截斷到 52 字，所以主 agent
   每輪看到的內容刻意短。
 - 預設 `BUDDY_PROVIDER=openai` 代表你跟 Anthropic Claude 的對話
   transcript 會被轉送到 OpenAI。如果這對你是合規紅線，設

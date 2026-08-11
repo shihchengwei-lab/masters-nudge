@@ -616,7 +616,36 @@ _CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
 _INLINE_CODE_RE = re.compile(r"`([^`]*)`")
 _MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
 _MD_HEADER_RE = re.compile(r"^#{1,6}\s*", re.MULTILINE)
-MAX_REACTION_CHARS = 28
+_BOILERPLATE_PREFIX_RES = (
+    re.compile(r"^(?:作為|身為)[^，,：:。！？!?]{1,40}[，,：:]\s*"),
+    re.compile(
+        r"^(?:整體來說|總體而言|總的來說|簡單來說|先說結論|"
+        r"值得注意的是|需要注意的是|我認為|在我看來|以下是我的觀察)"
+        r"[，,:：。.!！\s]*"
+    ),
+    re.compile(
+        r"^(?:做得很好|整體做得不錯|這個方向很好|方向很清楚|"
+        r"這是一個很好的(?:做法|方向|實作))"
+        r"[，,:：。.!！\s]*"
+    ),
+)
+_BOILERPLATE_SUFFIX_RE = re.compile(
+    r"(?:希望(?:這|以上)?(?:對你)?有幫助|希望能幫到你|供參考|"
+    r"以上(?:是我的觀察)?|謝謝(?:閱讀)?)"
+    r"[。.!！\s]*$"
+)
+MAX_REACTION_CHARS = 52
+
+
+def _strip_boilerplate(text: str) -> str:
+    """Remove anchored social filler without rewriting finding content."""
+    previous = None
+    while text and text != previous:
+        previous = text
+        for pattern in _BOILERPLATE_PREFIX_RES:
+            text = pattern.sub("", text, count=1).lstrip()
+        text = _BOILERPLATE_SUFFIX_RE.sub("", text, count=1).rstrip()
+    return text
 
 
 def sanitize_reaction(raw: str) -> str:
@@ -625,6 +654,7 @@ def sanitize_reaction(raw: str) -> str:
     - Strip code blocks and markdown formatting
     - Remove current and legacy wrapper collision markers
     - Collapse whitespace
+    - Remove common leading/trailing social filler
     - Hard truncate to MAX_REACTION_CHARS
     """
     text = raw.strip()
@@ -636,6 +666,7 @@ def sanitize_reaction(raw: str) -> str:
     text = _MD_HEADER_RE.sub("", text)
     text = _WRAPPER_RE.sub("", text)
     text = re.sub(r"\s+", " ", text).strip()
+    text = _strip_boilerplate(text)
     if len(text) > MAX_REACTION_CHARS:
         text = text[:MAX_REACTION_CHARS]
     return text
