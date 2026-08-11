@@ -63,16 +63,25 @@ class TestBranding(unittest.TestCase):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
-        self.assertIn("### Six master lenses", readme)
-        self.assertIn("### 六種 master lenses", readme_zh)
+        self.assertIn("## Filters", readme)
+        self.assertIn("## 濾鏡", readme_zh)
         self.assertNotIn("### Engineering persona lenses", readme)
         self.assertNotIn("### 工程 persona 鏡頭", readme_zh)
-        self.assertIn("BUDDY_*", readme)
+        for document in (readme, readme_zh):
+            self.assertIn("BUDDY_*", document)
+            for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack"):
+                self.assertIn(f"`{persona}`", document)
+            for name in (
+                "Jeff Dean",
+                "Linus Torvalds",
+                "Martin Fowler",
+                "Kent Beck",
+                "Leslie Lamport",
+                "John Carmack",
+            ):
+                self.assertIn(name, document)
         self.assertIn("compatibility", readme.lower())
-        self.assertIn("BUDDY_*", readme_zh)
-        self.assertIn("相容", readme_zh)
-        self.assertIn("two short selection examples", readme)
-        self.assertIn("兩個極短選題例", readme_zh)
+        self.assertIn("既有安裝", readme_zh)
 
     def test_readmes_introduce_each_lens_with_a_sourced_quote(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -104,35 +113,36 @@ class TestBranding(unittest.TestCase):
             ),
         }
 
-        self.assertIn("#### Meet the six lenses", readme)
-        self.assertIn("#### 認識六種 lens", readme_zh)
+        self.assertIn("Filter notes", readme)
+        self.assertIn("各濾鏡補充", readme_zh)
         for document in (readme, readme_zh):
             for name, (quote, source) in anchors.items():
                 self.assertIn(f"##### {name}", document)
                 self.assertIn(quote, document)
                 self.assertIn(source, document)
 
-    def test_readmes_include_windows_powershell_env_examples(self):
+    def test_readmes_document_filter_and_sprite_env_vars(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
         for document in (readme, readme_zh):
-            self.assertIn("$env:BUDDY_SPRITE_PATH", document)
-            self.assertIn("$env:BUDDY_PERSONA", document)
+            self.assertIn("`BUDDY_PERSONA`", document)
+            self.assertIn("`BUDDY_SPRITE_PATH`", document)
+            self.assertIn("export BUDDY_SPRITE_PATH=", document)
 
-    def test_readmes_explain_the_floating_window_lens_badge(self):
+    def test_readmes_explain_floating_window_and_filter_priorities(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
-        self.assertIn("colored dot and the full lens name", readme)
-        self.assertIn("色點與完整 lens 姓名", readme_zh)
+        self.assertIn("floating window", readme.lower())
+        self.assertIn("end-of-turn", readme)
+        self.assertIn("浮動視窗", readme_zh)
+        self.assertIn("回合末", readme_zh)
+        self.assertIn("systems causality and cost", readme)
+        self.assertIn("系統因果與成本", readme_zh)
         for document in (readme, readme_zh):
-            self.assertIn("Jeff Dean lens", document)
-            self.assertIn("General lens", document)
-            self.assertIn("系統因果與成本", document)
-            self.assertIn("通用證據審查", document)
-        self.assertIn("older log", readme.lower())
-        self.assertIn("舊 log", readme_zh)
+            self.assertIn("start_buddy_window.bat", document)
+            self.assertIn("buddy_window.py", document)
 
     def test_readmes_explain_gui_lens_switching_and_env_override(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -141,10 +151,10 @@ class TestBranding(unittest.TestCase):
         for document in (readme, readme_zh):
             self.assertIn("config.json", document)
             self.assertIn("BUDDY_PERSONA", document)
-        self.assertIn("next review", readme)
-        self.assertIn("environment-variable override", readme)
-        self.assertIn("下一次 review", readme_zh)
-        self.assertIn("環境變數優先", readme_zh)
+        self.assertIn("applies from the next review", readme)
+        self.assertIn("overrides the window", readme)
+        self.assertIn("下次審查生效", readme_zh)
+        self.assertIn("可覆寫視窗選擇", readme_zh)
 
     def test_readmes_document_structured_reaction_output(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -152,7 +162,9 @@ class TestBranding(unittest.TestCase):
 
         for document in (readme, readme_zh):
             self.assertIn("reaction-schema.json", document)
-            self.assertIn("no_finding", document)
+            self.assertIn("52", document)
+        self.assertIn("one finding or silence", readme)
+        self.assertIn("一則 finding，要嘛靜默", readme_zh)
 
     def test_roadmap_matches_shipped_selector_and_shadow_evaluation(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
@@ -186,10 +198,8 @@ class TestBranding(unittest.TestCase):
         self.assertEqual(buddy._DEFAULT_MODELS["codex"], "gpt-5.6-sol")
         for document in (readme, readme_zh, roadmap):
             self.assertIn("gpt-5.6-sol", document)
-        self.assertEqual(readme.count("GPT-5.5"), 1)
-        self.assertEqual(readme_zh.count("GPT-5.5"), 1)
-        self.assertIn("historical GPT-5.5 vs Cinder", readme)
-        self.assertIn("歷史 GPT-5.5 vs Cinder", readme_zh)
+        self.assertIn("`BUDDY_MODEL`", readme)
+        self.assertIn("`BUDDY_MODEL`", readme_zh)
 
     def test_new_brand_is_used_in_agent_visible_checkpoint_wrapper(self):
         import checkpoint
