@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -300,8 +301,27 @@ def generate_nudge(hook: dict[str, Any], event: dict[str, str]) -> str:
     parts.append(source_packet)
 
     buddy.TIMEOUT_SEC = min(buddy.TIMEOUT_SEC, CHECKPOINT_TIMEOUT_SEC)
-    raw = buddy.dispatch_call(system_prompt + CHECKPOINT_PROMPT, "\n\n".join(parts))
-    return buddy.sanitize_reaction(raw)
+    full_system_prompt = system_prompt + CHECKPOINT_PROMPT
+    transcript_text = "\n\n".join(parts)
+    started = time.perf_counter()
+    call_result = buddy.dispatch_call_result(full_system_prompt, transcript_text)
+    latency_ms = round((time.perf_counter() - started) * 1000)
+    reaction = buddy.sanitize_reaction(str(call_result.get("finding") or ""))
+    status = str(call_result.get("status") or "error")
+    if status == "finding" and not reaction:
+        status = "error"
+    buddy.record_review_telemetry(
+        session_id=session_id,
+        kind="checkpoint",
+        reason=event["reason"],
+        status=status,
+        input_chars=len(full_system_prompt) + len(transcript_text),
+        latency_ms=latency_ms,
+        source_fingerprint=event["fingerprint"],
+        shadow_candidates=[],
+        usage=call_result.get("usage") if isinstance(call_result, dict) else {},
+    )
+    return reaction
 
 
 def build_hook_output(event_name: str, reaction: str, reason: str) -> dict[str, Any]:
@@ -331,6 +351,13 @@ def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
             release_checkpoint(session_id, event["fingerprint"])
             return None
         _mark_checkpoint_complete(session_id, event["fingerprint"])
+        source_state = source_context.load_source_state(buddy.BUDDY_DIR, session_id)
+        buddy.mark_checkpoint_delivery(
+            session_id,
+            prompt_offset=int(source_state.get("transcript_offset") or 0),
+            transcript_path=str(hook.get("transcript_path") or ""),
+            reason=event["reason"],
+        )
         return build_hook_output(
             str(hook.get("hook_event_name") or "PostToolUse"),
             reaction,

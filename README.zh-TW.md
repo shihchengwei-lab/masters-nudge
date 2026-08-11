@@ -130,8 +130,30 @@ $env:BUDDY_SPRITE_PATH = "C:\path\to\your\spritesheet.png"
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 同步 checkpoint nudge 等待模型的最長秒數 |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態檔放在哪 |
 | `BUDDY_PERSONA` | 未設定 | 選用的工程審查鏡頭：`jeff`、`linus`、`fowler`、`beck`、`lamport` 或 `carmack` |
+| `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略只觀察、不攔截的固定評估天數 |
+| `BUDDY_SHADOW_TARGET_CALLS` | `300` | 判讀整體樣本是否足夠的目標 review 次數 |
 
 編輯 `~/.claude/scripts/buddy/buddy-prompt.txt` 可調整審查行為。
+
+### 成本遙測與限時 shadow 評估
+
+安裝後第一次 review 會啟動固定 7 天的 shadow window。Shadow 的意思是只記錄
+「如果未來套用省成本規則，這次是否可能被略過」，目前仍照常呼叫模型；候選包含
+沒有新增工具或 agentcam 證據的 Stop，以及同一輪 checkpoint 後未再出現工具證據的
+Stop。任一候選 review 實際產生 finding，就會被標成 `shadow_fail`。
+
+第 7 天後的下一次 review 會關閉評估、產生
+`~/.claude/buddy/shadow-evaluation.md`，並透過浮動視窗與下一次 prompt 注入顯示一次
+通知。即使未達 300 次也會準時結束並標為 `insufficient_samples`；不會默默延長，
+也不會自動開啟任何略過規則。沒有新的 hook 事件時程式不會自行喚醒，因此到期通知
+會在評估期限後第一次 review 發生時出現。
+
+每次 Stop 與 checkpoint 都會把不含對話內容的 metadata 寫到
+`~/.claude/buddy/review-telemetry.jsonl`：時間、種類、原因、模型、lens、結果狀態、
+輸入字元數、延遲、來源雜湊、shadow 標籤，以及 CLI 有提供時的 token/cache 用量。
+不保存 prompt、transcript、tool result 或 finding 文字。刪除
+`shadow-evaluation.json`、`shadow-evaluation.md` 與 `review-telemetry.jsonl` 才會重新
+開始一個全新的評估 window。
 
 ### 六種 master lenses
 
@@ -364,6 +386,8 @@ Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。內容包�
   時間就足以蓋掉。
 - 不使用時間 cooldown。每次 Stop 都會呼叫模型；checkpoint 採事件式觸發，
   完全相同的事件會去重。繁忙時 token 用量仍會累積。
+- 目前成本策略僅處於 shadow 評估，不會降低實際呼叫次數。Token 數只在 CLI
+  回傳可解析的 usage metadata 時記錄；缺值不代表零用量。
 - 遞迴用 `BUDDY_ACTIVE` 環境變數防護，但如果你還有其他 hook 會遞迴
   呼叫 `claude`/`codex` 又沒做類似防護，要小心無窮迴圈。
 - Masters’ Nudge 反應以 `UserPromptSubmit hook success:` 的 system-reminder

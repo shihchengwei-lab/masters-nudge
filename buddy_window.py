@@ -44,7 +44,7 @@ ANIM_MS = 250           # 4 fps sprite animation
 SPRITE_HEIGHT = 90      # display height in pixels
 WINDOW_WIDTH = 460
 WINDOW_MIN_HEIGHT = 150
-WINDOW_MAX_HEIGHT = 220
+WINDOW_MAX_HEIGHT = 260
 BUBBLE_WRAP_LENGTH = 300
 APPROX_CHARS_PER_LINE = 16
 TEXT_LINE_HEIGHT = 22
@@ -65,6 +65,7 @@ LENS_BADGES = {
     "lamport": ("Leslie Lamport lens", "#72A1FF"),
     "carmack": ("John Carmack lens", "#FFB86C"),
     "general": ("General lens", "#A0A0B8"),
+    "evaluation": ("Shadow evaluation", "#FFD166"),
 }
 
 
@@ -352,7 +353,11 @@ class BuddyWindow:
                 entry = json.loads(line)
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
-                persona = entry.get("persona", "general")
+                persona = (
+                    "evaluation"
+                    if entry.get("kind") == "evaluation_notice"
+                    else entry.get("persona", "general")
+                )
                 if reaction:
                     self.last_reaction = reaction
                     self._set_lens_badge(persona)

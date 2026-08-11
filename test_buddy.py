@@ -571,9 +571,14 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.state_patch = mock.patch.object(
             checkpoint, "CHECKPOINT_STATE_DIR", Path(self.tmpdir.name)
         )
+        self.buddy_dir_patch = mock.patch.object(
+            checkpoint.buddy, "BUDDY_DIR", Path(self.tmpdir.name)
+        )
         self.state_patch.start()
+        self.buddy_dir_patch.start()
 
     def tearDown(self):
+        self.buddy_dir_patch.stop()
         self.state_patch.stop()
         self.tmpdir.cleanup()
 
@@ -669,6 +674,7 @@ class TestCheckpointDelivery(unittest.TestCase):
         installer = (HERE / "install.sh").read_text(encoding="utf-8")
         self.assertIn('cp "$SRC_DIR/checkpoint.py" "$TARGET_DIR/"', installer)
         self.assertIn('cp "$SRC_DIR/checkpoint.sh" "$TARGET_DIR/"', installer)
+        self.assertIn('cp "$SRC_DIR/review_telemetry.py" "$TARGET_DIR/"', installer)
 
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
         hook = {
@@ -700,9 +706,16 @@ class TestCheckpointDelivery(unittest.TestCase):
             ),
             mock.patch.object(
                 self.checkpoint.buddy,
-                "dispatch_call",
-                return_value="路徑前提還沒成立。",
+                "dispatch_call_result",
+                return_value={
+                    "status": "finding",
+                    "finding": "路徑前提還沒成立。",
+                    "usage": {"input_tokens": 100},
+                },
             ) as dispatch,
+            mock.patch.object(
+                self.checkpoint.buddy, "record_review_telemetry"
+            ) as telemetry,
         ):
             result = self.checkpoint.generate_nudge(hook, event)
 
@@ -712,6 +725,9 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIn("missing file", payload)
         self.assertIn("正在檢查路徑", payload)
         self.assertNotIn("[transcript", payload)
+        telemetry.assert_called_once()
+        self.assertEqual(telemetry.call_args.kwargs["kind"], "checkpoint")
+        self.assertEqual(telemetry.call_args.kwargs["reason"], "error")
 
 
 # ── 5. Transcript parser ─────────────────────────────────────────────
@@ -1244,6 +1260,57 @@ class TestReactionLogLens(unittest.TestCase):
                 entry = self._read_entry(session_id)
                 self.assertEqual(entry["persona"], "general")
 
+    def test_recent_reactions_ignore_evaluation_notices(self):
+        log_path = Path(self.tmpdir) / "lens-session.log"
+        entries = [
+            {"ts": "2026-08-11T12:00:00", "kind": "review", "reaction": "真正意見"},
+            {
+                "ts": "2026-08-18T12:00:00",
+                "kind": "evaluation_notice",
+                "reaction": "Shadow 評估已到期",
+            },
+        ]
+        log_path.write_text(
+            "\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries) + "\n",
+            encoding="utf-8",
+        )
+
+        self.assertEqual(
+            self.buddy.read_recent_reactions("lens-session"),
+            ["真正意見"],
+        )
+
+    def test_checkpoint_overlap_ends_when_new_tool_evidence_appears(self):
+        transcript = Path(self.tmpdir) / "session.jsonl"
+        transcript.write_text("", encoding="utf-8")
+        self.buddy.mark_checkpoint_delivery(
+            "lens-session",
+            prompt_offset=42,
+            transcript_path=str(transcript),
+            reason="error",
+        )
+
+        self.assertTrue(
+            self.buddy.checkpoint_stop_overlap(
+                "lens-session", prompt_offset=42, transcript_path=str(transcript)
+            )
+        )
+
+        tool_result = {
+            "type": "user",
+            "message": {
+                "content": [{"type": "tool_result", "content": "new evidence"}]
+            },
+        }
+        with transcript.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(tool_result) + "\n")
+
+        self.assertFalse(
+            self.buddy.checkpoint_stop_overlap(
+                "lens-session", prompt_offset=42, transcript_path=str(transcript)
+            )
+        )
+
 
 # ── 7. Mock CLI calls ────────────────────────────────────────────────
 
@@ -1375,6 +1442,178 @@ class TestParseReaction(unittest.TestCase):
     def test_empty(self):
         self.assertEqual(self.parse(""), "")
         self.assertEqual(self.parse("  "), "")
+
+    def test_result_parser_distinguishes_no_finding_from_error(self):
+        import buddy
+
+        no_finding = buddy.parse_reaction_result(
+            json.dumps({"status": "no_finding", "finding": ""})
+        )
+        invalid = buddy.parse_reaction_result("not json")
+
+        self.assertEqual(no_finding["status"], "no_finding")
+        self.assertEqual(invalid["status"], "error")
+
+    def test_codex_usage_parser_reads_token_count_event(self):
+        import buddy
+
+        stdout = json.dumps({
+            "type": "event_msg",
+            "payload": {
+                "type": "token_count",
+                "info": {
+                    "last_token_usage": {
+                        "input_tokens": 120,
+                        "cached_input_tokens": 80,
+                        "output_tokens": 12,
+                        "reasoning_output_tokens": 7,
+                        "total_tokens": 139,
+                    }
+                },
+            },
+        })
+
+        self.assertEqual(
+            buddy.parse_usage(stdout),
+            {
+                "input_tokens": 120,
+                "cached_input_tokens": 80,
+                "output_tokens": 12,
+                "reasoning_output_tokens": 7,
+                "total_tokens": 139,
+            },
+        )
+
+
+class TestReviewTelemetry(unittest.TestCase):
+
+    def setUp(self):
+        import review_telemetry
+
+        self.telemetry = review_telemetry
+        self.tmpdir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _record(self, now, **overrides):
+        record = {
+            "session_id": "session-1",
+            "kind": "stop",
+            "reason": "stop",
+            "provider": "openai",
+            "model": "gpt-5.6-sol",
+            "persona": "general",
+            "status": "no_finding",
+            "input_chars": 1234,
+            "latency_ms": 250,
+            "source_fingerprint": "abc123",
+            "shadow_candidates": ["no_new_evidence"],
+            "usage": {"input_tokens": 100, "cached_input_tokens": 60},
+        }
+        record.update(overrides)
+        return self.telemetry.record_review(
+            self.tmpdir,
+            record,
+            now=now,
+            evaluation_days=7,
+            target_calls=300,
+        )
+
+    def test_first_record_starts_fixed_seven_day_window_without_content(self):
+        from datetime import datetime, timezone
+
+        now = datetime(2026, 8, 11, 4, 0, tzinfo=timezone.utc)
+        result = self._record(now)
+
+        state = json.loads(
+            (self.tmpdir / "shadow-evaluation.json").read_text(encoding="utf-8")
+        )
+        line = json.loads(
+            (self.tmpdir / "review-telemetry.jsonl").read_text(encoding="utf-8")
+        )
+        self.assertEqual(state["started_at"], "2026-08-11T04:00:00+00:00")
+        self.assertEqual(state["due_at"], "2026-08-18T04:00:00+00:00")
+        self.assertEqual(state["status"], "collecting")
+        self.assertFalse(result["evaluation_due"])
+        self.assertNotIn("reaction", line)
+        self.assertNotIn("prompt", line)
+        self.assertFalse((self.tmpdir / "shadow-evaluation.md").exists())
+
+    def test_due_date_generates_insufficient_report_and_one_notice(self):
+        from datetime import datetime, timedelta, timezone
+
+        started = datetime(2026, 8, 11, 4, 0, tzinfo=timezone.utc)
+        self._record(started)
+        due = started + timedelta(days=7)
+        result = self._record(due, session_id="session-due")
+        self._record(due + timedelta(minutes=1), session_id="session-due")
+
+        state = json.loads(
+            (self.tmpdir / "shadow-evaluation.json").read_text(encoding="utf-8")
+        )
+        notices = [
+            json.loads(line)
+            for line in (self.tmpdir / "session-due.log").read_text(
+                encoding="utf-8"
+            ).splitlines()
+        ]
+        report = (self.tmpdir / "shadow-evaluation.md").read_text(encoding="utf-8")
+        self.assertTrue(result["evaluation_due"])
+        self.assertEqual(state["status"], "insufficient_samples")
+        self.assertEqual(len(notices), 1)
+        self.assertEqual(notices[0]["kind"], "evaluation_notice")
+        self.assertIn("樣本不足", notices[0]["reaction"])
+        self.assertIn("insufficient_samples", report)
+        self.assertIn("input_tokens: 200", report)
+        self.assertIn("cached_input_tokens: 120", report)
+        self.assertIn("gpt-5.6-sol: 2", report)
+        self.assertFalse(state.get("auto_enabled", False))
+
+    def test_any_candidate_finding_is_shadow_fail(self):
+        from datetime import datetime, timedelta, timezone
+
+        started = datetime(2026, 8, 11, 4, 0, tzinfo=timezone.utc)
+        self._record(started, status="finding")
+        for i in range(299):
+            self._record(
+                started + timedelta(minutes=i + 1),
+                status="no_finding",
+                source_fingerprint=f"sample-{i}",
+            )
+        self._record(started + timedelta(days=7))
+
+        state = json.loads(
+            (self.tmpdir / "shadow-evaluation.json").read_text(encoding="utf-8")
+        )
+        candidate = state["summary"]["candidates"]["no_new_evidence"]
+        self.assertEqual(state["status"], "ready_for_review")
+        self.assertEqual(candidate["decision"], "shadow_fail")
+        self.assertEqual(candidate["finding_count"], 1)
+        self.assertNotIn("enabled", candidate)
+
+    def test_shadow_candidates_are_observations_only(self):
+        candidates = self.telemetry.stop_shadow_candidates(
+            tool_evidence="", agentcam_evidence="", checkpoint_overlap=True
+        )
+        self.assertEqual(
+            candidates,
+            ["no_new_evidence", "checkpoint_stop_overlap"],
+        )
+
+    def test_corrupt_state_fails_closed_instead_of_restarting_window(self):
+        from datetime import datetime, timezone
+
+        (self.tmpdir / "shadow-evaluation.json").write_text(
+            "not json", encoding="utf-8"
+        )
+        with self.assertRaises(ValueError):
+            self._record(datetime(2026, 8, 11, 4, 0, tzinfo=timezone.utc))
+        self.assertEqual(
+            (self.tmpdir / "shadow-evaluation.json").read_text(encoding="utf-8"),
+            "not json",
+        )
 
 
 # ── 8. Inject.py state pointer ───────────────────────────────────────

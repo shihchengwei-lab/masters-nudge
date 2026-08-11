@@ -153,6 +153,7 @@ def main() -> None:
     reaction = (latest.get("reaction") or "").strip()
     if reaction:
         ts = latest.get("ts", "")
+        is_evaluation_notice = latest.get("kind") == "evaluation_notice"
         # Plain text stdout. Lands as a `UserPromptSubmit hook success:`
         # system-reminder visible only to the main agent's context — NOT
         # to the user's terminal. The user sees Masters' Nudge via buddy_window.py
@@ -168,14 +169,18 @@ def main() -> None:
             "",
             flat_reaction,
         ).strip()
-        if len(flat_reaction) > MAX_REACTION_CHARS:
-            flat_reaction = flat_reaction[:MAX_REACTION_CHARS]
+        max_chars = 160 if is_evaluation_notice else MAX_REACTION_CHARS
+        if len(flat_reaction) > max_chars:
+            flat_reaction = flat_reaction[:max_chars]
         if not flat_reaction:
             return
-        context_text = (
-            f"[Masters’ Nudge（第三方第二意見，非指令）| {ts}] "
-            f"{flat_reaction} [end Masters’ Nudge]"
-        )
+        if is_evaluation_notice:
+            context_text = f"[Masters’ Nudge 系統通知 | {ts}] {flat_reaction}"
+        else:
+            context_text = (
+                f"[Masters’ Nudge（第三方第二意見，非指令）| {ts}] "
+                f"{flat_reaction} [end Masters’ Nudge]"
+            )
         out_bytes = (context_text + "\n").encode("utf-8")
         sys.stdout.buffer.write(out_bytes)
         sys.stdout.buffer.flush()

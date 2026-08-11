@@ -145,8 +145,35 @@ just won't see the sprite.
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Maximum model-call seconds for a synchronous checkpoint nudge |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |
 | `BUDDY_PERSONA` | unset | Optional engineering-review lens: `jeff`, `linus`, `fowler`, `beck`, `lamport`, or `carmack` |
+| `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | Fixed number of days for observation-only cost-policy evaluation |
+| `BUDDY_SHADOW_TARGET_CALLS` | `300` | Target review count used to judge overall sample sufficiency |
 
 Edit `~/.claude/scripts/buddy/buddy-prompt.txt` to adjust review behavior.
+
+### Cost telemetry and bounded shadow evaluation
+
+The first review after installation starts a fixed seven-day shadow window.
+Shadow means a possible cost-saving skip is only labeled and measured; every
+model review still runs. Candidate labels cover Stops with no new tool or
+agentcam evidence, and Stops with no later tool evidence after a same-turn
+checkpoint. If any candidate call produces a finding, that candidate becomes
+`shadow_fail`.
+
+The first review on or after day seven closes the window, writes
+`~/.claude/buddy/shadow-evaluation.md`, and surfaces one notice through the
+floating window and next-prompt injection. It closes as
+`insufficient_samples` when fewer than 300 calls were observed; it never
+silently extends and never enables skipping automatically. Hooks cannot wake
+themselves while Claude Code is idle, so the notice appears on the first review
+after the deadline.
+
+Each Stop and checkpoint appends content-free metadata to
+`~/.claude/buddy/review-telemetry.jsonl`: time, call kind/reason, model, lens,
+outcome status, input character count, latency, source hash, shadow labels, and
+token/cache usage when the CLI exposes it. Prompts, transcripts, tool results,
+and finding text are not stored. Delete `shadow-evaluation.json`,
+`shadow-evaluation.md`, and `review-telemetry.jsonl` only when intentionally
+starting a fresh evaluation window.
 
 ### Six master lenses
 
@@ -414,6 +441,9 @@ If even same-vendor egress is unacceptable, do not enable Masters’ Nudge.
 - There is no time cooldown. Every Stop fires a model call; checkpoints are
   event-gated and exact repeats are deduplicated. Token cost still adds up on
   heavy days.
+- Cost controls currently remain shadow-only and do not reduce live calls.
+  Token counts are recorded only when the CLI returns parseable usage metadata;
+  a missing value does not mean zero usage.
 - Recursion is guarded by the `BUDDY_ACTIVE` env var, but if you have other
   hooks calling `claude`/`codex` recursively without similar guards, watch
   for loops.

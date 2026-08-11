@@ -11,16 +11,19 @@ Never raises out of main() — hook must not block on our errors.
 """
 
 import json
+import hashlib
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 
 import source_context
+import review_telemetry
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -327,6 +330,8 @@ def read_recent_reactions(session_id: str, max_count: int = 3, max_chars: int = 
             continue
         try:
             entry = json.loads(line)
+            if entry.get("kind") == "evaluation_notice":
+                continue
             r = entry.get("reaction", "").strip()
             if r:
                 reactions.append(r[:max_chars])
@@ -466,7 +471,7 @@ def load_output_schema_json() -> str:
     return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
 
-def parse_reaction(stdout: str) -> str:
+def parse_reaction_result(stdout: str) -> dict:
     """Extract and validate one finding from structured CLI output.
 
     Both direct schema objects (Codex) and Claude's JSON result envelope are
@@ -474,34 +479,79 @@ def parse_reaction(stdout: str) -> str:
     """
     stdout = stdout.strip()
     if not stdout:
-        return ""
+        return {"status": "error", "finding": ""}
     try:
         obj = json.loads(stdout)
     except (TypeError, ValueError):
-        return ""
+        return {"status": "error", "finding": ""}
     if isinstance(obj, dict) and "structured_output" in obj:
         obj = obj.get("structured_output")
     if not isinstance(obj, dict) or set(obj) != {"status", "finding"}:
-        return ""
+        return {"status": "error", "finding": ""}
     status = obj.get("status")
     finding = obj.get("finding")
     if not isinstance(finding, str):
-        return ""
+        return {"status": "error", "finding": ""}
     if status == "no_finding":
-        return ""
+        return {"status": "no_finding", "finding": ""}
     if status != "finding":
-        return ""
+        return {"status": "error", "finding": ""}
     finding = finding.strip()
     if not finding or len(finding) > MAX_REACTION_CHARS:
-        return ""
-    return finding
+        return {"status": "error", "finding": ""}
+    return {"status": "finding", "finding": finding}
 
 
-def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
+def parse_reaction(stdout: str) -> str:
+    """Backward-compatible finding-only wrapper."""
+    return str(parse_reaction_result(stdout)["finding"])
+
+
+def parse_usage(stdout: str) -> dict[str, int]:
+    """Best-effort extraction of token counters from CLI JSON/JSONL output."""
+    usage_fields = {
+        "input_tokens",
+        "cached_input_tokens",
+        "cache_write_input_tokens",
+        "output_tokens",
+        "reasoning_output_tokens",
+        "total_tokens",
+    }
+    best: dict[str, int] = {}
+
+    def visit(value) -> None:
+        nonlocal best
+        if isinstance(value, dict):
+            candidate = {
+                key: int(item)
+                for key, item in value.items()
+                if key in usage_fields and isinstance(item, (int, float))
+            }
+            if len(candidate) > len(best):
+                best = candidate
+            for item in value.values():
+                visit(item)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    for line in str(stdout or "").splitlines():
+        try:
+            visit(json.loads(line))
+        except (TypeError, ValueError):
+            continue
+    return best
+
+
+def _call_result(status: str = "error", finding: str = "", **extra) -> dict:
+    return {"status": status, "finding": finding, "usage": {}, **extra}
+
+
+def call_claude_result(system_prompt: str, transcript_text: str, model: str) -> dict:
     user_prompt = "請對 stdin 提供的對話片段寫一句簡短的旁觀者反應。"
     schema_json = load_output_schema_json()
     if not schema_json:
-        return ""
+        return _call_result()
 
     fd = tempfile.NamedTemporaryFile(
         mode="w", suffix=".txt", delete=False, encoding="utf-8"
@@ -528,19 +578,26 @@ def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
         )
         if r.returncode != 0:
             log_error(f"claude CLI exit {r.returncode}: {r.stderr[:500]}")
-            return ""
-        return parse_reaction(r.stdout)
+            return _call_result()
+        result = parse_reaction_result(r.stdout)
+        result["usage"] = parse_usage(r.stdout)
+        return result
     except subprocess.TimeoutExpired:
         log_error("claude CLI timeout")
-        return ""
+        return _call_result()
     except FileNotFoundError:
         log_error("claude CLI not found in PATH")
-        return ""
+        return _call_result()
     finally:
         try:
             os.unlink(fd.name)
         except OSError:
             pass
+
+
+def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
+    """Backward-compatible finding-only wrapper."""
+    return str(call_claude_result(system_prompt, transcript_text, model)["finding"])
 
 
 def _resolve_codex_bin() -> str | None:
@@ -563,14 +620,14 @@ def _resolve_codex_bin() -> str | None:
     return None
 
 
-def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
-    """Invoke codex exec for OpenAI-side critique. Returns last assistant message."""
+def call_codex_result(system_prompt: str, transcript_text: str, model: str) -> dict:
+    """Invoke codex exec and return structured status plus best-effort usage."""
     codex_bin = _resolve_codex_bin()
     if not codex_bin:
         log_error("codex CLI not found (checked PATH + common npm paths)")
-        return ""
+        return _call_result()
     if not load_output_schema_json():
-        return ""
+        return _call_result()
 
     # codex has no separate system-prompt slot — bundle everything into one prompt.
     user_prompt = "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。"
@@ -595,6 +652,7 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             "--skip-git-repo-check",
             "--ephemeral",
             "--ignore-user-config",
+            "--json",
             "-s", "read-only",
             "-m", model,
             "--output-schema", str(OUTPUT_SCHEMA_FILE),
@@ -626,24 +684,31 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             )
         if r.returncode != 0:
             log_error(f"codex exit {r.returncode}: {r.stderr[:500]}")
-            return ""
+            return _call_result(usage=parse_usage(r.stdout))
         try:
             with open(output_fd.name, "r", encoding="utf-8") as f:
-                return parse_reaction(f.read())
+                result = parse_reaction_result(f.read())
+                result["usage"] = parse_usage(r.stdout)
+                return result
         except Exception as e:
             log_error(f"codex output read failed: {e}")
-            return ""
+            return _call_result(usage=parse_usage(r.stdout))
     except subprocess.TimeoutExpired:
         log_error("codex timeout")
-        return ""
+        return _call_result()
     except FileNotFoundError:
         log_error(f"codex CLI not executable: {codex_bin}")
-        return ""
+        return _call_result()
     finally:
         try:
             os.unlink(output_fd.name)
         except OSError:
             pass
+
+
+def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
+    """Backward-compatible finding-only wrapper."""
+    return str(call_codex_result(system_prompt, transcript_text, model)["finding"])
 
 
 _WRAPPER_RE = re.compile(
@@ -708,9 +773,14 @@ def sanitize_reaction(raw: str) -> str:
 
 def dispatch_call(system_prompt: str, transcript_text: str) -> str:
     """Route to the right provider based on BUDDY_PROVIDER."""
+    return str(dispatch_call_result(system_prompt, transcript_text)["finding"])
+
+
+def dispatch_call_result(system_prompt: str, transcript_text: str) -> dict:
+    """Route to a provider while preserving outcome and usage metadata."""
     if PROVIDER in ("openai", "codex"):
-        return call_codex(system_prompt, transcript_text, MODEL)
-    return call_claude(system_prompt, transcript_text, MODEL)
+        return call_codex_result(system_prompt, transcript_text, MODEL)
+    return call_claude_result(system_prompt, transcript_text, MODEL)
 
 
 def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) -> None:
@@ -724,6 +794,7 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
     entry = {
         "ts": datetime.now().isoformat(),
         "session_id": session_id,
+        "kind": "review",
         "provider": provider,
         "model": model,
         "persona": persona,
@@ -733,7 +804,93 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def build_stop_source_packet(hook: dict, agentcam_content: str = "") -> str:
+def _selected_persona() -> str:
+    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
+    return persona if persona in PERSONAS else "general"
+
+
+def _checkpoint_delivery_path(session_id: str) -> Path:
+    safe_session = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id)[:120]
+    return BUDDY_DIR / f"{safe_session}.checkpoint-delivery.json"
+
+
+def mark_checkpoint_delivery(
+    session_id: str,
+    *,
+    prompt_offset: int,
+    transcript_path: str,
+    reason: str,
+) -> None:
+    """Remember a delivered checkpoint without retaining its text."""
+    try:
+        transcript_offset = Path(transcript_path).stat().st_size if transcript_path else 0
+        BUDDY_DIR.mkdir(parents=True, exist_ok=True)
+        _checkpoint_delivery_path(session_id).write_text(
+            json.dumps(
+                {
+                    "prompt_offset": max(0, int(prompt_offset)),
+                    "transcript_offset": max(0, int(transcript_offset)),
+                    "reason": reason,
+                }
+            ),
+            encoding="utf-8",
+        )
+    except (OSError, TypeError, ValueError) as exc:
+        log_error(f"checkpoint delivery state failed: {exc}")
+
+
+def checkpoint_stop_overlap(
+    session_id: str, *, prompt_offset: int, transcript_path: str
+) -> bool:
+    """True when no new tool evidence followed a same-turn checkpoint."""
+    try:
+        state = json.loads(
+            _checkpoint_delivery_path(session_id).read_text(encoding="utf-8")
+        )
+        if int(state.get("prompt_offset") or 0) != max(0, int(prompt_offset)):
+            return False
+        checkpoint_offset = int(state.get("transcript_offset") or 0)
+    except (OSError, TypeError, ValueError):
+        return False
+    return not bool(read_recent_tool_evidence(transcript_path, checkpoint_offset).strip())
+
+
+def record_review_telemetry(
+    *,
+    session_id: str,
+    kind: str,
+    reason: str,
+    status: str,
+    input_chars: int,
+    latency_ms: int,
+    source_fingerprint: str,
+    shadow_candidates: list[str],
+    usage: dict | None = None,
+) -> None:
+    """Record content-free local metadata; telemetry failure never blocks hooks."""
+    try:
+        review_telemetry.record_review(
+            BUDDY_DIR,
+            {
+                "session_id": session_id,
+                "kind": kind,
+                "reason": reason,
+                "provider": PROVIDER,
+                "model": MODEL,
+                "persona": _selected_persona(),
+                "status": status,
+                "input_chars": input_chars,
+                "latency_ms": latency_ms,
+                "source_fingerprint": source_fingerprint,
+                "shadow_candidates": shadow_candidates,
+                "usage": usage or {},
+            },
+        )
+    except Exception as exc:
+        log_error(f"review telemetry failed: {exc}")
+
+
+def build_stop_source_context(hook: dict, agentcam_content: str = "") -> dict:
     session_id = str(hook.get("session_id") or "unknown")
     transcript_path = str(hook.get("transcript_path") or "")
     state = source_context.load_source_state(BUDDY_DIR, session_id)
@@ -745,13 +902,30 @@ def build_stop_source_packet(hook: dict, agentcam_content: str = "") -> str:
     agentcam_evidence = source_context.extract_agentcam_evidence(agentcam_content)
 
     if not any((last_assistant, tool_evidence, agentcam_evidence)):
-        return read_recent_transcript(transcript_path)
-    return source_context.build_stop_packet(
-        task_anchor=str(state.get("task_anchor") or ""),
-        last_assistant_message=last_assistant,
-        tool_evidence=tool_evidence,
-        agentcam_evidence=agentcam_evidence,
+        packet = read_recent_transcript(transcript_path)
+    else:
+        packet = source_context.build_stop_packet(
+            task_anchor=str(state.get("task_anchor") or ""),
+            last_assistant_message=last_assistant,
+            tool_evidence=tool_evidence,
+            agentcam_evidence=agentcam_evidence,
+        )
+    overlap = checkpoint_stop_overlap(
+        session_id,
+        prompt_offset=offset,
+        transcript_path=transcript_path,
     )
+    return {
+        "packet": packet,
+        "tool_evidence": tool_evidence,
+        "agentcam_evidence": agentcam_evidence,
+        "checkpoint_overlap": overlap,
+    }
+
+
+def build_stop_source_packet(hook: dict, agentcam_content: str = "") -> str:
+    """Backward-compatible packet-only wrapper."""
+    return str(build_stop_source_context(hook, agentcam_content)["packet"])
 
 
 def main() -> None:
@@ -765,7 +939,8 @@ def main() -> None:
         report_content = report["content"]
         save_agentcam_last_mtime(session_id, report["mtime"])
 
-    source_packet = build_stop_source_packet(hook, report_content)
+    source = build_stop_source_context(hook, report_content)
+    source_packet = str(source["packet"])
     if not source_packet:
         log_error("empty source packet, skipping")
         return
@@ -788,12 +963,37 @@ def main() -> None:
 
     enriched_text = "\n".join(context_parts)
 
-    raw_reaction = dispatch_call(system_prompt, enriched_text)
+    candidates = review_telemetry.stop_shadow_candidates(
+        tool_evidence=str(source["tool_evidence"]),
+        agentcam_evidence=str(source["agentcam_evidence"]),
+        checkpoint_overlap=bool(source["checkpoint_overlap"]),
+    )
+    fingerprint = hashlib.sha256(
+        f"{system_prompt}\0{enriched_text}".encode("utf-8", errors="replace")
+    ).hexdigest()[:24]
+    started = time.perf_counter()
+    call_result = dispatch_call_result(system_prompt, enriched_text)
+    latency_ms = round((time.perf_counter() - started) * 1000)
+    raw_reaction = str(call_result.get("finding") or "")
     reaction = sanitize_reaction(raw_reaction)
     if reaction:
         append_buddy_log(session_id, PROVIDER, MODEL, reaction)
     else:
         log_error("empty reaction, not logged")
+    status = str(call_result.get("status") or "error")
+    if status == "finding" and not reaction:
+        status = "error"
+    record_review_telemetry(
+        session_id=str(session_id),
+        kind="stop",
+        reason="stop",
+        status=status,
+        input_chars=len(system_prompt) + len(enriched_text),
+        latency_ms=latency_ms,
+        source_fingerprint=fingerprint,
+        shadow_candidates=candidates,
+        usage=call_result.get("usage") if isinstance(call_result, dict) else {},
+    )
 
 
 if __name__ == "__main__":
