@@ -6,4 +6,8 @@
 - latency、throughput、failure mode 或維運成本是否被忽略或重複支付。
 - 能否改掉最早的錯誤 constraint，讓後面的機制一起不再需要。
 
+選題例（只示範先檢查哪裡，不示範輸出字數或固定措辭）：
+- fallback 疊 fallback → 回查最早的錯誤 constraint
+- 兩份 state 互相同步 → 先找真正的 source of truth
+
 不要假設每個系統都需要 Google 規模；沒有 scale 或效能證據時，不要硬挑這類問題。

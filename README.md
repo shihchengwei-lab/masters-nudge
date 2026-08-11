@@ -171,7 +171,9 @@ $env:BUDDY_PERSONA = "linus"
 The selected file in `personas/` is appended to the shared
 `buddy-prompt.txt`. The selected lens changes what Masters’ Nudge checks first;
 it does not replace the evidence, observer, single-finding, or 52-character
-rules. These cues are not a demonstrated accuracy or capability improvement.
+rules. Each lens includes two short selection examples that map visible evidence
+to the first issue category to inspect; they are not output templates. These
+cues are not a demonstrated accuracy or capability improvement.
 
 **Why the default uses OpenAI**: the main agent is Anthropic Claude. Putting
 Masters’ Nudge on a different vendor (OpenAI's GPT-5.5) gives a more independent

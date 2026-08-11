@@ -68,6 +68,8 @@ class TestBranding(unittest.TestCase):
         self.assertIn("compatibility", readme.lower())
         self.assertIn("BUDDY_*", readme_zh)
         self.assertIn("相容", readme_zh)
+        self.assertIn("two short selection examples", readme)
+        self.assertIn("兩個極短選題例", readme_zh)
 
     def test_readmes_include_windows_powershell_env_examples(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -140,12 +142,35 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.assertIn("你是 Masters’ Nudge", result)
                 self.assertIn("# 工程觀察鏡頭", result)
                 self.assertIn(display_name, result)
-                self.assertIn("不要假裝自己是這位人物", result)
+                self.assertIn("作為注意力索引", result)
+                self.assertIn("身份與語氣維持 Masters’ Nudge", result)
+                self.assertNotIn("不要假裝自己是這位人物", result)
+                self.assertNotIn("模仿口吻、迷因", result)
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                     encoding="utf-8"
                 ).strip()
                 self.assertTrue(overlay)
                 self.assertTrue(result.endswith(f"{overlay}\n"))
+
+    def test_each_persona_has_exactly_two_short_selection_examples(self):
+        marker = "選題例（只示範先檢查哪裡，不示範輸出字數或固定措辭）："
+
+        for persona in self.PERSONAS:
+            with self.subTest(persona=persona):
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                )
+                self.assertEqual(overlay.count(marker), 1)
+                example_block = overlay.split(marker, 1)[1].split("\n\n", 1)[0]
+                examples = [
+                    line.removeprefix("- ").strip()
+                    for line in example_block.splitlines()
+                    if line.startswith("- ")
+                ]
+                self.assertEqual(len(examples), 2)
+                for example in examples:
+                    self.assertIn("→", example)
+                    self.assertLessEqual(len(example), 46)
 
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}

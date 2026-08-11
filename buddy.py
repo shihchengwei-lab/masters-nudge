@@ -439,9 +439,9 @@ def build_system_prompt() -> str:
 
     persona_header = (
         "# 工程觀察鏡頭\n\n"
-        f"這一輪使用 {PERSONAS[persona]} 相關的工程判斷作為注意力線索。\n"
-        "人名只改變優先檢查的問題類型；不要假裝自己是這位人物，"
-        "不要模仿口吻、迷因、羞辱或人身攻擊。\n"
+        f"這一輪以 {PERSONAS[persona]} 常見的工程判斷作為注意力索引。\n"
+        "只套用下方的選題框架；身份與語氣維持 Masters’ Nudge "
+        "的中性、證據優先風格。\n"
         "上方 Masters’ Nudge 的證據、旁觀者角色、單一 finding 與字數規則仍然優先。"
     )
     return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"

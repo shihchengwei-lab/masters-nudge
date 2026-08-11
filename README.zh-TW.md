@@ -155,7 +155,8 @@ $env:BUDDY_PERSONA = "linus"
 
 Masters’ Nudge 會把 `personas/` 中選定的檔案附加到共用 `buddy-prompt.txt`。
 選定的 lens 只改變優先檢查的問題，不會取代原本的證據、旁觀者、單一
-finding 與 52 字限制。這些提示尚未證明能提升正確率或能力。
+finding 與 52 字限制。每個 lens 含兩個極短選題例，把可見證據對應到優先
+檢查的問題類型；選題例不是輸出範本。這些提示尚未證明能提升正確率或能力。
 
 **為什麼預設用 OpenAI**：主 agent 是 Anthropic Claude。把 Masters’ Nudge 放在
 不同廠商（OpenAI 的 GPT-5.5）能得到更獨立的批評 —— 不同訓練、不同盲點、
