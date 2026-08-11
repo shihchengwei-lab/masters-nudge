@@ -154,6 +154,27 @@ class TestBranding(unittest.TestCase):
             self.assertIn("reaction-schema.json", document)
             self.assertIn("no_finding", document)
 
+    def test_roadmap_matches_shipped_selector_and_shadow_evaluation(self):
+        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
+
+        self.assertIn("Runtime lens selector", roadmap)
+        self.assertIn("✅ SHIPPED 2026-08-11", roadmap)
+        self.assertIn("Bounded cost shadow evaluation", roadmap)
+        self.assertIn("never enables skipping automatically", roadmap)
+        self.assertNotIn("Runtime lens UI/automatic switching", roadmap)
+        self.assertIn("Automatic per-event lens switching", roadmap)
+
+    def test_roadmap_names_generalization_and_cost_control_as_priorities(self):
+        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
+
+        self.assertIn("### 1. Generalization（通用化）", roadmap)
+        self.assertIn("### 2. Cost control（成本控制）", roadmap)
+        self.assertIn("normalized review event", roadmap)
+        self.assertIn("Claude Code adapter", roadmap)
+        self.assertIn("first generalization deliverable", roadmap)
+        self.assertIn("quality floor", roadmap)
+        self.assertIn("Live gating remains off", roadmap)
+
     def test_openai_default_is_current_explicit_flagship(self):
         import buddy
 
