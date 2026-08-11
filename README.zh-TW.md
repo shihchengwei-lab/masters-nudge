@@ -2,419 +2,256 @@
 
 繁體中文 | [English](README.md)
 
-**六位大師，一句及時提醒。**
+**套上一位大師的濾鏡做場邊審查，每一位各關注不同的面向。**
 
 <img src="spritesheet.webp" alt="Masters’ Nudge 工程 checkpoint 提醒鈴動畫" width="720">
 
-Masters’ Nudge 是長時間 coding agent 的第三方 side-review companion。
-它可以選用 Jeff Dean、Linus Torvalds、Martin Fowler、Kent Beck、
-Leslie Lamport 或 John Carmack 所代表的工程鏡頭，在值得介入的 checkpoint
-只回傳一句有證據的 nudge。人名只用來引導注意力，不會模仿本人。
+## 簡介
 
-專案源自重建 Claude Code 舊 Buddy/Cinder companion 精神的實驗。為了不破壞
-既有安裝，`buddy.py`、`BUDDY_*` 與 `~/.claude/buddy/` 等名稱保留作為相容層。
+Masters’ Nudge 掛在 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 上：在少數時機把當下狀況整理後，送到**另一個**模型做審查，必要時回傳最多 52 字的短評。主 Claude 仍寫碼與決策；本工具只提供第二意見。
 
-- 在長時間 agentic 工作途中執行同步、事件式的 checkpoint hook。工具失敗、
-  測試失敗，或 working tree 首次超過 80 行變動時才呼叫 Masters’ Nudge。
-  產生的一句 nudge 透過 `additionalContext` 直接送回主 Claude；不阻擋
-  工具，也不等待使用者批准。
-- 保留每輪結束後的 Stop hook（背景模式，使用者感受不到延遲），作為回合末
-  補充審查。
-- 改用小型、有標籤的證據封包，不再固定重送一段滾動 transcript。
-  `UserPromptSubmit` 會把最新使用者 prompt 記成有上限的任務錨點，並記住
-  當時的 transcript 位元組位置。Checkpoint 收到任務錨點、觸發事件與少量
-  最近 Agent context；Stop 審查收到任務錨點、Agent 最終宣告、當輪工具
-  結果，以及有的話經篩選的 agentcam 證據。長內容保留開頭與結尾，並明確
-  標示中段已截斷。只有 Stop 拿不到最終宣告、工具或 agentcam 證據時，
-  才退回舊的 transcript parser。封包另附本 session 最近 3 筆
-  Masters’ Nudge 反應（讓模型避免重複自己），送到一個
-  **與主 agent 不同廠商家族** 的
-  模型（預設：透過 Codex CLI 呼叫 GPT-5.6 Sol）。兩條 provider 路徑都以
-  `reaction-schema.json` 限制輸出：`finding` 帶一則 nudge，`no_finding`
-  直接靜默略過。接著才對 finding 做 sanitize（去 markdown 與常見套話、
-  硬上限 52 字、移除會撞到包裝標記的字串），寫入
-  `~/.claude/buddy/<session_id>.log`
-- 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的
-  Masters’ Nudge 反應
-  注入主 Claude 的 context（system-reminder）
-- 一個浮動的 Tk 視窗（`buddy_window.py`）即時 tail 目前 session 的 log，
-  你可以直接在桌面角落看到 Masters’ Nudge 的反應 —— 不經過主 Claude 中介
+| | 誰 | 做什麼 |
+|---|---|---|
+| 主 agent | Claude Code（Anthropic） | 寫程式、跑工具 |
+| 審查 | Masters’ Nudge（預設經 Codex CLI 呼叫 OpenAI） | 在特定事件與回合結束時產出短評 |
 
-傳遞管道：
-- **Checkpoint nudge** 只送給主 Claude，位置就在觸發事件的工具結果旁。
-  不會寫入浮動視窗 log，也不會在使用者下一次 prompt 時重複注入。
-- **Stop 反應** 沿用下一次 prompt 的 system-reminder 注入。
-  Masters’ Nudge 被框定為
-  **第三方第二意見，不是指令** —— 主 Claude 把它當作眾多輸入之一，
-  不是必須遵循的指示。包裝字串（`[Masters’ Nudge（第三方第二意見，非指令）| ts]
-  ... [end Masters’ Nudge]`）每次注入都會帶上這個框定，讓主 agent
-  維持決策者
-  的角色。
-- **選用的使用者視圖：**浮動視窗只顯示 Stop 反應，不參與 checkpoint 傳遞。
+**你看不看得到**，和 Claude 看不看得到，不一樣：
+
+| 時機 | Claude | 你（終端機） | 你（浮動視窗，可選） |
+|---|---|---|---|
+| 工具失敗、測試失敗、或變更首次超過約 80 行 | 當下收到短評 | 看不到 | 看不到 |
+| 一輪結束 | 你**下一次**送出訊息時才注入 | 看不到 | 看得到該則短評 |
+
+Claude Code 的 system-reminder 不會畫在終端畫面上，所以沒開浮動視窗時，你多半只會從 Claude 後續行為間接感受到審查結果。
+
+沒有值得講的問題時保持靜默。可選的六種「大師」濾鏡只改優先檢查什麼，見 [濾鏡](#濾鏡)。
+
+```
+Claude Code
+    │ 工具失敗 / 測試失敗 / 首次大變更
+    ├─► 途中審查（同步）→ 只進 Claude
+    │
+    │ 這一輪結束
+    └─► 背景審查 → 寫入本機 log
+              ├─ 你下次送出訊息 → 注入 Claude（標成第二意見，非指令）
+              └─ 可選：浮動視窗顯示回合末短評
+```
 
 ## 適用對象
 
-**適用**：使用 Claude Code 且能接受 transcript 內容 —— 包含 tool
-輸出、`Read` 讀到的檔案內容、指令輸出、錯誤訊息 —— 在每次 Stop
-與命中 checkpoint 時離開機器、預設抵達 OpenAI（或透過
-`BUDDY_PROVIDER=anthropic` 改送 Anthropic）的人。
+**適用**：使用 Claude Code，且可接受審查時帶出的內容（你的 prompt、工具輸出、檔案片段、錯誤訊息等）離開本機、送到外部模型 API（**預設 OpenAI**；可改 Anthropic）。
 
-**不適用**：
-- 對話內容不能離開機器的環境（公司機密程式碼、受監管行業、機密工作）。
-- 不能接受檔案內容、指令輸出每輪抵達第三方 API 的人。
+**不適用**：對話或程式碼不得外送的環境。細節見 [隱私](#隱私)。不符合就不要裝。
 
-只要符合一條就不要安裝。完整資料流見下方 [隱私](#隱私) 一節。
+成本上：預設**每個回合結束都會**呼叫一次審查模型；途中僅在命中錯誤／測不過／首次大變更時再呼叫。繁忙時 token 會累積。
+
+## 行為
+
+| 種類 | 何時觸發 | 誰收到 | 時序 |
+|---|---|---|---|
+| 途中（checkpoint） | 工具錯誤、測試失敗、working tree 首次超過約 80 行變更 | 僅 Claude（貼在該次工具結果旁） | 同步；**僅命中時**可能暫停最多約 15 秒，其餘工具事件只做本機判斷 |
+| 回合末（Stop） | Claude 一輪結束 | Claude（下次你送出訊息時）；浮動視窗 | 背景，不擋當前回合 |
+
+注入給 Claude 的回合末短評帶固定框定：第三方第二意見，不是指令。途中短評只送一次，不進浮動視窗，也不在下次 prompt 重送。
+
+輸出要嘛一則 finding，要嘛靜默；finding 去 markdown／套話後硬上限 52 字。
 
 ## 安裝
+
+### 前置
+
+- 可用的 Claude Code
+- 預設路徑：本機 [Codex CLI](https://github.com/openai/codex) 已安裝且可完成登入／呼叫  
+  （或改 `BUDDY_PROVIDER=anthropic`，走 `claude -p`）
+- `bash`（macOS／Linux 原生；Windows 可用 Git Bash 或 WSL 跑下方腳本）
+
+### 步驟
+
+1. 複製腳本（不改 settings）：
 
 ```bash
 bash install.sh
 ```
 
-接著打開 `~/.claude/settings.json`，把 `settings-snippet.json` 裡的
-`hooks` 區段合併進去。（snippet 內的 `_comment` 欄位會提醒你不要整份
-取代 settings.json。）
+目標目錄：`~/.claude/scripts/buddy/`。
 
-## 選用：啟動 Masters’ Nudge 視窗
+2. 打開 `~/.claude/settings.json`，把 [`settings-snippet.json`](settings-snippet.json) 裡的 `hooks` **合併**進去：保留你既有的 hooks，把 snippet 中的 `PostToolUse`、`PostToolUseFailure`、`Stop`、`UserPromptSubmit` 條目加在旁邊。不要整檔覆蓋。snippet 內 `_comment` 亦有提醒。
 
-hooks 已足以把 Masters’ Nudge 注入主 Claude 的 context。浮動 sprite 是
-回合末 Stop 反應的選用視圖；checkpoint nudge 只在 reviewer 與主 Agent
-之間傳遞。開啟方式：
+3. （可選）開浮動視窗，否則你在 UI 上幾乎看不到回合末短評：
 
 ```bash
-pip install Pillow      # 一次性安裝，buddy_window.py 需要
+pip install Pillow
 ```
 
-接著：
+- **Windows：** 雙擊 `~/.claude/scripts/buddy/start_buddy_window.bat`
+- **macOS / Linux：** `python3 ~/.claude/scripts/buddy/buddy_window.py &`
 
-- **Windows** —— 雙擊 `~/.claude/scripts/buddy/start_buddy_window.bat`
-  （使用 `pythonw`，不會跳 console 視窗）。
-- **macOS / Linux** —— 執行 `python3 ~/.claude/scripts/buddy/buddy_window.py &`。
+關閉視窗不會停用 hooks。
 
-視窗會自動 tail 當前作用中的 session。關掉視窗 **不會** 停用 Masters’ Nudge；
-Stop hook 仍會繼續寫 log，UserPromptSubmit hook 仍會繼續注入主 Claude。
-隨時可以重新開啟。
-較長的 nudge 會自動換行，視窗會從 180px 向上增高到最多 290px，讓 52 字
-上限完整顯示，同時維持視窗底部位置。
-視窗內的下拉選單可直接切換 `General` 或六種 master lenses；選擇會寫入
-`~/.claude/buddy/config.json`，並從下一次 review 起生效，不必重開 Claude Code。
-若啟動 Claude Code 時已設定 `BUDDY_PERSONA`，reviewer 仍以環境變數優先。
-浮動視窗也繼承該環境變數時，選單會停用並顯示目前由環境變數接管；若浮動視窗
-是另外用滑鼠啟動，視窗不一定看得到 Claude Code 程序內的暫時環境變數，因此每次
-切換後的提示也會保留這項優先序提醒。
-每則 Stop reaction 上方會顯示色點與完整 lens 姓名，例如
-`● Jeff Dean lens（系統因果與成本）`。每個名稱後方都附上白話關注面向，
-不需要先認識六位 master。標籤讀取該則 reaction 一起儲存的 persona，不依賴浮動
-視窗自己的環境變數。未設定、無法辨識的值，或缺少 persona metadata 的舊 log，
-都會顯示 `● General lens（通用證據審查）`。
+### 如何確認有在跑
 
-### 自訂 sprite
+- 在 Claude Code 裡觸發一次測試失敗，或累積超過約 80 行變更後再跑一輪：命中途中審查時 Claude 可能多等數秒；回合結束後應出現 `~/.claude/buddy/<session_id>.log`。
+- 腳本錯誤：`~/.claude/buddy-error.log`。
+- 若完全沒有 log：多半是 hooks 未合併成功，或 Codex／`BUDDY_PROVIDER` 端呼叫失敗。
 
-`install.sh` 會內建 Masters’ Nudge 的工程 checkpoint 提醒鈴 spritesheet
-（`spritesheet.webp`）。視窗會從 `buddy_window.py` 同目錄載入。要用自己的圖，把
-`BUDDY_SPRITE_PATH` 指到任何透明背景的 spritesheet —— 自動分格偵測
-能處理任意 frame 數與 row 排列：
+## 濾鏡
 
-```bash
-export BUDDY_SPRITE_PATH=/path/to/your/spritesheet.png
-```
+預設為通用、證據優先的審查。浮動視窗下拉可切換（寫入 `~/.claude/buddy/config.json`，下次審查生效）。啟動 Claude Code 前設 `BUDDY_PERSONA` 可覆寫視窗選擇。
 
-Windows PowerShell 請使用：
-
-```powershell
-$env:BUDDY_SPRITE_PATH = "C:\path\to\your\spritesheet.png"
-```
-
-如果檔案不存在，視窗仍會開啟並顯示對話泡泡，只是看不到 sprite。
-
-## 設定
-
-| 環境變數 | 預設值 | 效果 |
+| 值 | 靈感來源 | 優先面向 |
 |---|---|---|
-| `BUDDY_PROVIDER` | `openai` | 由哪一家廠商發聲。`openai`（用 `codex exec`）或 `anthropic`（用 `claude -p`） |
-| `BUDDY_MODEL` | `gpt-5.6-sol`（openai）/ `sonnet`（anthropic） | 傳給選定 CLI 的具體模型名；也可設定此變數固定使用其他支援的模型 |
-| `BUDDY_TIMEOUT` | `60` | 模型呼叫的逾時秒數 |
-| `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 同步 checkpoint nudge 等待模型的最長秒數 |
-| `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態檔放在哪 |
-| `BUDDY_PERSONA` | 未設定 | 進階環境變數覆寫；優先於浮動視窗保存的 lens |
-| `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略只觀察、不攔截的固定評估天數 |
-| `BUDDY_SHADOW_TARGET_CALLS` | `300` | 判讀整體樣本是否足夠的目標 review 次數 |
+| `jeff` | Jeff Dean | 因果、資料流、狀態、規模、維運成本 |
+| `linus` | Linus Torvalds | 多餘抽象、繞路、責任歸屬不清 |
+| `fowler` | Martin Fowler | 設計氣味、耦合、變更成本、不改行為的重構 |
+| `beck` | Kent Beck | 小步驟、測試、當前範圍、做完即停 |
+| `lamport` | Leslie Lamport | 不變量、事件順序、重試、部分失敗 |
+| `carmack` | John Carmack | 實際執行路徑、量測、多餘工作 |
 
-編輯 `~/.claude/scripts/buddy/buddy-prompt.txt` 可調整審查行為。
+濾鏡只改檢查優先序，不改證據門檻、單則 finding、字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。非模仿本人，亦非六個 agent 同時發言。
 
-### 成本遙測與限時 shadow 評估
-
-安裝後第一次 review 會啟動固定 7 天的 shadow window。Shadow 的意思是只記錄
-「如果未來套用省成本規則，這次是否可能被略過」，目前仍照常呼叫模型；候選包含
-沒有新增工具或 agentcam 證據的 Stop，以及同一輪 checkpoint 後未再出現工具證據的
-Stop。任一候選 review 實際產生 finding，就會被標成 `shadow_fail`。
-
-第 7 天後的下一次 review 會關閉評估、產生
-`~/.claude/buddy/shadow-evaluation.md`，並透過浮動視窗與下一次 prompt 注入顯示一次
-通知。即使未達 300 次也會準時結束並標為 `insufficient_samples`；不會默默延長，
-也不會自動開啟任何略過規則。沒有新的 hook 事件時程式不會自行喚醒，因此到期通知
-會在評估期限後第一次 review 發生時出現。
-
-每次 Stop 與 checkpoint 都會把不含對話內容的 metadata 寫到
-`~/.claude/buddy/review-telemetry.jsonl`：時間、種類、原因、模型、lens、結果狀態、
-輸入字元數、延遲、來源雜湊、shadow 標籤，以及 CLI 有提供時的 token/cache 用量。
-不保存 prompt、transcript、tool result 或 finding 文字。刪除
-`shadow-evaluation.json`、`shadow-evaluation.md` 與 `review-telemetry.jsonl` 才會重新
-開始一個全新的評估 window。
-
-### 六種 master lenses
-
-六位人物是工程注意力線索，不是人格模仿，也不是六個 Agent 同時開會。
-一般使用方式是在浮動視窗的下拉選單選擇 lens；下一次 review 起立即生效。
-選擇 `General lens（通用證據審查）` 會回到通用、證據優先的審查。
-
-進階使用者仍可在啟動 Claude Code 前用 `BUDDY_PERSONA` 強制指定 lens：
-
-```bash
-export BUDDY_PERSONA=linus
-```
-
-Windows PowerShell 請使用：
-
-```powershell
-$env:BUDDY_PERSONA = "linus"
-```
-
-| 值 | 靈感來源 | 優先注意 |
-|---|---|---|
-| `jeff` | Jeff Dean | 系統因果、資料流、state、scale 與維運成本 |
-| `linus` | Linus Torvalds | 不必要 abstraction、indirection、wrapper 與不清楚的 ownership |
-| `fowler` | Martin Fowler | design smell、變更成本、coupling 與不改行為的重構 |
-| `beck` | Kent Beck | 小步驟、測試、當前範圍與滿足需求後停止 |
-| `lamport` | Leslie Lamport | invariant、狀態轉換、事件順序、retry 與部分失敗 |
-| `carmack` | John Carmack | 實際執行、資料搬運、量測與不必要工作 |
-
-#### 認識六種 lens
+<details>
+<summary>各濾鏡補充</summary>
 
 ##### Jeff Dean — 系統因果與成本
 
 > “As systems scale up, simply stamping out all sources of variability does not work.” — [Jeff Dean](https://research.google/pubs/achieving-rapid-response-times-in-large-online-services/)
 
-Jeff Dean 以建造與研究 Google 大規模系統聞名。這個 lens 會先問每個機制是由
-哪個真實限制所造成，再沿著資料流、延遲、state、失敗處理與維運成本追查影響。
-Jeff Dean lens 並不假設每個專案都需要 Google 規模，而是注意局部補丁是否製造了
-更大的系統問題。
+機制對應哪個真實限制；沿資料流、延遲、狀態、失敗處理與維運成本追影響。不預設需要 Google 規模。
 
-##### Linus Torvalds — 直接程式碼與清楚 ownership
+##### Linus Torvalds — 直接程式碼與責任歸屬
 
 > “Talk is cheap. Show me the code.” — [Linus Torvalds](https://groups.google.com/g/mlist.linux.kernel/c/pdl_7y9bPgk)
 
-Linus Torvalds 創造了 Linux 與 Git，也常被連結到直接、以證據為準的 code review。
-這個 lens 會質疑遮住實際行為或責任歸屬的 wrapper、indirection 與 abstraction。
-這裡借用的是優先檢查的面向，不是模仿 Linus Torvalds 的衝突式語氣。
+遮住實際行為或責任的包裝與間接層。取檢查面向，不是語氣。
 
-##### Martin Fowler — 讓既有設計安全演進
+##### Martin Fowler — 既有設計的安全演進
 
 > “…to make it easier to understand and cheaper to modify without changing its observable behavior.” — [Martin Fowler](https://martinfowler.com/bliki/DefinitionOfRefactoring.html)
 
-Martin Fowler 是軟體設計作者，與 refactoring（不改外部行為的重構）及 code smell
-密切相關。這個 lens 會找出讓下一次變更成本不成比例升高的結構，優先採用小幅、
-不改行為的改善，而不是不必要地重寫。
+後續變更成本過高的結構；偏好小幅、不改可觀察行為的調整。
 
-##### Kent Beck — 小而可測的步驟
+##### Kent Beck — 可測的小步
 
 > “You don’t always have to take tiny steps, but they are always an option.” — [Kent Beck](https://newsletter.kentbeck.com/p/first-one-then-many)
 
-Kent Beck 創立 Extreme Programming，並推動 test-driven development（先用測試定義
-預期行為再實作）。這個 lens 會把 Agent 留在當前需求，尋找能取得有效回饋的最小
-安全步驟，也會注意需求已滿足後是否仍繼續擴張實作。
+當前需求與有效回饋；需求已滿足後是否仍在膨脹實作。
 
-##### Leslie Lamport — state、順序與失敗
+##### Leslie Lamport — 狀態、順序、失敗
 
 > “A distributed system is one in which the failure of a computer you didn’t even know existed can render your own computer unusable.” — [Leslie Lamport](https://www.microsoft.com/en-us/research/publication/distribution/)
 
-Leslie Lamport 的工作深刻影響工程師理解 concurrency（多個工作交錯執行）與
-distributed systems。這個 lens 會把隱藏 state 與事件順序攤開、檢查狀態轉換前後
-的 invariant，並追問 retry、重複、延遲或部分失敗會如何改變結果。
+隱藏狀態與事件順序；重試、重複、延遲、部分失敗對結果的影響。
 
-##### John Carmack — 真正執行的路徑
+##### John Carmack — 實際執行路徑
 
 > “Sometimes, the elegant implementation is just a function. Not a method. Not a class. Not a framework. Just a function.” — [John Carmack](https://twitter.com/ID_AA_Carmack/status/53512300451201024)
 
-John Carmack 以務實且重視效能的遊戲引擎工作聞名。這個 lens 會沿著真正的控制流程
-與資料搬運檢查，要求效能宣告先有量測，也會質疑沒有改變結果、卻增加額外工作的
-機制。
+控制流與資料搬運；效能宣稱需有量測；不改結果卻增加工作的機制。
 
-Masters’ Nudge 會把 `personas/` 中選定的檔案附加到共用 `buddy-prompt.txt`。
-選定的 lens 只改變優先檢查的問題，不會取代原本的證據、旁觀者、單一
-finding 與 52 字限制。每個 lens 含兩個極短選題例，把可見證據對應到優先
-檢查的問題類型；選題例不是輸出範本。這些提示尚未證明能提升正確率或能力。
+</details>
 
-**為什麼預設用 OpenAI**：主 agent 是 Anthropic Claude。把 Masters’ Nudge 放在
-不同廠商（OpenAI 的 GPT-5.6 Sol）能得到更獨立的批評 —— 不同訓練、不同盲點、
-較少回音主 agent 的推理。
+預設走 OpenAI，是為了與主 agent 的 Anthropic 家族錯開；屬設計取捨，非正確率保證。
 
-## 選用：agentcam 整合
+## 設定
 
-Masters’ Nudge 可以選擇性接收
-[agentcam](https://github.com/shihchengwei-lab/agentcam) 產生的報告 ——
-agentcam 是另一個獨立工具，會記錄 AI agent 一次 run 實際做了什麼（git
-變更、動到的檔案、exit code、風險旗標）。如果你裝了 agentcam 並用它
-記錄 agent run，Masters’ Nudge 會自動把最新的 `AGENT_RUN_REPORT.md` 一起送進
-payload，讓第二意見模型可以引用作為證據。
+| 環境變數 | 預設 | 作用 |
+|---|---|---|
+| `BUDDY_PROVIDER` | `openai` | `openai`（`codex exec`）或 `anthropic`（`claude -p`） |
+| `BUDDY_MODEL` | `gpt-5.6-sol` / `sonnet` | 傳給選定 CLI 的模型名 |
+| `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
+| `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
+| `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態目錄 |
+| `BUDDY_PERSONA` | 未設定 | 強制濾鏡；優先於浮動視窗 |
+| `BUDDY_SPRITE_PATH` | 內建 spritesheet | 自訂透明背景 spritesheet |
+| `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略 shadow 評估天數 |
+| `BUDDY_SHADOW_TARGET_CALLS` | `300` | 評估用目標審查次數 |
 
-**你不需要裝 agentcam 才能用 Masters’ Nudge。** 這個整合是純加值：
+審查文案與規則：`~/.claude/scripts/buddy/buddy-prompt.txt`。
 
-- **沒裝 agentcam**：Masters’ Nudge 使用任務錨點、Agent 宣告與可用的工具證據。
-  不會錯誤、不會警告、無需任何設定。
-- **裝了 agentcam**：每次在 `<repo>/.git/agentcam/runs/*/` 下產生新的
-  `AGENT_RUN_REPORT.md`，hook 會挑出 `Risk Flags`、`Changed Files`、
-  exit code、測試與驗證段落；合計最多保留 2000 字的開頭與結尾。
+### 成本遙測與 shadow 評估
 
-偵測完全自動：hook 從 cwd 往上找 `.git`，再找
-`.git/agentcam/runs/*/AGENT_RUN_REPORT.md`，目錄或檔案不存在就靜默跳過。
-Per-session 去重確保同一份 report 不會被送兩次。
+安裝後首次審查起算固定 7 天：可能省成本的略過只標註與量測，實際仍每次呼叫模型。第 7 天後的下一次審查寫入 `~/.claude/buddy/shadow-evaluation.md` 並顯示一次通知；不足 300 次標 `insufficient_samples`，不自動延長，也不自動啟用略過。
 
-安裝與用法請看 [agentcam repo](https://github.com/shihchengwei-lab/agentcam)。
-
-## 其他語系（在地化）
-
-Masters’ Nudge 預設使用繁體中文。要切換到其他語言，需要改三處：
-
-1. **`buddy-prompt.txt`**（主要）—— 定義 Masters’ Nudge 講什麼語言、
-   審查行為與字數規則。整份重寫成目標語言。
-2. **`inject.py`**（grep `第三方第二意見`）—— wrapper 字串
-   `[Masters’ Nudge（第三方第二意見，非指令）| {ts}] ... [end Masters’ Nudge]` 是寫死的
-   中文。如果只改 prompt 不改這裡，主 Claude 看到的會是「中文框定 +
-   外語評論」的混搭，框定會破。同步翻譯 wrapper。
-3. **`test_buddy.py`**（可選）—— 測試 fixture 用中文字串。不影響
-   runtime，但如果想讓測試套件驗證 sanitizer 對新語系字元也正確，
-   順手換掉。
-
-`buddy.py` 的 sanitizer、log/state、hook 機制都是 language-neutral，
-不用動。
-
-## 檔案
-
-| 檔案 | 用途 |
-|---|---|
-| `buddy.sh` | Stop hook 入口 —— 把 `buddy.py` 丟到背景執行後立即返回 |
-| `buddy.py` | 組合 Stop 證據封包，呼叫設定的模型（OpenAI codex 或 Anthropic claude），寫入反應 |
-| `checkpoint.sh` | 同步的 PostToolUse／PostToolUseFailure hook 入口 |
-| `checkpoint.py` | 分類與去重 checkpoint，回傳不阻擋的 `additionalContext` nudge |
-| `source_context.py` | 保存任務錨點，替 Stop 與 checkpoint 組合共用的有上限標籤證據封包 |
-| `persona_config.py` | 共用的 lens 設定讀寫與環境變數優先規則 |
-| `inject.sh` | UserPromptSubmit hook 入口 —— 把 hook 輸入 pipe 給 `inject.py` |
-| `inject.py` | 記錄最新任務錨點，再把最新未讀的反應注入為追加 context |
-| `buddy-prompt.txt` | Masters’ Nudge 的 system prompt（審查行為 + 長度 / 結構規則） |
-| `reaction-schema.json` | Codex 與 Claude 共用的結構化輸出契約（`finding` 或靜默 `no_finding`） |
-| `personas/*.txt` | 由浮動視窗或 `BUDDY_PERSONA` 選用的六種 master-lens overlay |
-| `buddy_window.py` | 顯示工程 checkpoint 提醒鈴動畫的 Tk 浮動視窗 |
-| `start_buddy_window.bat` | Windows 啟動器（使用 `pythonw`，不跳 console 視窗） |
-| `install.sh` | 把所有腳本複製到 `~/.claude/scripts/buddy/` |
-| `settings-snippet.json` | 要合併進 `~/.claude/settings.json` 的 hook 條目 |
-| `test_buddy.py` | 單元與煙霧測試 —— `python -m unittest test_buddy -v`（來源封包、checkpoint 傳遞、transcript fallback、sanitizer、mock CLI、state pointer） |
-| `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 —— binary 逆向、API 探測、366 筆盲截取產出分析，以及歷史 GPT-5.5 vs Cinder 跨廠商對照實驗 |
-| `ROADMAP.md` | 後續擴充項目，附狀態 / 「為什麼留著」/「什麼觸發才動工」 |
-
-## Runtime 檔案（首次使用時建立）
-
-| 檔案 | 用途 |
-|---|---|
-| `~/.claude/buddy/<session_id>.log` | 單一 session 的 Masters’ Nudge 反應 JSONL |
-| `~/.claude/buddy/<session_id>.state.json` | inject.py 的讀取指標（最後消耗的 timestamp），單一 session |
-| `~/.claude/buddy/<session_id>.source.json` | 最新的有上限任務錨點，以及送出 prompt 時的 transcript 位元組位置 |
-| `~/.claude/buddy/config.json` | 浮動視窗保存的目前 lens；不含對話內容 |
-| `~/.claude/buddy/<session_id>.checkpoints/` | 單一 session 的 checkpoint 去重指紋 |
-| `~/.claude/buddy-error.log` | 任一腳本的錯誤（跨 session 共用） |
+每次審查會把不含對話內容的 metadata 追加到 `~/.claude/buddy/review-telemetry.jsonl`。若要重開評估，刪除 `shadow-evaluation.json`、`shadow-evaluation.md`、`review-telemetry.jsonl`。
 
 ## 隱私
 
-**Masters’ Nudge 會把對話與工具事件資料送給外部模型廠商。** 每次 Stop hook 會送出
-一份 payload；命中的 checkpoint 會在同一輪工作途中再送一份（預設：透過
-Codex CLI 送 OpenAI；備選：透過 Claude CLI 送 Anthropic）。內容包含：
+**會把對話與工具事件送至外部模型廠商。** 每次回合末審查，以及每次命中的途中審查，各為一次外送。內容可能包含：
 
-1. **最新使用者 prompt 形成的任務錨點**：由 `UserPromptSubmit` 擷取，
-   上限 2000 字。長 prompt 保留開頭與結尾，中間以
-   `[…中段已截斷…]` 明確標示。
-2. **Checkpoint 呼叫：**任務錨點、觸發工具事件（最多 3000 字），以及
-   最近 Agent context（最多 1200 字）。事件可能包含工具輸入、失敗／結果
-   文字或偵測到的 working-tree 變動行數。
-3. **Stop 呼叫：**任務錨點、hook 直接提供的 `last_assistant_message`
-   （最多 2500 字），以及保存在 prompt-time transcript 位元組位置之後的
-   當輪 `tool_result` 證據（最多 2000 字）。工具證據可能包含 Read 讀到的
-   檔案內容、指令輸出、stderr、錯誤訊息與 diff。若 Stop 拿不到最終宣告、
-   工具或 agentcam 證據，hook 才退回舊的 6000 字 transcript 封包，以及
-   最多 2000 字的 tool output。
-4. **選用的 agentcam 證據：**風險、異動檔案、exit code、測試與驗證等
-   指定段落，合計上限 2000 字。
-5. **本 session 最近 3 句 Masters’ Nudge 回應**（每句 ≤ 200 字元），預先
-   黏在訊息前面，讓模型避免重複自己。這些回應原本就是某次廠商呼叫
-   產生的，但會在同 session 後續每次呼叫被**重新送出**。
-6. **Masters’ Nudge prompt**（`buddy-prompt.txt` 加上選定的 `personas/*.txt`
-   overlay，若有設定），每次呼叫作為 system prompt 送出。內含審查規則，
-   不含使用者資料。
+1. 最新使用者 prompt（上限 2000 字；長文保留頭尾，中段標截斷）
+2. 途中：觸發的工具事件（≤3000）與最近 agent 上下文（≤1200）
+3. 回合末：最後宣告（≤2500）與當輪工具結果（≤2000；可能含讀檔內容、指令輸出、錯誤、diff）。缺證據時退回較長的 transcript 切片
+4. 可選的 agentcam 摘錄（合計 ≤2000）
+5. 本 session 最近最多 3 則短評（避免重複）
+6. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
 
-這代表：
+預設 `BUDDY_PROVIDER=openai` 會把與 Anthropic 主 agent 相關的內容轉送 OpenAI。中途切換 provider 時，先前短評可能作為「最近幾則」送進新廠商。反應與任務錨點亦以明文存在 `~/.claude/buddy/`。
 
-- 最新使用者 prompt、程式碼片段、檔案路徑、錯誤訊息、指令輸出與經挑選的
-  Agent 證據，都可能離開你的機器、抵達廠商的 API。
-- 長 session 每完成一輪至少有一次外送，另外加上命中的 `error`、
-  `test-fail`，以及首次 `large-diff` checkpoint。
-- 長證據欄位會同時保留開頭與結尾，不再只留尾端；中段會被省略並明確
-  標記，因此中段細節仍可能影響判斷。
-- 有可靠 finding 時，每句反應以 48–52 個有效字為目標，並會在 log 寫入前
-  與注入前硬截斷到 52 字，所以主 agent
-  每輪看到的內容刻意短。
-- 預設 `BUDDY_PROVIDER=openai` 代表你跟 Anthropic Claude 的對話
-  transcript 會被轉送到 OpenAI。如果這對你是合規紅線，設
-  `BUDDY_PROVIDER=anthropic` 讓資料留在跟主 agent 同一家廠商。
-- 如果你在 session 中途切換 `BUDDY_PROVIDER`，廠商 A 之前產生的反應
-  回應，會在下次呼叫時跟著當作「最近 3 句」context 送給廠商 B。
-- 廠商的資料保留與訓練政策各家不同、會隨時間變動。請查閱所選廠商目前的
-  API 使用條款。
+連同廠商外送都不能接受時，請勿啟用。廠商保留／訓練政策請查現行 API 條款。
 
-**本機保存：** Masters’ Nudge 反應以純文字 JSONL 形式存在
-`~/.claude/buddy/<session_id>.log`；最新任務錨點與 transcript 位置存在
-`<session_id>.source.json`。錯誤寫到 `~/.claude/buddy-error.log`。任何能
-讀取你 home 目錄的人都看得到。
+## 選用整合
 
-如果連同一家廠商外送都不能接受，不要啟用 Masters’ Nudge。
+### agentcam
+
+若使用 [agentcam](https://github.com/shihchengwei-lab/agentcam)，會在有報告時附上風險、變更檔、exit code、測試與驗證等段落。未安裝則跳過。
+
+### 自訂 sprite
+
+```bash
+export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
+```
+
+檔案不存在時仍開視窗，僅無動畫。
+
+### 語系
+
+預設提示為繁體中文。換語系需同步：`buddy-prompt.txt`、`inject.py` 內包裝字串（搜尋 `第三方第二意見`），可選更新 `test_buddy.py` 的中文 fixture。管線本身與語言無關。
+
+## 實作摘要
+
+審查用小型、有標籤的證據封包，而非固定重送整段對話。你送出訊息時記錄任務錨點與 transcript 位置；途中帶錨點與觸發事件；回合末帶錨點、最終宣告與當輪工具結果。結構化契約見 `reaction-schema.json`。
+
+倉庫內腳本與路徑仍使用 `buddy.py`、`BUDDY_*`、`~/.claude/buddy/`，以免破壞既有安裝。產品名稱為 Masters’ Nudge。
+
+| 元件 | 路徑 |
+|---|---|
+| 安裝 | `install.sh` → `~/.claude/scripts/buddy/` |
+| Hooks 片段 | `settings-snippet.json` |
+| 途中審查 | `checkpoint.sh` / `checkpoint.py` |
+| 回合末審查 | `buddy.sh` / `buddy.py` |
+| 注入 | `inject.sh` / `inject.py` |
+| 證據封包 | `source_context.py` |
+| 提示與濾鏡 | `buddy-prompt.txt`、`personas/*.txt` |
+| 輸出契約 | `reaction-schema.json` |
+| 浮動 UI | `buddy_window.py`、`start_buddy_window.bat` |
+| 測試 | `python -m unittest test_buddy -v` |
+| 路線圖 | `ROADMAP.md` |
+| 歷史筆記 | `BUDDY_FORENSICS_REPORT.md` |
+
+Runtime：
+
+| 路徑 | 用途 |
+|---|---|
+| `~/.claude/buddy/<session_id>.log` | 反應 JSONL |
+| `~/.claude/buddy/<session_id>.state.json` | 注入讀取指標 |
+| `~/.claude/buddy/<session_id>.source.json` | 任務錨點與 transcript 位置 |
+| `~/.claude/buddy/config.json` | 視窗保存的濾鏡 |
+| `~/.claude/buddy/<session_id>.checkpoints/` | 途中審查去重 |
+| `~/.claude/buddy-error.log` | 錯誤 log |
 
 ## 已知限制
 
-- Checkpoint hook 必須同步執行，主 Claude 才能在下一次模型請求前讀到 nudge。
-  命中事件可能讓 Agent 暫停最多 `BUDDY_CHECKPOINT_TIMEOUT` 秒（預設 15 秒）；
-  未命中的工具事件只做本機分類，不呼叫模型。
-- 測試失敗偵測結合失敗的 shell 指令與輸出樣式；不常見的 test runner 可能
-  漏判或分錯類。大型變更使用 Git numstat 加上未追蹤文字檔計數，在單一
-  session 首次超過 80 行時觸發；binary 不列入。
-- 任務錨點就是最新送出的 prompt。像「繼續」這種簡短追問會取代前一個較完整
-  的 prompt，可能讓審查 context 變少。
-- 當輪工具證據依賴 transcript 在 prompt-time 位元組位置之後完成寫入；延遲或
-  非典型寫入可能讓工具證據不完整。Checkpoint 仍直接包含觸發事件，Stop
-  通常仍有 hook 直接提供的 `last_assistant_message`。
-- 長證據採開頭＋結尾截取，會刻意省略中段。舊 transcript 路徑只作 Stop
-  fallback，不是一般的來源選擇方式。
-- 背景模式代表打字快的人可能在 Masters’ Nudge 還沒生成完就送出下一個 prompt ——
-  那一輪的反應會出現在 *再下一輪*，不是緊接著的那輪。實務上打字思考
-  時間就足以蓋掉。
-- 不使用時間 cooldown。每次 Stop 都會呼叫模型；checkpoint 採事件式觸發，
-  完全相同的事件會去重。繁忙時 token 用量仍會累積。
-- 目前成本策略僅處於 shadow 評估，不會降低實際呼叫次數。Token 數只在 CLI
-  回傳可解析的 usage metadata 時記錄；缺值不代表零用量。
-- 遞迴用 `BUDDY_ACTIVE` 環境變數防護，但如果你還有其他 hook 會遞迴
-  呼叫 `claude`/`codex` 又沒做類似防護，要小心無窮迴圈。
-- Masters’ Nudge 反應以 `UserPromptSubmit hook success:` 的 system-reminder
-  訊息注入 Claude Code。**只有主 Agent 看得到** —— system-reminder
-  不會 render 在使用者的終端機畫面上。這個不對稱正是
-  `buddy_window.py` 存在的理由：浮動視窗是你唯一能直接看到 Masters’ Nudge
-  的管道。
-
-完整的後續項目清單與已完成項目見 `ROADMAP.md`。
+- 命中途中審查可能讓 agent 暫停最多 `BUDDY_CHECKPOINT_TIMEOUT`（預設 15 秒）。
+- 測試失敗啟發式可能漏判少見 runner；大變更依 Git 與未追蹤文字檔，binary 不計，session 內約超過 80 行後觸發一次。
+- 簡短 follow-up（如「繼續」）會取代先前詳細 prompt 作為任務錨點。
+- 當輪工具證據依賴 transcript 寫入時機；延遲寫入可能不完整。
+- 若你在回合末審查完成前就送下一則訊息，該則短評會晚一輪才注入。
+- 無時間 cooldown；回合末每次都呼叫模型。成本略過目前僅 shadow。
+- 其他 hook 若無 `BUDDY_ACTIVE` 類防護，仍可能與 `claude`／`codex` 形成迴圈。
 
 ## 起源
 
-專案起源是閱讀
-[`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer)
-的 hook + Claude CLI 呼叫模式，再從使用者於 2026 年 4 月使用的舊 Cinder
-個性字串重新寫起。`buddy_screenshot.png` 與 `cinder_screenshot.png` 保留為
-歷史對照；目前使用中的吉祥物已改為工程 checkpoint 提醒鈴。
+參考 [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer) 的 hook 與 CLI 模式，並從 Claude Code 舊 Buddy／Cinder companion 用法重寫。`buddy_screenshot.png`、`cinder_screenshot.png` 為歷史素材；現行圖示為工程 checkpoint 提醒鈴。
 
 ## 授權
 
