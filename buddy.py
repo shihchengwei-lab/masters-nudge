@@ -25,9 +25,11 @@ import source_context
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROMPT_FILE = SCRIPT_DIR / "buddy-prompt.txt"
+OUTPUT_SCHEMA_FILE = SCRIPT_DIR / "reaction-schema.json"
 PERSONA_DIR = SCRIPT_DIR / "personas"
 BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
+MAX_REACTION_CHARS = 52
 
 PERSONAS = {
     "jeff": "Jeff Dean",
@@ -451,29 +453,55 @@ def build_system_prompt() -> str:
     return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
 
 
-def parse_reaction(stdout: str) -> str:
-    """Robustly extract the reviewer's text from claude CLI stdout.
+def load_output_schema_json() -> str:
+    """Return the shared output schema as compact JSON, or fail closed."""
+    try:
+        schema = json.loads(OUTPUT_SCHEMA_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        log_error(f"reaction schema unavailable: {exc}")
+        return ""
+    if not isinstance(schema, dict):
+        log_error("reaction schema root must be an object")
+        return ""
+    return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
-    Handles both raw-text output and JSON-envelope output.
+
+def parse_reaction(stdout: str) -> str:
+    """Extract and validate one finding from structured CLI output.
+
+    Both direct schema objects (Codex) and Claude's JSON result envelope are
+    accepted. Anything outside the shared two-field contract fails closed.
     """
     stdout = stdout.strip()
     if not stdout:
         return ""
-    if stdout.startswith("{"):
-        try:
-            obj = json.loads(stdout)
-            if isinstance(obj, dict):
-                for k in ("result", "content", "text"):
-                    v = obj.get(k)
-                    if isinstance(v, str) and v.strip():
-                        return v.strip()
-        except Exception:
-            pass
-    return stdout
+    try:
+        obj = json.loads(stdout)
+    except (TypeError, ValueError):
+        return ""
+    if isinstance(obj, dict) and "structured_output" in obj:
+        obj = obj.get("structured_output")
+    if not isinstance(obj, dict) or set(obj) != {"status", "finding"}:
+        return ""
+    status = obj.get("status")
+    finding = obj.get("finding")
+    if not isinstance(finding, str):
+        return ""
+    if status == "no_finding":
+        return ""
+    if status != "finding":
+        return ""
+    finding = finding.strip()
+    if not finding or len(finding) > MAX_REACTION_CHARS:
+        return ""
+    return finding
 
 
 def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
     user_prompt = "請對 stdin 提供的對話片段寫一句簡短的旁觀者反應。"
+    schema_json = load_output_schema_json()
+    if not schema_json:
+        return ""
 
     fd = tempfile.NamedTemporaryFile(
         mode="w", suffix=".txt", delete=False, encoding="utf-8"
@@ -488,6 +516,8 @@ def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
                 "claude", "-p", user_prompt,
                 "--model", model,
                 "--append-system-prompt-file", fd.name,
+                "--output-format", "json",
+                "--json-schema", schema_json,
             ],
             input=transcript_text,
             capture_output=True,
@@ -539,6 +569,8 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
     if not codex_bin:
         log_error("codex CLI not found (checked PATH + common npm paths)")
         return ""
+    if not load_output_schema_json():
+        return ""
 
     # codex has no separate system-prompt slot — bundle everything into one prompt.
     user_prompt = "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。"
@@ -565,6 +597,7 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             "--ignore-user-config",
             "-s", "read-only",
             "-m", model,
+            "--output-schema", str(OUTPUT_SCHEMA_FILE),
             "-o", output_fd.name,
             "-",  # read prompt from stdin
         ]
@@ -596,7 +629,7 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             return ""
         try:
             with open(output_fd.name, "r", encoding="utf-8") as f:
-                return f.read().strip()
+                return parse_reaction(f.read())
         except Exception as e:
             log_error(f"codex output read failed: {e}")
             return ""
@@ -638,9 +671,6 @@ _BOILERPLATE_SUFFIX_RE = re.compile(
     r"以上(?:是我的觀察)?|謝謝(?:閱讀)?)"
     r"[。.!！\s]*$"
 )
-MAX_REACTION_CHARS = 52
-
-
 def _strip_boilerplate(text: str) -> str:
     """Remove anchored social filler without rewriting finding content."""
     previous = None

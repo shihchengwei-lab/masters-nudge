@@ -29,8 +29,10 @@ Leslie Lamport 或 John Carmack 所代表的工程鏡頭，在值得介入的 ch
   才退回舊的 transcript parser。封包另附本 session 最近 3 筆
   Masters’ Nudge 反應（讓模型避免重複自己），送到一個
   **與主 agent 不同廠商家族** 的
-  模型（預設：透過 Codex CLI 呼叫 GPT-5.6 Sol），對回應做 sanitize（去
-  markdown 與常見套話、硬上限 52 字、移除會撞到包裝標記的字串），寫入
+  模型（預設：透過 Codex CLI 呼叫 GPT-5.6 Sol）。兩條 provider 路徑都以
+  `reaction-schema.json` 限制輸出：`finding` 帶一則 nudge，`no_finding`
+  直接靜默略過。接著才對 finding 做 sanitize（去 markdown 與常見套話、
+  硬上限 52 字、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的
   Masters’ Nudge 反應
@@ -214,6 +216,7 @@ Masters’ Nudge 預設使用繁體中文。要切換到其他語言，需要改
 | `inject.sh` | UserPromptSubmit hook 入口 —— 把 hook 輸入 pipe 給 `inject.py` |
 | `inject.py` | 記錄最新任務錨點，再把最新未讀的反應注入為追加 context |
 | `buddy-prompt.txt` | Masters’ Nudge 的 system prompt（審查行為 + 長度 / 結構規則） |
+| `reaction-schema.json` | Codex 與 Claude 共用的結構化輸出契約（`finding` 或靜默 `no_finding`） |
 | `personas/*.txt` | 由 `BUDDY_PERSONA` 選用的六種 master-lens overlay |
 | `buddy_window.py` | 顯示工程 checkpoint 提醒鈴動畫的 Tk 浮動視窗 |
 | `start_buddy_window.bat` | Windows 啟動器（使用 `pythonw`，不跳 console 視窗） |

@@ -34,8 +34,10 @@ names remain as a compatibility layer for current installations.
   tool, or agentcam evidence is available for Stop. The reviewer also appends
   the session's last 3 reactions (so the model avoids repeating itself), sends
   the bundle to a model in a **different vendor family from the main agent**
-  (default: GPT-5.6 Sol via Codex CLI), sanitizes the
-  response (strip markdown and common social filler, hard-cap at 52 chars,
+  (default: GPT-5.6 Sol via Codex CLI). Both provider paths enforce
+  `reaction-schema.json`: `finding` carries one review nudge, while
+  `no_finding` is silently skipped. The worker then sanitizes findings
+  (strip markdown and common social filler, hard-cap at 52 chars,
   remove wrapper-collision markers), and writes it to
   `~/.claude/buddy/<session_id>.log`
 - On your next prompt, the UserPromptSubmit hook injects the latest reaction
@@ -242,6 +244,7 @@ language-neutral — no changes needed there.
 | `inject.sh` | UserPromptSubmit hook entry — pipes hook input to `inject.py` |
 | `inject.py` | Records the latest task anchor, then injects the latest unread reaction as additional context |
 | `buddy-prompt.txt` | The Masters’ Nudge system prompt (review behavior + length / structure rules) |
+| `reaction-schema.json` | Shared structured-output contract for Codex and Claude (`finding` or silent `no_finding`) |
 | `personas/*.txt` | Six optional master-lens overlays selected by `BUDDY_PERSONA` |
 | `buddy_window.py` | Tk floating window with the animated checkpoint-bell sprite |
 | `start_buddy_window.bat` | Windows launcher (uses `pythonw` so no console pops up) |

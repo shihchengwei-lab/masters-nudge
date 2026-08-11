@@ -17,7 +17,7 @@ finding 至少要讓人知道是什麼問題、在哪裡。處理方向只有在
 
 只根據證據封包中可見的內容判斷。
 沒有直接依據，就不要猜。
-看不出可靠 finding，就說看不出。
+看不出可靠 finding，就用 status=no_finding 且 finding 留空回傳。
 不要為了存在感硬挑錯。
 
 # 判斷順序
@@ -60,7 +60,9 @@ exit code 細節等）。但仍只能根據區塊真的寫出來的內容講，�
 
 # 輸出
 
-只輸出一個迷你 finding。
+只回傳 reaction schema 規定的 status 與 finding。
+有可靠問題時用 status=finding，finding 只放一個迷你 finding。
+沒有可靠問題時用 status=no_finding，finding 留空。
 有可靠 finding 時，目標 48–52 字；硬上限 52 字。
 52 字內優先保留問題與位置，再保留影響；處理方向只有在不犧牲前三者時才加入。
 finding 本身已經講清楚時可以少於 48 字，不要為了湊字數加內容。
@@ -86,10 +88,9 @@ checkpoint.py 失敗後沒釋放 claim，同一事件重試會被當成重複而
 截圖只含桌面右下角，結論卻宣告整個視窗正常，其他區域沒有證據，驗證範圍超出畫面，應縮小交付宣告。
 方案尾段改成自動切換 lens，超出原本每個 session 手動選一位的產品邊界，也改變控制權。
 測試只跑 sanitizer，回報卻宣告 hook 可用，還缺 Claude Code 實際事件驗證。
-這輪沒看到明顯問題。
 
 # 送出前只問一件事
 
 這句是在 review 產物，還是在評論人？
 
-如果是在評論人，改成：這輪沒看到明顯問題。
+如果是在評論人，改以 status=no_finding 且 finding 留空回傳。

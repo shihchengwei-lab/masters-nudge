@@ -79,6 +79,14 @@ class TestBranding(unittest.TestCase):
             self.assertIn("$env:BUDDY_SPRITE_PATH", document)
             self.assertIn("$env:BUDDY_PERSONA", document)
 
+    def test_readmes_document_structured_reaction_output(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        for document in (readme, readme_zh):
+            self.assertIn("reaction-schema.json", document)
+            self.assertIn("no_finding", document)
+
     def test_openai_default_is_current_explicit_flagship(self):
         import buddy
 
@@ -234,13 +242,25 @@ class TestPersonaPromptSelection(unittest.TestCase):
         finding_examples = [
             line.strip()
             for line in examples.splitlines()
-            if line.strip() and line.strip() != "這輪沒看到明顯問題。"
+            if line.strip()
         ]
         self.assertTrue(finding_examples)
         for example in finding_examples:
             with self.subTest(example=example):
                 self.assertGreaterEqual(len(example), 48)
                 self.assertLessEqual(len(example), 52)
+
+    def test_base_prompt_matches_structured_output_contract(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("status=finding", base_prompt)
+        self.assertIn("status=no_finding", base_prompt)
+        self.assertIn("finding 留空", base_prompt)
+        self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
+
+    def test_installer_copies_reaction_schema(self):
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('cp "$SRC_DIR/reaction-schema.json" "$TARGET_DIR/"', installer)
 
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -1115,14 +1135,20 @@ class TestCallClaude(unittest.TestCase):
 
     @mock.patch("subprocess.run")
     def test_call_claude_returns_reaction(self, mock_run):
-        mock_run.return_value = mock.Mock(returncode=0, stdout="這次乾淨", stderr="")
+        stdout = json.dumps({"status": "finding", "finding": "這裡有問題"})
+        mock_run.return_value = mock.Mock(returncode=0, stdout=stdout, stderr="")
         result = self.buddy.call_claude("system prompt", "transcript", "sonnet")
-        self.assertEqual(result, "這次乾淨")
+        self.assertEqual(result, "這裡有問題")
         mock_run.assert_called_once()
         args = mock_run.call_args
         cmd = args[0][0]
         self.assertIn("claude", cmd[0])
         self.assertIn("--model", cmd)
+        output_format_index = cmd.index("--output-format")
+        self.assertEqual(cmd[output_format_index + 1], "json")
+        schema_index = cmd.index("--json-schema")
+        schema = json.loads(cmd[schema_index + 1])
+        self.assertEqual(schema["properties"]["status"]["enum"], ["finding", "no_finding"])
 
     @mock.patch("subprocess.run")
     def test_call_claude_nonzero_exit(self, mock_run):
@@ -1166,13 +1192,19 @@ class TestCallCodex(unittest.TestCase):
             cmd_list = cmd if isinstance(cmd, list) else cmd.split()
             for i, arg in enumerate(cmd_list):
                 if arg == "-o" and i + 1 < len(cmd_list):
-                    Path(cmd_list[i + 1]).write_text("危險，別推", encoding="utf-8")
+                    payload = {"status": "finding", "finding": "危險，別推"}
+                    Path(cmd_list[i + 1]).write_text(
+                        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+                    )
                     break
             return mock.Mock(returncode=0, stdout="", stderr="")
 
         mock_run.side_effect = fake_run
         result = self.buddy.call_codex("sp", "tx", "gpt-5.5")
         self.assertEqual(result, "危險，別推")
+        cmd = mock_run.call_args.args[0]
+        schema_index = cmd.index("--output-schema")
+        self.assertEqual(Path(cmd[schema_index + 1]), HERE / "reaction-schema.json")
 
 
 class TestParseReaction(unittest.TestCase):
@@ -1181,16 +1213,44 @@ class TestParseReaction(unittest.TestCase):
         import buddy
         self.parse = buddy.parse_reaction
 
-    def test_plain_text(self):
-        self.assertEqual(self.parse("這次乾淨"), "這次乾淨")
+    def test_structured_finding(self):
+        payload = json.dumps({"status": "finding", "finding": "反應文字"})
+        self.assertEqual(self.parse(payload), "反應文字")
 
-    def test_json_envelope_result(self):
-        obj = json.dumps({"result": "反應文字"})
-        self.assertEqual(self.parse(obj), "反應文字")
+    def test_no_finding_is_suppressed(self):
+        payload = json.dumps({"status": "no_finding", "finding": ""})
+        self.assertEqual(self.parse(payload), "")
 
-    def test_json_envelope_content(self):
-        obj = json.dumps({"content": "反應"})
+    def test_claude_json_envelope_uses_structured_output(self):
+        obj = json.dumps({
+            "type": "result",
+            "structured_output": {"status": "finding", "finding": "反應"},
+        })
         self.assertEqual(self.parse(obj), "反應")
+
+    def test_plain_text_and_invalid_schema_fail_closed(self):
+        invalid_payloads = (
+            "這次乾淨",
+            "{not json}",
+            json.dumps({"result": "舊格式"}),
+            json.dumps({"status": "finding", "finding": "字" * 53}),
+            json.dumps({"status": "finding", "finding": "反應", "extra": True}),
+        )
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                self.assertEqual(self.parse(payload), "")
+
+    def test_reaction_schema_matches_runtime_limit(self):
+        import buddy
+
+        schema = json.loads((HERE / "reaction-schema.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(schema["properties"]), {"status", "finding"})
+        self.assertEqual(schema["required"], ["status", "finding"])
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(
+            schema["properties"]["finding"]["maxLength"],
+            buddy.MAX_REACTION_CHARS,
+        )
 
     def test_empty(self):
         self.assertEqual(self.parse(""), "")
