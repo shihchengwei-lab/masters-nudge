@@ -155,6 +155,57 @@ $env:BUDDY_PERSONA = "linus"
 | `lamport` | Leslie Lamport | invariant、狀態轉換、事件順序、retry 與部分失敗 |
 | `carmack` | John Carmack | 實際執行、資料搬運、量測與不必要工作 |
 
+#### 認識六種 lens
+
+##### Jeff Dean — 系統因果與成本
+
+> “As systems scale up, simply stamping out all sources of variability does not work.” — [Jeff Dean](https://research.google/pubs/achieving-rapid-response-times-in-large-online-services/)
+
+Jeff Dean 以建造與研究 Google 大規模系統聞名。這個 lens 會先問每個機制是由
+哪個真實限制所造成，再沿著資料流、延遲、state、失敗處理與維運成本追查影響。
+Jeff Dean lens 並不假設每個專案都需要 Google 規模，而是注意局部補丁是否製造了
+更大的系統問題。
+
+##### Linus Torvalds — 直接程式碼與清楚 ownership
+
+> “Talk is cheap. Show me the code.” — [Linus Torvalds](https://groups.google.com/g/mlist.linux.kernel/c/pdl_7y9bPgk)
+
+Linus Torvalds 創造了 Linux 與 Git，也常被連結到直接、以證據為準的 code review。
+這個 lens 會質疑遮住實際行為或責任歸屬的 wrapper、indirection 與 abstraction。
+這裡借用的是優先檢查的面向，不是模仿 Linus Torvalds 的衝突式語氣。
+
+##### Martin Fowler — 讓既有設計安全演進
+
+> “…to make it easier to understand and cheaper to modify without changing its observable behavior.” — [Martin Fowler](https://martinfowler.com/bliki/DefinitionOfRefactoring.html)
+
+Martin Fowler 是軟體設計作者，與 refactoring（不改外部行為的重構）及 code smell
+密切相關。這個 lens 會找出讓下一次變更成本不成比例升高的結構，優先採用小幅、
+不改行為的改善，而不是不必要地重寫。
+
+##### Kent Beck — 小而可測的步驟
+
+> “You don’t always have to take tiny steps, but they are always an option.” — [Kent Beck](https://newsletter.kentbeck.com/p/first-one-then-many)
+
+Kent Beck 創立 Extreme Programming，並推動 test-driven development（先用測試定義
+預期行為再實作）。這個 lens 會把 Agent 留在當前需求，尋找能取得有效回饋的最小
+安全步驟，也會注意需求已滿足後是否仍繼續擴張實作。
+
+##### Leslie Lamport — state、順序與失敗
+
+> “A distributed system is one in which the failure of a computer you didn’t even know existed can render your own computer unusable.” — [Leslie Lamport](https://www.microsoft.com/en-us/research/publication/distribution/)
+
+Leslie Lamport 的工作深刻影響工程師理解 concurrency（多個工作交錯執行）與
+distributed systems。這個 lens 會把隱藏 state 與事件順序攤開、檢查狀態轉換前後
+的 invariant，並追問 retry、重複、延遲或部分失敗會如何改變結果。
+
+##### John Carmack — 真正執行的路徑
+
+> “Sometimes, the elegant implementation is just a function. Not a method. Not a class. Not a framework. Just a function.” — [John Carmack](https://twitter.com/ID_AA_Carmack/status/53512300451201024)
+
+John Carmack 以務實且重視效能的遊戲引擎工作聞名。這個 lens 會沿著真正的控制流程
+與資料搬運檢查，要求效能宣告先有量測，也會質疑沒有改變結果、卻增加額外工作的
+機制。
+
 Masters’ Nudge 會把 `personas/` 中選定的檔案附加到共用 `buddy-prompt.txt`。
 選定的 lens 只改變優先檢查的問題，不會取代原本的證據、旁觀者、單一
 finding 與 52 字限制。每個 lens 含兩個極短選題例，把可見證據對應到優先

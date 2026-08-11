@@ -170,6 +170,63 @@ $env:BUDDY_PERSONA = "linus"
 | `lamport` | Leslie Lamport | Invariants, state transitions, ordering, retries, and partial failure |
 | `carmack` | John Carmack | Actual execution, data movement, measurement, and unnecessary work |
 
+#### Meet the six lenses
+
+##### Jeff Dean — systems causality and cost
+
+> “As systems scale up, simply stamping out all sources of variability does not work.” — [Jeff Dean](https://research.google/pubs/achieving-rapid-response-times-in-large-online-services/)
+
+Jeff Dean is known for building and studying large-scale Google systems. This
+lens asks which real constraint caused each mechanism, then follows its cost
+through data flow, latency, state, failure handling, and operations. It does not
+assume every project needs Google scale; it looks for local fixes that create a
+larger system problem.
+
+##### Linus Torvalds — direct code and clear ownership
+
+> “Talk is cheap. Show me the code.” — [Linus Torvalds](https://groups.google.com/g/mlist.linux.kernel/c/pdl_7y9bPgk)
+
+Linus Torvalds created Linux and Git and is closely associated with direct,
+evidence-driven code review. This lens challenges wrappers, indirection, and
+abstractions that hide the actual behavior or its owner. The cue is about what
+gets inspected, not about copying Torvalds's confrontational tone.
+
+##### Martin Fowler — safer evolution of existing design
+
+> “…to make it easier to understand and cheaper to modify without changing its observable behavior.” — [Martin Fowler](https://martinfowler.com/bliki/DefinitionOfRefactoring.html)
+
+Martin Fowler is a software-design author strongly associated with refactoring
+and code smells. This lens looks for structures that make the next change
+disproportionately expensive, then favors small, behavior-preserving
+improvements over an unnecessary rewrite.
+
+##### Kent Beck — small, testable steps
+
+> “You don’t always have to take tiny steps, but they are always an option.” — [Kent Beck](https://newsletter.kentbeck.com/p/first-one-then-many)
+
+Kent Beck created Extreme Programming and helped establish test-driven
+development. This lens keeps the agent on the current requirement, asks for the
+smallest safe step with useful feedback, and notices when implementation keeps
+growing after the requirement is already met.
+
+##### Leslie Lamport — state, order, and failure
+
+> “A distributed system is one in which the failure of a computer you didn’t even know existed can render your own computer unusable.” — [Leslie Lamport](https://www.microsoft.com/en-us/research/publication/distribution/)
+
+Leslie Lamport's work shaped how engineers reason about concurrent and
+distributed systems. This lens makes hidden state and event order explicit,
+checks invariants across transitions, and asks what retries, duplication, delay,
+or partial failure can do to the result.
+
+##### John Carmack — the execution path that really runs
+
+> “Sometimes, the elegant implementation is just a function. Not a method. Not a class. Not a framework. Just a function.” — [John Carmack](https://twitter.com/ID_AA_Carmack/status/53512300451201024)
+
+John Carmack is known for practical, performance-focused game-engine work. This
+lens follows actual control flow and data movement, asks for measurement before
+an optimization claim, and questions machinery that adds work without changing
+the result.
+
 The selected file in `personas/` is appended to the shared
 `buddy-prompt.txt`. The selected lens changes what Masters’ Nudge checks first;
 it does not replace the evidence, observer, single-finding, or 52-character

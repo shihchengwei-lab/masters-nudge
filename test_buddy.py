@@ -71,6 +71,44 @@ class TestBranding(unittest.TestCase):
         self.assertIn("two short selection examples", readme)
         self.assertIn("兩個極短選題例", readme_zh)
 
+    def test_readmes_introduce_each_lens_with_a_sourced_quote(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+        anchors = {
+            "Jeff Dean": (
+                "As systems scale up, simply stamping out all sources of variability does not work.",
+                "https://research.google/pubs/achieving-rapid-response-times-in-large-online-services/",
+            ),
+            "Linus Torvalds": (
+                "Talk is cheap. Show me the code.",
+                "https://groups.google.com/g/mlist.linux.kernel/c/pdl_7y9bPgk",
+            ),
+            "Martin Fowler": (
+                "easier to understand and cheaper to modify without changing its observable behavior",
+                "https://martinfowler.com/bliki/DefinitionOfRefactoring.html",
+            ),
+            "Kent Beck": (
+                "You don’t always have to take tiny steps, but they are always an option.",
+                "https://newsletter.kentbeck.com/p/first-one-then-many",
+            ),
+            "Leslie Lamport": (
+                "the failure of a computer you didn’t even know existed can render your own computer unusable",
+                "https://www.microsoft.com/en-us/research/publication/distribution/",
+            ),
+            "John Carmack": (
+                "Sometimes, the elegant implementation is just a function.",
+                "https://twitter.com/ID_AA_Carmack/status/53512300451201024",
+            ),
+        }
+
+        self.assertIn("#### Meet the six lenses", readme)
+        self.assertIn("#### 認識六種 lens", readme_zh)
+        for document in (readme, readme_zh):
+            for name, (quote, source) in anchors.items():
+                self.assertIn(f"##### {name}", document)
+                self.assertIn(quote, document)
+                self.assertIn(source, document)
+
     def test_readmes_include_windows_powershell_env_examples(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
