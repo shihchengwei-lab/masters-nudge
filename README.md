@@ -133,7 +133,7 @@ just won't see the sprite.
 | Env var | Default | Effect |
 |---|---|---|
 | `BUDDY_PROVIDER` | `openai` | Which vendor voices Masters’ Nudge. `openai` (uses `codex exec`) or `anthropic` (uses `claude -p`) |
-| `BUDDY_MODEL` | `gpt-5.5` (openai) / `sonnet` (anthropic) | Specific model name passed to the chosen CLI |
+| `BUDDY_MODEL` | `gpt-5.6-sol` (openai) / `sonnet` (anthropic) | Specific model name passed to the chosen CLI; set this variable to pin a different supported model |
 | `BUDDY_TIMEOUT` | `60` | Seconds before giving up on the model call |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Maximum model-call seconds for a synchronous checkpoint nudge |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |

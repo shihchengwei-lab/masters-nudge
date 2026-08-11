@@ -43,7 +43,7 @@ log. The existing asynchronous Stop path remains as supplementary review.
 ## 4. Multi-model switching — ✅ SHIPPED (cross-vendor)
 
 `BUDDY_PROVIDER` env var routes between Anthropic (`claude -p`) and OpenAI
-(`codex exec`). Default is `openai` with `gpt-5.5` so the side-review view is
+(`codex exec`). Default is `openai` with `gpt-5.6-sol` so the side-review view is
 independent from the main agent's Anthropic Sonnet — different blind spots.
 
 Smart routing (different models per turn type) remains cut: checkpoint reasons

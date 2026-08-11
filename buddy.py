@@ -41,8 +41,12 @@ PERSONAS = {
 PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
 # BUDDY_MODEL meaning depends on provider:
 #   anthropic: sonnet (default), opus, haiku
-#   openai/codex: gpt-5.5 (default), other model names codex CLI accepts
-_DEFAULT_MODELS = {"anthropic": "sonnet", "openai": "gpt-5.5", "codex": "gpt-5.5"}
+#   openai/codex: gpt-5.6-sol (default), other model names codex CLI accepts
+_DEFAULT_MODELS = {
+    "anthropic": "sonnet",
+    "openai": "gpt-5.6-sol",
+    "codex": "gpt-5.6-sol",
+}
 MODEL = os.environ.get("BUDDY_MODEL", _DEFAULT_MODELS.get(PROVIDER, "sonnet"))
 TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
 

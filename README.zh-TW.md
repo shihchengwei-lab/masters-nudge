@@ -119,7 +119,7 @@ $env:BUDDY_SPRITE_PATH = "C:\path\to\your\spritesheet.png"
 | 環境變數 | 預設值 | 效果 |
 |---|---|---|
 | `BUDDY_PROVIDER` | `openai` | 由哪一家廠商發聲。`openai`（用 `codex exec`）或 `anthropic`（用 `claude -p`） |
-| `BUDDY_MODEL` | `gpt-5.5`（openai）/ `sonnet`（anthropic） | 傳給選定 CLI 的具體模型名 |
+| `BUDDY_MODEL` | `gpt-5.6-sol`（openai）/ `sonnet`（anthropic） | 傳給選定 CLI 的具體模型名；也可設定此變數固定使用其他支援的模型 |
 | `BUDDY_TIMEOUT` | `60` | 模型呼叫的逾時秒數 |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 同步 checkpoint nudge 等待模型的最長秒數 |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態檔放在哪 |

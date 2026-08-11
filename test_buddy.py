@@ -79,6 +79,18 @@ class TestBranding(unittest.TestCase):
             self.assertIn("$env:BUDDY_SPRITE_PATH", document)
             self.assertIn("$env:BUDDY_PERSONA", document)
 
+    def test_openai_default_is_current_explicit_flagship(self):
+        import buddy
+
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
+
+        self.assertEqual(buddy._DEFAULT_MODELS["openai"], "gpt-5.6-sol")
+        self.assertEqual(buddy._DEFAULT_MODELS["codex"], "gpt-5.6-sol")
+        for document in (readme, readme_zh, roadmap):
+            self.assertIn("gpt-5.6-sol", document)
+
     def test_new_brand_is_used_in_agent_visible_checkpoint_wrapper(self):
         import checkpoint
 
