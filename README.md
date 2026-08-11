@@ -34,7 +34,7 @@ names remain as a compatibility layer for current installations.
   tool, or agentcam evidence is available for Stop. The reviewer also appends
   the session's last 3 reactions (so the model avoids repeating itself), sends
   the bundle to a model in a **different vendor family from the main agent**
-  (default: GPT-5.5 via Codex CLI), sanitizes the
+  (default: GPT-5.6 Sol via Codex CLI), sanitizes the
   response (strip markdown and common social filler, hard-cap at 52 chars,
   remove wrapper-collision markers), and writes it to
   `~/.claude/buddy/<session_id>.log`
@@ -176,7 +176,7 @@ to the first issue category to inspect; they are not output templates. These
 cues are not a demonstrated accuracy or capability improvement.
 
 **Why the default uses OpenAI**: the main agent is Anthropic Claude. Putting
-Masters’ Nudge on a different vendor (OpenAI's GPT-5.5) gives a more independent
+Masters’ Nudge on a different vendor (OpenAI's GPT-5.6 Sol) gives a more independent
 critique — different training, different blind spots, less echo of the main
 agent's reasoning.
 
@@ -248,7 +248,7 @@ language-neutral — no changes needed there.
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | Hook entries to merge into `~/.claude/settings.json` |
 | `test_buddy.py` | Unit and smoke tests — `python -m unittest test_buddy -v` (source packets, checkpoint delivery, transcript fallback, sanitizer, mock CLI, state pointers) |
-| `BUDDY_FORENSICS_REPORT.md` | Forensic report on the original Cinder — binary reverse-engineering, API probing, analysis of 366 blind-captured outputs, cross-vendor comparison experiments (GPT-5.5 vs Cinder). Written in Traditional Chinese. |
+| `BUDDY_FORENSICS_REPORT.md` | Forensic report on the original Cinder — binary reverse-engineering, API probing, analysis of 366 blind-captured outputs, and the historical GPT-5.5 vs Cinder comparison experiments. Written in Traditional Chinese. |
 | `ROADMAP.md` | Future expansion items, with status / "why kept" / "trigger to do" |
 
 ## Runtime files (created on first use)

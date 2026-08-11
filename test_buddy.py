@@ -90,6 +90,10 @@ class TestBranding(unittest.TestCase):
         self.assertEqual(buddy._DEFAULT_MODELS["codex"], "gpt-5.6-sol")
         for document in (readme, readme_zh, roadmap):
             self.assertIn("gpt-5.6-sol", document)
+        self.assertEqual(readme.count("GPT-5.5"), 1)
+        self.assertEqual(readme_zh.count("GPT-5.5"), 1)
+        self.assertIn("historical GPT-5.5 vs Cinder", readme)
+        self.assertIn("歷史 GPT-5.5 vs Cinder", readme_zh)
 
     def test_new_brand_is_used_in_agent_visible_checkpoint_wrapper(self):
         import checkpoint

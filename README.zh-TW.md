@@ -29,7 +29,7 @@ Leslie Lamport 或 John Carmack 所代表的工程鏡頭，在值得介入的 ch
   才退回舊的 transcript parser。封包另附本 session 最近 3 筆
   Masters’ Nudge 反應（讓模型避免重複自己），送到一個
   **與主 agent 不同廠商家族** 的
-  模型（預設：透過 Codex CLI 呼叫 GPT-5.5），對回應做 sanitize（去
+  模型（預設：透過 Codex CLI 呼叫 GPT-5.6 Sol），對回應做 sanitize（去
   markdown 與常見套話、硬上限 52 字、移除會撞到包裝標記的字串），寫入
   `~/.claude/buddy/<session_id>.log`
 - 你下一次送出 prompt 時，UserPromptSubmit hook 會把最新的
@@ -159,7 +159,7 @@ finding 與 52 字限制。每個 lens 含兩個極短選題例，把可見證�
 檢查的問題類型；選題例不是輸出範本。這些提示尚未證明能提升正確率或能力。
 
 **為什麼預設用 OpenAI**：主 agent 是 Anthropic Claude。把 Masters’ Nudge 放在
-不同廠商（OpenAI 的 GPT-5.5）能得到更獨立的批評 —— 不同訓練、不同盲點、
+不同廠商（OpenAI 的 GPT-5.6 Sol）能得到更獨立的批評 —— 不同訓練、不同盲點、
 較少回音主 agent 的推理。
 
 ## 選用：agentcam 整合
@@ -220,7 +220,7 @@ Masters’ Nudge 預設使用繁體中文。要切換到其他語言，需要改
 | `install.sh` | 把所有腳本複製到 `~/.claude/scripts/buddy/` |
 | `settings-snippet.json` | 要合併進 `~/.claude/settings.json` 的 hook 條目 |
 | `test_buddy.py` | 單元與煙霧測試 —— `python -m unittest test_buddy -v`（來源封包、checkpoint 傳遞、transcript fallback、sanitizer、mock CLI、state pointer） |
-| `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 —— binary 逆向、API 探測、366 筆盲截取產出分析、跨廠商對照實驗（GPT-5.5 vs Cinder） |
+| `BUDDY_FORENSICS_REPORT.md` | 原版 Cinder 鑑識報告 —— binary 逆向、API 探測、366 筆盲截取產出分析，以及歷史 GPT-5.5 vs Cinder 跨廠商對照實驗 |
 | `ROADMAP.md` | 後續擴充項目，附狀態 / 「為什麼留著」/「什麼觸發才動工」 |
 
 ## Runtime 檔案（首次使用時建立）
