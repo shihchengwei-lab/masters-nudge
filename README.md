@@ -108,6 +108,11 @@ The window auto-tails whichever session is currently active. Closing it does
 UserPromptSubmit hook keeps injecting into main Claude. Reopen any time.
 The window wraps longer nudges and grows upward from 150 to 220 pixels so the
 52-character maximum remains visible without moving its bottom edge.
+Each Stop reaction is labeled with a colored dot and the full lens name, such
+as `● Jeff Dean lens`. The label comes from the persona stored with that
+reaction, rather than the floating window's environment. An unset lens, an
+unknown value, or an older log entry without persona metadata displays
+`● General lens`.
 
 ### Custom sprite
 

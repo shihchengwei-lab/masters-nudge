@@ -718,11 +718,15 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
         return
     BUDDY_DIR.mkdir(parents=True, exist_ok=True)
     log_path = BUDDY_DIR / f"{session_id}.log"
+    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
+    if persona not in PERSONAS:
+        persona = "general"
     entry = {
         "ts": datetime.now().isoformat(),
         "session_id": session_id,
         "provider": provider,
         "model": model,
+        "persona": persona,
         "reaction": reaction,
     }
     with log_path.open("a", encoding="utf-8") as f:

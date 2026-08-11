@@ -117,6 +117,18 @@ class TestBranding(unittest.TestCase):
             self.assertIn("$env:BUDDY_SPRITE_PATH", document)
             self.assertIn("$env:BUDDY_PERSONA", document)
 
+    def test_readmes_explain_the_floating_window_lens_badge(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("colored dot and the full lens name", readme)
+        self.assertIn("色點與完整 lens 姓名", readme_zh)
+        for document in (readme, readme_zh):
+            self.assertIn("Jeff Dean lens", document)
+            self.assertIn("General lens", document)
+        self.assertIn("older log", readme.lower())
+        self.assertIn("舊 log", readme_zh)
+
     def test_readmes_document_structured_reaction_output(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
@@ -1145,6 +1157,35 @@ class TestSanitizer(unittest.TestCase):
 
 class TestFloatingWindowLayout(unittest.TestCase):
 
+    def test_six_personas_have_distinct_named_badges_with_general_fallback(self):
+        import buddy_window
+
+        expected_names = {
+            "jeff": "Jeff Dean lens",
+            "linus": "Linus Torvalds lens",
+            "fowler": "Martin Fowler lens",
+            "beck": "Kent Beck lens",
+            "lamport": "Leslie Lamport lens",
+            "carmack": "John Carmack lens",
+        }
+        colors = set()
+        for persona, expected_name in expected_names.items():
+            with self.subTest(persona=persona):
+                label, color = buddy_window.lens_badge(persona)
+                self.assertEqual(label, f"● {expected_name}")
+                self.assertRegex(color, r"^#[0-9A-Fa-f]{6}$")
+                colors.add(color.lower())
+
+        self.assertEqual(len(colors), len(expected_names))
+        self.assertEqual(
+            buddy_window.lens_badge("unknown"),
+            buddy_window.lens_badge("general"),
+        )
+        self.assertEqual(
+            buddy_window.lens_badge(None)[0],
+            "● General lens",
+        )
+
     def test_window_grows_for_a_52_character_reaction(self):
         import buddy_window
 
@@ -1154,13 +1195,54 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertEqual(short_height, buddy_window.WINDOW_MIN_HEIGHT)
         self.assertGreater(long_height, short_height)
         self.assertLessEqual(long_height, buddy_window.WINDOW_MAX_HEIGHT)
+        self.assertGreaterEqual(buddy_window.WINDOW_NON_TEXT_HEIGHT, 104)
 
     def test_window_wrap_width_and_resize_hook_cover_long_reactions(self):
         import buddy_window
 
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
         self.assertGreaterEqual(buddy_window.BUBBLE_WRAP_LENGTH, 300)
+        self.assertIn('entry.get("persona", "general")', source)
+        self.assertIn("self._set_lens_badge(persona)", source)
         self.assertIn("self._resize_for_reaction(reaction)", source)
+
+
+class TestReactionLogLens(unittest.TestCase):
+
+    def setUp(self):
+        import buddy
+
+        self.buddy = buddy
+        self.tmpdir = tempfile.mkdtemp()
+        self.original_buddy_dir = buddy.BUDDY_DIR
+        buddy.BUDDY_DIR = Path(self.tmpdir)
+
+    def tearDown(self):
+        self.buddy.BUDDY_DIR = self.original_buddy_dir
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _read_entry(self, session_id):
+        log_path = Path(self.tmpdir) / f"{session_id}.log"
+        return json.loads(log_path.read_text(encoding="utf-8").strip())
+
+    def test_append_log_records_the_selected_persona(self):
+        with mock.patch.dict(os.environ, {"BUDDY_PERSONA": "LINUS"}, clear=True):
+            self.buddy.append_buddy_log("lens-session", "openai", "model", "提醒")
+
+        entry = self._read_entry("lens-session")
+        self.assertEqual(entry["persona"], "linus")
+
+    def test_append_log_records_general_for_unset_or_unknown_persona(self):
+        for session_id, persona in (("unset", None), ("unknown", "nobody")):
+            env = {} if persona is None else {"BUDDY_PERSONA": persona}
+            with self.subTest(persona=persona):
+                with mock.patch.dict(os.environ, env, clear=True):
+                    self.buddy.append_buddy_log(
+                        session_id, "openai", "model", "提醒"
+                    )
+                entry = self._read_entry(session_id)
+                self.assertEqual(entry["persona"], "general")
 
 
 # ── 7. Mock CLI calls ────────────────────────────────────────────────

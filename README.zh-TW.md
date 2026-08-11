@@ -96,6 +96,10 @@ Stop hook 仍會繼續寫 log，UserPromptSubmit hook 仍會繼續注入主 Clau
 隨時可以重新開啟。
 較長的 nudge 會自動換行，視窗會從 150px 向上增高到最多 220px，讓 52 字
 上限完整顯示，同時維持視窗底部位置。
+每則 Stop reaction 上方會顯示色點與完整 lens 姓名，例如
+`● Jeff Dean lens`。標籤讀取該則 reaction 一起儲存的 persona，不依賴浮動
+視窗自己的環境變數。未設定、無法辨識的值，或缺少 persona metadata 的舊 log，
+都會顯示 `● General lens`。
 
 ### 自訂 sprite
 

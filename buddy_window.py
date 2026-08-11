@@ -48,7 +48,7 @@ WINDOW_MAX_HEIGHT = 220
 BUBBLE_WRAP_LENGTH = 300
 APPROX_CHARS_PER_LINE = 16
 TEXT_LINE_HEIGHT = 22
-WINDOW_NON_TEXT_HEIGHT = 84
+WINDOW_NON_TEXT_HEIGHT = 106
 
 # Colors
 BG = "#1a1a2e"
@@ -56,6 +56,23 @@ BUBBLE_BG = "#252545"
 BUBBLE_FG = "#e0e0e0"
 BUBBLE_BORDER = "#4a4a6a"
 TS_FG = "#6a6a8a"
+
+LENS_BADGES = {
+    "jeff": ("Jeff Dean lens", "#56CFE1"),
+    "linus": ("Linus Torvalds lens", "#FF6B6B"),
+    "fowler": ("Martin Fowler lens", "#C77DFF"),
+    "beck": ("Kent Beck lens", "#80ED99"),
+    "lamport": ("Leslie Lamport lens", "#72A1FF"),
+    "carmack": ("John Carmack lens", "#FFB86C"),
+    "general": ("General lens", "#A0A0B8"),
+}
+
+
+def lens_badge(persona: str | None) -> tuple[str, str]:
+    """Return a color-plus-name badge, falling back for old or unknown logs."""
+    key = persona.strip().lower() if isinstance(persona, str) else "general"
+    name, color = LENS_BADGES.get(key, LENS_BADGES["general"])
+    return f"● {name}", color
 
 
 def window_height_for_reaction(reaction: str) -> int:
@@ -250,11 +267,19 @@ class BuddyWindow:
         )
         bubble.pack(fill="both", expand=True)
 
+        badge_text, badge_color = lens_badge("general")
+        self.lens_label = tk.Label(
+            bubble, text=badge_text, bg=BUBBLE_BG, fg=badge_color,
+            font=("Microsoft JhengHei", 9, "bold"),
+            anchor="w", padx=10, pady=2,
+        )
+        self.lens_label.pack(fill="x", pady=(4, 0))
+
         self.bubble_label = tk.Label(
             bubble, text="( . . . )", bg=BUBBLE_BG, fg=BUBBLE_FG,
             font=("Microsoft JhengHei", 11),
             wraplength=BUBBLE_WRAP_LENGTH, justify="left",
-            anchor="nw", padx=10, pady=8,
+            anchor="nw", padx=10, pady=6,
         )
         self.bubble_label.pack(fill="both", expand=True)
 
@@ -263,6 +288,10 @@ class BuddyWindow:
             font=("Microsoft JhengHei", 8), anchor="e",
         )
         self.ts_label.pack(fill="x")
+
+    def _set_lens_badge(self, persona: str | None):
+        text, color = lens_badge(persona)
+        self.lens_label.config(text=text, fg=color)
 
     # ── Animation ─────────────────────────────────────────
 
@@ -323,8 +352,10 @@ class BuddyWindow:
                 entry = json.loads(line)
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
+                persona = entry.get("persona", "general")
                 if reaction:
                     self.last_reaction = reaction
+                    self._set_lens_badge(persona)
                     self.bubble_label.config(text=reaction)
                     self._resize_for_reaction(reaction)
                     if ts:
