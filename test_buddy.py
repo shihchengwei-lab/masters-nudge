@@ -129,6 +129,8 @@ class TestBranding(unittest.TestCase):
         for document in (readme, readme_zh):
             self.assertIn("Jeff Dean lens", document)
             self.assertIn("General lens", document)
+            self.assertIn("系統因果與成本", document)
+            self.assertIn("通用證據審查", document)
         self.assertIn("older log", readme.lower())
         self.assertIn("舊 log", readme_zh)
 
@@ -1302,10 +1304,23 @@ class TestFloatingWindowLayout(unittest.TestCase):
         import buddy_window
 
         options = buddy_window.selector_options()
-        self.assertEqual(len(options), 7)
-        self.assertEqual(options[0], "General lens")
-        self.assertIn("Linus Torvalds lens", options)
-        self.assertIn("Jeff Dean lens", options)
+        self.assertEqual(
+            options,
+            [
+                "General lens（通用證據審查）",
+                "Jeff Dean lens（系統因果與成本）",
+                "Linus Torvalds lens（簡化與責任歸屬）",
+                "Martin Fowler lens（重構與變更成本）",
+                "Kent Beck lens（小步驟與測試）",
+                "Leslie Lamport lens（狀態、順序與失敗）",
+                "John Carmack lens（執行路徑與效能）",
+            ],
+        )
+        for label, persona in zip(
+            options,
+            ("general", "jeff", "linus", "fowler", "beck", "lamport", "carmack"),
+        ):
+            self.assertEqual(buddy_window.SELECTOR_PERSONAS[label], persona)
 
     def test_window_contains_persistent_lens_selector(self):
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
@@ -1320,12 +1335,12 @@ class TestFloatingWindowLayout(unittest.TestCase):
         import buddy_window
 
         expected_names = {
-            "jeff": "Jeff Dean lens",
-            "linus": "Linus Torvalds lens",
-            "fowler": "Martin Fowler lens",
-            "beck": "Kent Beck lens",
-            "lamport": "Leslie Lamport lens",
-            "carmack": "John Carmack lens",
+            "jeff": "Jeff Dean lens（系統因果與成本）",
+            "linus": "Linus Torvalds lens（簡化與責任歸屬）",
+            "fowler": "Martin Fowler lens（重構與變更成本）",
+            "beck": "Kent Beck lens（小步驟與測試）",
+            "lamport": "Leslie Lamport lens（狀態、順序與失敗）",
+            "carmack": "John Carmack lens（執行路徑與效能）",
         }
         colors = set()
         for persona, expected_name in expected_names.items():
@@ -1342,7 +1357,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         )
         self.assertEqual(
             buddy_window.lens_badge(None)[0],
-            "● General lens",
+            "● General lens（通用證據審查）",
         )
 
     def test_window_grows_for_a_52_character_reaction(self):

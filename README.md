@@ -116,10 +116,12 @@ disabled when the floating-window process inherits the same variable. A window
 launched separately by mouse may not see a temporary variable inside the
 Claude Code process, so its selection confirmation also repeats this precedence.
 Each Stop reaction is labeled with a colored dot and the full lens name, such
-as `● Jeff Dean lens`. The label comes from the persona stored with that
-reaction, rather than the floating window's environment. An unset lens, an
-unknown value, or an older log entry without persona metadata displays
-`● General lens`.
+as `● Jeff Dean lens（系統因果與成本）`. Every name includes a short Traditional
+Chinese focus description, so readers do not need prior knowledge of the six
+masters. The label comes from the persona stored with that reaction, rather
+than the floating window's environment. An unset lens, an unknown value, or an
+older log entry without persona metadata displays
+`● General lens（通用證據審查）`.
 
 ### Custom sprite
 
@@ -186,7 +188,8 @@ starting a fresh evaluation window.
 
 The six names are engineering attention cues, not impersonations and not six
 agents debating at once. Normally, choose a lens from the floating-window
-dropdown; it applies from the next review. Choose `General lens` to return to
+dropdown; it applies from the next review. Choose
+`General lens（通用證據審查）` to return to
 the general evidence-first review.
 
 Advanced users can still force a lens before starting Claude Code:

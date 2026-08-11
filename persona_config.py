@@ -21,6 +21,15 @@ LENS_PERSONAS = {
     "carmack": "John Carmack",
 }
 PERSONA_NAMES = {"general": "General", **LENS_PERSONAS}
+PERSONA_FOCUS = {
+    "general": "通用證據審查",
+    "jeff": "系統因果與成本",
+    "linus": "簡化與責任歸屬",
+    "fowler": "重構與變更成本",
+    "beck": "小步驟與測試",
+    "lamport": "狀態、順序與失敗",
+    "carmack": "執行路徑與效能",
+}
 
 
 @dataclass(frozen=True)
@@ -31,6 +40,13 @@ class PersonaSelection:
 
 def config_path(base_dir: Path) -> Path:
     return Path(base_dir) / CONFIG_FILE
+
+
+def persona_label(persona: str) -> str:
+    key = str(persona or "").strip().lower()
+    if key not in PERSONA_NAMES:
+        key = "general"
+    return f"{PERSONA_NAMES[key]} lens（{PERSONA_FOCUS[key]}）"
 
 
 def resolve_persona(

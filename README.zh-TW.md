@@ -103,9 +103,10 @@ Stop hook 仍會繼續寫 log，UserPromptSubmit hook 仍會繼續注入主 Clau
 是另外用滑鼠啟動，視窗不一定看得到 Claude Code 程序內的暫時環境變數，因此每次
 切換後的提示也會保留這項優先序提醒。
 每則 Stop reaction 上方會顯示色點與完整 lens 姓名，例如
-`● Jeff Dean lens`。標籤讀取該則 reaction 一起儲存的 persona，不依賴浮動
+`● Jeff Dean lens（系統因果與成本）`。每個名稱後方都附上白話關注面向，
+不需要先認識六位 master。標籤讀取該則 reaction 一起儲存的 persona，不依賴浮動
 視窗自己的環境變數。未設定、無法辨識的值，或缺少 persona metadata 的舊 log，
-都會顯示 `● General lens`。
+都會顯示 `● General lens（通用證據審查）`。
 
 ### 自訂 sprite
 
@@ -165,7 +166,7 @@ Stop。任一候選 review 實際產生 finding，就會被標成 `shadow_fail`�
 
 六位人物是工程注意力線索，不是人格模仿，也不是六個 Agent 同時開會。
 一般使用方式是在浮動視窗的下拉選單選擇 lens；下一次 review 起立即生效。
-選擇 `General lens` 會回到通用、證據優先的審查。
+選擇 `General lens（通用證據審查）` 會回到通用、證據優先的審查。
 
 進階使用者仍可在啟動 Claude Code 前用 `BUDDY_PERSONA` 強制指定 lens：
 

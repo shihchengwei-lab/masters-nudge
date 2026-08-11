@@ -61,13 +61,13 @@ BUBBLE_BORDER = "#4a4a6a"
 TS_FG = "#6a6a8a"
 
 LENS_BADGES = {
-    "jeff": ("Jeff Dean lens", "#56CFE1"),
-    "linus": ("Linus Torvalds lens", "#FF6B6B"),
-    "fowler": ("Martin Fowler lens", "#C77DFF"),
-    "beck": ("Kent Beck lens", "#80ED99"),
-    "lamport": ("Leslie Lamport lens", "#72A1FF"),
-    "carmack": ("John Carmack lens", "#FFB86C"),
-    "general": ("General lens", "#A0A0B8"),
+    "jeff": (persona_config.persona_label("jeff"), "#56CFE1"),
+    "linus": (persona_config.persona_label("linus"), "#FF6B6B"),
+    "fowler": (persona_config.persona_label("fowler"), "#C77DFF"),
+    "beck": (persona_config.persona_label("beck"), "#80ED99"),
+    "lamport": (persona_config.persona_label("lamport"), "#72A1FF"),
+    "carmack": (persona_config.persona_label("carmack"), "#FFB86C"),
+    "general": (persona_config.persona_label("general"), "#A0A0B8"),
     "evaluation": ("Shadow evaluation", "#FFD166"),
 }
 
@@ -80,11 +80,15 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
 
 
 def selector_options() -> list[str]:
-    return [f"{name} lens" for name in persona_config.PERSONA_NAMES.values()]
+    return [
+        persona_config.persona_label(persona)
+        for persona in persona_config.PERSONA_NAMES
+    ]
 
 
 SELECTOR_PERSONAS = {
-    f"{name} lens": key for key, name in persona_config.PERSONA_NAMES.items()
+    persona_config.persona_label(key): key
+    for key in persona_config.PERSONA_NAMES
 }
 
 
@@ -292,9 +296,7 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
-        selected_label = (
-            f"{persona_config.PERSONA_NAMES[active_persona]} lens"
-        )
+        selected_label = persona_config.persona_label(active_persona)
         self.persona_var = tk.StringVar(value=selected_label)
         selector_state = (
             "disabled"
@@ -306,7 +308,7 @@ class BuddyWindow:
             textvariable=self.persona_var,
             values=selector_options(),
             state=selector_state,
-            width=24,
+            width=34,
             font=("Microsoft JhengHei", 9),
         )
         self.persona_selector.pack(fill="x", padx=10, pady=(2, 2))
