@@ -24,7 +24,10 @@ import math
 import os
 import sys
 import tkinter as tk
+from tkinter import ttk
 from pathlib import Path
+
+import persona_config
 
 try:
     from PIL import Image, ImageTk
@@ -43,12 +46,12 @@ POLL_MS = 1000
 ANIM_MS = 250           # 4 fps sprite animation
 SPRITE_HEIGHT = 90      # display height in pixels
 WINDOW_WIDTH = 460
-WINDOW_MIN_HEIGHT = 150
-WINDOW_MAX_HEIGHT = 260
+WINDOW_MIN_HEIGHT = 180
+WINDOW_MAX_HEIGHT = 290
 BUBBLE_WRAP_LENGTH = 300
 APPROX_CHARS_PER_LINE = 16
 TEXT_LINE_HEIGHT = 22
-WINDOW_NON_TEXT_HEIGHT = 106
+WINDOW_NON_TEXT_HEIGHT = 136
 
 # Colors
 BG = "#1a1a2e"
@@ -74,6 +77,15 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
     key = persona.strip().lower() if isinstance(persona, str) else "general"
     name, color = LENS_BADGES.get(key, LENS_BADGES["general"])
     return f"● {name}", color
+
+
+def selector_options() -> list[str]:
+    return [f"{name} lens" for name in persona_config.PERSONA_NAMES.values()]
+
+
+SELECTOR_PERSONAS = {
+    f"{name} lens": key for key, name in persona_config.PERSONA_NAMES.items()
+}
 
 
 def window_height_for_reaction(reaction: str) -> int:
@@ -171,6 +183,7 @@ class BuddyWindow:
         self.current_log: Path | None = None
         self.last_offset = 0
         self.last_reaction = ""
+        self.persona_selection = persona_config.resolve_persona(BUDDY_DIR)
 
         # Load sprite
         self.idle_frames: list[ImageTk.PhotoImage] = []
@@ -268,7 +281,10 @@ class BuddyWindow:
         )
         bubble.pack(fill="both", expand=True)
 
-        badge_text, badge_color = lens_badge("general")
+        active_persona = self.persona_selection.persona
+        if active_persona not in persona_config.PERSONA_NAMES:
+            active_persona = "general"
+        badge_text, badge_color = lens_badge(active_persona)
         self.lens_label = tk.Label(
             bubble, text=badge_text, bg=BUBBLE_BG, fg=badge_color,
             font=("Microsoft JhengHei", 9, "bold"),
@@ -276,8 +292,34 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
+        selected_label = (
+            f"{persona_config.PERSONA_NAMES[active_persona]} lens"
+        )
+        self.persona_var = tk.StringVar(value=selected_label)
+        selector_state = (
+            "disabled"
+            if self.persona_selection.source == "environment"
+            else "readonly"
+        )
+        self.persona_selector = ttk.Combobox(
+            bubble,
+            textvariable=self.persona_var,
+            values=selector_options(),
+            state=selector_state,
+            width=24,
+            font=("Microsoft JhengHei", 9),
+        )
+        self.persona_selector.pack(fill="x", padx=10, pady=(2, 2))
+        self.persona_selector.bind("<<ComboboxSelected>>", self._on_persona_selected)
+
+        initial_text = "( . . . )"
+        if self.persona_selection.source == "environment":
+            initial_text = (
+                f"BUDDY_PERSONA 正在接管：{selected_label}。"
+            )
+
         self.bubble_label = tk.Label(
-            bubble, text="( . . . )", bg=BUBBLE_BG, fg=BUBBLE_FG,
+            bubble, text=initial_text, bg=BUBBLE_BG, fg=BUBBLE_FG,
             font=("Microsoft JhengHei", 11),
             wraplength=BUBBLE_WRAP_LENGTH, justify="left",
             anchor="nw", padx=10, pady=6,
@@ -293,6 +335,26 @@ class BuddyWindow:
     def _set_lens_badge(self, persona: str | None):
         text, color = lens_badge(persona)
         self.lens_label.config(text=text, fg=color)
+
+    def _on_persona_selected(self, _event=None):
+        label = self.persona_var.get()
+        persona = SELECTOR_PERSONAS.get(label)
+        if persona is None:
+            return
+        try:
+            persona_config.save_persona(BUDDY_DIR, persona)
+        except (OSError, ValueError):
+            self.bubble_label.config(text="Lens 設定無法儲存，仍使用原設定。")
+            return
+        self.persona_selection = persona_config.PersonaSelection(persona, "config")
+        self._set_lens_badge(persona)
+        message = (
+            f"下一次 review 起使用 {label}；"
+            "若 Claude Code 設有 BUDDY_PERSONA，仍以環境變數為準。"
+        )
+        self.last_reaction = message
+        self.bubble_label.config(text=message)
+        self._resize_for_reaction(message)
 
     # ── Animation ─────────────────────────────────────────
 

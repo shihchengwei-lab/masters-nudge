@@ -106,8 +106,15 @@ Then:
 The window auto-tails whichever session is currently active. Closing it does
 **not** disable Masters’ Nudge; the Stop hook keeps writing to the log and the
 UserPromptSubmit hook keeps injecting into main Claude. Reopen any time.
-The window wraps longer nudges and grows upward from 150 to 220 pixels so the
+The window wraps longer nudges and grows upward from 180 to 290 pixels so the
 52-character maximum remains visible without moving its bottom edge.
+Use the window's dropdown to switch between General and the six master lenses.
+The choice is saved to `~/.claude/buddy/config.json` and applies from the next review
+without restarting Claude Code. If `BUDDY_PERSONA` was set when Claude Code
+started, that environment-variable override still wins. The selector is
+disabled when the floating-window process inherits the same variable. A window
+launched separately by mouse may not see a temporary variable inside the
+Claude Code process, so its selection confirmation also repeats this precedence.
 Each Stop reaction is labeled with a colored dot and the full lens name, such
 as `● Jeff Dean lens`. The label comes from the persona stored with that
 reaction, rather than the floating window's environment. An unset lens, an
@@ -144,7 +151,7 @@ just won't see the sprite.
 | `BUDDY_TIMEOUT` | `60` | Seconds before giving up on the model call |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Maximum model-call seconds for a synchronous checkpoint nudge |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Where logs and state live |
-| `BUDDY_PERSONA` | unset | Optional engineering-review lens: `jeff`, `linus`, `fowler`, `beck`, `lamport`, or `carmack` |
+| `BUDDY_PERSONA` | unset | Advanced environment-variable override; takes priority over the lens saved by the floating window |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | Fixed number of days for observation-only cost-policy evaluation |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | Target review count used to judge overall sample sufficiency |
 
@@ -178,10 +185,11 @@ starting a fresh evaluation window.
 ### Six master lenses
 
 The six names are engineering attention cues, not impersonations and not six
-agents debating at once. `BUDDY_PERSONA` selects one lens for the session; leave
-it unset for a general evidence-first review.
+agents debating at once. Normally, choose a lens from the floating-window
+dropdown; it applies from the next review. Choose `General lens` to return to
+the general evidence-first review.
 
-Set a lens before starting Claude Code:
+Advanced users can still force a lens before starting Claude Code:
 
 ```bash
 export BUDDY_PERSONA=linus
@@ -330,11 +338,12 @@ language-neutral — no changes needed there.
 | `checkpoint.sh` | Synchronous PostToolUse/PostToolUseFailure hook entry |
 | `checkpoint.py` | Classifies checkpoints, deduplicates them, and returns a non-blocking `additionalContext` nudge |
 | `source_context.py` | Stores task anchors and builds bounded, labeled evidence packets shared by Stop and checkpoint paths |
+| `persona_config.py` | Shared lens persistence and environment-variable precedence |
 | `inject.sh` | UserPromptSubmit hook entry — pipes hook input to `inject.py` |
 | `inject.py` | Records the latest task anchor, then injects the latest unread reaction as additional context |
 | `buddy-prompt.txt` | The Masters’ Nudge system prompt (review behavior + length / structure rules) |
 | `reaction-schema.json` | Shared structured-output contract for Codex and Claude (`finding` or silent `no_finding`) |
-| `personas/*.txt` | Six optional master-lens overlays selected by `BUDDY_PERSONA` |
+| `personas/*.txt` | Six optional master-lens overlays selected by the floating window or `BUDDY_PERSONA` |
 | `buddy_window.py` | Tk floating window with the animated checkpoint-bell sprite |
 | `start_buddy_window.bat` | Windows launcher (uses `pythonw` so no console pops up) |
 | `install.sh` | Copies all scripts to `~/.claude/scripts/buddy/` |
@@ -350,6 +359,7 @@ language-neutral — no changes needed there.
 | `~/.claude/buddy/<session_id>.log` | JSONL of Masters’ Nudge reactions for one session |
 | `~/.claude/buddy/<session_id>.state.json` | inject.py read pointer (last consumed timestamp) for one session |
 | `~/.claude/buddy/<session_id>.source.json` | Latest bounded task anchor and prompt-time transcript byte offset |
+| `~/.claude/buddy/config.json` | Current lens saved by the floating window; contains no conversation content |
 | `~/.claude/buddy/<session_id>.checkpoints/` | Atomic checkpoint fingerprints used for per-session deduplication |
 | `~/.claude/buddy-error.log` | Errors from any of the scripts (shared across sessions) |
 

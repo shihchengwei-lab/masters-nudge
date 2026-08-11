@@ -24,6 +24,7 @@ from pathlib import Path
 
 import source_context
 import review_telemetry
+import persona_config
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -34,14 +35,7 @@ BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
 MAX_REACTION_CHARS = 52
 
-PERSONAS = {
-    "jeff": "Jeff Dean",
-    "linus": "Linus Torvalds",
-    "fowler": "Martin Fowler",
-    "beck": "Kent Beck",
-    "lamport": "Leslie Lamport",
-    "carmack": "John Carmack",
-}
+PERSONAS = persona_config.LENS_PERSONAS
 
 PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
 # BUDDY_MODEL meaning depends on provider:
@@ -433,8 +427,9 @@ def build_system_prompt() -> str:
         log_error(f"prompt file read failed: {e}")
         return ""
 
-    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
-    if not persona:
+    selection = persona_config.resolve_persona(BUDDY_DIR)
+    persona = selection.persona
+    if persona == "general":
         return base_prompt
     if persona not in PERSONAS:
         supported = ", ".join(PERSONAS)
@@ -788,9 +783,7 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
         return
     BUDDY_DIR.mkdir(parents=True, exist_ok=True)
     log_path = BUDDY_DIR / f"{session_id}.log"
-    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
-    if persona not in PERSONAS:
-        persona = "general"
+    persona = _selected_persona()
     entry = {
         "ts": datetime.now().isoformat(),
         "session_id": session_id,
@@ -805,7 +798,7 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
 
 
 def _selected_persona() -> str:
-    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
+    persona = persona_config.resolve_persona(BUDDY_DIR).persona
     return persona if persona in PERSONAS else "general"
 
 

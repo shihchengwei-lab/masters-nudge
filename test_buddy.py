@@ -37,6 +37,9 @@ class TestCompile(unittest.TestCase):
     def test_source_context_compiles(self):
         py_compile.compile(str(HERE / "source_context.py"), doraise=True)
 
+    def test_persona_config_compiles(self):
+        py_compile.compile(str(HERE / "persona_config.py"), doraise=True)
+
 
 # ── 2. Persona prompt selection ──────────────────────────────────────
 
@@ -129,6 +132,18 @@ class TestBranding(unittest.TestCase):
         self.assertIn("older log", readme.lower())
         self.assertIn("舊 log", readme_zh)
 
+    def test_readmes_explain_gui_lens_switching_and_env_override(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        for document in (readme, readme_zh):
+            self.assertIn("config.json", document)
+            self.assertIn("BUDDY_PERSONA", document)
+        self.assertIn("next review", readme)
+        self.assertIn("environment-variable override", readme)
+        self.assertIn("下一次 review", readme_zh)
+        self.assertIn("環境變數優先", readme_zh)
+
     def test_readmes_document_structured_reaction_output(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
@@ -199,6 +214,13 @@ class TestPersonaPromptSelection(unittest.TestCase):
     def setUp(self):
         import buddy
         self.buddy = buddy
+        self.persona_tmpdir = tempfile.TemporaryDirectory()
+        self.original_buddy_dir = buddy.BUDDY_DIR
+        buddy.BUDDY_DIR = Path(self.persona_tmpdir.name)
+
+    def tearDown(self):
+        self.buddy.BUDDY_DIR = self.original_buddy_dir
+        self.persona_tmpdir.cleanup()
 
     def test_default_prompt_uses_evidence_first_review_without_lens_overlay(self):
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -259,9 +281,62 @@ class TestPersonaPromptSelection(unittest.TestCase):
         log_error.assert_called_once()
         self.assertIn("unknown persona", log_error.call_args.args[0])
 
+    def test_saved_gui_persona_is_read_on_each_review(self):
+        import persona_config
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_dir = self.buddy.BUDDY_DIR
+            self.buddy.BUDDY_DIR = Path(tmpdir)
+            try:
+                with mock.patch.dict(os.environ, {}, clear=True):
+                    persona_config.save_persona(self.buddy.BUDDY_DIR, "linus")
+                    linus_prompt = self.buddy.build_system_prompt()
+                    persona_config.save_persona(self.buddy.BUDDY_DIR, "beck")
+                    beck_prompt = self.buddy.build_system_prompt()
+            finally:
+                self.buddy.BUDDY_DIR = original_dir
+
+        self.assertIn("Linus Torvalds", linus_prompt)
+        self.assertIn("Kent Beck", beck_prompt)
+
+    def test_environment_persona_overrides_saved_gui_persona(self):
+        import persona_config
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_dir = self.buddy.BUDDY_DIR
+            self.buddy.BUDDY_DIR = Path(tmpdir)
+            try:
+                persona_config.save_persona(self.buddy.BUDDY_DIR, "linus")
+                with mock.patch.dict(
+                    os.environ, {"BUDDY_PERSONA": "jeff"}, clear=True
+                ):
+                    result = self.buddy.build_system_prompt()
+            finally:
+                self.buddy.BUDDY_DIR = original_dir
+
+        self.assertIn("Jeff Dean", result)
+        self.assertNotIn("Linus Torvalds", result)
+
+    def test_saved_general_persona_uses_base_prompt(self):
+        import persona_config
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_dir = self.buddy.BUDDY_DIR
+            self.buddy.BUDDY_DIR = Path(tmpdir)
+            try:
+                persona_config.save_persona(self.buddy.BUDDY_DIR, "general")
+                with mock.patch.dict(os.environ, {}, clear=True):
+                    result = self.buddy.build_system_prompt()
+            finally:
+                self.buddy.BUDDY_DIR = original_dir
+
+        self.assertIn("你是 Masters’ Nudge", result)
+        self.assertNotIn("# 工程觀察鏡頭", result)
+
     def test_installer_copies_persona_overlays(self):
         installer = (HERE / "install.sh").read_text(encoding="utf-8")
         self.assertIn('cp -R "$SRC_DIR/personas" "$TARGET_DIR/"', installer)
+        self.assertIn('cp "$SRC_DIR/persona_config.py" "$TARGET_DIR/"', installer)
 
     def test_base_prompt_delegates_attention_after_high_risk_screen(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -1171,7 +1246,75 @@ class TestSanitizer(unittest.TestCase):
         self.assertNotIn("  ", result)
 
 
+class TestPersonaConfig(unittest.TestCase):
+
+    def setUp(self):
+        import persona_config
+
+        self.config = persona_config
+        self.tmpdir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_save_and_load_persona(self):
+        self.config.save_persona(self.tmpdir, "fowler")
+
+        selection = self.config.resolve_persona(self.tmpdir, environ={})
+
+        self.assertEqual(selection.persona, "fowler")
+        self.assertEqual(selection.source, "config")
+        saved = json.loads(
+            (self.tmpdir / "config.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(saved, {"persona": "fowler"})
+
+    def test_environment_override_reports_its_source(self):
+        self.config.save_persona(self.tmpdir, "fowler")
+
+        selection = self.config.resolve_persona(
+            self.tmpdir, environ={"BUDDY_PERSONA": "lamport"}
+        )
+
+        self.assertEqual(selection.persona, "lamport")
+        self.assertEqual(selection.source, "environment")
+
+    def test_missing_or_invalid_config_falls_back_to_general(self):
+        missing = self.config.resolve_persona(self.tmpdir, environ={})
+        (self.tmpdir / "config.json").write_text(
+            json.dumps({"persona": "unknown"}), encoding="utf-8"
+        )
+        invalid = self.config.resolve_persona(self.tmpdir, environ={})
+
+        self.assertEqual((missing.persona, missing.source), ("general", "default"))
+        self.assertEqual((invalid.persona, invalid.source), ("general", "default"))
+
+    def test_invalid_persona_is_not_saved(self):
+        with self.assertRaises(ValueError):
+            self.config.save_persona(self.tmpdir, "unknown")
+        self.assertFalse((self.tmpdir / "config.json").exists())
+
+
 class TestFloatingWindowLayout(unittest.TestCase):
+
+    def test_selector_offers_general_and_six_lenses(self):
+        import buddy_window
+
+        options = buddy_window.selector_options()
+        self.assertEqual(len(options), 7)
+        self.assertEqual(options[0], "General lens")
+        self.assertIn("Linus Torvalds lens", options)
+        self.assertIn("Jeff Dean lens", options)
+
+    def test_window_contains_persistent_lens_selector(self):
+        source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
+
+        self.assertIn("ttk.Combobox", source)
+        self.assertIn("<<ComboboxSelected>>", source)
+        self.assertIn("persona_config.save_persona", source)
+        self.assertIn("下一次 review 起使用", source)
+        self.assertIn("BUDDY_PERSONA 正在接管", source)
 
     def test_six_personas_have_distinct_named_badges_with_general_fallback(self):
         import buddy_window

@@ -94,8 +94,14 @@ pip install Pillow      # 一次性安裝，buddy_window.py 需要
 視窗會自動 tail 當前作用中的 session。關掉視窗 **不會** 停用 Masters’ Nudge；
 Stop hook 仍會繼續寫 log，UserPromptSubmit hook 仍會繼續注入主 Claude。
 隨時可以重新開啟。
-較長的 nudge 會自動換行，視窗會從 150px 向上增高到最多 220px，讓 52 字
+較長的 nudge 會自動換行，視窗會從 180px 向上增高到最多 290px，讓 52 字
 上限完整顯示，同時維持視窗底部位置。
+視窗內的下拉選單可直接切換 `General` 或六種 master lenses；選擇會寫入
+`~/.claude/buddy/config.json`，並從下一次 review 起生效，不必重開 Claude Code。
+若啟動 Claude Code 時已設定 `BUDDY_PERSONA`，reviewer 仍以環境變數優先。
+浮動視窗也繼承該環境變數時，選單會停用並顯示目前由環境變數接管；若浮動視窗
+是另外用滑鼠啟動，視窗不一定看得到 Claude Code 程序內的暫時環境變數，因此每次
+切換後的提示也會保留這項優先序提醒。
 每則 Stop reaction 上方會顯示色點與完整 lens 姓名，例如
 `● Jeff Dean lens`。標籤讀取該則 reaction 一起儲存的 persona，不依賴浮動
 視窗自己的環境變數。未設定、無法辨識的值，或缺少 persona metadata 的舊 log，
@@ -129,7 +135,7 @@ $env:BUDDY_SPRITE_PATH = "C:\path\to\your\spritesheet.png"
 | `BUDDY_TIMEOUT` | `60` | 模型呼叫的逾時秒數 |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 同步 checkpoint nudge 等待模型的最長秒數 |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態檔放在哪 |
-| `BUDDY_PERSONA` | 未設定 | 選用的工程審查鏡頭：`jeff`、`linus`、`fowler`、`beck`、`lamport` 或 `carmack` |
+| `BUDDY_PERSONA` | 未設定 | 進階環境變數覆寫；優先於浮動視窗保存的 lens |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略只觀察、不攔截的固定評估天數 |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | 判讀整體樣本是否足夠的目標 review 次數 |
 
@@ -158,9 +164,10 @@ Stop。任一候選 review 實際產生 finding，就會被標成 `shadow_fail`�
 ### 六種 master lenses
 
 六位人物是工程注意力線索，不是人格模仿，也不是六個 Agent 同時開會。
-`BUDDY_PERSONA` 每個 session 選一種 lens；不設定時使用通用、證據優先的審查。
+一般使用方式是在浮動視窗的下拉選單選擇 lens；下一次 review 起立即生效。
+選擇 `General lens` 會回到通用、證據優先的審查。
 
-啟動 Claude Code 前選一種 lens：
+進階使用者仍可在啟動 Claude Code 前用 `BUDDY_PERSONA` 強制指定 lens：
 
 ```bash
 export BUDDY_PERSONA=linus
@@ -290,11 +297,12 @@ Masters’ Nudge 預設使用繁體中文。要切換到其他語言，需要改
 | `checkpoint.sh` | 同步的 PostToolUse／PostToolUseFailure hook 入口 |
 | `checkpoint.py` | 分類與去重 checkpoint，回傳不阻擋的 `additionalContext` nudge |
 | `source_context.py` | 保存任務錨點，替 Stop 與 checkpoint 組合共用的有上限標籤證據封包 |
+| `persona_config.py` | 共用的 lens 設定讀寫與環境變數優先規則 |
 | `inject.sh` | UserPromptSubmit hook 入口 —— 把 hook 輸入 pipe 給 `inject.py` |
 | `inject.py` | 記錄最新任務錨點，再把最新未讀的反應注入為追加 context |
 | `buddy-prompt.txt` | Masters’ Nudge 的 system prompt（審查行為 + 長度 / 結構規則） |
 | `reaction-schema.json` | Codex 與 Claude 共用的結構化輸出契約（`finding` 或靜默 `no_finding`） |
-| `personas/*.txt` | 由 `BUDDY_PERSONA` 選用的六種 master-lens overlay |
+| `personas/*.txt` | 由浮動視窗或 `BUDDY_PERSONA` 選用的六種 master-lens overlay |
 | `buddy_window.py` | 顯示工程 checkpoint 提醒鈴動畫的 Tk 浮動視窗 |
 | `start_buddy_window.bat` | Windows 啟動器（使用 `pythonw`，不跳 console 視窗） |
 | `install.sh` | 把所有腳本複製到 `~/.claude/scripts/buddy/` |
@@ -310,6 +318,7 @@ Masters’ Nudge 預設使用繁體中文。要切換到其他語言，需要改
 | `~/.claude/buddy/<session_id>.log` | 單一 session 的 Masters’ Nudge 反應 JSONL |
 | `~/.claude/buddy/<session_id>.state.json` | inject.py 的讀取指標（最後消耗的 timestamp），單一 session |
 | `~/.claude/buddy/<session_id>.source.json` | 最新的有上限任務錨點，以及送出 prompt 時的 transcript 位元組位置 |
+| `~/.claude/buddy/config.json` | 浮動視窗保存的目前 lens；不含對話內容 |
 | `~/.claude/buddy/<session_id>.checkpoints/` | 單一 session 的 checkpoint 去重指紋 |
 | `~/.claude/buddy-error.log` | 任一腳本的錯誤（跨 session 共用） |
 
