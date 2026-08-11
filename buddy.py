@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Buddy_similar — Stop hook worker.
+"""Masters' Nudge — Stop hook worker.
 
 Reads the transcript path from the Stop-hook JSON on stdin, gathers the recent
 turns, dispatches to the configured provider's CLI (OpenAI Codex by default,
-or Anthropic Claude via BUDDY_PROVIDER=anthropic) with the Buddy personality
+or Anthropic Claude via BUDDY_PROVIDER=anthropic) with the Masters' Nudge prompt
 prompt, and appends the reaction to the per-session log at
 ~/.claude/buddy/<session_id>.log.
 
@@ -20,11 +20,23 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+import source_context
+
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROMPT_FILE = SCRIPT_DIR / "buddy-prompt.txt"
+PERSONA_DIR = SCRIPT_DIR / "personas"
 BUDDY_DIR = CLAUDE_DIR / "buddy"
 ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
+
+PERSONAS = {
+    "jeff": "Jeff Dean",
+    "linus": "Linus Torvalds",
+    "fowler": "Martin Fowler",
+    "beck": "Kent Beck",
+    "lamport": "Leslie Lamport",
+    "carmack": "John Carmack",
+}
 
 PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
 # BUDDY_MODEL meaning depends on provider:
@@ -43,12 +55,12 @@ TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
 #
 # Sizing rationale:
 # - Prior PER_MESSAGE_MAX_CHARS=1500 regularly truncated long Claude
-#   responses mid-sentence — Buddy then surfaced "content looks incomplete"
+#   responses mid-sentence — the reviewer then surfaced "content looks incomplete"
 #   findings that were actually budget artifacts, not real delivery gaps.
 #   5000 lets a typical 2000-4000-char Claude response survive whole.
 # - TRANSCRIPT_CHAR_BUDGET capped at 6000 because read_recent_reactions
-#   only carries forward the last 3 of Buddy's own reactions — letting the
-#   transcript window walk farther back than ~3 turns means Buddy sees old
+#   only carries forward the last 3 reactions — letting the transcript window
+#   walk farther back than ~3 turns means the reviewer sees old
 #   Claude content without knowing what it itself said about it, which
 #   degrades into hallucinated or repeated findings.
 # - TRANSCRIPT + TOOL_OUTPUT held at 8000 total (user-set ceiling).
@@ -146,8 +158,43 @@ def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
     return prefix, text, tool_results
 
 
+def _read_transcript_entries(
+    transcript_path: str, start_offset: int | None = None
+) -> list[tuple[str, str, list[str]]]:
+    if not transcript_path or not os.path.exists(transcript_path):
+        return []
+    try:
+        tail_bytes = 65536
+        size = os.path.getsize(transcript_path)
+        with open(transcript_path, "rb") as handle:
+            if start_offset is not None and 0 < start_offset <= size:
+                handle.seek(start_offset)
+            elif size > tail_bytes:
+                handle.seek(size - tail_bytes)
+                handle.readline()  # drop the partial first JSONL line
+            data = handle.read()
+        lines = data.decode("utf-8", errors="replace").splitlines()
+    except Exception as e:
+        log_error(f"transcript read failed: {e}")
+        return []
+
+    entries: list[tuple[str, str, list[str]]] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except Exception:
+            continue
+        parsed = parse_transcript_entry(obj)
+        if parsed is not None:
+            entries.append(parsed)
+    return entries
+
+
 def read_recent_transcript(transcript_path: str) -> str:
-    """Build the transcript snippet for Buddy's prompt using a char budget.
+    """Build the legacy transcript fallback using a character budget.
 
     Walk backwards from the newest user/assistant entry, including each one
     in full until the TRANSCRIPT_CHAR_BUDGET is consumed. Entries longer
@@ -158,7 +205,7 @@ def read_recent_transcript(transcript_path: str) -> str:
     same selected window flows into a separate trailing block, tail-cropped
     to TOOL_OUTPUT_TAIL_CHARS.
 
-    Output shape (sections are explicitly delimited so Buddy can tell where
+    Output shape (sections are explicitly delimited so the reviewer can tell where
     the conversation ends and tool output begins):
 
         [transcript — 從最新往回填，總長 ≤ TRANSCRIPT_CHAR_BUDGET 字；
@@ -176,40 +223,7 @@ def read_recent_transcript(transcript_path: str) -> str:
     entry had user/claude text (a tool-result-only window suppresses the
     transcript framing but keeps the tool output framing).
     """
-    if not transcript_path or not os.path.exists(transcript_path):
-        return ""
-    try:
-        # Read only the tail of the JSONL file. Long sessions can produce
-        # many-MB transcripts; we only need the last few turns. 64 KB tail
-        # comfortably covers TRANSCRIPT_CHAR_BUDGET plus the tool-output
-        # tail even when entries arrive as wide JSON envelopes.
-        TAIL_BYTES = 65536
-        size = os.path.getsize(transcript_path)
-        with open(transcript_path, "rb") as f:
-            if size > TAIL_BYTES:
-                f.seek(size - TAIL_BYTES)
-                # Drop the (likely partial) first line from the seek point
-                # so JSON parsing below doesn't choke on a half-line.
-                f.readline()
-            data = f.read()
-        lines = data.decode("utf-8", errors="replace").splitlines()
-    except Exception as e:
-        log_error(f"transcript read failed: {e}")
-        return ""
-
-    entries: list[tuple[str, str, list[str]]] = []
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            obj = json.loads(line)
-        except Exception:
-            continue
-        parsed = parse_transcript_entry(obj)
-        if parsed is None:
-            continue
-        entries.append(parsed)
+    entries = _read_transcript_entries(transcript_path)
 
     # Walk newest → oldest, filling the char budget. tool_result-only
     # entries cost nothing against the transcript budget (they have no
@@ -274,9 +288,26 @@ def read_recent_transcript(transcript_path: str) -> str:
     return "\n".join(out_lines)
 
 
+def read_recent_tool_evidence(transcript_path: str, start_offset: int = 0) -> str:
+    offset = start_offset if start_offset > 0 else None
+    entries = _read_transcript_entries(transcript_path, offset)
+    tool_results: list[str] = []
+    for _, _, results in entries:
+        tool_results.extend(result for result in results if result)
+    return "\n".join(tool_results)
+
+
+def read_latest_assistant_text(transcript_path: str, start_offset: int = 0) -> str:
+    offset = start_offset if start_offset > 0 else None
+    for prefix, text, _ in reversed(_read_transcript_entries(transcript_path, offset)):
+        if prefix == "claude" and text:
+            return text
+    return ""
+
+
 
 def read_recent_reactions(session_id: str, max_count: int = 3, max_chars: int = 200) -> list[str]:
-    """Read last N Buddy reactions from this session's log."""
+    """Read the last N Masters' Nudge reactions from this session's log."""
     log_path = BUDDY_DIR / f"{session_id}.log"
     if not log_path.exists():
         return []
@@ -302,11 +333,11 @@ def read_recent_reactions(session_id: str, max_count: int = 3, max_chars: int = 
 
 
 # ── agentcam report integration ───────────────────────────────────────
-# Buddy can read AGENT_RUN_REPORT.md generated by `cr` / `agentcam run` and
+# Masters' Nudge can read AGENT_RUN_REPORT.md generated by `cr` / `agentcam run` and
 # include it in the payload sent to the second-opinion model. Dedup is per
 # session_id keyed on report file mtime.
 
-AGENTCAM_REPORT_TAIL_CHARS = 2000  # cap inclusion size to keep token cost sane
+AGENTCAM_REPORT_READ_CHARS = 65536
 
 
 def _find_git_root(start: str) -> str | None:
@@ -327,7 +358,8 @@ def read_latest_agentcam_report(cwd: str) -> dict | None:
     """Find the most recent AGENT_RUN_REPORT.md under <git_root>/.git/agentcam/runs/.
 
     Returns {"path": str, "content": str, "mtime": float} or None.
-    Content is tail-truncated to AGENTCAM_REPORT_TAIL_CHARS.
+    Content keeps both ends within AGENTCAM_REPORT_READ_CHARS. The provider
+    receives only selected evidence sections, capped separately.
     """
     git_root = _find_git_root(cwd)
     if not git_root:
@@ -348,8 +380,7 @@ def read_latest_agentcam_report(cwd: str) -> dict | None:
     except Exception as e:
         log_error(f"agentcam report read failed: {e}")
         return None
-    if len(content) > AGENTCAM_REPORT_TAIL_CHARS:
-        content = content[-AGENTCAM_REPORT_TAIL_CHARS:]
+    content = source_context.head_tail(content, AGENTCAM_REPORT_READ_CHARS)
     return {
         "path": str(newest),
         "content": content,
@@ -386,14 +417,38 @@ def build_system_prompt() -> str:
         log_error(f"prompt file missing: {PROMPT_FILE}")
         return ""
     try:
-        return PROMPT_FILE.read_text(encoding="utf-8")
+        base_prompt = PROMPT_FILE.read_text(encoding="utf-8")
     except Exception as e:
         log_error(f"prompt file read failed: {e}")
         return ""
 
+    persona = os.environ.get("BUDDY_PERSONA", "").strip().lower()
+    if not persona:
+        return base_prompt
+    if persona not in PERSONAS:
+        supported = ", ".join(PERSONAS)
+        log_error(f"unknown persona: {persona!r}; supported: {supported}")
+        return ""
+
+    persona_file = PERSONA_DIR / f"{persona}.txt"
+    try:
+        overlay = persona_file.read_text(encoding="utf-8").strip()
+    except Exception as e:
+        log_error(f"persona prompt read failed ({persona}): {e}")
+        return ""
+
+    persona_header = (
+        "# 工程觀察鏡頭\n\n"
+        f"這一輪使用 {PERSONAS[persona]} 相關的工程判斷作為注意力線索。\n"
+        "人名只改變優先檢查的問題類型；不要假裝自己是這位人物，"
+        "不要模仿口吻、迷因、羞辱或人身攻擊。\n"
+        "上方 Masters’ Nudge 的證據、旁觀者角色、單一 finding 與字數規則仍然優先。"
+    )
+    return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
+
 
 def parse_reaction(stdout: str) -> str:
-    """Robustly extract Buddy's text from claude CLI stdout.
+    """Robustly extract the reviewer's text from claude CLI stdout.
 
     Handles both raw-text output and JSON-envelope output.
     """
@@ -554,7 +609,9 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
             pass
 
 
-_WRAPPER_RE = re.compile(r"\[(?:end )?Buddy[^\]]*\]")
+_WRAPPER_RE = re.compile(
+    r"\[(?:end )?(?:Buddy|Masters[’'] Nudge)[^\]]*\]"
+)
 _CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
 _INLINE_CODE_RE = re.compile(r"`([^`]*)`")
 _MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
@@ -566,7 +623,7 @@ def sanitize_reaction(raw: str) -> str:
     """Clean model output before logging.
 
     - Strip code blocks and markdown formatting
-    - Remove wrapper collision markers ([end Buddy], [Buddy ...])
+    - Remove current and legacy wrapper collision markers
     - Collapse whitespace
     - Hard truncate to MAX_REACTION_CHARS
     """
@@ -607,15 +664,41 @@ def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) 
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def build_stop_source_packet(hook: dict, agentcam_content: str = "") -> str:
+    session_id = str(hook.get("session_id") or "unknown")
+    transcript_path = str(hook.get("transcript_path") or "")
+    state = source_context.load_source_state(BUDDY_DIR, session_id)
+    offset = int(state.get("transcript_offset") or 0)
+    last_assistant = str(hook.get("last_assistant_message") or "")
+    if not last_assistant:
+        last_assistant = read_latest_assistant_text(transcript_path, offset)
+    tool_evidence = read_recent_tool_evidence(transcript_path, offset)
+    agentcam_evidence = source_context.extract_agentcam_evidence(agentcam_content)
+
+    if not any((last_assistant, tool_evidence, agentcam_evidence)):
+        return read_recent_transcript(transcript_path)
+    return source_context.build_stop_packet(
+        task_anchor=str(state.get("task_anchor") or ""),
+        last_assistant_message=last_assistant,
+        tool_evidence=tool_evidence,
+        agentcam_evidence=agentcam_evidence,
+    )
+
+
 def main() -> None:
     hook = read_hook_input()
-    transcript_path = hook.get("transcript_path", "")
     session_id = hook.get("session_id", "unknown")
     cwd = hook.get("cwd") or os.getcwd()
 
-    transcript_text = read_recent_transcript(transcript_path)
-    if not transcript_text:
-        log_error("empty transcript, skipping")
+    report = read_latest_agentcam_report(cwd)
+    report_content = ""
+    if report and report["mtime"] > load_agentcam_last_mtime(session_id):
+        report_content = report["content"]
+        save_agentcam_last_mtime(session_id, report["mtime"])
+
+    source_packet = build_stop_source_packet(hook, report_content)
+    if not source_packet:
+        log_error("empty source packet, skipping")
         return
 
     system_prompt = build_system_prompt()
@@ -632,16 +715,7 @@ def main() -> None:
             context_parts.append(f"- {r}")
         context_parts.append("[避免重複上面的話，可以接著講]")
     context_parts.append("")
-    context_parts.append(transcript_text)
-
-    # --- agentcam report (only if a *new* report has appeared this session) ---
-    report = read_latest_agentcam_report(cwd)
-    if report and report["mtime"] > load_agentcam_last_mtime(session_id):
-        context_parts.append("")
-        context_parts.append("[agentcam report — 此 run 的 git/檔案/風險旗 authoritative 來源]")
-        context_parts.append(report["content"])
-        context_parts.append("[end agentcam report]")
-        save_agentcam_last_mtime(session_id, report["mtime"])
+    context_parts.append(source_packet)
 
     enriched_text = "\n".join(context_parts)
 

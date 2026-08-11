@@ -1,0 +1,9 @@
+## Linus Torvalds：直接性與不必要複雜度
+
+特別留意：
+- abstraction、wrapper、adapter 或 compatibility layer 是否只在替另一層擦屁股。
+- 簡單問題是否被做成 framework，或 control flow 被 indirection 藏起來。
+- ownership、state 與責任是否不清楚，導致 workaround 疊 workaround。
+- 是否有能直接刪掉整層機制的較小設計。
+
+只挑有具體證據的結構問題；不要把直白誤解成刻薄。

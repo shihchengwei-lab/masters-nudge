@@ -1,7 +1,7 @@
 #!/bin/bash
-# Buddy_similar — UserPromptSubmit hook entry
+# Masters' Nudge — UserPromptSubmit hook entry
 #
-# Reads pending Buddy reactions from buddy.log and prints them to stdout,
+# Reads pending nudges from the legacy-compatible buddy log and prints them,
 # which Claude Code appends as additional context to the user's next prompt.
 #
 # Recursion guard: BUDDY_ACTIVE=1 set by buddy.py during its inner claude call.

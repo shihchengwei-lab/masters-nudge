@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke tests for Buddy_similar.
+"""Smoke tests for Masters' Nudge.
 
 Run:  python -m unittest test_buddy -v
 """
@@ -31,8 +31,556 @@ class TestCompile(unittest.TestCase):
     def test_window_compiles(self):
         py_compile.compile(str(HERE / "buddy_window.py"), doraise=True)
 
+    def test_checkpoint_compiles(self):
+        py_compile.compile(str(HERE / "checkpoint.py"), doraise=True)
 
-# ── 2. Transcript parser ─────────────────────────────────────────────
+    def test_source_context_compiles(self):
+        py_compile.compile(str(HERE / "source_context.py"), doraise=True)
+
+
+# ── 2. Persona prompt selection ──────────────────────────────────────
+
+class TestBranding(unittest.TestCase):
+    """Public surfaces use the new name while legacy paths stay compatible."""
+
+    def test_public_brand_name_is_masters_nudge(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+        prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+        window = (HERE / "buddy_window.py").read_text(encoding="utf-8")
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+
+        self.assertTrue(readme.startswith("# Masters’ Nudge"))
+        self.assertTrue(readme_zh.startswith("# Masters’ Nudge"))
+        self.assertIn("你是 Masters’ Nudge", prompt)
+        self.assertIn('self.root.title("Masters’ Nudge")', window)
+        self.assertIn('echo "Masters’ Nudge — install"', installer)
+
+    def test_readmes_explain_six_master_lenses_and_compatibility_layer(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("### Six master lenses", readme)
+        self.assertIn("### 六種 master lenses", readme_zh)
+        self.assertNotIn("### Engineering persona lenses", readme)
+        self.assertNotIn("### 工程 persona 鏡頭", readme_zh)
+        self.assertIn("BUDDY_*", readme)
+        self.assertIn("compatibility", readme.lower())
+        self.assertIn("BUDDY_*", readme_zh)
+        self.assertIn("相容", readme_zh)
+
+    def test_readmes_include_windows_powershell_env_examples(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        for document in (readme, readme_zh):
+            self.assertIn("$env:BUDDY_SPRITE_PATH", document)
+            self.assertIn("$env:BUDDY_PERSONA", document)
+
+    def test_new_brand_is_used_in_agent_visible_checkpoint_wrapper(self):
+        import checkpoint
+
+        output = checkpoint.build_hook_output(
+            "PostToolUseFailure", "測試結果跟宣告不一致", "test-fail"
+        )
+        context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Masters’ Nudge", context)
+        self.assertNotIn("[Buddy", context)
+
+    def test_legacy_runtime_paths_remain_for_existing_installations(self):
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+        settings = (HERE / "settings-snippet.json").read_text(encoding="utf-8")
+
+        self.assertIn("~/.claude/scripts/buddy", installer)
+        self.assertIn("~/.claude/scripts/buddy", settings)
+        self.assertIn("BUDDY_PROVIDER", (HERE / "buddy.py").read_text(encoding="utf-8"))
+
+    def test_default_sprite_is_transparent_and_detectable(self):
+        from PIL import Image
+        import buddy_window
+
+        with Image.open(HERE / "spritesheet.webp") as source:
+            sprite = source.convert("RGBA")
+        alpha = sprite.getchannel("A")
+        rows = buddy_window.detect_frames(sprite)
+
+        self.assertEqual(alpha.getextrema()[0], 0)
+        self.assertGreater(alpha.getbbox()[2] - alpha.getbbox()[0], 0)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual([len(row) for row in rows], [6, 6])
+
+
+class TestPersonaPromptSelection(unittest.TestCase):
+    PERSONAS = {
+        "jeff": "Jeff Dean",
+        "linus": "Linus Torvalds",
+        "fowler": "Martin Fowler",
+        "beck": "Kent Beck",
+        "lamport": "Leslie Lamport",
+        "carmack": "John Carmack",
+    }
+
+    def setUp(self):
+        import buddy
+        self.buddy = buddy
+
+    def test_default_prompt_uses_evidence_first_review_without_lens_overlay(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            result = self.buddy.build_system_prompt()
+
+        self.assertIn("你是 Masters’ Nudge", result)
+        self.assertNotIn("# 工程觀察鏡頭", result)
+
+    def test_each_supported_persona_appends_its_overlay(self):
+        for persona, display_name in self.PERSONAS.items():
+            with self.subTest(persona=persona):
+                with mock.patch.dict(os.environ, {"BUDDY_PERSONA": persona}, clear=True):
+                    result = self.buddy.build_system_prompt()
+
+                self.assertIn("你是 Masters’ Nudge", result)
+                self.assertIn("# 工程觀察鏡頭", result)
+                self.assertIn(display_name, result)
+                self.assertIn("不要假裝自己是這位人物", result)
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                ).strip()
+                self.assertTrue(overlay)
+                self.assertTrue(result.endswith(f"{overlay}\n"))
+
+    def test_persona_directory_contains_exactly_the_supported_overlays(self):
+        files = {path.stem for path in (HERE / "personas").glob("*.txt")}
+        self.assertEqual(files, set(self.PERSONAS))
+
+    def test_unknown_persona_stops_instead_of_silently_using_default(self):
+        with mock.patch.dict(os.environ, {"BUDDY_PERSONA": "unknown"}, clear=True):
+            with mock.patch.object(self.buddy, "log_error") as log_error:
+                result = self.buddy.build_system_prompt()
+
+        self.assertEqual(result, "")
+        log_error.assert_called_once()
+        self.assertIn("unknown persona", log_error.call_args.args[0])
+
+    def test_installer_copies_persona_overlays(self):
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('cp -R "$SRC_DIR/personas" "$TARGET_DIR/"', installer)
+
+    def test_base_prompt_delegates_attention_after_high_risk_screen(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("先做高風險篩選", base_prompt)
+        self.assertIn("由該鏡頭決定先檢查哪類工程問題", base_prompt)
+        self.assertIn("未使用工程觀察鏡頭時", base_prompt)
+        self.assertNotIn("其他問題只有非常明確時才提", base_prompt)
+
+    def test_base_prompt_preserves_problem_and_location_inside_length_cap(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("優先保留問題與位置", base_prompt)
+        self.assertIn("不犧牲前兩者", base_prompt)
+
+    def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        conflicting_examples = (
+            "回去對一下需求",
+            "拆兩句各講一件事",
+            "提一下保留前面的選項",
+            "補個檢查步驟",
+        )
+        for phrase in conflicting_examples:
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, base_prompt)
+
+    def test_base_prompt_matches_structured_evidence_packet_labels(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+        packet = self.buddy.source_context.build_stop_packet(
+            task_anchor="修正登入錯誤",
+            last_assistant_message="已完成",
+            agentcam_evidence="## Risk Flags\n- HIGH",
+        )
+
+        self.assertIn("證據封包", base_prompt)
+        self.assertNotIn("最近一小段對話", base_prompt)
+        self.assertIn("[agentcam evidence]", base_prompt)
+        self.assertNotIn("[agentcam report]", base_prompt)
+        self.assertIn("[agentcam evidence]", packet)
+
+
+# ── 3. Source evidence packets ───────────────────────────────────────
+
+class TestSourceContext(unittest.TestCase):
+
+    def setUp(self):
+        import source_context
+        self.source = source_context
+
+    def test_head_tail_keeps_both_ends_with_explicit_marker(self):
+        text = "HEAD_MARKER" + ("x" * 500) + "TAIL_MARKER"
+
+        result = self.source.head_tail(text, 120)
+
+        self.assertLessEqual(len(result), 120)
+        self.assertIn("HEAD_MARKER", result)
+        self.assertIn("TAIL_MARKER", result)
+        self.assertIn("中段已截斷", result)
+
+    def test_head_tail_leaves_short_text_unchanged(self):
+        self.assertEqual(self.source.head_tail("short", 100), "short")
+
+    def test_source_state_saves_bounded_task_anchor_and_transcript_offset(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            transcript = Path(tmpdir) / "session.jsonl"
+            transcript.write_text("existing transcript\n", encoding="utf-8")
+            expected_offset = transcript.stat().st_size
+            prompt = "PROMPT_HEAD" + ("p" * 3000) + "PROMPT_TAIL"
+
+            self.source.save_source_state(
+                Path(tmpdir), "session/unsafe", prompt, str(transcript)
+            )
+            state = self.source.load_source_state(Path(tmpdir), "session/unsafe")
+
+        self.assertLessEqual(
+            len(state["task_anchor"]), self.source.TASK_ANCHOR_MAX_CHARS
+        )
+        self.assertIn("PROMPT_HEAD", state["task_anchor"])
+        self.assertIn("PROMPT_TAIL", state["task_anchor"])
+        self.assertEqual(state["transcript_offset"], expected_offset)
+
+    def test_source_state_invalid_offset_falls_back_without_losing_anchor(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = self.source.source_state_path(Path(tmpdir), "session-1")
+            path.write_text(
+                json.dumps({"task_anchor": "保留這個要求", "transcript_offset": "bad"}),
+                encoding="utf-8",
+            )
+
+            state = self.source.load_source_state(Path(tmpdir), "session-1")
+
+        self.assertEqual(state["task_anchor"], "保留這個要求")
+        self.assertEqual(state["transcript_offset"], 0)
+
+    def test_checkpoint_packet_is_event_centered_and_source_labeled(self):
+        packet = self.source.build_checkpoint_packet(
+            task_anchor="修正登入測試",
+            event_context="reason: test-fail\nfailure: 2 failed",
+            assistant_context="正在調整 auth.py",
+        )
+
+        self.assertIn("[task anchor]", packet)
+        self.assertIn("修正登入測試", packet)
+        self.assertIn("[checkpoint evidence]", packet)
+        self.assertIn("2 failed", packet)
+        self.assertIn("[recent agent context]", packet)
+        self.assertNotIn("[transcript", packet)
+
+    def test_stop_packet_separates_claim_from_objective_evidence(self):
+        packet = self.source.build_stop_packet(
+            task_anchor="只修目前的 bug",
+            last_assistant_message="已完成並通過測試",
+            tool_evidence="Exit code 1\n1 failed",
+            agentcam_evidence="## Risk Flags\n| HIGH | auth.py |",
+        )
+
+        self.assertIn("[task anchor]", packet)
+        self.assertIn("[agent final claim]", packet)
+        self.assertIn("[tool evidence]", packet)
+        self.assertIn("[agentcam evidence]", packet)
+        self.assertLess(packet.index("[agent final claim]"), packet.index("[tool evidence]"))
+
+    def test_agentcam_extractor_keeps_only_named_evidence_sections(self):
+        report = """# Agent Run Report
+
+## Summary
+generic summary that should not be sent
+
+## Risk Flags
+| HIGH | auth.py |
+
+## Changed Files
+- auth.py
+
+## Narrative
+long unrelated prose
+
+## Exit Code Detail
+pytest: 1
+"""
+
+        result = self.source.extract_agentcam_evidence(report)
+
+        self.assertIn("Risk Flags", result)
+        self.assertIn("Changed Files", result)
+        self.assertIn("Exit Code Detail", result)
+        self.assertNotIn("generic summary", result)
+        self.assertNotIn("unrelated prose", result)
+
+    def test_installer_copies_source_context(self):
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('cp "$SRC_DIR/source_context.py" "$TARGET_DIR/"', installer)
+
+
+# ── 4. Checkpoint nudge hooks ────────────────────────────────────────
+
+class TestCheckpointClassification(unittest.TestCase):
+
+    def setUp(self):
+        import checkpoint
+        self.checkpoint = checkpoint
+
+    def test_failed_test_command_is_test_fail(self):
+        hook = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "python -m pytest"},
+            "error": "Exit code 1\n2 failed, 8 passed",
+        }
+
+        result = self.checkpoint.classify_checkpoint(hook)
+
+        self.assertEqual(result["reason"], "test-fail")
+        self.assertIn("python -m pytest", result["context"])
+        self.assertIn("2 failed", result["context"])
+
+    def test_test_failure_text_on_success_event_is_test_fail(self):
+        hook = {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Bash",
+            "tool_input": {"command": "custom-test-wrapper"},
+            "tool_response": {
+                "stdout": "Tests: 1 failed, 9 passed",
+                "stderr": "",
+            },
+        }
+
+        result = self.checkpoint.classify_checkpoint(hook, changed_line_count=0)
+
+        self.assertEqual(result["reason"], "test-fail")
+
+    def test_non_test_tool_failure_is_error(self):
+        hook = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/missing.txt"},
+            "error": "File does not exist",
+        }
+
+        result = self.checkpoint.classify_checkpoint(hook)
+
+        self.assertEqual(result["reason"], "error")
+
+    def test_interrupted_tool_is_not_a_checkpoint(self):
+        hook = {
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest"},
+            "error": "Interrupted",
+            "is_interrupt": True,
+        }
+
+        self.assertIsNone(self.checkpoint.classify_checkpoint(hook))
+
+    def test_large_diff_triggers_only_above_original_threshold(self):
+        hook = {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "/project/app.py"},
+            "tool_response": {"success": True},
+        }
+
+        self.assertIsNone(
+            self.checkpoint.classify_checkpoint(hook, changed_line_count=80)
+        )
+        result = self.checkpoint.classify_checkpoint(hook, changed_line_count=81)
+        self.assertEqual(result["reason"], "large-diff")
+        self.assertIn("81", result["context"])
+        later = self.checkpoint.classify_checkpoint(hook, changed_line_count=120)
+        self.assertEqual(result["fingerprint"], later["fingerprint"])
+
+    def test_changed_line_count_includes_tracked_and_untracked_text(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            Path(tmpdir, "new.py").write_text(
+                "\n".join(f"line {i}" for i in range(70)) + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_git(args, _cwd):
+                if args[:2] == ["diff", "--numstat"]:
+                    return "10\t5\tapp.py\n-\t-\timage.png\n"
+                if args[:3] == ["ls-files", "--others", "--exclude-standard"]:
+                    return "new.py\0"
+                return ""
+
+            with mock.patch.object(
+                self.checkpoint, "_git_output", side_effect=fake_git
+            ):
+                result = self.checkpoint.get_changed_line_count(tmpdir)
+
+        self.assertEqual(result, 85)
+
+    def test_unrelated_success_does_not_trigger(self):
+        hook = {
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/project/app.py"},
+            "tool_response": {"success": True},
+        }
+
+        self.assertIsNone(self.checkpoint.classify_checkpoint(hook))
+
+
+class TestCheckpointDelivery(unittest.TestCase):
+
+    def setUp(self):
+        import checkpoint
+        self.checkpoint = checkpoint
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.state_patch = mock.patch.object(
+            checkpoint, "CHECKPOINT_STATE_DIR", Path(self.tmpdir.name)
+        )
+        self.state_patch.start()
+
+    def tearDown(self):
+        self.state_patch.stop()
+        self.tmpdir.cleanup()
+
+    def test_same_checkpoint_fingerprint_is_claimed_once(self):
+        claimed = self.checkpoint.claim_checkpoint("session-1", "same-fingerprint")
+        claimed_again = self.checkpoint.claim_checkpoint(
+            "session-1", "same-fingerprint"
+        )
+
+        self.assertTrue(claimed)
+        self.assertFalse(claimed_again)
+
+    def test_release_allows_retry_after_reviewer_failure(self):
+        self.assertTrue(self.checkpoint.claim_checkpoint("session-1", "retry-me"))
+        self.checkpoint.release_checkpoint("session-1", "retry-me")
+        self.assertTrue(self.checkpoint.claim_checkpoint("session-1", "retry-me"))
+
+    def test_output_is_nudge_only_additional_context(self):
+        result = self.checkpoint.build_hook_output(
+            "PostToolUseFailure", "先確認失敗根因。", "error"
+        )
+
+        self.assertEqual(
+            result["hookSpecificOutput"]["hookEventName"],
+            "PostToolUseFailure",
+        )
+        self.assertIn(
+            "先確認失敗根因。",
+            result["hookSpecificOutput"]["additionalContext"],
+        )
+        serialized = json.dumps(result, ensure_ascii=False)
+        self.assertNotIn('"decision"', serialized)
+        self.assertNotIn('"continue"', serialized)
+        self.assertNotIn('"systemMessage"', serialized)
+
+    def test_reviewer_failure_returns_no_output_and_releases_claim(self):
+        hook = {
+            "session_id": "session-1",
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/missing.txt"},
+            "error": "File does not exist",
+        }
+        with mock.patch.object(
+            self.checkpoint, "generate_nudge", return_value=""
+        ):
+            result = self.checkpoint.process_hook(hook)
+
+        self.assertIsNone(result)
+        event = self.checkpoint.classify_checkpoint(hook)
+        self.assertTrue(
+            self.checkpoint.claim_checkpoint("session-1", event["fingerprint"])
+        )
+
+    def test_successful_nudge_is_deduplicated(self):
+        hook = {
+            "session_id": "session-1",
+            "hook_event_name": "PostToolUseFailure",
+            "tool_name": "Read",
+            "tool_input": {"file_path": "/missing.txt"},
+            "error": "File does not exist",
+        }
+        with mock.patch.object(
+            self.checkpoint, "generate_nudge", return_value="路徑假設還沒成立。"
+        ) as generate:
+            first = self.checkpoint.process_hook(hook)
+            second = self.checkpoint.process_hook(hook)
+
+        self.assertIsNotNone(first)
+        self.assertIsNone(second)
+        generate.assert_called_once()
+
+    def test_settings_register_checkpoint_hooks_without_async(self):
+        settings = json.loads(
+            (HERE / "settings-snippet.json").read_text(encoding="utf-8")
+        )
+
+        self.assertIn("PostToolUse", settings["hooks"])
+        self.assertIn("PostToolUseFailure", settings["hooks"])
+        for event_name in ("PostToolUse", "PostToolUseFailure"):
+            handlers = settings["hooks"][event_name]
+            command_hooks = [
+                hook
+                for group in handlers
+                for hook in group["hooks"]
+            ]
+            self.assertTrue(
+                any("checkpoint.sh" in hook["command"] for hook in command_hooks)
+            )
+            self.assertTrue(all(not hook.get("async") for hook in command_hooks))
+
+    def test_installer_copies_checkpoint_files(self):
+        installer = (HERE / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('cp "$SRC_DIR/checkpoint.py" "$TARGET_DIR/"', installer)
+        self.assertIn('cp "$SRC_DIR/checkpoint.sh" "$TARGET_DIR/"', installer)
+
+    def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
+        hook = {
+            "session_id": "session-1",
+            "transcript_path": "/session.jsonl",
+            "hook_event_name": "PostToolUseFailure",
+        }
+        event = {
+            "reason": "error",
+            "context": "reason: error\nfailure: missing file",
+            "fingerprint": "error-1",
+        }
+        with (
+            mock.patch.object(
+                self.checkpoint.source_context,
+                "load_source_state",
+                return_value={"task_anchor": "只修路徑問題", "transcript_offset": 42},
+            ),
+            mock.patch.object(
+                self.checkpoint.buddy,
+                "read_latest_assistant_text",
+                return_value="正在檢查路徑",
+            ),
+            mock.patch.object(
+                self.checkpoint.buddy, "build_system_prompt", return_value="system"
+            ),
+            mock.patch.object(
+                self.checkpoint.buddy, "read_recent_reactions", return_value=[]
+            ),
+            mock.patch.object(
+                self.checkpoint.buddy,
+                "dispatch_call",
+                return_value="路徑前提還沒成立。",
+            ) as dispatch,
+        ):
+            result = self.checkpoint.generate_nudge(hook, event)
+
+        self.assertEqual(result, "路徑前提還沒成立。")
+        payload = dispatch.call_args.args[1]
+        self.assertIn("只修路徑問題", payload)
+        self.assertIn("missing file", payload)
+        self.assertIn("正在檢查路徑", payload)
+        self.assertNotIn("[transcript", payload)
+
+
+# ── 5. Transcript parser ─────────────────────────────────────────────
 
 FIXTURE_LINES = [
     {"type": "user", "message": {"role": "user", "content": "幫我修 bug"}},
@@ -122,7 +670,7 @@ class TestTranscriptParser(unittest.TestCase):
         fd.close()
         return fd.name
 
-    def test_read_recent_transcript_uses_cinder_format(self):
+    def test_read_recent_transcript_uses_labeled_fallback_format(self):
         path = self._write_jsonl(FIXTURE_LINES)
         try:
             result = self.buddy.read_recent_transcript(path)
@@ -134,7 +682,7 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertNotIn("ignored", result)
             # tool_use placeholder must be gone
             self.assertNotIn("tool_use", result)
-            # Transcript section must be explicitly bounded so Buddy can tell
+            # Transcript section must be explicitly bounded for the reviewer.
             # the boundary between conversation and other payload pieces.
             self.assertIn("[transcript", result)
             self.assertIn("[end transcript]", result)
@@ -171,8 +719,8 @@ class TestTranscriptParser(unittest.TestCase):
             # Oldest message (i=0) cannot fit — its TAIL-00 must be absent.
             self.assertNotIn("TAIL-00", result)
             # Sum of kept user lines must respect the budget.
-            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
-            total = sum(len(l[len("user: "):]) for l in user_lines)
+            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
+            total = sum(len(line[len("user: "):]) for line in user_lines)
             self.assertLessEqual(total, self.buddy.TRANSCRIPT_CHAR_BUDGET)
         finally:
             os.unlink(path)
@@ -191,7 +739,7 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertNotIn("HEAD", result)
             # TAIL is the last 4 chars — must survive.
             self.assertIn("TAIL", result)
-            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
             self.assertEqual(len(user_lines), 1)
             payload = user_lines[0][len("user: "):]
             self.assertTrue(
@@ -221,7 +769,7 @@ class TestTranscriptParser(unittest.TestCase):
         try:
             result = self.buddy.read_recent_transcript(path)
             # Newest (big) survives intact.
-            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
             self.assertEqual(len(user_lines), 2)
             # Older entry should appear truncated: head dropped, tail kept,
             # with the "…" marker.
@@ -230,7 +778,7 @@ class TestTranscriptParser(unittest.TestCase):
             self.assertIn("OLDER_TAIL", older_line)
             self.assertNotIn("OLDER_HEAD", older_line)
             # Total transcript chars must still respect budget.
-            total = sum(len(l[len("user: "):]) for l in user_lines)
+            total = sum(len(line[len("user: "):]) for line in user_lines)
             self.assertLessEqual(total, budget)
         finally:
             os.unlink(path)
@@ -243,13 +791,13 @@ class TestTranscriptParser(unittest.TestCase):
         path = self._write_jsonl(entries)
         try:
             result = self.buddy.read_recent_transcript(path)
-            user_lines = [l for l in result.splitlines() if l.startswith("user: ")]
+            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
             self.assertEqual(user_lines, ["user: 短訊息"])
         finally:
             os.unlink(path)
 
     def test_read_recent_transcript_tool_output_concatenated(self):
-        # Two separate tool_results inside the 12-message window.
+        # Two separate tool_results inside the legacy character-budget window.
         entries = [
             {"type": "user", "message": {"role": "user", "content": [
                 {"type": "tool_result", "content": "AAA"},
@@ -296,13 +844,71 @@ class TestTranscriptParser(unittest.TestCase):
             # is at most TOOL_OUTPUT_TAIL_CHARS.
             lines = result.splitlines()
             opening_idx = next(
-                i for i, l in enumerate(lines) if l.startswith("[tool output")
+                i for i, line in enumerate(lines) if line.startswith("[tool output")
             )
             closing_idx = lines.index("[end tool output]")
             payload = "\n".join(lines[opening_idx + 1:closing_idx])
             self.assertLessEqual(len(payload), cap)
         finally:
             os.unlink(path)
+
+    def test_read_recent_tool_evidence_respects_prompt_time_offset(self):
+        fd = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
+        )
+        fd.write(json.dumps({
+            "type": "user",
+            "message": {"role": "user", "content": [
+                {"type": "tool_result", "content": "OLD_RESULT"},
+            ]},
+        }) + "\n")
+        fd.flush()
+        offset = fd.tell()
+        fd.write(json.dumps({
+            "type": "user",
+            "message": {"role": "user", "content": [
+                {"type": "tool_result", "content": "NEW_RESULT"},
+            ]},
+        }) + "\n")
+        fd.close()
+
+        try:
+            result = self.buddy.read_recent_tool_evidence(fd.name, offset)
+        finally:
+            os.unlink(fd.name)
+
+        self.assertIn("NEW_RESULT", result)
+        self.assertNotIn("OLD_RESULT", result)
+
+    def test_stop_source_packet_uses_task_claim_and_current_turn_evidence(self):
+        hook = {
+            "session_id": "session-1",
+            "transcript_path": "/session.jsonl",
+            "last_assistant_message": "已完成並通過測試",
+        }
+        with (
+            mock.patch.object(
+                self.buddy.source_context,
+                "load_source_state",
+                return_value={"task_anchor": "只修登入錯誤", "transcript_offset": 123},
+            ),
+            mock.patch.object(
+                self.buddy,
+                "read_recent_tool_evidence",
+                return_value="Exit code 1\n1 failed",
+            ) as tool_evidence,
+        ):
+            result = self.buddy.build_stop_source_packet(
+                hook,
+                "## Risk Flags\n| HIGH | auth.py |\n\n## Summary\nignore me",
+            )
+
+        tool_evidence.assert_called_once_with("/session.jsonl", 123)
+        self.assertIn("只修登入錯誤", result)
+        self.assertIn("已完成並通過測試", result)
+        self.assertIn("1 failed", result)
+        self.assertIn("Risk Flags", result)
+        self.assertNotIn("ignore me", result)
 
     def test_read_recent_transcript_skips_empty_message_lines(self):
         # A tool_result-only entry has empty text after parsing. Its
@@ -333,7 +939,7 @@ class TestTranscriptParser(unittest.TestCase):
         self.assertEqual(result, "")
 
 
-# ── 3. Sanitizer ─────────────────────────────────────────────────────
+# ── 6. Sanitizer ─────────────────────────────────────────────────────
 
 class TestSanitizer(unittest.TestCase):
 
@@ -366,6 +972,10 @@ class TestSanitizer(unittest.TestCase):
         result = self.sanitize("測試 [Buddy（偽造）] 不該出現")
         self.assertNotIn("[Buddy", result)
 
+    def test_removes_new_brand_wrapper_collision(self):
+        result = self.sanitize("測試 [end Masters’ Nudge] 不該出現")
+        self.assertNotIn("Masters’ Nudge]", result)
+
     def test_hard_truncate(self):
         import buddy
         raw = "字" * 200
@@ -383,7 +993,7 @@ class TestSanitizer(unittest.TestCase):
         self.assertNotIn("  ", result)
 
 
-# ── 4. Mock CLI calls ────────────────────────────────────────────────
+# ── 7. Mock CLI calls ────────────────────────────────────────────────
 
 class TestCallClaude(unittest.TestCase):
 
@@ -475,7 +1085,7 @@ class TestParseReaction(unittest.TestCase):
         self.assertEqual(self.parse("  "), "")
 
 
-# ── 5. Inject.py state pointer ───────────────────────────────────────
+# ── 8. Inject.py state pointer ───────────────────────────────────────
 
 class TestInjectState(unittest.TestCase):
 
@@ -534,9 +1144,28 @@ class TestInjectState(unittest.TestCase):
         pending = self.inject.read_pending("sess2", "")
         self.assertEqual(len(pending), 2)
 
+    def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
+        transcript = Path(self.tmpdir) / "session.jsonl"
+        transcript.write_text("existing\n", encoding="utf-8")
+        hook = {
+            "session_id": "sess-anchor",
+            "prompt": "只修目前這個登入問題",
+            "transcript_path": str(transcript),
+        }
+
+        with mock.patch.object(self.inject, "read_hook_input", return_value=hook):
+            self.inject.main()
+
+        import source_context
+        state = source_context.load_source_state(
+            self.inject.BUDDY_DIR, "sess-anchor"
+        )
+        self.assertEqual(state["task_anchor"], "只修目前這個登入問題")
+        self.assertEqual(state["transcript_offset"], transcript.stat().st_size)
 
 
-# ── 6. agentcam report integration ───────────────────────────────────
+
+# ── 9. agentcam report integration ───────────────────────────────────
 
 class TestAgentcamReport(unittest.TestCase):
     """buddy.read_latest_agentcam_report walks up to git root and finds
@@ -608,15 +1237,14 @@ class TestAgentcamReport(unittest.TestCase):
         self.assertEqual(result["path"], str(r2))
         self.assertEqual(result["content"], "second")
 
-    def test_content_is_tail_truncated(self):
+    def test_content_preserves_head_and_tail_with_read_cap(self):
         repo = self._make_fake_repo()
         report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        # Make a report longer than AGENTCAM_REPORT_TAIL_CHARS
-        big = "X" * (self.buddy.AGENTCAM_REPORT_TAIL_CHARS + 500) + "TAIL_MARKER"
+        big = "HEAD_MARKER" + ("X" * (self.buddy.AGENTCAM_REPORT_READ_CHARS + 500)) + "TAIL_MARKER"
         report_path.write_text(big, encoding="utf-8")
         result = self.buddy.read_latest_agentcam_report(str(repo))
-        self.assertEqual(len(result["content"]), self.buddy.AGENTCAM_REPORT_TAIL_CHARS)
-        # Tail should be preserved (truncation is from the front)
+        self.assertLessEqual(len(result["content"]), self.buddy.AGENTCAM_REPORT_READ_CHARS)
+        self.assertTrue(result["content"].startswith("HEAD_MARKER"))
         self.assertTrue(result["content"].endswith("TAIL_MARKER"))
 
     def test_state_roundtrip(self):

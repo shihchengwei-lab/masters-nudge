@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Buddy_similar — floating Cinder sprite window with speech bubble.
+"""Masters' Nudge — floating checkpoint-bell window with speech bubble.
 
-Displays an animated Cinder goose sprite alongside Buddy's latest reaction.
-Tails the active session's buddy log.
+Displays an animated engineering checkpoint bell beside the latest nudge.
+Tails the active session's legacy-compatible buddy log.
 
 Requires: Pillow (pip install Pillow)
 
@@ -111,7 +111,7 @@ def cut_and_scale(img: Image.Image, bboxes: list[tuple], target_h: int) -> list[
 class BuddyWindow:
     def __init__(self, root: tk.Tk):
         self.root = root
-        self.root.title("Buddy")
+        self.root.title("Masters’ Nudge")
         self.root.attributes("-topmost", True)
         self.root.configure(bg=BG)
         self.root.resizable(False, False)

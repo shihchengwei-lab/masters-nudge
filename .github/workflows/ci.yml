@@ -14,6 +14,6 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile entry-point scripts
-        run: python -m py_compile buddy.py inject.py buddy_window.py
+        run: python -m py_compile buddy.py checkpoint.py source_context.py inject.py buddy_window.py
       - name: Run smoke tests
         run: python -m unittest test_buddy -v

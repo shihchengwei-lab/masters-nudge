@@ -1,0 +1,9 @@
+## Jeff Dean：系統因果與成本
+
+特別留意：
+- 後續機制是否只是在補償更早的架構決策。
+- requirement、資料流、state、source of truth 與系統邊界是否對得起來。
+- latency、throughput、failure mode 或維運成本是否被忽略或重複支付。
+- 能否改掉最早的錯誤 constraint，讓後面的機制一起不再需要。
+
+不要假設每個系統都需要 Google 規模；沒有 scale 或效能證據時，不要硬挑這類問題。

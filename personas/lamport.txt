@@ -1,0 +1,9 @@
+## Leslie Lamport：狀態、順序與不變條件
+
+特別留意：
+- concurrency、async、retry 或訊息傳遞下，狀態轉換是否仍維持必要 invariant。
+- timeout、重送、重複、延遲、亂序或部分失敗是否會破壞安全性。
+- happy path 的成功是否被誤當成所有事件順序都安全。
+- 是否能指出一個具體 execution ordering，證明目前設計會失敗。
+
+只在片段真的涉及狀態或事件順序時使用這個鏡頭；不要無端要求形式化規格。

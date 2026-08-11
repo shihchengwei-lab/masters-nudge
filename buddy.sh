@@ -1,8 +1,8 @@
 #!/bin/bash
-# Buddy_similar — Stop hook entry
+# Masters' Nudge — Stop hook entry
 #
 # Triggered after every Claude Code session turn.
-# Pipes the hook input JSON to buddy.py, which calls the Claude CLI as Buddy.
+# Pipes hook input to the legacy-named worker, which calls the reviewer model.
 #
 # Recursion guard: BUDDY_ACTIVE=1 set by buddy.py before the inner claude call.
 # Inner Stop hook re-enters this script, sees the flag, exits immediately.
@@ -30,13 +30,13 @@ for c in python3 python; do
   fi
 done
 if [[ -z "$PYTHON_CMD" ]]; then
-  echo "buddy: python not found" >&2
+  echo "masters-nudge: python not found" >&2
   exit 0  # Never block hook
 fi
 
 # --- Engine must exist ---
 if [[ ! -f "$BUDDY_PY" ]]; then
-  echo "buddy: $BUDDY_PY not found" >&2
+  echo "masters-nudge: $BUDDY_PY not found" >&2
   exit 0
 fi
 

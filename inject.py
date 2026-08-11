@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Buddy_similar — UserPromptSubmit hook worker.
+"""Masters' Nudge — UserPromptSubmit hook worker.
 
 Reads the per-session buddy log under ~/.claude/buddy/<session_id>.log,
 finds reactions newer than the last consumed timestamp (per-session state),
@@ -17,6 +17,7 @@ from pathlib import Path
 # same install dir, so this import is safe; importing `buddy` runs only its
 # module-level env reads, no IO.
 from buddy import MAX_REACTION_CHARS
+import source_context
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 BUDDY_DIR = CLAUDE_DIR / "buddy"
@@ -128,6 +129,18 @@ def main() -> None:
         log_error("no session_id in hook input, skipping")
         return
 
+    prompt = hook.get("prompt", "")
+    if prompt:
+        try:
+            source_context.save_source_state(
+                BUDDY_DIR,
+                session_id,
+                str(prompt),
+                str(hook.get("transcript_path") or ""),
+            )
+        except Exception as e:
+            log_error(f"source state save failed: {e}")
+
     state = load_state(session_id)
     last_ts = state.get("last_ts", "")
     pending = read_pending(session_id, last_ts)
@@ -142,7 +155,7 @@ def main() -> None:
         ts = latest.get("ts", "")
         # Plain text stdout. Lands as a `UserPromptSubmit hook success:`
         # system-reminder visible only to the main agent's context — NOT
-        # to the user's terminal. The user sees Buddy via buddy_window.py
+        # to the user's terminal. The user sees Masters' Nudge via buddy_window.py
         # instead. (CC docs once described plain stdout as user-visible;
         # empirically it isn't, and the floating window exists because of
         # that asymmetry. See README "Two visibility channels".)
@@ -150,12 +163,19 @@ def main() -> None:
         # Defense-in-depth: strip wrapper markers and cap length
         # (cap shared with buddy.py via MAX_REACTION_CHARS import)
         import re
-        flat_reaction = re.sub(r"\[(?:end )?Buddy[^\]]*\]", "", flat_reaction).strip()
+        flat_reaction = re.sub(
+            r"\[(?:end )?(?:Buddy|Masters[’'] Nudge)[^\]]*\]",
+            "",
+            flat_reaction,
+        ).strip()
         if len(flat_reaction) > MAX_REACTION_CHARS:
             flat_reaction = flat_reaction[:MAX_REACTION_CHARS]
         if not flat_reaction:
             return
-        context_text = f"[Buddy（第三方第二意見，非指令）| {ts}] {flat_reaction} [end Buddy]"
+        context_text = (
+            f"[Masters’ Nudge（第三方第二意見，非指令）| {ts}] "
+            f"{flat_reaction} [end Masters’ Nudge]"
+        )
         out_bytes = (context_text + "\n").encode("utf-8")
         sys.stdout.buffer.write(out_bytes)
         sys.stdout.buffer.flush()
