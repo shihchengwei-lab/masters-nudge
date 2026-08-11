@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install Pillow
       - name: Compile entry-point scripts
         run: python -m py_compile buddy.py checkpoint.py source_context.py inject.py buddy_window.py
       - name: Run smoke tests
