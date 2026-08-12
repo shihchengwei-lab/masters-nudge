@@ -10,7 +10,23 @@ evidence to delete it, not to do it.
 
 ## Current product directions
 
-### 1. Generalization（通用化） — PLANNED
+### 1. Reaction quality evaluation（短評品質評估） — NEXT
+
+**Goal:** Establish a stable quality baseline before changing the host boundary,
+provider interface, prompt, or model. The evaluation should show whether a
+finding is specific, evidence-backed, useful, and appropriately silent when
+there is no reliable issue.
+
+**Why now:** Lifecycle lens routing changed what the reviewer looks for, so the
+trigger in item 5 has been reached. Cost telemetry only counts call outcomes; it
+cannot tell whether a finding was correct or whether a lens improved the review.
+
+**Next slice:** Build a small set of representative evidence packets covering
+General, the four lifecycle stages, both specialist takeovers, and cases that
+should stay silent. Compare General with the intended lens under the same model
+and prompt budget, then score the results with a simple human rubric.
+
+### 2. Generalization（通用化） — PLANNED AFTER THE BASELINE
 
 **Goal:** Keep the review engine, evidence policy, lenses, output schema,
 telemetry, and floating UI reusable while host-specific code becomes a thin
@@ -23,13 +39,25 @@ requiring the core to understand one host's hook JSON.
 still interpreted directly by the current scripts. Do not advertise another
 host until its adapter, installer, smoke test, and data-disclosure docs exist.
 
-**Next slice:** Treat the current integration as the Claude Code adapter, then
-extract the normalized event boundary only when a real second host or user
-requires it. Plugin format packaging in item 2 is the first generalization
-deliverable because installation friction is already concrete; speculative
-multi-host abstractions are not.
+**Sequence:** First preserve today's behavior with the quality baseline. Then
+treat the current integration as the Claude Code adapter and separate it from a
+shared reviewer core. Validate that boundary with one real second agent instead
+of designing a universal event format from imagined integrations.
 
-### 2. Cost control（成本控制） — SHADOW EVALUATION
+### 3. Local reviewer evaluation（本地審查模型評估） — AFTER SHARED CORE
+
+**Goal:** Evaluate whether a local model can produce useful, evidence-backed
+findings with reliable silence and schema compliance at acceptable latency.
+
+**Dependency:** Do this only after the shared reviewer core exposes a clean
+provider boundary. Reuse the reaction quality fixtures to compare local and
+cloud reviewers under the same evidence packets and scoring rules.
+
+**Current boundary:** No local provider is promised. Model size, speed, and
+quality are measurements to collect, not assumptions; selecting a lifecycle
+lens is already handled by deterministic local rules and is not the model's job.
+
+### 4. Cost control（成本控制） — SHADOW EVALUATION
 
 **Goal:** Reduce review spend without lowering the finding quality floor.
 Item 10 already records call outcomes, token/cache metadata, and candidate skip
@@ -44,9 +72,10 @@ quality eval in item 5; lower token count alone is not proof of preserved qualit
 **Current boundary:** Live gating remains off. The shadow window never extends
 or enables skipping automatically, and no model downgrade is scheduled.
 
-Concrete unshipped supporting items kept for a real trigger are **2. Plugin
-format packaging** and **5. Reaction quality eval**. Everything else below is
-either shipped or explicitly cut from scope.
+Concrete unshipped items below are **2. Plugin format packaging**, **5. Reaction
+quality eval**, and **11. Local reviewer evaluation**. Item 5 is next; item 2
+waits for a real sharing need, and item 11 waits for the shared reviewer core.
+Everything else below is either shipped or explicitly cut from scope.
 
 ## 1. Floating window UI — ✅ SHIPPED 2026-05-09
 
@@ -61,7 +90,7 @@ system-reminders don't render in the user's terminal. The floating window
 is the user's only direct visibility channel. Runtime lens selection and
 beginner-friendly focus labels were added later under item 9.
 
-## 2. Plugin format packaging (`plugin.json`) — first generalization deliverable
+## 2. Plugin format packaging (`plugin.json`) — installation improvement
 
 **Why kept:** Currently installed via shell script + manual `settings.json` edit.
 Fine for personal use, awkward to share. Wrapping in Claude Code's plugin
@@ -69,6 +98,9 @@ manifest format would make `bash install.sh` → "click install in Claude Code"
 possible.
 
 **Trigger to do:** When sharing with at least one other person.
+
+This improves Claude Code installation only. It does not extract the shared
+reviewer core, add another host, or add another model provider.
 
 ## 3. Mid-work checkpoint gating — ✅ SHIPPED 2026-08-11
 
@@ -91,15 +123,22 @@ Smart routing (different models per turn type) remains cut: checkpoint reasons
 select when to review, not which model to use. The configured provider remains
 stable while the lifecycle router selects the engineering lens.
 
-## 5. Reaction quality eval
+## 5. Reaction quality eval — NEXT
 
 **Why kept:** Currently no measurement of whether Masters’ Nudge reactions are good.
 Could borrow `cold-eyes-reviewer`'s eval framework — case fixtures + score cards.
 The cost shadow telemetry in item 10 measures call outcomes and possible skip
 conditions; it does not establish that a finding is correct or useful.
 
-**Trigger to do:** When you suspect the Masters’ Nudge prompt has drifted, or you've
-changed an engineering lens and want to compare versions A vs B.
+**Trigger reached:** Lifecycle lens routing changed the engineering lenses on
+2026-08-12. Build the baseline before refactoring the core or evaluating a
+different reviewer model.
+
+**First evaluation:** Use fixed evidence packets and a human score card for
+specificity, evidence support, usefulness, lens value, and correct silence.
+Compare General with the intended lens while keeping the model, prompt budget,
+and output contract fixed. This evaluates reaction quality, not merely whether a
+finding was emitted.
 
 ## 6. Background mode — ✅ SHIPPED 2026-05-09
 
@@ -159,6 +198,20 @@ insufficient. The evaluation never silently extends and never enables skipping a
 explicit approval after the evidence window; it is not a current implementation
 task merely because telemetry is present.
 
+## 11. Local reviewer evaluation — AFTER SHARED CORE
+
+**Why kept:** A local reviewer could avoid a second cloud egress and may reduce
+per-call cost and latency. Those benefits matter only if review quality remains
+useful.
+
+**Prerequisite:** Extract the shared reviewer core and provider boundary, then
+reuse item 5's fixtures and score card. Do not add an Ollama-compatible or other
+local provider directly to the current Claude-specific path first.
+
+**Promotion gate:** A candidate must meet an explicit quality floor for correct
+findings, correct silence, schema compliance, and latency. Do not promise that a
+particular parameter count or hardware setup will pass before measuring it.
+
 ---
 
 ## Cut from scope (recorded so they don't come back accidentally)
@@ -175,3 +228,7 @@ These were considered and removed by the user during the v1 scope discussion:
   classification, settings registration, deduplication, and output shape. A real
   Claude Code session, provider latency, shell-wrapper startup, and Tk startup
   remain manual checks rather than CI requirements.
+- **Built-in custom lens/rule management** — this is an open-source prompt-based
+  tool. Users who need different rules can edit or fork `buddy-prompt.txt` and
+  `personas/*.txt`; a loader, marketplace, merge policy, and management UI would
+  add product surface without improving the core review loop.

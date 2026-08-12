@@ -179,14 +179,22 @@ class TestBranding(unittest.TestCase):
         self.assertNotIn("Runtime lens UI/automatic switching", roadmap)
         self.assertNotIn("Automatic per-event lens switching", roadmap)
 
-    def test_roadmap_names_generalization_and_cost_control_as_priorities(self):
+    def test_roadmap_names_the_current_product_sequence(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
 
-        self.assertIn("### 1. Generalization（通用化）", roadmap)
-        self.assertIn("### 2. Cost control（成本控制）", roadmap)
+        self.assertIn("### 1. Reaction quality evaluation（短評品質評估）", roadmap)
+        self.assertIn("### 2. Generalization（通用化）", roadmap)
+        self.assertIn("### 3. Local reviewer evaluation（本地審查模型評估）", roadmap)
+        self.assertIn("### 4. Cost control（成本控制）", roadmap)
+        self.assertIn("quality baseline", roadmap)
         self.assertIn("normalized review event", roadmap)
         self.assertIn("Claude Code adapter", roadmap)
-        self.assertIn("first generalization deliverable", roadmap)
+        self.assertIn("shared reviewer core", roadmap)
+        self.assertIn("one real second agent", roadmap)
+        self.assertIn("installation improvement", roadmap)
+        self.assertNotIn("first generalization deliverable", roadmap)
+        self.assertIn("AFTER SHARED CORE", roadmap)
+        self.assertIn("Built-in custom lens/rule management", roadmap)
         self.assertIn("quality floor", roadmap)
         self.assertIn("Live gating remains off", roadmap)
 
