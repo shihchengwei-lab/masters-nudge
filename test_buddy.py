@@ -347,6 +347,32 @@ class TestPersonaPromptSelection(unittest.TestCase):
                     self.assertIn("→", example)
                     self.assertLessEqual(len(example), 46)
 
+    def test_each_persona_has_a_distinct_scene_and_shared_evidence_gate(self):
+        scene_anchors = {
+            "jeff": "把 packet 裡可見的元件、資料流與 state 畫上白板",
+            "beck": "把 task anchor、可見測試與本輪修改排在桌上",
+            "fowler": "沿著它翻過所有受影響的檔案、條件與責任",
+            "linus": "沿著 packet 顯示的實際 control flow 往下讀",
+            "lamport": "再交換成 `B → A`",
+            "carmack": "把每次 allocation、copy、轉換與 I/O 逐一計數",
+        }
+
+        for persona, scene_anchor in scene_anchors.items():
+            with self.subTest(persona=persona):
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                )
+                self.assertEqual(overlay.count("### 思考場景"), 1)
+                self.assertEqual(overlay.count("### 證據閘門"), 1)
+                self.assertIn(scene_anchor, overlay)
+                self.assertIn("不表示 packet 裡一定有問題", overlay)
+                self.assertIn("人物的反應、名聲與工程偏好都不是證據", overlay)
+                self.assertIn("status=no_finding", overlay)
+                if persona == "linus":
+                    self.assertIn("才笑出來", overlay)
+                else:
+                    self.assertNotIn("笑", overlay)
+
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
         self.assertEqual(files, set(self.PERSONAS))
