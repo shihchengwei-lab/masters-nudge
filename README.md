@@ -2,38 +2,59 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-**Side review that changes engineering viewpoint as the project moves.**
+**Add a different voice to long-running Claude Code tasks.**
 
 ## Overview
 
-Masters’ Nudge attaches to [Claude Code](https://docs.anthropic.com/en/docs/claude-code): at a few moments it packages what just happened, sends it to a **different** model for review, and may return a short finding of at most 52 characters. Main Claude still writes code and decides; this tool only supplies a second opinion.
+The longer Claude Code works, the more its early choices shape everything that follows.
 
-| | Who | Role |
-|---|---|---|
-| Main agent | Claude Code (Anthropic) | Code and tools |
-| Reviewer | Masters’ Nudge (default: Codex CLI → OpenAI) | Short review on selected events and end of turn |
+When the direction is right, this builds momentum. When it is wrong, Claude may keep patching and working around the same idea until the task looks finished but still carries a problem nobody stopped to question.
 
-**What you see is not what Claude sees:**
+At a few key moments, Masters’ Nudge asks another model to look at a small piece of the latest work and leave the single most useful warning. If it finds no clear problem, it stays quiet.
 
-| When | Claude | You (terminal) | You (optional floating window) |
-|---|---|---|---|
-| Tool failure, test failure, or first time changes exceed ~80 lines | Receives the short review immediately | No | No |
-| End of turn | Injected on your **next** message | No | Yes (that Stop reaction) |
+Claude Code still does the work and makes the decisions. Masters’ Nudge simply adds a different voice beside it.
 
-Claude Code system-reminders do not render in the terminal. Without the floating window, you mostly notice reviews only through Claude’s later behavior.
+## Why only one line?
 
-Silent when there is nothing worth saying. Four lifecycle stages choose the everyday lens; two specialists can take one evidence-backed review; see [Filters](#filters).
+Each nudge is at most 52 characters and points to one concrete problem.
+
+It may flag a wrong direction, growing scope, needless complexity, or a claim of completion that the evidence does not support.
+
+The point is not to produce another full answer. It is to give the same work one brief look from another angle before Claude continues.
+
+## Why another model?
+
+When the same model reviews its own work, it can carry the same assumptions into the review.
+
+By default, Anthropic's Claude Code does the work while an OpenAI model checks it. A different model creates another chance to notice a different problem.
+
+The reviewer receives only a small packet of current evidence and must base its warning on that material. If the evidence does not support a clear finding, it says nothing.
+
+## When does it join in?
 
 ```
-Claude Code
+Claude Code works normally
     │ tool failure / test failure / first large change
-    ├─► mid-turn review (sync) → Claude only
+    ├─► check once → Claude only
     │
     │ turn ends
-    └─► background review → local log
-              ├─ your next message → inject into Claude (opinion, not order)
-              └─ optional floating window for end-of-turn lines
+    └─► check once in the background
+              ├─ give it to Claude on your next message
+              └─ show it in the floating window
 ```
+
+| Moment | Why look again? | Who sees it? |
+|---|---|---|
+| Tool failure | The fix may address only the surface symptom | Claude Code |
+| Test failure | The repair may be taking a longer route around the problem | Claude Code |
+| First change over ~80 lines | The task may be growing beyond its original scope | Claude Code |
+| End of turn | Check whether the work is actually complete | Claude Code and the floating window |
+
+Mid-turn checks call the model only for the first three cases and may pause Claude Code for up to about 15 seconds. End-of-turn checks run in the background and do not block the completed turn.
+
+Claude receives an end-of-turn nudge when you send your next message. Claude Code does not display these system reminders in the terminal; the floating window is where you can read them directly.
+
+Output is either one finding or silence. Findings are stripped of markdown and filler, with a hard limit of 52 characters.
 
 ## Who this is for
 
@@ -42,17 +63,6 @@ Claude Code
 **Not suitable** where conversation or code must not leave the machine. Details: [Privacy](#privacy). Do not install if that is a hard constraint.
 
 Cost: by default **every completed turn** calls the review model once; mid-turn calls only on error / test failure / first large change. Busy days accumulate tokens.
-
-## Behavior
-
-| Kind | Trigger | Audience | Timing |
-|---|---|---|---|
-| Mid-turn (checkpoint) | Tool error, test failure, or working tree first exceeds ~80 changed lines | Claude only (beside that tool result) | Sync; **only on match** may pause up to ~15s; other tool events stay local |
-| End of turn (Stop) | Claude finishes a turn | Claude (on your next message); floating window | Background; does not block the finished turn |
-
-End-of-turn injections are framed as a third-party second opinion, not an instruction. Mid-turn lines are delivered once: not re-injected on the next prompt, not shown in the floating window.
-
-Output is either one finding or silence; findings are stripped of markdown/filler and hard-capped at 52 characters.
 
 ## Install
 
@@ -92,25 +102,38 @@ Closing the window does not disable hooks.
 - Script errors: `~/.claude/buddy-error.log`.
 - No log at all: hooks usually not merged, or the Codex / `BUDDY_PROVIDER` call is failing.
 
-## Filters
+## Filters: different stages, different questions
 
-The floating-window dropdown stores a lifecycle stage in `~/.claude/buddy/config.json` (applies from the next review). Build is the default. The dropdown shows the saved stage; the colored badge shows the lens actually used by the latest review, so a Lamport or Carmack specialist may appear without changing the dropdown. Every review still starts with the General evidence and high-risk screen.
+Different parts of a project make different problems easy to miss.
+
+During design, data, state, and ownership matter most. During implementation, scope can quietly grow. As the code evolves, today's structure can make tomorrow's change harder. Before delivery, it is worth asking which layers never needed to exist.
+
+| Stage | Viewpoint | First question |
+|---|---|---|
+| General only | General review | What is the clearest problem right now? |
+| Design | Jeff Dean (`jeff`) | Are data, state, or ownership in the wrong place? |
+| Build | Kent Beck (`beck`) | Has the work grown beyond what is needed now? |
+| Evolve | Martin Fowler (`fowler`) | Will this structure make the next change harder? |
+| Review | Linus Torvalds (`linus`) | Which extra layers do not need to exist? |
+
+Two more viewpoints join for one review when there is a clear signal:
+
+- Retry, idempotency, races, duplicate handling, event order, or partial failure bring in Leslie Lamport (`lamport`).
+- A profiler, benchmark, or measured latency, throughput, allocation, copying, I/O, or hot-path cost brings in John Carmack (`carmack`).
+
+If both match, Lamport goes first because correctness comes before speed. A lone word such as `async`, `cache`, `performance`, or `latency` is not enough to switch viewpoints.
+
+Each name stands for a set of engineering concerns. The nudge does not imitate that person's voice; it stays direct and specific.
+
+Whatever the stage, clear errors, unsupported claims, work that has drifted from the request, and delivery gaps always come first.
+
+The floating-window dropdown stores the stage in `~/.claude/buddy/config.json`. Your choice applies from the next review; Build is the default. The dropdown shows your chosen stage; the colored badge shows the viewpoint used for the latest nudge. A temporary Lamport or Carmack review changes the badge, not the dropdown.
 
 New configuration files use `{"stage":"build"}`. Valid stages are `general`, `design`, `build`, `evolve`, and `review`.
 
-| Stage | Everyday lens | Priority |
-|---|---|---|
-| General only | General | No specialist routing |
-| Design | Jeff Dean (`jeff`) | Causality, data flow, state, scale, operational cost |
-| Build | Kent Beck (`beck`) | Small steps, tests, current scope, stop when done |
-| Evolve | Martin Fowler (`fowler`) | Design smells, coupling, change cost, behavior-preserving refactor |
-| Review | Linus Torvalds (`linus`) | Unnecessary abstraction, indirection, unclear ownership |
-
-Leslie Lamport (`lamport`) takes one review when the visible evidence clearly involves retry, idempotency, ordering, duplication, partial failure, or a state mechanism plus a failure signal. John Carmack (`carmack`) takes one review when there is profiler/benchmark evidence, or a numeric measurement tied to latency, throughput, allocation, copying, I/O, or a hot path. Lamport wins when both match. A lone word such as `async`, `cache`, `performance`, or `latency` is not enough.
-
 `BUDDY_PERSONA` set before Claude Code starts remains a force override and disables specialist switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, while old Lamport/Carmack choices stay locked until a stage is selected in the window.
 
-A lens changes inspection order only — not evidence rules, model-call count, single-finding limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. Not impersonation; not six agents at once.
+A lens changes which kind of problem gets checked first. It does not change the evidence rules, model-call count, single-finding limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. All six viewpoints share one review; they are not six agents speaking at once.
 
 <details>
 <summary>Filter notes</summary>
