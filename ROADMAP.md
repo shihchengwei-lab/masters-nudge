@@ -10,24 +10,45 @@ evidence to delete it, not to do it.
 
 ## Current product directions
 
-### 1. Reaction quality evaluation（短評品質評估） — NEXT
+### 1. Reaction quality and impact evaluation（短評品質與後續影響） — NEXT, IN TWO PHASES
 
-**Goal:** Establish a stable quality baseline before changing the host boundary,
-provider interface, prompt, or model. The evaluation should show whether a
-finding is specific, evidence-backed, useful, and appropriately silent when
-there is no reliable issue.
+**Goal:** First establish that a finding is reliable, then test whether injecting
+it changes the main agent's work for the better. A good-sounding reaction is not
+the product outcome; the intended outcome is a better decision by the combined
+user-and-agent workflow.
 
 **Why now:** Lifecycle lens routing changed what the reviewer looks for, so the
 trigger in item 5 has been reached. Cost telemetry only counts call outcomes; it
 cannot tell whether a finding was correct or whether a lens improved the review.
 
-**Next slice:** Build a small set of representative evidence packets covering
-the internal no-overlay baseline, the four lifecycle stages, both specialist
-takeovers, and cases that should stay silent. Compare that internal baseline
-with the intended lens under the same model and prompt budget, then score the
-results with a simple human rubric. The baseline is not a user-selectable mode.
+**Phase A — reaction quality:** Build labeled evidence packets covering the
+internal no-overlay baseline, the four lifecycle stages, both specialist
+takeovers, and cases that should stay silent. Prefer packets with an objective
+oracle: a seeded defect, a known unsupported claim, an explicit scope conflict,
+or a verified no-finding case. Check schema compliance, evidence grounding,
+issue identification, and correct silence automatically. Use blind rubric-based
+human adjudication only when more than one finding could legitimately be useful;
+record disagreement instead of hiding it in one average score. Compare the
+internal baseline with the intended lens under the same model and prompt budget.
+The baseline is not a user-selectable mode.
 
-### 2. Generalization（通用化） — PLANNED AFTER THE BASELINE
+**Phase B — reaction impact:** Start only after Phase A reaches a declared
+quality floor. Run matched tasks from the same repository state with Nudge
+injected in one condition and withheld in the other, keeping the main model,
+task, tool budget, and acceptance criteria fixed. Repeat runs rather than
+treating one stochastic trajectory as proof. Primary outcomes should be
+checkable: hidden tests, removal of a seeded defect, satisfaction of explicit
+requirements, absence of regressions, and evidence supporting the final claim.
+Turns, latency, and diff size are secondary diagnostics, not standalone quality
+scores. Blind human review is reserved for design decisions that have no honest
+executable oracle.
+
+Do not count the agent acknowledging a Nudge, an evaluator model preferring its
+wording, or production telemetry correlations as proof of impact. Until Phase B
+shows a repeatable difference, describe Masters' Nudge as increasing the chance
+of noticing a different problem, not as proven to improve task outcomes.
+
+### 2. Generalization（通用化） — PLANNED AFTER THE EVALUATION BASELINE
 
 **Goal:** Keep the review engine, evidence policy, lenses, output schema,
 telemetry, and floating UI reusable while host-specific code becomes a thin
@@ -40,10 +61,11 @@ requiring the core to understand one host's hook JSON.
 still interpreted directly by the current scripts. Do not advertise another
 host until its adapter, installer, smoke test, and data-disclosure docs exist.
 
-**Sequence:** First preserve today's behavior with the quality baseline. Then
-treat the current integration as the Claude Code adapter and separate it from a
-shared reviewer core. Validate that boundary with one real second agent instead
-of designing a universal event format from imagined integrations.
+**Sequence:** First preserve today's behavior with the Phase A quality baseline
+and run a small Phase B impact study. Then treat the current integration as the
+Claude Code adapter and separate it from a shared reviewer core. Validate that
+boundary with one real second agent instead of designing a universal event
+format from imagined integrations.
 
 ### 3. Local reviewer evaluation（本地審查模型評估） — AFTER SHARED CORE
 
@@ -74,9 +96,10 @@ quality eval in item 5; lower token count alone is not proof of preserved qualit
 or enables skipping automatically, and no model downgrade is scheduled.
 
 Concrete unshipped items below are **2. Plugin format packaging**, **5. Reaction
-quality eval**, and **11. Local reviewer evaluation**. Item 5 is next; item 2
-waits for a real sharing need, and item 11 waits for the shared reviewer core.
-Everything else below is either shipped or explicitly cut from scope.
+quality and impact eval**, and **11. Local reviewer evaluation**. Item 5 Phase A
+is next, followed by its small Phase B study; item 2 waits for a real sharing
+need, and item 11 waits for the shared reviewer core. Everything else below is
+either shipped or explicitly cut from scope.
 
 ## 1. Floating window UI — ✅ SHIPPED 2026-05-09
 
@@ -124,23 +147,39 @@ Smart routing (different models per turn type) remains cut: checkpoint reasons
 select when to review, not which model to use. The configured provider remains
 stable while the lifecycle router selects the engineering lens.
 
-## 5. Reaction quality eval — NEXT
+## 5. Reaction quality and impact eval — NEXT, IN TWO PHASES
 
-**Why kept:** Currently no measurement of whether Masters’ Nudge reactions are good.
-Could borrow `cold-eyes-reviewer`'s eval framework — case fixtures + score cards.
-The cost shadow telemetry in item 10 measures call outcomes and possible skip
-conditions; it does not establish that a finding is correct or useful.
+**Why kept:** Currently no measurement of whether Masters’ Nudge reactions are
+reliable or whether the main agent makes a better decision after receiving one.
+Could borrow `cold-eyes-reviewer`'s case-fixture structure, but subjective score
+cards must not be the primary evidence. The cost shadow telemetry in item 10
+measures call outcomes and possible skip conditions; it establishes neither
+reaction correctness nor downstream impact.
 
 **Trigger reached:** Lifecycle lens routing changed the engineering lenses on
 2026-08-12. Build the baseline before refactoring the core or evaluating a
 different reviewer model.
 
-**First evaluation:** Use fixed evidence packets and a human score card for
-specificity, evidence support, usefulness, lens value, and correct silence.
-Compare the internal no-overlay baseline with the intended lens while keeping
-the model, prompt budget, and output contract fixed. This evaluates reaction
-quality, not merely whether a finding was emitted; the baseline is not exposed
-as a product mode.
+**Phase A — quality:** Use fixed, labeled evidence packets with known issues or
+verified no-finding cases. Automatically check schema compliance, grounding,
+issue match, and correct silence. Compare the internal no-overlay baseline with
+the intended lens while keeping the reviewer model, prompt budget, and output
+contract fixed. Blind human adjudication handles only cases with multiple
+defensible findings and reports inter-rater disagreement. The baseline is not
+exposed as a product mode.
+
+**Phase B — impact:** For reactions that pass the quality floor, run paired
+agent tasks from identical starting states with injection enabled or withheld.
+Use hidden tests, seeded issues, explicit acceptance checks, regression checks,
+and support for the final completion claim as primary outcomes. Hold the main
+model and task budget constant, randomize or alternate condition order, and run
+enough repeats to report a distribution rather than a showcase. Use blind human
+review only where no executable oracle can represent the design trade-off.
+
+**Claim boundary:** Agent acknowledgement, evaluator-model preference, fewer
+turns, smaller diffs, or observational production telemetry cannot by themselves
+show that Nudge improved the result. Product claims remain conservative until a
+repeatable controlled difference is observed.
 
 ## 6. Background mode — ✅ SHIPPED 2026-05-09
 
