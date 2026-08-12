@@ -236,6 +236,40 @@ class TestBranding(unittest.TestCase):
         self.assertEqual(len(rows), 2)
         self.assertEqual([len(row) for row in rows], [6, 6])
 
+    def test_default_sprite_cells_have_transparent_edge_padding(self):
+        from PIL import Image
+
+        with Image.open(HERE / "spritesheet.webp") as source:
+            sprite = source.convert("RGBA")
+        cell_width = sprite.width // 6
+        cell_height = sprite.height // 2
+        self.assertEqual(sprite.size, (cell_width * 6, cell_height * 2))
+
+        alpha = sprite.getchannel("A")
+        for row in range(2):
+            for column in range(6):
+                left = column * cell_width
+                top = row * cell_height
+                cell = alpha.crop((left, top, left + cell_width, top + cell_height))
+                self.assertFalse(cell.crop((0, 0, 2, cell_height)).getbbox())
+                self.assertFalse(
+                    cell.crop((cell_width - 2, 0, cell_width, cell_height)).getbbox()
+                )
+
+    def test_lens_backgrounds_are_distinct_dark_colors(self):
+        import buddy_window
+
+        colors = [
+            buddy_window.lens_background(persona)
+            for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
+        ]
+        self.assertEqual(len(set(colors)), 6)
+        self.assertEqual(buddy_window.lens_background("general"), buddy_window.BG)
+        self.assertEqual(buddy_window.lens_background("unknown"), buddy_window.BG)
+        for color in colors:
+            self.assertRegex(color, r"^#[0-9A-Fa-f]{6}$")
+            self.assertLess(max(int(color[i:i + 2], 16) for i in (1, 3, 5)), 100)
+
 
 class TestPersonaPromptSelection(unittest.TestCase):
     PERSONAS = {
@@ -1502,6 +1536,10 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn("persona_config.save_stage", source)
         self.assertIn("下一次 review 起使用", source)
         self.assertIn("BUDDY_PERSONA 正在接管", source)
+        self.assertIn("self._set_lens_background(persona)", source)
+        self.assertIn(
+            "self.review_frames_remaining = len(self.review_frames)", source
+        )
 
     def test_six_personas_have_distinct_named_badges_with_general_fallback(self):
         import buddy_window

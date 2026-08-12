@@ -121,10 +121,11 @@ final-claim, tool, or agentcam evidence is available.
 
 ## 8. Pet-style UI — ✅ SHIPPED 2026-05-09
 
-`buddy_window.py` now includes the animated Masters’ Nudge engineering
-checkpoint bell alongside the speech bubble. The 2x6 transparent spritesheet is
-auto-detected, draggable, always on top, runs at 4fps, and follows the active
-session. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
+`buddy_window.py` now includes Rook, an animated raven companion, alongside the
+speech bubble. The 2x6 transparent spritesheet provides idle and review rows,
+is draggable, always on top, runs at 4fps, and follows the active session.
+The outer-window background follows the effective lens while Rook remains
+graphite black. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
 
 ## 9. Lifecycle lens routing — ✅ SHIPPED 2026-08-12
 

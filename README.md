@@ -4,7 +4,7 @@
 
 **Side review that changes engineering viewpoint as the project moves.**
 
-<img src="spritesheet.webp" alt="Masters’ Nudge engineering checkpoint bell animation" width="720">
+<img src="spritesheet.webp" alt="Rook, the Masters’ Nudge raven companion" width="720">
 
 ## Overview
 
@@ -208,6 +208,11 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 
 Missing file: window opens without animation.
 
+The shipped Rook sheet uses two six-frame rows: quiet idle, then a short review
+reaction. The quiet outer-window background follows the effective lens shown
+by the badge; specialist takeovers change it for that review without changing
+the saved lifecycle stage. Rook itself remains graphite black.
+
 ### Localization
 
 Shipped prompt language is Traditional Chinese. For another language, update `buddy-prompt.txt`, the hard-coded wrapper in `inject.py` (search for `第三方第二意見`), and optionally Chinese fixtures in `test_buddy.py`. Plumbing is language-neutral.
@@ -256,7 +261,7 @@ Runtime:
 
 ## Origin
 
-Hook and CLI patterns from [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer); rewritten from prior Buddy/Cinder companion usage. Historical screenshots: `buddy_screenshot.png`, `cinder_screenshot.png`. Current asset: engineering checkpoint bell.
+Hook and CLI patterns from [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer); rewritten from prior Buddy/Cinder companion usage. Historical screenshots: `buddy_screenshot.png`, `cinder_screenshot.png`. Current companion: Rook, a raven shown against the effective review lens color.
 
 ## License
 

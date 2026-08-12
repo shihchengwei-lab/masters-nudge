@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Masters' Nudge — floating checkpoint-bell window with speech bubble.
+"""Masters' Nudge — floating Rook companion window with speech bubble.
 
-Displays an animated engineering checkpoint bell beside the latest nudge.
+Displays an animated raven companion beside the latest nudge.
 Tails the active session's legacy-compatible buddy log.
 
 Requires: Pillow (pip install Pillow)
@@ -37,10 +37,11 @@ except ImportError:
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 BUDDY_DIR = CLAUDE_DIR / "buddy"
-SPRITESHEET_PATH = Path(os.environ.get(
-    "BUDDY_SPRITE_PATH",
-    Path(__file__).resolve().parent / "spritesheet.webp",
-))
+CUSTOM_SPRITE_PATH = os.environ.get("BUDDY_SPRITE_PATH")
+SPRITESHEET_PATH = Path(
+    CUSTOM_SPRITE_PATH
+    or Path(__file__).resolve().parent / "spritesheet.webp"
+)
 
 POLL_MS = 1000
 ANIM_MS = 250           # 4 fps sprite animation
@@ -69,6 +70,17 @@ LENS_BADGES = {
     "carmack": (persona_config.persona_label("carmack"), "#FFB86C"),
     "general": (persona_config.persona_label("general"), "#A0A0B8"),
     "evaluation": ("Shadow evaluation", "#FFD166"),
+}
+
+LENS_BACKGROUNDS = {
+    "jeff": "#17343B",
+    "linus": "#3A2228",
+    "fowler": "#30233D",
+    "beck": "#1D3528",
+    "lamport": "#222B4A",
+    "carmack": "#3A2E1D",
+    "general": BG,
+    "evaluation": "#3A321D",
 }
 
 
@@ -127,7 +139,7 @@ def detect_frames(img: Image.Image) -> list[list[tuple[int, int, int, int]]]:
     rows = []
     for ys, ye in bands:
         col_has = [any(px[x, y] > 10 for y in range(ys, ye, 2)) for x in range(w)]
-        frames = []
+        components = []
         in_f = False
         xs = 0
         for x in range(w):
@@ -135,10 +147,23 @@ def detect_frames(img: Image.Image) -> list[list[tuple[int, int, int, int]]]:
                 xs = x
                 in_f = True
             elif not col_has[x] and in_f:
-                frames.append((xs, ys, x, ye))
+                components.append((xs, x))
                 in_f = False
         if in_f:
-            frames.append((xs, ys, w, ye))
+            components.append((xs, w))
+
+        # A pet can have detached feet or a gap between beak and body. Merge
+        # small internal gaps while preserving the larger gap between cells.
+        merged = []
+        for start, end in components:
+            previous_width = merged[-1][1] - merged[-1][0] if merged else 0
+            current_width = end - start
+            joins_pet_part = min(previous_width, current_width) < 40
+            if merged and joins_pet_part and start - merged[-1][1] <= 40:
+                merged[-1] = (merged[-1][0], end)
+            else:
+                merged.append((start, end))
+        frames = [(start, ys, end, ye) for start, end in merged]
         if frames:
             rows.append(frames)
     return rows
@@ -155,6 +180,12 @@ def cut_and_scale(img: Image.Image, bboxes: list[tuple], target_h: int) -> list[
         frame = frame.resize((new_w, target_h), Image.NEAREST)
         result.append(frame)
     return result
+
+
+def lens_background(persona: str | None) -> str:
+    """Return a restrained outer-window color for the effective lens."""
+    key = persona.strip().lower() if isinstance(persona, str) else "general"
+    return LENS_BACKGROUNDS.get(key, BG)
 
 
 class BuddyWindow:
@@ -187,8 +218,11 @@ class BuddyWindow:
         self.stage_selection = persona_config.resolve_stage(BUDDY_DIR)
 
         # Load sprite
+        self.idle_source_frames: list[Image.Image] = []
+        self.review_source_frames: list[Image.Image] = []
         self.idle_frames: list[ImageTk.PhotoImage] = []
-        self.walk_frames: list[ImageTk.PhotoImage] = []
+        self.review_frames: list[ImageTk.PhotoImage] = []
+        self.review_frames_remaining = 0
         self.frame_idx = 0
         self._load_sprites()
 
@@ -235,31 +269,35 @@ class BuddyWindow:
         if not rows:
             return
 
-        # Pick animation rows:
-        # - Idle: row with ~6 consistent-width frames (prefer middle rows)
-        # - Walk: another row with ~6 frames
+        candidates = []
         scored = []
         for i, row in enumerate(rows):
             if len(row) < 3:
                 continue
             widths = [b[2] - b[0] for b in row]
             consistency = 1.0 - (max(widths) - min(widths)) / max(max(widths), 1)
+            if consistency >= 0.65:
+                candidates.append(i)
             scored.append((consistency, len(row), i))
-        scored.sort(reverse=True)
 
-        if len(scored) >= 2:
+        if CUSTOM_SPRITE_PATH is None and len(candidates) >= 2:
+            idle_row_idx, review_row_idx = candidates[:2]
+        elif CUSTOM_SPRITE_PATH is None and len(candidates) == 1:
+            idle_row_idx = review_row_idx = candidates[0]
+        elif scored:
+            scored.sort(reverse=True)
             idle_row_idx = scored[0][2]
-            walk_row_idx = scored[1][2]
-        elif len(scored) == 1:
-            idle_row_idx = walk_row_idx = scored[0][2]
+            review_row_idx = scored[1][2] if len(scored) >= 2 else idle_row_idx
         else:
             return
 
         idle_pil = cut_and_scale(img, rows[idle_row_idx], SPRITE_HEIGHT)
-        walk_pil = cut_and_scale(img, rows[walk_row_idx], SPRITE_HEIGHT)
+        review_pil = cut_and_scale(img, rows[review_row_idx], SPRITE_HEIGHT)
 
-        self.idle_frames = [ImageTk.PhotoImage(f) for f in idle_pil]
-        self.walk_frames = [ImageTk.PhotoImage(f) for f in walk_pil]
+        self.idle_source_frames = idle_pil
+        self.review_source_frames = review_pil
+        self.idle_frames = [ImageTk.PhotoImage(frame) for frame in idle_pil]
+        self.review_frames = [ImageTk.PhotoImage(frame) for frame in review_pil]
 
     # ── UI ────────────────────────────────────────────────
 
@@ -273,11 +311,11 @@ class BuddyWindow:
         self.sprite_canvas.pack(side="left", padx=(10, 0), pady=10)
 
         # Bubble (right)
-        right = tk.Frame(self.root, bg=BG)
-        right.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.right_panel = tk.Frame(self.root, bg=BG)
+        self.right_panel.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 
         bubble = tk.Frame(
-            right, bg=BUBBLE_BG,
+            self.right_panel, bg=BUBBLE_BG,
             highlightbackground=BUBBLE_BORDER, highlightthickness=1,
         )
         bubble.pack(fill="both", expand=True)
@@ -329,14 +367,23 @@ class BuddyWindow:
         self.bubble_label.pack(fill="both", expand=True)
 
         self.ts_label = tk.Label(
-            right, text="", bg=BG, fg=TS_FG,
+            self.right_panel, text="", bg=BG, fg=TS_FG,
             font=("Microsoft JhengHei", 8), anchor="e",
         )
         self.ts_label.pack(fill="x")
+        self._set_lens_background(active_persona)
+
+    def _set_lens_background(self, persona: str | None):
+        color = lens_background(persona)
+        self.root.configure(bg=color)
+        self.sprite_canvas.configure(bg=color)
+        self.right_panel.configure(bg=color)
+        self.ts_label.configure(bg=color)
 
     def _set_lens_badge(self, persona: str | None):
         text, color = lens_badge(persona)
         self.lens_label.config(text=text, fg=color)
+        self._set_lens_background(persona)
 
     def _on_stage_selected(self, _event=None):
         label = self.stage_var.get()
@@ -364,12 +411,15 @@ class BuddyWindow:
     # ── Animation ─────────────────────────────────────────
 
     def _animate(self):
-        frames = self.idle_frames or self.walk_frames
+        reviewing = self.review_frames_remaining > 0 and self.review_frames
+        frames = self.review_frames if reviewing else self.idle_frames
         if frames:
             self.frame_idx = (self.frame_idx + 1) % len(frames)
             tk_img = frames[self.frame_idx]
             self.sprite_canvas.delete("all")
             self.sprite_canvas.create_image(50, SPRITE_HEIGHT // 2 + 5, image=tk_img)
+            if reviewing:
+                self.review_frames_remaining -= 1
         self.root.after(ANIM_MS, self._animate)
 
     # ── Log polling ───────────────────────────────────────
@@ -428,6 +478,8 @@ class BuddyWindow:
                 if reaction:
                     self.last_reaction = reaction
                     self._set_lens_badge(persona)
+                    self.frame_idx = -1
+                    self.review_frames_remaining = len(self.review_frames)
                     self.bubble_label.config(text=reaction)
                     self._resize_for_reaction(reaction)
                     if ts:

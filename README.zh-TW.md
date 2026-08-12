@@ -4,7 +4,7 @@
 
 **隨專案階段切換工程視角的場邊審查。**
 
-<img src="spritesheet.webp" alt="Masters’ Nudge 工程 checkpoint 提醒鈴動畫" width="720">
+<img src="spritesheet.webp" alt="Masters’ Nudge 渡鴉夥伴 Rook" width="720">
 
 ## 簡介
 
@@ -208,6 +208,8 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 
 檔案不存在時仍開視窗，僅無動畫。
 
+內建 Rook spritesheet 為兩列、每列六格：第一列安靜待機，第二列收到審查結果時短暫反應。浮窗外圍的低彩度底色跟隨 badge 顯示的 effective lens；專科單次接手會換底色，但不改寫持久設定的生命週期階段。Rook 本身維持石墨黑。
+
 ### 語系
 
 預設提示為繁體中文。換語系需同步：`buddy-prompt.txt`、`inject.py` 內包裝字串（搜尋 `第三方第二意見`），可選更新 `test_buddy.py` 的中文 fixture。管線本身與語言無關。
@@ -256,7 +258,7 @@ Runtime：
 
 ## 起源
 
-參考 [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer) 的 hook 與 CLI 模式，並從 Claude Code 舊 Buddy／Cinder companion 用法重寫。`buddy_screenshot.png`、`cinder_screenshot.png` 為歷史素材；現行圖示為工程 checkpoint 提醒鈴。
+參考 [`cold-eyes-reviewer`](https://github.com/shihchengwei-lab/cold-eyes-reviewer) 的 hook 與 CLI 模式，並從 Claude Code 舊 Buddy／Cinder companion 用法重寫。`buddy_screenshot.png`、`cinder_screenshot.png` 為歷史素材；現行夥伴為渡鴉 Rook，浮窗底色會跟隨實際使用的 review lens。
 
 ## 授權
 
