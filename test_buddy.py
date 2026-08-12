@@ -396,7 +396,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn("Jeff Dean", result)
         self.assertNotIn("Linus Torvalds", result)
 
-    def test_saved_general_persona_uses_base_prompt(self):
+    def test_legacy_general_persona_falls_back_to_build_prompt(self):
         import persona_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -410,7 +410,8 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.buddy.BUDDY_DIR = original_dir
 
         self.assertIn("你是 Masters’ Nudge", result)
-        self.assertNotIn("# 工程觀察鏡頭", result)
+        self.assertIn("# 工程觀察鏡頭", result)
+        self.assertIn("Kent Beck", result)
 
     def test_installer_copies_persona_overlays(self):
         installer = (HERE / "install.sh").read_text(encoding="utf-8")
@@ -1367,6 +1368,16 @@ class TestPersonaConfig(unittest.TestCase):
         self.assertEqual(selection.persona, "lamport")
         self.assertEqual(selection.source, "environment")
 
+    def test_removed_general_environment_override_maps_to_forced_build(self):
+        selection = self.config.resolve_stage(
+            self.tmpdir, environ={"BUDDY_PERSONA": "general"}
+        )
+
+        self.assertEqual(
+            (selection.stage, selection.persona, selection.source, selection.locked),
+            ("build", "beck", "environment", True),
+        )
+
     def test_missing_or_invalid_config_falls_back_to_build(self):
         missing = self.config.resolve_persona(self.tmpdir, environ={})
         (self.tmpdir / "config.json").write_text(
@@ -1393,22 +1404,38 @@ class TestPersonaConfig(unittest.TestCase):
 
     def test_legacy_lifecycle_and_specialist_configs_are_interpreted(self):
         expected = {
-            "general": ("general", False),
-            "jeff": ("design", False),
-            "beck": ("build", False),
-            "fowler": ("evolve", False),
-            "linus": ("review", False),
-            "lamport": ("forced", True),
-            "carmack": ("forced", True),
+            "general": ("build", "beck", False),
+            "jeff": ("design", "jeff", False),
+            "beck": ("build", "beck", False),
+            "fowler": ("evolve", "fowler", False),
+            "linus": ("review", "linus", False),
+            "lamport": ("forced", "lamport", True),
+            "carmack": ("forced", "carmack", True),
         }
-        for persona, (stage, locked) in expected.items():
+        for persona, (stage, effective_persona, locked) in expected.items():
             with self.subTest(persona=persona):
                 self.config.save_persona(self.tmpdir, persona)
                 selection = self.config.resolve_stage(self.tmpdir, environ={})
                 self.assertEqual(
                     (selection.stage, selection.persona, selection.locked),
-                    (stage, persona, locked),
+                    (stage, effective_persona, locked),
                 )
+
+    def test_removed_general_stage_config_falls_back_to_build(self):
+        (self.tmpdir / "config.json").write_text(
+            json.dumps({"stage": "general"}), encoding="utf-8"
+        )
+
+        selection = self.config.resolve_stage(self.tmpdir, environ={})
+
+        self.assertEqual(
+            (selection.stage, selection.persona, selection.source),
+            ("build", "beck", "legacy_config"),
+        )
+
+    def test_general_is_not_a_savable_stage(self):
+        with self.assertRaises(ValueError):
+            self.config.save_stage(self.tmpdir, "general")
 
     def test_invalid_persona_is_not_saved(self):
         with self.assertRaises(ValueError):
@@ -1437,7 +1464,6 @@ class TestLensRouter(unittest.TestCase):
         import persona_config
 
         expected = {
-            "general": "general",
             "design": "jeff",
             "build": "beck",
             "evolve": "fowler",
@@ -1516,14 +1542,13 @@ class TestLensRouter(unittest.TestCase):
 
 class TestFloatingWindowLayout(unittest.TestCase):
 
-    def test_selector_offers_general_and_four_lifecycle_stages(self):
+    def test_selector_offers_only_four_lifecycle_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
         self.assertEqual(
             options,
             [
-                "General only（通用證據審查）",
                 "Design · Jeff Dean（系統因果與成本）",
                 "Build · Kent Beck（小步驟與測試）",
                 "Evolve · Martin Fowler（重構與變更成本）",
@@ -1532,7 +1557,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         )
         for label, stage in zip(
             options,
-            ("general", "design", "build", "evolve", "review"),
+            ("design", "build", "evolve", "review"),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
 

@@ -110,7 +110,6 @@ During design, data, state, and ownership matter most. During implementation, sc
 
 | Stage | Viewpoint | First question |
 |---|---|---|
-| General only | General review | What is the clearest problem right now? |
 | Design | Jeff Dean (`jeff`) | Are data, state, or ownership in the wrong place? |
 | Build | Kent Beck (`beck`) | Has the work grown beyond what is needed now? |
 | Evolve | Martin Fowler (`fowler`) | Will this structure make the next change harder? |
@@ -129,9 +128,9 @@ Whatever the stage, clear errors, unsupported claims, work that has drifted from
 
 The floating-window dropdown stores the stage in `~/.claude/buddy/config.json`. Your choice applies from the next review; Build is the default. The dropdown shows your chosen stage; the colored badge shows the viewpoint used for the latest nudge. A temporary Lamport or Carmack review changes the badge, not the dropdown.
 
-New configuration files use `{"stage":"build"}`. Valid stages are `general`, `design`, `build`, `evolve`, and `review`.
+New configuration files use `{"stage":"build"}`. Valid stages are `design`, `build`, `evolve`, and `review`. General evidence and high-risk checks are the shared base for every stage, not a selectable filter.
 
-`BUDDY_PERSONA` set before Claude Code starts remains a force override and disables specialist switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, while old Lamport/Carmack choices stay locked until a stage is selected in the window.
+`BUDDY_PERSONA` set before Claude Code starts remains a force override and disables specialist switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, old General settings fall back to the default Build stage, and old Lamport/Carmack choices stay locked until a stage is selected in the window.
 
 A lens changes which kind of problem gets checked first. It does not change the evidence rules, model-call count, single-finding limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. All six viewpoints share one review; they are not six agents speaking at once.
 
@@ -187,7 +186,7 @@ Default OpenAI is intentional: different vendor family from the Anthropic main a
 | `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Logs and state |
-| `BUDDY_PERSONA` | unset | Force `general`, `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack`; wins over the window and specialist routing |
+| `BUDDY_PERSONA` | unset | Force `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack`; wins over the window and specialist routing |
 | `BUDDY_SPRITE_PATH` | shipped spritesheet | Custom transparent spritesheet |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | Shadow cost-policy evaluation length |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | Sample-size target for that evaluation |

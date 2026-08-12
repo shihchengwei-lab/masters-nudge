@@ -22,9 +22,10 @@ trigger in item 5 has been reached. Cost telemetry only counts call outcomes; it
 cannot tell whether a finding was correct or whether a lens improved the review.
 
 **Next slice:** Build a small set of representative evidence packets covering
-General, the four lifecycle stages, both specialist takeovers, and cases that
-should stay silent. Compare General with the intended lens under the same model
-and prompt budget, then score the results with a simple human rubric.
+the internal no-overlay baseline, the four lifecycle stages, both specialist
+takeovers, and cases that should stay silent. Compare that internal baseline
+with the intended lens under the same model and prompt budget, then score the
+results with a simple human rubric. The baseline is not a user-selectable mode.
 
 ### 2. Generalization（通用化） — PLANNED AFTER THE BASELINE
 
@@ -136,9 +137,10 @@ different reviewer model.
 
 **First evaluation:** Use fixed evidence packets and a human score card for
 specificity, evidence support, usefulness, lens value, and correct silence.
-Compare General with the intended lens while keeping the model, prompt budget,
-and output contract fixed. This evaluates reaction quality, not merely whether a
-finding was emitted.
+Compare the internal no-overlay baseline with the intended lens while keeping
+the model, prompt budget, and output contract fixed. This evaluates reaction
+quality, not merely whether a finding was emitted; the baseline is not exposed
+as a product mode.
 
 ## 6. Background mode — ✅ SHIPPED 2026-05-09
 
@@ -168,10 +170,11 @@ graphite black. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
 
 ## 9. Lifecycle lens routing — ✅ SHIPPED 2026-08-12
 
-The floating window now offers General-only plus Design, Build, Evolve, and
-Review stages. These map to Jeff Dean, Kent Beck, Martin Fowler, and Linus
-Torvalds. Build is the default. Stop and checkpoint reviews use the same local,
-deterministic router without an extra model call.
+The floating window offers Design, Build, Evolve, and Review stages. These map
+to Jeff Dean, Kent Beck, Martin Fowler, and Linus Torvalds. Build is the default;
+General remains the shared evidence and high-risk review base rather than a
+selectable stage. Stop and checkpoint reviews use the same local, deterministic
+router without an extra model call.
 
 High-confidence state/ordering evidence temporarily selects Leslie Lamport;
 measured execution-cost evidence temporarily selects John Carmack. A temporary

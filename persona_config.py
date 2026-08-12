@@ -21,7 +21,6 @@ LENS_PERSONAS = {
     "carmack": "John Carmack",
 }
 STAGE_LENSES = {
-    "general": "general",
     "design": "jeff",
     "build": "beck",
     "evolve": "fowler",
@@ -29,7 +28,6 @@ STAGE_LENSES = {
 }
 LENS_STAGES = {lens: stage for stage, lens in STAGE_LENSES.items()}
 STAGE_NAMES = {
-    "general": "General only",
     "design": "Design",
     "build": "Build",
     "evolve": "Evolve",
@@ -77,8 +75,6 @@ def stage_label(stage: str) -> str:
     if key not in STAGE_LENSES:
         key = "build"
     persona = STAGE_LENSES[key]
-    if key == "general":
-        return "General only（通用證據審查）"
     return f"{STAGE_NAMES[key]} · {PERSONA_NAMES[persona]}（{PERSONA_FOCUS[persona]}）"
 
 
@@ -89,6 +85,8 @@ def resolve_stage(
     environment = os.environ if environ is None else environ
     env_persona = str(environment.get("BUDDY_PERSONA") or "").strip().lower()
     if env_persona:
+        if env_persona == "general":
+            return StageSelection("build", "beck", "environment", True)
         return StageSelection(
             LENS_STAGES.get(env_persona, "forced"),
             env_persona,
@@ -108,8 +106,12 @@ def resolve_stage(
         return StageSelection(
             config_stage, STAGE_LENSES[config_stage], "config", False
         )
+    if config_stage == "general":
+        return StageSelection("build", "beck", "legacy_config", False)
 
     legacy_persona = str(payload.get("persona") or "").strip().lower()
+    if legacy_persona == "general":
+        return StageSelection("build", "beck", "legacy_config", False)
     if legacy_persona in PERSONA_NAMES:
         legacy_stage = LENS_STAGES.get(legacy_persona, "forced")
         return StageSelection(

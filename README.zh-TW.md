@@ -110,7 +110,6 @@ pip install Pillow
 
 | 階段 | 視角 | 它會先問 |
 |---|---|---|
-| General only | 一般檢查 | 現在最明確的問題是什麼？ |
 | Design | Jeff Dean（`jeff`） | 資料、狀態與責任是不是放錯地方？ |
 | Build | Kent Beck（`beck`） | 是否已經做超過現在需要的範圍？ |
 | Evolve | Martin Fowler（`fowler`） | 這個結構會不會讓下次修改更困難？ |
@@ -129,9 +128,9 @@ pip install Pillow
 
 浮動視窗下拉會把階段寫入 `~/.claude/buddy/config.json`，下次審查生效；預設為 Build。下拉顯示選定的階段，彩色 badge 顯示上一則短評實際使用的視角。Lamport 或 Carmack 暫時加入時，badge 會改變，但下拉選擇不變。
 
-新設定檔格式為 `{"stage":"build"}`；合法階段是 `general`、`design`、`build`、`evolve`、`review`。
+新設定檔格式為 `{"stage":"build"}`；合法階段是 `design`、`build`、`evolve`、`review`。General 是所有階段共用的證據與高風險檢查底座，不是可選濾鏡。
 
-啟動 Claude Code 前設定 `BUDDY_PERSONA` 仍可強制指定 lens，且會停用專科切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
+啟動 Claude Code 前設定 `BUDDY_PERSONA` 仍可強制指定 lens，且會停用專科切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 General 設定回到預設 Build；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
 
 Lens 只改先看哪類問題，不改證據門檻、模型呼叫次數、單則 finding 或字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。六個視角共用同一次審查，不是六個 agent 同時發言。
 
@@ -187,7 +186,7 @@ Lens 只改先看哪類問題，不改證據門檻、模型呼叫次數、單則
 | `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態目錄 |
-| `BUDDY_PERSONA` | 未設定 | 強制 `general`、`jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack`；優先於浮動視窗與專科路由 |
+| `BUDDY_PERSONA` | 未設定 | 強制 `jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack`；優先於浮動視窗與專科路由 |
 | `BUDDY_SPRITE_PATH` | 內建 spritesheet | 自訂透明背景 spritesheet |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略 shadow 評估天數 |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | 評估用目標審查次數 |
