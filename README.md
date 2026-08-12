@@ -4,8 +4,6 @@
 
 **Side review that changes engineering viewpoint as the project moves.**
 
-<img src="spritesheet.webp" alt="Rook, the Masters’ Nudge raven companion" width="720">
-
 ## Overview
 
 Masters’ Nudge attaches to [Claude Code](https://docs.anthropic.com/en/docs/claude-code): at a few moments it packages what just happened, sends it to a **different** model for review, and may return a short finding of at most 52 characters. Main Claude still writes code and decides; this tool only supplies a second opinion.

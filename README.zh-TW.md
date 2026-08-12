@@ -4,8 +4,6 @@
 
 **隨專案階段切換工程視角的場邊審查。**
 
-<img src="spritesheet.webp" alt="Masters’ Nudge 渡鴉夥伴 Rook" width="720">
-
 ## 簡介
 
 Masters’ Nudge 掛在 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 上：在少數時機把當下狀況整理後，送到**另一個**模型做審查，必要時回傳最多 52 字的短評。主 Claude 仍寫碼與決策；本工具只提供第二意見。
