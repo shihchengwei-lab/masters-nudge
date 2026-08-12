@@ -88,8 +88,8 @@ log. The existing asynchronous Stop path remains as supplementary review.
 independent from the main agent's Anthropic Sonnet — different blind spots.
 
 Smart routing (different models per turn type) remains cut: checkpoint reasons
-select when to review, not which model to use. The same configured provider and
-engineering lens handle every checkpoint.
+select when to review, not which model to use. The configured provider remains
+stable while the lifecycle router selects the engineering lens.
 
 ## 5. Reaction quality eval
 
@@ -126,18 +126,19 @@ checkpoint bell alongside the speech bubble. The 2x6 transparent spritesheet is
 auto-detected, draggable, always on top, runs at 4fps, and follows the active
 session. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
 
-## 9. Runtime lens selector — ✅ SHIPPED 2026-08-11
+## 9. Lifecycle lens routing — ✅ SHIPPED 2026-08-12
 
-The floating window now offers General plus all six master lenses without
-requiring CLI use. It writes the selected persona key to
-`~/.claude/buddy/config.json`; Stop and checkpoint reviews resolve that file on
-every call, so the next review uses the new lens without restarting Claude
-Code. `BUDDY_PERSONA` remains an advanced environment-variable override.
+The floating window now offers General-only plus Design, Build, Evolve, and
+Review stages. These map to Jeff Dean, Kent Beck, Martin Fowler, and Linus
+Torvalds. Build is the default. Stop and checkpoint reviews use the same local,
+deterministic router without an extra model call.
 
-Dropdown choices and reaction badges append a short Traditional Chinese focus
-description after each master name, such as
-`Linus Torvalds lens（簡化與責任歸屬）`. Existing persona keys and old log entries
-remain compatible.
+High-confidence state/ordering evidence temporarily selects Leslie Lamport;
+measured execution-cost evidence temporarily selects John Carmack. A temporary
+specialist does not change the saved stage, and Lamport wins a simultaneous
+match. Reaction logs and telemetry record the primary and effective lens,
+trigger, stage, and route source. `BUDDY_PERSONA`, existing persona configs, and
+old log entries remain compatible.
 
 ## 10. Bounded cost shadow evaluation — ✅ SHIPPED 2026-08-11 (enforcement off)
 
@@ -163,9 +164,6 @@ task merely because telemetry is present.
 
 These were considered and removed by the user during the v1 scope discussion:
 
-- **Automatic per-event lens switching** — manual runtime selection is shipped,
-  but tool events and checkpoint reasons do not change the lens automatically.
-  A user's chosen engineering viewpoint remains stable until the user changes it.
 - **Cross-session memory** — Masters’ Nudge doesn't need to remember things across days;
   one-turn reactions are enough.
 - **Lens-selection CLI** — the floating-window selector covers normal use; a

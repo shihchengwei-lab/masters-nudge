@@ -80,15 +80,12 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
 
 
 def selector_options() -> list[str]:
-    return [
-        persona_config.persona_label(persona)
-        for persona in persona_config.PERSONA_NAMES
-    ]
+    return [persona_config.stage_label(stage) for stage in persona_config.STAGE_LENSES]
 
 
-SELECTOR_PERSONAS = {
-    persona_config.persona_label(key): key
-    for key in persona_config.PERSONA_NAMES
+SELECTOR_STAGES = {
+    persona_config.stage_label(key): key
+    for key in persona_config.STAGE_LENSES
 }
 
 
@@ -187,7 +184,7 @@ class BuddyWindow:
         self.current_log: Path | None = None
         self.last_offset = 0
         self.last_reaction = ""
-        self.persona_selection = persona_config.resolve_persona(BUDDY_DIR)
+        self.stage_selection = persona_config.resolve_stage(BUDDY_DIR)
 
         # Load sprite
         self.idle_frames: list[ImageTk.PhotoImage] = []
@@ -285,7 +282,7 @@ class BuddyWindow:
         )
         bubble.pack(fill="both", expand=True)
 
-        active_persona = self.persona_selection.persona
+        active_persona = self.stage_selection.persona
         if active_persona not in persona_config.PERSONA_NAMES:
             active_persona = "general"
         badge_text, badge_color = lens_badge(active_persona)
@@ -296,26 +293,29 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
-        selected_label = persona_config.persona_label(active_persona)
-        self.persona_var = tk.StringVar(value=selected_label)
+        if self.stage_selection.stage in persona_config.STAGE_LENSES:
+            selected_label = persona_config.stage_label(self.stage_selection.stage)
+        else:
+            selected_label = f"Legacy · {persona_config.persona_label(active_persona)}"
+        self.stage_var = tk.StringVar(value=selected_label)
         selector_state = (
             "disabled"
-            if self.persona_selection.source == "environment"
+            if self.stage_selection.source == "environment"
             else "readonly"
         )
-        self.persona_selector = ttk.Combobox(
+        self.stage_selector = ttk.Combobox(
             bubble,
-            textvariable=self.persona_var,
+            textvariable=self.stage_var,
             values=selector_options(),
             state=selector_state,
             width=34,
             font=("Microsoft JhengHei", 9),
         )
-        self.persona_selector.pack(fill="x", padx=10, pady=(2, 2))
-        self.persona_selector.bind("<<ComboboxSelected>>", self._on_persona_selected)
+        self.stage_selector.pack(fill="x", padx=10, pady=(2, 2))
+        self.stage_selector.bind("<<ComboboxSelected>>", self._on_stage_selected)
 
         initial_text = "( . . . )"
-        if self.persona_selection.source == "environment":
+        if self.stage_selection.source == "environment":
             initial_text = (
                 f"BUDDY_PERSONA 正在接管：{selected_label}。"
             )
@@ -338,20 +338,23 @@ class BuddyWindow:
         text, color = lens_badge(persona)
         self.lens_label.config(text=text, fg=color)
 
-    def _on_persona_selected(self, _event=None):
-        label = self.persona_var.get()
-        persona = SELECTOR_PERSONAS.get(label)
-        if persona is None:
+    def _on_stage_selected(self, _event=None):
+        label = self.stage_var.get()
+        stage = SELECTOR_STAGES.get(label)
+        if stage is None:
             return
         try:
-            persona_config.save_persona(BUDDY_DIR, persona)
+            persona_config.save_stage(BUDDY_DIR, stage)
         except (OSError, ValueError):
-            self.bubble_label.config(text="Lens 設定無法儲存，仍使用原設定。")
+            self.bubble_label.config(text="階段設定無法儲存，仍使用原設定。")
             return
-        self.persona_selection = persona_config.PersonaSelection(persona, "config")
+        persona = persona_config.STAGE_LENSES[stage]
+        self.stage_selection = persona_config.StageSelection(
+            stage, persona, "config", False
+        )
         self._set_lens_badge(persona)
         message = (
-            f"下一次 review 起使用 {label}；"
+            f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
             "若 Claude Code 設有 BUDDY_PERSONA，仍以環境變數為準。"
         )
         self.last_reaction = message

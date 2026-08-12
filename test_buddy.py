@@ -40,6 +40,9 @@ class TestCompile(unittest.TestCase):
     def test_persona_config_compiles(self):
         py_compile.compile(str(HERE / "persona_config.py"), doraise=True)
 
+    def test_lens_router_compiles(self):
+        py_compile.compile(str(HERE / "lens_router.py"), doraise=True)
+
 
 # ── 2. Persona prompt selection ──────────────────────────────────────
 
@@ -152,9 +155,9 @@ class TestBranding(unittest.TestCase):
             self.assertIn("config.json", document)
             self.assertIn("BUDDY_PERSONA", document)
         self.assertIn("applies from the next review", readme)
-        self.assertIn("overrides the window", readme)
+        self.assertIn("force override", readme)
         self.assertIn("下次審查生效", readme_zh)
-        self.assertIn("可覆寫視窗選擇", readme_zh)
+        self.assertIn("強制指定 lens", readme_zh)
 
     def test_readmes_document_structured_reaction_output(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -169,12 +172,12 @@ class TestBranding(unittest.TestCase):
     def test_roadmap_matches_shipped_selector_and_shadow_evaluation(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
 
-        self.assertIn("Runtime lens selector", roadmap)
-        self.assertIn("✅ SHIPPED 2026-08-11", roadmap)
+        self.assertIn("Lifecycle lens routing", roadmap)
+        self.assertIn("✅ SHIPPED 2026-08-12", roadmap)
         self.assertIn("Bounded cost shadow evaluation", roadmap)
         self.assertIn("never enables skipping automatically", roadmap)
         self.assertNotIn("Runtime lens UI/automatic switching", roadmap)
-        self.assertIn("Automatic per-event lens switching", roadmap)
+        self.assertNotIn("Automatic per-event lens switching", roadmap)
 
     def test_roadmap_names_generalization_and_cost_control_as_priorities(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
@@ -255,12 +258,13 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.buddy.BUDDY_DIR = self.original_buddy_dir
         self.persona_tmpdir.cleanup()
 
-    def test_default_prompt_uses_evidence_first_review_without_lens_overlay(self):
+    def test_default_prompt_uses_build_stage_beck_overlay(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             result = self.buddy.build_system_prompt()
 
         self.assertIn("你是 Masters’ Nudge", result)
-        self.assertNotIn("# 工程觀察鏡頭", result)
+        self.assertIn("# 工程觀察鏡頭", result)
+        self.assertIn("Kent Beck", result)
 
     def test_each_supported_persona_appends_its_overlay(self):
         for persona, display_name in self.PERSONAS.items():
@@ -370,6 +374,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
         installer = (HERE / "install.sh").read_text(encoding="utf-8")
         self.assertIn('cp -R "$SRC_DIR/personas" "$TARGET_DIR/"', installer)
         self.assertIn('cp "$SRC_DIR/persona_config.py" "$TARGET_DIR/"', installer)
+        self.assertIn('cp "$SRC_DIR/lens_router.py" "$TARGET_DIR/"', installer)
 
     def test_base_prompt_delegates_attention_after_high_risk_screen(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -706,7 +711,7 @@ class TestCheckpointDelivery(unittest.TestCase):
 
     def test_output_is_nudge_only_additional_context(self):
         result = self.checkpoint.build_hook_output(
-            "PostToolUseFailure", "先確認失敗根因。", "error"
+            "PostToolUseFailure", "先確認失敗根因。", "error", "lamport"
         )
 
         self.assertEqual(
@@ -715,6 +720,10 @@ class TestCheckpointDelivery(unittest.TestCase):
         )
         self.assertIn(
             "先確認失敗根因。",
+            result["hookSpecificOutput"]["additionalContext"],
+        )
+        self.assertIn(
+            "Leslie Lamport lens",
             result["hookSpecificOutput"]["additionalContext"],
         )
         serialized = json.dumps(result, ensure_ascii=False)
@@ -836,6 +845,9 @@ class TestCheckpointDelivery(unittest.TestCase):
         telemetry.assert_called_once()
         self.assertEqual(telemetry.call_args.kwargs["kind"], "checkpoint")
         self.assertEqual(telemetry.call_args.kwargs["reason"], "error")
+        self.assertEqual(
+            telemetry.call_args.kwargs["route"].effective_lens, "beck"
+        )
 
 
 # ── 5. Transcript parser ─────────────────────────────────────────────
@@ -1297,7 +1309,7 @@ class TestPersonaConfig(unittest.TestCase):
         selection = self.config.resolve_persona(self.tmpdir, environ={})
 
         self.assertEqual(selection.persona, "fowler")
-        self.assertEqual(selection.source, "config")
+        self.assertEqual(selection.source, "legacy_config")
         saved = json.loads(
             (self.tmpdir / "config.json").read_text(encoding="utf-8")
         )
@@ -1313,15 +1325,48 @@ class TestPersonaConfig(unittest.TestCase):
         self.assertEqual(selection.persona, "lamport")
         self.assertEqual(selection.source, "environment")
 
-    def test_missing_or_invalid_config_falls_back_to_general(self):
+    def test_missing_or_invalid_config_falls_back_to_build(self):
         missing = self.config.resolve_persona(self.tmpdir, environ={})
         (self.tmpdir / "config.json").write_text(
             json.dumps({"persona": "unknown"}), encoding="utf-8"
         )
         invalid = self.config.resolve_persona(self.tmpdir, environ={})
 
-        self.assertEqual((missing.persona, missing.source), ("general", "default"))
-        self.assertEqual((invalid.persona, invalid.source), ("general", "default"))
+        self.assertEqual((missing.persona, missing.source), ("beck", "default"))
+        self.assertEqual((invalid.persona, invalid.source), ("beck", "default"))
+
+    def test_save_and_load_new_stage_format(self):
+        self.config.save_stage(self.tmpdir, "review")
+
+        selection = self.config.resolve_stage(self.tmpdir, environ={})
+        saved = json.loads(
+            (self.tmpdir / "config.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            (selection.stage, selection.persona, selection.source, selection.locked),
+            ("review", "linus", "config", False),
+        )
+        self.assertEqual(saved, {"stage": "review"})
+
+    def test_legacy_lifecycle_and_specialist_configs_are_interpreted(self):
+        expected = {
+            "general": ("general", False),
+            "jeff": ("design", False),
+            "beck": ("build", False),
+            "fowler": ("evolve", False),
+            "linus": ("review", False),
+            "lamport": ("forced", True),
+            "carmack": ("forced", True),
+        }
+        for persona, (stage, locked) in expected.items():
+            with self.subTest(persona=persona):
+                self.config.save_persona(self.tmpdir, persona)
+                selection = self.config.resolve_stage(self.tmpdir, environ={})
+                self.assertEqual(
+                    (selection.stage, selection.persona, selection.locked),
+                    (stage, persona, locked),
+                )
 
     def test_invalid_persona_is_not_saved(self):
         with self.assertRaises(ValueError):
@@ -1329,36 +1374,132 @@ class TestPersonaConfig(unittest.TestCase):
         self.assertFalse((self.tmpdir / "config.json").exists())
 
 
+class TestLensRouter(unittest.TestCase):
+
+    def setUp(self):
+        import lens_router
+
+        self.router = lens_router
+        self.tmpdir = Path(tempfile.mkdtemp())
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def route(self, evidence="", environ=None):
+        return self.router.resolve_review_route(
+            self.tmpdir, evidence, environ={} if environ is None else environ
+        )
+
+    def test_lifecycle_stages_map_to_primary_lenses(self):
+        import persona_config
+
+        expected = {
+            "general": "general",
+            "design": "jeff",
+            "build": "beck",
+            "evolve": "fowler",
+            "review": "linus",
+        }
+        for stage, lens in expected.items():
+            with self.subTest(stage=stage):
+                persona_config.save_stage(self.tmpdir, stage)
+                route = self.route()
+                self.assertEqual(route.stage, stage)
+                self.assertEqual(route.primary_lens, lens)
+                self.assertEqual(route.effective_lens, lens)
+                self.assertEqual(route.override_lens, "")
+
+    def test_lamport_direct_and_combined_signals_override_once(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "build")
+        for evidence in (
+            "retry may duplicate the payment side effect",
+            "舊回應亂序寫回，可能覆蓋新的狀態",
+            "async queue can timeout and leave stale state",
+            "非同步佇列逾時後會留下過期狀態",
+        ):
+            with self.subTest(evidence=evidence):
+                route = self.route(evidence)
+                self.assertEqual(route.primary_lens, "beck")
+                self.assertEqual(route.effective_lens, "lamport")
+                self.assertEqual(route.override_lens, "lamport")
+                self.assertEqual(route.trigger, "state-ordering-evidence")
+
+    def test_carmack_direct_and_measured_signals_override_once(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "evolve")
+        for evidence in (
+            "The profiler shows this hot path dominates runtime.",
+            "p95 latency increased from 12 ms to 28 ms",
+            "基準測試顯示資料搬運成本集中在這裡",
+            "吞吐量降低 31% 且有重複 I/O",
+        ):
+            with self.subTest(evidence=evidence):
+                route = self.route(evidence)
+                self.assertEqual(route.primary_lens, "fowler")
+                self.assertEqual(route.effective_lens, "carmack")
+                self.assertEqual(route.override_lens, "carmack")
+                self.assertEqual(route.trigger, "measured-performance-evidence")
+
+    def test_low_signal_words_do_not_trigger_specialists(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "design")
+        for evidence in ("cache", "async", "performance", "latency", "效能"):
+            with self.subTest(evidence=evidence):
+                route = self.route(evidence)
+                self.assertEqual(route.effective_lens, "jeff")
+                self.assertEqual(route.override_lens, "")
+
+    def test_lamport_wins_when_both_specialists_match(self):
+        route = self.route(
+            "Profiler benchmark: retry caused duplicate delivery; p95 latency 40 ms"
+        )
+        self.assertEqual(route.effective_lens, "lamport")
+
+    def test_environment_persona_is_locked_and_unknown_fails_closed(self):
+        locked = self.route(
+            "retry duplicate delivery", {"BUDDY_PERSONA": "carmack"}
+        )
+        unknown = self.route("benchmark", {"BUDDY_PERSONA": "unknown"})
+
+        self.assertEqual(locked.effective_lens, "carmack")
+        self.assertEqual(locked.override_lens, "")
+        self.assertEqual(locked.source, "environment")
+        self.assertEqual(unknown.effective_lens, "unknown")
+
+
 class TestFloatingWindowLayout(unittest.TestCase):
 
-    def test_selector_offers_general_and_six_lenses(self):
+    def test_selector_offers_general_and_four_lifecycle_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
         self.assertEqual(
             options,
             [
-                "General lens（通用證據審查）",
-                "Jeff Dean lens（系統因果與成本）",
-                "Linus Torvalds lens（簡化與責任歸屬）",
-                "Martin Fowler lens（重構與變更成本）",
-                "Kent Beck lens（小步驟與測試）",
-                "Leslie Lamport lens（狀態、順序與失敗）",
-                "John Carmack lens（執行路徑與效能）",
+                "General only（通用證據審查）",
+                "Design · Jeff Dean（系統因果與成本）",
+                "Build · Kent Beck（小步驟與測試）",
+                "Evolve · Martin Fowler（重構與變更成本）",
+                "Review · Linus Torvalds（簡化與責任歸屬）",
             ],
         )
-        for label, persona in zip(
+        for label, stage in zip(
             options,
-            ("general", "jeff", "linus", "fowler", "beck", "lamport", "carmack"),
+            ("general", "design", "build", "evolve", "review"),
         ):
-            self.assertEqual(buddy_window.SELECTOR_PERSONAS[label], persona)
+            self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
 
     def test_window_contains_persistent_lens_selector(self):
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
 
         self.assertIn("ttk.Combobox", source)
         self.assertIn("<<ComboboxSelected>>", source)
-        self.assertIn("persona_config.save_persona", source)
+        self.assertIn("persona_config.save_stage", source)
         self.assertIn("下一次 review 起使用", source)
         self.assertIn("BUDDY_PERSONA 正在接管", source)
 
@@ -1437,9 +1578,37 @@ class TestReactionLogLens(unittest.TestCase):
 
         entry = self._read_entry("lens-session")
         self.assertEqual(entry["persona"], "linus")
+        self.assertEqual(entry["effective_lens"], "linus")
+        self.assertEqual(entry["route_source"], "environment")
 
-    def test_append_log_records_general_for_unset_or_unknown_persona(self):
-        for session_id, persona in (("unset", None), ("unknown", "nobody")):
+    def test_append_log_records_specialist_route_metadata(self):
+        import lens_router
+
+        route = lens_router.ReviewRoute(
+            stage="build",
+            primary_lens="beck",
+            effective_lens="lamport",
+            override_lens="lamport",
+            trigger="state-ordering-evidence",
+            source="config",
+        )
+        self.buddy.append_buddy_log(
+            "specialist", "openai", "model", "提醒", route
+        )
+
+        entry = self._read_entry("specialist")
+        self.assertEqual(entry["persona"], "lamport")
+        self.assertEqual(entry["stage"], "build")
+        self.assertEqual(entry["primary_lens"], "beck")
+        self.assertEqual(entry["effective_lens"], "lamport")
+        self.assertEqual(entry["override_lens"], "lamport")
+        self.assertEqual(entry["trigger"], "state-ordering-evidence")
+
+    def test_append_log_records_build_default_and_sanitizes_unknown_persona(self):
+        for session_id, persona, expected in (
+            ("unset", None, "beck"),
+            ("unknown", "nobody", "general"),
+        ):
             env = {} if persona is None else {"BUDDY_PERSONA": persona}
             with self.subTest(persona=persona):
                 with mock.patch.dict(os.environ, env, clear=True):
@@ -1447,7 +1616,7 @@ class TestReactionLogLens(unittest.TestCase):
                         session_id, "openai", "model", "提醒"
                     )
                 entry = self._read_entry(session_id)
-                self.assertEqual(entry["persona"], "general")
+                self.assertEqual(entry["persona"], expected)
 
     def test_recent_reactions_ignore_evaluation_notices(self):
         log_path = Path(self.tmpdir) / "lens-session.log"
@@ -1790,6 +1959,28 @@ class TestReviewTelemetry(unittest.TestCase):
             candidates,
             ["no_new_evidence", "checkpoint_stop_overlap"],
         )
+
+    def test_route_metadata_is_kept_without_review_content(self):
+        from datetime import datetime, timezone
+
+        self._record(
+            datetime(2026, 8, 11, 4, 0, tzinfo=timezone.utc),
+            stage="build",
+            primary_lens="beck",
+            effective_lens="lamport",
+            override_lens="lamport",
+            trigger="state-ordering-evidence",
+            route_source="config",
+        )
+        line = json.loads(
+            (self.tmpdir / "review-telemetry.jsonl").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(line["stage"], "build")
+        self.assertEqual(line["effective_lens"], "lamport")
+        self.assertEqual(line["trigger"], "state-ordering-evidence")
+        self.assertNotIn("reaction", line)
+        self.assertNotIn("prompt", line)
 
     def test_corrupt_state_fails_closed_instead_of_restarting_window(self):
         from datetime import datetime, timezone

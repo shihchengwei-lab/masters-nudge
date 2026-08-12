@@ -2,7 +2,7 @@
 
 繁體中文 | [English](README.md)
 
-**套上一位大師的濾鏡做場邊審查，每一位各關注不同的面向。**
+**隨專案階段切換工程視角的場邊審查。**
 
 <img src="spritesheet.webp" alt="Masters’ Nudge 工程 checkpoint 提醒鈴動畫" width="720">
 
@@ -24,7 +24,7 @@ Masters’ Nudge 掛在 [Claude Code](https://docs.anthropic.com/en/docs/claude-
 
 Claude Code 的 system-reminder 不會畫在終端畫面上，所以沒開浮動視窗時，你多半只會從 Claude 後續行為間接感受到審查結果。
 
-沒有值得講的問題時保持靜默。可選的六種「大師」濾鏡只改優先檢查什麼，見 [濾鏡](#濾鏡)。
+沒有值得講的問題時保持靜默。四個生命週期階段決定日常 lens，兩位專科只在證據足夠時接手單次審查，見 [濾鏡](#濾鏡)。
 
 ```
 Claude Code
@@ -96,18 +96,23 @@ pip install Pillow
 
 ## 濾鏡
 
-預設為通用、證據優先的審查。浮動視窗下拉可切換（寫入 `~/.claude/buddy/config.json`，下次審查生效）。啟動 Claude Code 前設 `BUDDY_PERSONA` 可覆寫視窗選擇。
+浮動視窗下拉會把生命週期階段寫入 `~/.claude/buddy/config.json`，下次審查生效；預設為 Build。下拉顯示持久設定的階段，彩色 badge 顯示上一則審查實際使用的 lens，因此 Lamport 或 Carmack 接手時，badge 會暫時改變但下拉不變。每次審查仍先執行 General 的證據與高風險篩選。
 
-| 值 | 靈感來源 | 優先面向 |
+新設定檔格式為 `{"stage":"build"}`；合法階段是 `general`、`design`、`build`、`evolve`、`review`。
+
+| 階段 | 日常 lens | 優先面向 |
 |---|---|---|
-| `jeff` | Jeff Dean | 因果、資料流、狀態、規模、維運成本 |
-| `linus` | Linus Torvalds | 多餘抽象、繞路、責任歸屬不清 |
-| `fowler` | Martin Fowler | 設計氣味、耦合、變更成本、不改行為的重構 |
-| `beck` | Kent Beck | 小步驟、測試、當前範圍、做完即停 |
-| `lamport` | Leslie Lamport | 不變量、事件順序、重試、部分失敗 |
-| `carmack` | John Carmack | 實際執行路徑、量測、多餘工作 |
+| General only | General | 不啟用專科路由 |
+| Design | Jeff Dean（`jeff`） | 因果、資料流、狀態、規模、維運成本 |
+| Build | Kent Beck（`beck`） | 小步驟、測試、當前範圍、做完即停 |
+| Evolve | Martin Fowler（`fowler`） | 設計氣味、耦合、變更成本、不改行為的重構 |
+| Review | Linus Torvalds（`linus`） | 多餘抽象、繞路、責任歸屬不清 |
 
-濾鏡只改檢查優先序，不改證據門檻、單則 finding、字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。非模仿本人，亦非六個 agent 同時發言。
+可見證據明確涉及重試、冪等、亂序、重複交付、部分失敗，或狀態機制同時伴隨失敗信號時，由 Leslie Lamport（`lamport`）接手一次。出現 profiler／benchmark，或量測數字明確連到延遲、吞吐、配置、複製、I/O、hot path 時，由 John Carmack（`carmack`）接手一次。兩者同時命中時 Lamport 優先。單獨出現 `async`、`cache`、`performance` 或 `latency` 不足以觸發。
+
+啟動 Claude Code 前設定 `BUDDY_PERSONA` 仍可強制指定 lens，且會停用專科切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
+
+Lens 只改檢查優先序，不改證據門檻、模型呼叫次數、單則 finding 或字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。非模仿本人，亦非六個 agent 同時發言。
 
 <details>
 <summary>各濾鏡補充</summary>
@@ -161,7 +166,7 @@ pip install Pillow
 | `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | log 與狀態目錄 |
-| `BUDDY_PERSONA` | 未設定 | 強制濾鏡；優先於浮動視窗 |
+| `BUDDY_PERSONA` | 未設定 | 強制 `general`、`jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack`；優先於浮動視窗與專科路由 |
 | `BUDDY_SPRITE_PATH` | 內建 spritesheet | 自訂透明背景 spritesheet |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略 shadow 評估天數 |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | 評估用目標審查次數 |
@@ -172,7 +177,7 @@ pip install Pillow
 
 安裝後首次審查起算固定 7 天：可能省成本的略過只標註與量測，實際仍每次呼叫模型。第 7 天後的下一次審查寫入 `~/.claude/buddy/shadow-evaluation.md` 並顯示一次通知；不足 300 次標 `insufficient_samples`，不自動延長，也不自動啟用略過。
 
-每次審查會把不含對話內容的 metadata 追加到 `~/.claude/buddy/review-telemetry.jsonl`。若要重開評估，刪除 `shadow-evaluation.json`、`shadow-evaluation.md`、`review-telemetry.jsonl`。
+每次審查會把不含對話內容的 metadata 追加到 `~/.claude/buddy/review-telemetry.jsonl`，包括階段、primary lens、effective lens、專科 trigger 與路由來源。反應 log 的 `persona` 代表 effective lens，並帶有同一套路由 metadata。若要重開評估，刪除 `shadow-evaluation.json`、`shadow-evaluation.md`、`review-telemetry.jsonl`。
 
 ## 隱私
 
@@ -221,7 +226,7 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 | 回合末審查 | `buddy.sh` / `buddy.py` |
 | 注入 | `inject.sh` / `inject.py` |
 | 證據封包 | `source_context.py` |
-| 提示與濾鏡 | `buddy-prompt.txt`、`personas/*.txt` |
+| 提示與路由 | `buddy-prompt.txt`、`personas/*.txt`、`lens_router.py` |
 | 輸出契約 | `reaction-schema.json` |
 | 浮動 UI | `buddy_window.py`、`start_buddy_window.bat` |
 | 測試 | `python -m unittest test_buddy -v` |
@@ -235,7 +240,7 @@ Runtime：
 | `~/.claude/buddy/<session_id>.log` | 反應 JSONL |
 | `~/.claude/buddy/<session_id>.state.json` | 注入讀取指標 |
 | `~/.claude/buddy/<session_id>.source.json` | 任務錨點與 transcript 位置 |
-| `~/.claude/buddy/config.json` | 視窗保存的濾鏡 |
+| `~/.claude/buddy/config.json` | 視窗保存的生命週期階段 |
 | `~/.claude/buddy/<session_id>.checkpoints/` | 途中審查去重 |
 | `~/.claude/buddy-error.log` | 錯誤 log |
 

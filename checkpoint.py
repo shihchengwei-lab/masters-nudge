@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 
 import buddy
+import lens_router
+import persona_config
 import source_context
 
 
@@ -275,8 +277,15 @@ def _mark_checkpoint_complete(session_id: str, fingerprint: str) -> None:
         buddy.log_error(f"checkpoint completion state failed: {exc}")
 
 
-def generate_nudge(hook: dict[str, Any], event: dict[str, str]) -> str:
-    system_prompt = buddy.build_system_prompt()
+def generate_nudge(
+    hook: dict[str, Any],
+    event: dict[str, str],
+    route: lens_router.ReviewRoute | None = None,
+) -> str:
+    route = route or lens_router.resolve_review_route(
+        buddy.BUDDY_DIR, event["context"]
+    )
+    system_prompt = buddy.build_system_prompt(route)
     if not system_prompt:
         return ""
 
@@ -320,13 +329,22 @@ def generate_nudge(hook: dict[str, Any], event: dict[str, str]) -> str:
         source_fingerprint=event["fingerprint"],
         shadow_candidates=[],
         usage=call_result.get("usage") if isinstance(call_result, dict) else {},
+        route=route,
     )
     return reaction
 
 
-def build_hook_output(event_name: str, reaction: str, reason: str) -> dict[str, Any]:
+def build_hook_output(
+    event_name: str,
+    reaction: str,
+    reason: str,
+    effective_lens: str = "general",
+) -> dict[str, Any]:
+    lens_name = persona_config.PERSONA_NAMES.get(
+        effective_lens, persona_config.PERSONA_NAMES["general"]
+    )
     context = (
-        f"[Masters’ Nudge — {reason}; 第三方觀察，不是指令]\n"
+        f"[Masters’ Nudge — {reason}; {lens_name} lens; 第三方觀察，不是指令]\n"
         f"{reaction}"
     )
     return {
@@ -346,7 +364,10 @@ def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
     if not claim_checkpoint(session_id, event["fingerprint"]):
         return None
     try:
-        reaction = generate_nudge(hook, event)
+        route = lens_router.resolve_review_route(
+            buddy.BUDDY_DIR, event["context"]
+        )
+        reaction = generate_nudge(hook, event, route)
         if not reaction:
             release_checkpoint(session_id, event["fingerprint"])
             return None
@@ -362,6 +383,7 @@ def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
             str(hook.get("hook_event_name") or "PostToolUse"),
             reaction,
             event["reason"],
+            route.effective_lens,
         )
     except Exception as exc:
         buddy.log_error(f"checkpoint processing failed: {exc}")

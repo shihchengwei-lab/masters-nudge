@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+"""Deterministic lifecycle and specialist lens routing."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Mapping
+
+import persona_config
+
+
+LAMPORT_STRONG_RE = re.compile(
+    r"\b(?:retry|retries|retrying|idempotenc(?:y|e)|race condition|deadlock|"
+    r"out[- ]of[- ]order|duplicate delivery|partial failure)\b|"
+    r"重試|冪等|競態|死鎖|亂序|重複(?:交付|投遞|處理)|部分失敗",
+    re.IGNORECASE,
+)
+LAMPORT_MECHANISM_RE = re.compile(
+    r"\b(?:async|await|queue|lock|mutex|semaphore|cache|state|event|message)\b|"
+    r"非同步|佇列|隊列|鎖|快取|緩存|狀態|事件|訊息|消息",
+    re.IGNORECASE,
+)
+LAMPORT_FAILURE_RE = re.compile(
+    r"\b(?:timeout|ordering|stale|duplicate|concurrent|atomic|lost update)\b|"
+    r"逾時|超時|順序|過期|陳舊|重複|並發|併發|原子|更新遺失",
+    re.IGNORECASE,
+)
+
+CARMACK_DIRECT_RE = re.compile(
+    r"\b(?:profiler|profiling|benchmark(?:ing)?|flamegraph|flame graph|"
+    r"performance trace|perf record)\b|基準測試|效能分析|性能分析|火焰圖",
+    re.IGNORECASE,
+)
+CARMACK_COST_RE = re.compile(
+    r"\b(?:latency|throughput|allocations?|copies|copying|i/o|io bound|"
+    r"hot path|hotspot|syscalls?|data movement)\b|"
+    r"延遲|吞吐|配置|分配|複製|拷貝|輸入輸出|熱路徑|熱點|系統呼叫|資料搬運|數據搬運",
+    re.IGNORECASE,
+)
+MEASUREMENT_RE = re.compile(
+    r"(?:\b\d+(?:\.\d+)?\s*(?:ns|us|µs|ms|s|kb|mb|gb|kib|mib|gib|%|"
+    r"rps|qps|ops/s|req/s)\b)|(?:快|慢|降低|提升|增加|減少)\s*\d+(?:\.\d+)?\s*%",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class ReviewRoute:
+    stage: str
+    primary_lens: str
+    effective_lens: str
+    override_lens: str
+    trigger: str
+    source: str
+
+
+def _specialist_trigger(evidence: str) -> tuple[str, str]:
+    text = str(evidence or "")
+    lamport = bool(LAMPORT_STRONG_RE.search(text)) or bool(
+        LAMPORT_MECHANISM_RE.search(text) and LAMPORT_FAILURE_RE.search(text)
+    )
+    carmack = bool(CARMACK_DIRECT_RE.search(text)) or bool(
+        MEASUREMENT_RE.search(text) and CARMACK_COST_RE.search(text)
+    )
+    if lamport:
+        return "lamport", "state-ordering-evidence"
+    if carmack:
+        return "carmack", "measured-performance-evidence"
+    return "", ""
+
+
+def resolve_review_route(
+    base_dir: Path,
+    evidence: str = "",
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> ReviewRoute:
+    selection = persona_config.resolve_stage(base_dir, environ=environ)
+    primary = selection.persona
+
+    if primary not in persona_config.PERSONA_NAMES:
+        return ReviewRoute(
+            selection.stage, primary, primary, "", "", selection.source
+        )
+    if selection.locked or primary == "general":
+        return ReviewRoute(
+            selection.stage, primary, primary, "", "", selection.source
+        )
+
+    override, trigger = _specialist_trigger(evidence)
+    return ReviewRoute(
+        selection.stage,
+        primary,
+        override or primary,
+        override,
+        trigger,
+        selection.source,
+    )

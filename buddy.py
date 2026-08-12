@@ -25,6 +25,7 @@ from pathlib import Path
 import source_context
 import review_telemetry
 import persona_config
+import lens_router
 
 CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -417,7 +418,7 @@ def save_agentcam_last_mtime(session_id: str, mtime: float) -> None:
         log_error(f"agentcam state save failed: {e}")
 
 
-def build_system_prompt() -> str:
+def build_system_prompt(route: lens_router.ReviewRoute | None = None) -> str:
     if not PROMPT_FILE.exists():
         log_error(f"prompt file missing: {PROMPT_FILE}")
         return ""
@@ -427,8 +428,8 @@ def build_system_prompt() -> str:
         log_error(f"prompt file read failed: {e}")
         return ""
 
-    selection = persona_config.resolve_persona(BUDDY_DIR)
-    persona = selection.persona
+    route = route or lens_router.resolve_review_route(BUDDY_DIR)
+    persona = route.effective_lens
     if persona == "general":
         return base_prompt
     if persona not in PERSONAS:
@@ -778,28 +779,46 @@ def dispatch_call_result(system_prompt: str, transcript_text: str) -> dict:
     return call_claude_result(system_prompt, transcript_text, MODEL)
 
 
-def append_buddy_log(session_id: str, provider: str, model: str, reaction: str) -> None:
+def append_buddy_log(
+    session_id: str,
+    provider: str,
+    model: str,
+    reaction: str,
+    route: lens_router.ReviewRoute | None = None,
+) -> None:
     if not reaction.strip():
         return
     BUDDY_DIR.mkdir(parents=True, exist_ok=True)
     log_path = BUDDY_DIR / f"{session_id}.log"
-    persona = _selected_persona()
+    route = route or lens_router.resolve_review_route(BUDDY_DIR)
     entry = {
         "ts": datetime.now().isoformat(),
         "session_id": session_id,
         "kind": "review",
         "provider": provider,
         "model": model,
-        "persona": persona,
+        "persona": _selected_persona(route),
+        **route_metadata(route),
         "reaction": reaction,
     }
     with log_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def _selected_persona() -> str:
-    persona = persona_config.resolve_persona(BUDDY_DIR).persona
+def _selected_persona(route: lens_router.ReviewRoute | None = None) -> str:
+    persona = (route or lens_router.resolve_review_route(BUDDY_DIR)).effective_lens
     return persona if persona in PERSONAS else "general"
+
+
+def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
+    return {
+        "stage": route.stage,
+        "primary_lens": route.primary_lens,
+        "effective_lens": route.effective_lens,
+        "override_lens": route.override_lens,
+        "trigger": route.trigger,
+        "route_source": route.source,
+    }
 
 
 def _checkpoint_delivery_path(session_id: str) -> Path:
@@ -859,9 +878,11 @@ def record_review_telemetry(
     source_fingerprint: str,
     shadow_candidates: list[str],
     usage: dict | None = None,
+    route: lens_router.ReviewRoute | None = None,
 ) -> None:
     """Record content-free local metadata; telemetry failure never blocks hooks."""
     try:
+        route = route or lens_router.resolve_review_route(BUDDY_DIR)
         review_telemetry.record_review(
             BUDDY_DIR,
             {
@@ -870,7 +891,8 @@ def record_review_telemetry(
                 "reason": reason,
                 "provider": PROVIDER,
                 "model": MODEL,
-                "persona": _selected_persona(),
+                "persona": _selected_persona(route),
+                **route_metadata(route),
                 "status": status,
                 "input_chars": input_chars,
                 "latency_ms": latency_ms,
@@ -938,7 +960,8 @@ def main() -> None:
         log_error("empty source packet, skipping")
         return
 
-    system_prompt = build_system_prompt()
+    route = lens_router.resolve_review_route(BUDDY_DIR, source_packet)
+    system_prompt = build_system_prompt(route)
     if not system_prompt:
         return
 
@@ -970,7 +993,7 @@ def main() -> None:
     raw_reaction = str(call_result.get("finding") or "")
     reaction = sanitize_reaction(raw_reaction)
     if reaction:
-        append_buddy_log(session_id, PROVIDER, MODEL, reaction)
+        append_buddy_log(session_id, PROVIDER, MODEL, reaction, route)
     else:
         log_error("empty reaction, not logged")
     status = str(call_result.get("status") or "error")
@@ -986,6 +1009,7 @@ def main() -> None:
         source_fingerprint=fingerprint,
         shadow_candidates=candidates,
         usage=call_result.get("usage") if isinstance(call_result, dict) else {},
+        route=route,
     )
 
 

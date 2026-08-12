@@ -2,7 +2,7 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-**Side review through one master’s filter; each master watches a different angle.**
+**Side review that changes engineering viewpoint as the project moves.**
 
 <img src="spritesheet.webp" alt="Masters’ Nudge engineering checkpoint bell animation" width="720">
 
@@ -24,7 +24,7 @@ Masters’ Nudge attaches to [Claude Code](https://docs.anthropic.com/en/docs/cl
 
 Claude Code system-reminders do not render in the terminal. Without the floating window, you mostly notice reviews only through Claude’s later behavior.
 
-Silent when there is nothing worth saying. Six optional “master” filters only change inspection priority; see [Filters](#filters).
+Silent when there is nothing worth saying. Four lifecycle stages choose the everyday lens; two specialists can take one evidence-backed review; see [Filters](#filters).
 
 ```
 Claude Code
@@ -96,18 +96,23 @@ Closing the window does not disable hooks.
 
 ## Filters
 
-Default is a general evidence-first review. The floating-window dropdown writes `~/.claude/buddy/config.json` (applies from the next review). `BUDDY_PERSONA` set before Claude Code starts overrides the window.
+The floating-window dropdown stores a lifecycle stage in `~/.claude/buddy/config.json` (applies from the next review). Build is the default. The dropdown shows the saved stage; the colored badge shows the lens actually used by the latest review, so a Lamport or Carmack specialist may appear without changing the dropdown. Every review still starts with the General evidence and high-risk screen.
 
-| Value | Inspired by | Priority |
+New configuration files use `{"stage":"build"}`. Valid stages are `general`, `design`, `build`, `evolve`, and `review`.
+
+| Stage | Everyday lens | Priority |
 |---|---|---|
-| `jeff` | Jeff Dean | Causality, data flow, state, scale, operational cost |
-| `linus` | Linus Torvalds | Unnecessary abstraction, indirection, unclear ownership |
-| `fowler` | Martin Fowler | Design smells, coupling, change cost, behavior-preserving refactor |
-| `beck` | Kent Beck | Small steps, tests, current scope, stop when done |
-| `lamport` | Leslie Lamport | Invariants, ordering, retries, partial failure |
-| `carmack` | John Carmack | Real execution path, measurement, wasted work |
+| General only | General | No specialist routing |
+| Design | Jeff Dean (`jeff`) | Causality, data flow, state, scale, operational cost |
+| Build | Kent Beck (`beck`) | Small steps, tests, current scope, stop when done |
+| Evolve | Martin Fowler (`fowler`) | Design smells, coupling, change cost, behavior-preserving refactor |
+| Review | Linus Torvalds (`linus`) | Unnecessary abstraction, indirection, unclear ownership |
 
-A filter changes inspection order only — not evidence rules, single-finding limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. Not impersonation; not six agents at once.
+Leslie Lamport (`lamport`) takes one review when the visible evidence clearly involves retry, idempotency, ordering, duplication, partial failure, or a state mechanism plus a failure signal. John Carmack (`carmack`) takes one review when there is profiler/benchmark evidence, or a numeric measurement tied to latency, throughput, allocation, copying, I/O, or a hot path. Lamport wins when both match. A lone word such as `async`, `cache`, `performance`, or `latency` is not enough.
+
+`BUDDY_PERSONA` set before Claude Code starts remains a force override and disables specialist switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, while old Lamport/Carmack choices stay locked until a stage is selected in the window.
+
+A lens changes inspection order only — not evidence rules, model-call count, single-finding limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. Not impersonation; not six agents at once.
 
 <details>
 <summary>Filter notes</summary>
@@ -161,7 +166,7 @@ Default OpenAI is intentional: different vendor family from the Anthropic main a
 | `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
 | `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
 | `BUDDY_CLAUDE_DIR` | `~/.claude` | Logs and state |
-| `BUDDY_PERSONA` | unset | Force filter; wins over the window |
+| `BUDDY_PERSONA` | unset | Force `general`, `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack`; wins over the window and specialist routing |
 | `BUDDY_SPRITE_PATH` | shipped spritesheet | Custom transparent spritesheet |
 | `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | Shadow cost-policy evaluation length |
 | `BUDDY_SHADOW_TARGET_CALLS` | `300` | Sample-size target for that evaluation |
@@ -172,7 +177,7 @@ Review copy: `~/.claude/scripts/buddy/buddy-prompt.txt`.
 
 First review after install opens a fixed 7-day shadow window: candidate skips are labeled only; every review still runs. First review on or after day seven writes `~/.claude/buddy/shadow-evaluation.md` and shows one notice. Below 300 calls → `insufficient_samples`. No silent extension; no automatic skip enablement.
 
-Each review appends content-free metadata to `~/.claude/buddy/review-telemetry.jsonl`. Delete `shadow-evaluation.json`, `shadow-evaluation.md`, and `review-telemetry.jsonl` to start a fresh evaluation window.
+Each review appends content-free metadata to `~/.claude/buddy/review-telemetry.jsonl`, including stage, primary lens, effective lens, specialist trigger, and route source. Reaction log entries keep `persona` as the effective lens and carry the same route metadata. Delete `shadow-evaluation.json`, `shadow-evaluation.md`, and `review-telemetry.jsonl` to start a fresh evaluation window.
 
 ## Privacy
 
@@ -221,7 +226,7 @@ Script paths still use `buddy.py`, `BUDDY_*`, and `~/.claude/buddy/` for install
 | End of turn | `buddy.sh` / `buddy.py` |
 | Inject | `inject.sh` / `inject.py` |
 | Evidence packets | `source_context.py` |
-| Prompts / filters | `buddy-prompt.txt`, `personas/*.txt` |
+| Prompts / routing | `buddy-prompt.txt`, `personas/*.txt`, `lens_router.py` |
 | Output contract | `reaction-schema.json` |
 | Floating UI | `buddy_window.py`, `start_buddy_window.bat` |
 | Tests | `python -m unittest test_buddy -v` |
@@ -235,7 +240,7 @@ Runtime:
 | `~/.claude/buddy/<session_id>.log` | Reaction JSONL |
 | `~/.claude/buddy/<session_id>.state.json` | Inject read pointer |
 | `~/.claude/buddy/<session_id>.source.json` | Task anchor and transcript offset |
-| `~/.claude/buddy/config.json` | Filter saved by the window |
+| `~/.claude/buddy/config.json` | Lifecycle stage saved by the window |
 | `~/.claude/buddy/<session_id>.checkpoints/` | Mid-turn dedup |
 | `~/.claude/buddy-error.log` | Error log |
 
