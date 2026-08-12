@@ -181,12 +181,23 @@ class TestBranding(unittest.TestCase):
 
     def test_roadmap_names_the_current_product_sequence(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
+        normalized_roadmap = " ".join(roadmap.split())
 
-        self.assertIn("### 1. Reaction quality evaluation（短評品質評估）", roadmap)
+        self.assertIn(
+            "### 1. Reaction quality and impact evaluation"
+            "（短評品質與後續影響）",
+            roadmap,
+        )
         self.assertIn("### 2. Generalization（通用化）", roadmap)
         self.assertIn("### 3. Local reviewer evaluation（本地審查模型評估）", roadmap)
         self.assertIn("### 4. Cost control（成本控制）", roadmap)
-        self.assertIn("quality baseline", roadmap)
+        phase_a = roadmap.index("**Phase A — reaction quality:**")
+        phase_b = roadmap.index("**Phase B — reaction impact:**")
+        self.assertLess(phase_a, phase_b)
+        self.assertIn("objective oracle", normalized_roadmap)
+        self.assertIn(
+            "matched tasks from the same repository state", normalized_roadmap
+        )
         self.assertIn("normalized review event", roadmap)
         self.assertIn("Claude Code adapter", roadmap)
         self.assertIn("shared reviewer core", roadmap)
