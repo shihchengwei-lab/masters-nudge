@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "blinded": true,
+  "identity_map_opened_before_freeze": false,
+  "rater_count": 1,
+  "blind_review_sha256": "ef659fb7c71e7849da6efcd7c571600ad5516d40bd16232d409bb68f1a72c957",
+  "reviewed_rows": 84,
+  "categories": {
+    "correct_silence": {
+      "ids": ["W003", "W004", "W006", "W013", "W014", "W018", "W025", "W031", "W036", "W041", "W043", "W047", "W050", "W051", "W054", "W056", "W057", "W058", "W059", "W064", "W069", "W070", "W074", "W078", "W082"],
+      "decision_valid": true,
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "local_artifact_only": false,
+      "note": "Seeded clean workflow correctly produced no finding. Finding-only rubric fields are not applicable."
+    },
+    "valid_complete_workflow_finding": {
+      "ids": ["W001", "W002", "W005", "W007", "W008", "W009", "W010", "W011", "W012", "W015", "W016", "W017", "W019", "W020", "W021", "W022", "W023", "W024", "W026", "W027", "W028", "W029", "W030", "W032", "W033", "W034", "W035", "W037", "W038", "W039", "W040", "W042", "W044", "W045", "W046", "W048", "W049", "W052", "W053", "W055", "W060", "W061", "W062", "W063", "W065", "W066", "W067", "W068", "W071", "W072", "W073", "W077", "W079", "W080", "W081", "W083", "W084"],
+      "decision_valid": true,
+      "grounded": true,
+      "workflow_level": true,
+      "target_relevant": true,
+      "lens_aligned": true,
+      "complete": true,
+      "local_artifact_only": false,
+      "note": "Evidence-grounded, workflow-level, target-relevant, lens-compatible, self-contained nudge."
+    },
+    "incomplete_cap_hit": {
+      "ids": ["W075", "W076"],
+      "decision_valid": false,
+      "grounded": true,
+      "workflow_level": true,
+      "target_relevant": true,
+      "lens_aligned": true,
+      "complete": false,
+      "local_artifact_only": false,
+      "note": "Exactly 52 characters and semantically cut off: W075 ends at '哪個已確認'; W076 ends at '跑在驗'."
+    }
+  },
+  "diagnostic_flags": {
+    "cap_hit_but_complete": {
+      "ids": ["W008"],
+      "note": "Exactly 52 characters; the final interrogative '要驗證哪個' remains self-contained despite missing punctuation."
+    },
+    "seeded_clean_fixture_contamination": {
+      "ids": ["W026", "W034", "W042"],
+      "note": "The allegedly clean packet explicitly says YAML has only one minimal case. The warnings about validation asymmetry are grounded, material workflow concerns, so they are human-valid findings even though they fail the seeded no_finding oracle."
+    },
+    "local_artifact_only": {
+      "ids": []
+    },
+    "unsupported_claim": {
+      "ids": []
+    }
+  }
+}

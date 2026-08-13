@@ -4,16 +4,23 @@
 # Reads pending nudges from the legacy-compatible buddy log and prints them,
 # which Claude Code appends as additional context to the user's next prompt.
 #
-# Recursion guard: BUDDY_ACTIVE=1 set by buddy.py during its inner claude call.
+# Recursion guard: both new and legacy variable names are supported.
 
 set -uo pipefail
 export PYTHONIOENCODING=utf-8
 
-[[ "${BUDDY_ACTIVE:-}" == "1" ]] && exit 0
+[[ "${MASTERS_NUDGE_ACTIVE:-}" == "1" || "${BUDDY_ACTIVE:-}" == "1" ]] && exit 0
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INJECT_PY="$SCRIPT_DIR/inject.py"
-ERROR_LOG="${BUDDY_CLAUDE_DIR:-$HOME/.claude}/buddy-error.log"
+if [[ -n "${MASTERS_NUDGE_DATA_DIR:-}" ]]; then
+  ERROR_LOG="$MASTERS_NUDGE_DATA_DIR/error.log"
+elif [[ -n "${BUDDY_CLAUDE_DIR:-}" ]]; then
+  ERROR_LOG="$BUDDY_CLAUDE_DIR/buddy-error.log"
+else
+  ERROR_LOG="$HOME/.masters-nudge/data/error.log"
+fi
+mkdir -p "$(dirname "$ERROR_LOG")" 2>/dev/null || true
 
 PYTHON_CMD=""
 for c in python3 python; do

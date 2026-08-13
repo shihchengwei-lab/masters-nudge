@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Masters' Nudge — UserPromptSubmit hook worker.
 
-Reads the per-session buddy log under ~/.claude/buddy/<session_id>.log,
+Reads the host-namespaced local reaction log (plus the legacy Claude log),
 finds reactions newer than the last consumed timestamp (per-session state),
 prints the most recent unread reaction to stdout. The Claude Code hook system
 appends stdout to the user's next prompt as additional context.
@@ -13,15 +13,17 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Single source of truth for the runtime length cap. Both files live in the
-# same install dir, so this import is safe; importing `buddy` runs only its
-# module-level env reads, no IO.
-from buddy import MAX_REACTION_CHARS
 import source_context
+from masters_nudge import storage
+from masters_nudge.contracts import SessionRef, find_git_root
+from masters_nudge.prompting import MAX_REACTION_CHARS
+from masters_nudge.runtime import RuntimeSettings, active_guard
 
-CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
-BUDDY_DIR = CLAUDE_DIR / "buddy"
-ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
+_RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent)
+CLAUDE_DIR = _RUNTIME.paths.legacy_data_dir.parent
+BUDDY_DIR = _RUNTIME.paths.data_dir
+LEGACY_BUDDY_DIR = _RUNTIME.paths.legacy_data_dir
+ERROR_LOG = _RUNTIME.paths.error_log
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
@@ -123,6 +125,8 @@ def read_pending(session_id: str, last_ts: str) -> list:
 
 
 def main() -> None:
+    if active_guard():
+        return
     hook = read_hook_input()
     session_id = hook.get("session_id", "")
     if not session_id:
@@ -130,8 +134,21 @@ def main() -> None:
         return
 
     prompt = hook.get("prompt", "")
+    cwd = str(hook.get("cwd") or "")
+    session = SessionRef(
+        "claude_code",
+        str(session_id),
+        cwd=cwd,
+        repo_root=find_git_root(cwd),
+    )
     if prompt:
         try:
+            storage.start_turn(
+                BUDDY_DIR,
+                session,
+                str(prompt),
+                transcript_path=str(hook.get("transcript_path") or ""),
+            )
             source_context.save_source_state(
                 BUDDY_DIR,
                 session_id,
@@ -144,12 +161,43 @@ def main() -> None:
     state = load_state(session_id)
     last_ts = state.get("last_ts", "")
     pending = read_pending(session_id, last_ts)
-    if not pending:
+    latest_new = storage.latest_pending(BUDDY_DIR, session)
+    candidates = [(entry, "legacy") for entry in pending]
+    if latest_new:
+        candidates.append((latest_new, "namespaced"))
+
+    # Read-only compatibility for installs that still have data in
+    # ~/.claude/buddy while new writes go to ~/.masters-nudge/data.
+    legacy_external_state = {"last_ts": ""}
+    if (
+        BUDDY_DIR.resolve() == _RUNTIME.paths.data_dir.resolve()
+        and LEGACY_BUDDY_DIR.resolve() != BUDDY_DIR.resolve()
+    ):
+        try:
+            legacy_state_path = LEGACY_BUDDY_DIR / f"{session_id}.state.json"
+            legacy_external_state = json.loads(
+                legacy_state_path.read_text(encoding="utf-8")
+            )
+            if not isinstance(legacy_external_state, dict):
+                legacy_external_state = {"last_ts": ""}
+        except (OSError, TypeError, ValueError):
+            legacy_external_state = {"last_ts": ""}
+        for entry in storage.read_legacy_reaction_entries(
+            LEGACY_BUDDY_DIR, session
+        ):
+            if str(entry.get("ts") or "") > str(
+                legacy_external_state.get("last_ts") or ""
+            ):
+                candidates.append((entry, "legacy_external"))
+
+    if not candidates:
         return
 
     # Inject only the latest reaction. Older unread ones are skipped to avoid
     # backlog dumping; their existence is preserved in the log for review.
-    latest = pending[-1]
+    latest, source_kind = max(
+        candidates, key=lambda pair: str(pair[0].get("ts") or "")
+    )
     reaction = (latest.get("reaction") or "").strip()
     if reaction:
         ts = latest.get("ts", "")
@@ -162,7 +210,7 @@ def main() -> None:
         # that asymmetry. See README "Two visibility channels".)
         flat_reaction = reaction.replace("\n", " ").strip()
         # Defense-in-depth: strip wrapper markers and cap length
-        # (cap shared with buddy.py via MAX_REACTION_CHARS import)
+        # (cap shared with the reviewer core via masters_nudge.prompting)
         import re
         flat_reaction = re.sub(
             r"\[(?:end )?(?:Buddy|Masters[’'] Nudge)[^\]]*\]",
@@ -186,8 +234,21 @@ def main() -> None:
         sys.stdout.buffer.flush()
         log_error(f"printed plain {len(out_bytes)} bytes for ts={ts} session={session_id[:8]}")
 
-    state["last_ts"] = latest.get("ts", last_ts)
-    save_state(session_id, state)
+    delivered_ts = str(latest.get("ts") or "")
+    if source_kind == "namespaced":
+        storage.mark_delivered(BUDDY_DIR, session, delivered_ts)
+    elif source_kind == "legacy_external":
+        try:
+            LEGACY_BUDDY_DIR.mkdir(parents=True, exist_ok=True)
+            (LEGACY_BUDDY_DIR / f"{session_id}.state.json").write_text(
+                json.dumps({"last_ts": delivered_ts}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except OSError as exc:
+            log_error(f"legacy state save failed: {exc}")
+    else:
+        state["last_ts"] = delivered_ts or last_ts
+        save_state(session_id, state)
 
 
 if __name__ == "__main__":

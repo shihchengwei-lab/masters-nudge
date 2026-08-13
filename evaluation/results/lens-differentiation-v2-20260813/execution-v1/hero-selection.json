@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "fixture_id": "incremental-index-in-progress-checkpoint",
+  "selection_rule": "lowest repeat with a valid finding; no wording edits",
+  "selections": [
+    {
+      "lens": "jeff",
+      "repeat": 1,
+      "finding": "local-json 尚未端到端驗證，就先鋪三個 backend；這是在解 pilot，還是在替過早的責",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "beck",
+      "repeat": 1,
+      "finding": "local-json 尚未端到端驗證，範圍卻已擴到三個 stub 與 cloud backend。",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "fowler",
+      "repeat": 1,
+      "finding": "local-json 尚未端到端驗證，卻先鋪三個 stub 並轉做 cloud，責任邊界是否反而擴散？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "linus",
+      "repeat": 1,
+      "finding": "三層轉交與未使用 stub 已先鋪開，local-json 端到端卻還沒驗證，責任邊界真的已決定嗎？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "lamport",
+      "repeat": 1,
+      "finding": "若 index 已更新、version 尚未寫入就 timeout，retry 後如何維持不重複？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "carmack",
+      "repeat": 1,
+      "finding": "尚無冷啟動 CLI 基準，卻先鋪三個未用 backend；pilot 的最小路徑是否已被擴充成本淹沒？",
+      "selection_rule": "lowest repeat with a valid finding"
+    }
+  ]
+}

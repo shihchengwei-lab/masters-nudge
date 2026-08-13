@@ -1,0 +1,3 @@
+phone rejected: 0912-345-678
+phone rejected: 0912 345 678
+phone rejected: ０９１２３４５６７８

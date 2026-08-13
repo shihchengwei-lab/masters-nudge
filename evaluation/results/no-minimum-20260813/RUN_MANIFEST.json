@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "run_kind": "no_minimum_prompt_regression",
+  "generated_at_utc": "2026-08-13T00:37:55.762006+00:00",
+  "git_commit": "06a110e2e668a3dcf8045646e7fb5a33b4355533",
+  "working_tree_dirty": true,
+  "provider": "openai",
+  "model": "gpt-5.6-sol",
+  "reviewer_cli": "codex-cli 0.147.0",
+  "timeout_seconds": 60,
+  "workers": 2,
+  "repeats": 2,
+  "randomization_seed": 20260814,
+  "call_count": 56,
+  "hashes_sha256": {
+    "buddy-prompt.txt": "f76a64c860bd9a1c8c52542cc7957fcfddcada3a8787535bca4ffafe767897ba",
+    "evaluation/quality_eval.py": "dfa78671791658ac1d0d794b4bb63697e95986c297ce5c56f20b2c41d092eba8",
+    "evaluation/fixtures.json": "602561725774bbf63afbf6acbb66e78cf857c0103e688ac5b78e6a9ae3c4c586",
+    "reaction-schema.json": "03100643dc4042c439021fb976d6134218b387d3dd2788ca527f8f44479cc86b"
+  }
+}

@@ -1,0 +1,358 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    {
+      "id": "holdout-design-stale-plan-token",
+      "title": "Delayed denylist compensates for long-lived plan claims",
+      "event_type": "stop",
+      "stage": "design",
+      "expected_effective_lens": "jeff",
+      "source": {
+        "task_anchor": "設計方案降級流程；使用者降級後必須立即失去高階功能權限。",
+        "last_assistant_message": "方案名稱寫進有效期 24 小時的 JWT。為處理降級，另建 denylist，每 15 分鐘匯入一次降級帳號；API 先信任 JWT，再查 denylist。",
+        "tool_evidence": "design check: JWT plan claim expires in 24h; denylist refresh interval is 15m",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "plan-downgrade-remains-authorized-until-denylist-refresh",
+        "support_facts": ["JWT 內的方案資訊有效 24 小時", "denylist 每 15 分鐘更新", "需求要求立即撤權"],
+        "concept_groups": [
+          ["JWT", "token", "denylist", "方案資訊", "方案名稱"],
+          ["15 分鐘", "延遲", "空窗", "未更新", "等待"],
+          ["立即", "權限", "撤權", "降級", "仍可使用", "繼續存取"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-build-csv-private-test",
+      "title": "CSV test checks a helper but not exported behavior",
+      "event_type": "checkpoint",
+      "stage": "build",
+      "expected_effective_lens": "beck",
+      "source": {
+        "task_anchor": "修正 CSV 匯出：含換行或雙引號的欄位必須正確加引號並跳脫，Excel 開啟後仍是一列。",
+        "event_context": "新增測試只直接呼叫私有 `_needs_quotes`，斷言含逗號時回傳 true。沒有呼叫 export_row，也沒有檢查換行、雙引號跳脫或最後輸出列。測試通過。",
+        "assistant_context": "實作已修改 exporter，驗證只涵蓋 `_needs_quotes('a,b')`。"
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "medium",
+        "issue_id": "test-does-not-cover-required-csv-output",
+        "support_facts": ["需求是可觀察的 CSV 輸出", "測試只呼叫私有 helper", "沒有驗證換行與雙引號"],
+        "concept_groups": [
+          ["_needs_quotes", "私有", "helper", "內部"],
+          ["export_row", "CSV 輸出", "最後輸出", "匯出結果", "可觀察行為"],
+          ["換行", "雙引號", "跳脫", "Excel", "未涵蓋", "沒有驗證"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-evolve-vat-rule-duplication",
+      "title": "VAT exemption rule remains duplicated in three consumers",
+      "event_type": "stop",
+      "stage": "evolve",
+      "expected_effective_lens": "fowler",
+      "source": {
+        "task_anchor": "將免稅條件由 `country == 'TW'` 改為 `country in {'TW','JP'}`。",
+        "last_assistant_message": "已分別修改 api_quote.py、invoice_total.py、tax_export.py；三個檔案仍各自保存同一個國別免稅集合與判斷式。",
+        "tool_evidence": "diff: identical `country in {'TW', 'JP'}` condition changed in 3 files; tests passed",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "medium",
+        "issue_id": "vat-exemption-knowledge-duplicated-across-consumers",
+        "support_facts": ["相同免稅集合存在三個檔案", "本次變更必須同步修改三處"],
+        "concept_groups": [
+          ["免稅", "國別", "country", "TW", "JP"],
+          ["三個檔案", "三處", "api_quote", "invoice_total", "tax_export", "散落", "重複"],
+          ["漏改", "不同步", "不一致", "維護", "同步修改", "修改成本"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-review-deleted-flag-compatibility",
+      "title": "Deleted flag remains accepted through compatibility layers",
+      "event_type": "stop",
+      "stage": "review",
+      "expected_effective_lens": "linus",
+      "source": {
+        "task_anchor": "移除已廢止的 `--legacy-cache` 選項；傳入舊選項時必須回報 unknown option。",
+        "last_assistant_message": "保留 LegacyFlagParser、LegacyFlagAdapter 與 fallback mapper；收到 `--legacy-cache` 時轉成 `--cache-mode=compat`，因此舊指令仍會成功執行。",
+        "tool_evidence": "CLI smoke: `app --legacy-cache` exits 0 and prints `compat mode`",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "removed-option-is-still-accepted",
+        "support_facts": ["需求要求舊選項回報 unknown", "相容層仍把舊選項映射成新選項", "smoke exit 0"],
+        "concept_groups": [
+          ["--legacy-cache", "LegacyFlag", "舊選項", "compat"],
+          ["仍會成功", "仍接受", "exit 0", "轉成", "映射", "fallback"],
+          ["unknown", "移除", "違反", "需求", "未移除"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-lamport-email-before-commit",
+      "title": "Crash between email side effect and sent marker duplicates delivery",
+      "event_type": "checkpoint",
+      "stage": "build",
+      "expected_effective_lens": "lamport",
+      "source": {
+        "task_anchor": "寄送收據的 worker 可在失敗後 retry，但同一訂單最多寄出一封。",
+        "event_context": "worker 先呼叫 send_email(order)，成功後才寫 receipt_sent=true。若 send_email 成功後程序 crash，marker 尚未寫入；queue 會 retry 同一訂單並再次寄信。",
+        "assistant_context": "happy-path 測試通過；沒有覆蓋 send_email 與 marker 之間的 partial failure。"
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "retry-duplicates-email-after-crash-before-marker",
+        "support_facts": ["外部寄信先發生", "sent marker 後寫", "中間 crash 會重送"],
+        "concept_groups": [
+          ["send_email", "寄信", "收據"],
+          ["crash", "partial failure", "marker", "receipt_sent", "寫入前"],
+          ["retry", "再次寄", "重複", "兩封", "多寄"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-carmack-double-image-decode",
+      "title": "Thumbnail path decodes the same image twice",
+      "event_type": "checkpoint",
+      "stage": "evolve",
+      "expected_effective_lens": "carmack",
+      "source": {
+        "task_anchor": "將縮圖 API 的 p95 壓到 12 ms 以下，輸出像素不得改變。",
+        "event_context": "benchmark p95=18.6 ms。profile 顯示 make_thumbnail 從原始 bytes decode 一次，compute_histogram 又從同一 bytes decode 一次；兩次 decode 合計 11.2 ms。histogram 可直接使用第一次 decode 的 pixels。",
+        "assistant_context": "像素 hash 測試通過，但 latency 仍未達目標。"
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "same-image-is-decoded-twice-on-hot-path",
+        "support_facts": ["同一 bytes decode 兩次", "兩次共 11.2 ms", "p95 18.6 ms 未達 12 ms"],
+        "concept_groups": [
+          ["decode", "解碼", "make_thumbnail", "compute_histogram"],
+          ["兩次", "重複", "同一", "再 decode", "再次解碼"],
+          ["11.2 ms", "18.6 ms", "p95", "12 ms", "latency", "延遲"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-general-cleanup-scope",
+      "title": "Cleanup command deletes temporary fixtures outside generated output",
+      "event_type": "stop",
+      "stage": "build",
+      "expected_effective_lens": "beck",
+      "source": {
+        "task_anchor": "新增 cleanup 指令，只能刪除 `generated/` 內的 `.tmp` 產物。",
+        "last_assistant_message": "cleanup.py 從 repository root 執行 `rglob('*.tmp')` 並刪除全部結果，包含 `tests/fixtures/keep.tmp`。",
+        "tool_evidence": "dry run: generated/a.tmp, tests/fixtures/keep.tmp would be deleted",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "cleanup-deletes-files-outside-generated-directory",
+        "support_facts": ["需求限 generated/", "搜尋從 repository root 開始", "測試 fixture 也會刪除"],
+        "concept_groups": [
+          ["cleanup.py", "rglob", "repository root", "repo root"],
+          ["generated", "範圍", "目錄外", "tests/fixtures", "keep.tmp"],
+          ["刪除", "誤刪", "違反", "超出"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-general-migration-dry-run",
+      "title": "Migration is declared reversible despite a failed dry run",
+      "event_type": "stop",
+      "stage": "review",
+      "expected_effective_lens": "linus",
+      "source": {
+        "task_anchor": "新增可回滾的 schema migration，完成前必須成功執行 up/down dry run。",
+        "last_assistant_message": "migration 已完成且可安全回滾，準備交付。",
+        "tool_evidence": "migration dry-run --down: syntax error near DROP; exit code 1. up dry run was not executed after this failure.",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "reversible-migration-claim-contradicts-failed-dry-run",
+        "support_facts": ["down dry run syntax error", "exit code 1", "final claim says safely reversible"],
+        "concept_groups": [
+          ["migration", "dry-run", "回滾", "down"],
+          ["syntax error", "exit code 1", "失敗", "未成功"],
+          ["宣告", "聲稱", "可安全回滾", "準備交付", "矛盾", "證據不符"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-general-authorization-log",
+      "title": "Diagnostic logging writes authorization secrets",
+      "event_type": "checkpoint",
+      "stage": "design",
+      "expected_effective_lens": "jeff",
+      "source": {
+        "task_anchor": "加入請求診斷紀錄；不得記錄密碼、token 或 Authorization header。",
+        "event_context": "debug_request.py 新增 `logger.info('headers=%s', request.headers)`。測試輸出包含 `Authorization: Bearer sk-live-123`。沒有 redaction。",
+        "assistant_context": "診斷 log 已能完整顯示所有 request headers。"
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "authorization-token-is-written-to-diagnostic-log",
+        "support_facts": ["需求禁止 Authorization/token", "logger 寫入全部 headers", "測試輸出含 Bearer secret"],
+        "concept_groups": [
+          ["Authorization", "Bearer", "token", "sk-live-123"],
+          ["log", "logger", "紀錄", "headers"],
+          ["redaction", "遮罩", "洩漏", "敏感", "禁止", "違反"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-general-missing-platform-artifacts",
+      "title": "Cross-platform release contains only a Linux binary",
+      "event_type": "stop",
+      "stage": "review",
+      "expected_effective_lens": "linus",
+      "source": {
+        "task_anchor": "發布 1.0 CLI，交付 Linux、macOS、Windows 三個平台的可執行檔。",
+        "last_assistant_message": "1.0 release package 已完成，可供三個平台下載。",
+        "tool_evidence": "dist listing: tool-linux-x86_64.tar.gz only. No darwin archive and no windows .zip/.exe.",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "finding",
+        "severity": "high",
+        "issue_id": "release-is-missing-macos-and-windows-artifacts",
+        "support_facts": ["需求三平台", "dist 只有 Linux", "final claim 說三平台皆可下載"],
+        "concept_groups": [
+          ["dist", "release", "發布", "套件"],
+          ["macOS", "darwin", "Windows", ".exe", ".zip"],
+          ["缺少", "沒有", "未交付", "只有 Linux", "三個平台", "宣告不符"]
+        ]
+      }
+    },
+    {
+      "id": "holdout-design-clean-plan-revocation",
+      "title": "Clean immediate plan revocation design",
+      "event_type": "stop",
+      "stage": "design",
+      "expected_effective_lens": "jeff",
+      "source": {
+        "task_anchor": "設計方案降級流程；使用者降級後必須立即失去高階功能權限。",
+        "last_assistant_message": "JWT 只保存 session id。每次授權從伺服器讀取目前方案；降級交易提交後立即增加 permissions_version，舊 session 在下一個 request 失效。",
+        "tool_evidence": "design check: plan is not embedded in token; downgrade integration check denies the next request",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["token 不保存方案", "每次讀取目前方案", "下一個 request 即拒絕"],
+        "concept_groups": []
+      }
+    },
+    {
+      "id": "holdout-build-clean-csv-behavior",
+      "title": "Clean CSV behavior test",
+      "event_type": "checkpoint",
+      "stage": "build",
+      "expected_effective_lens": "beck",
+      "source": {
+        "task_anchor": "修正 CSV 匯出：含換行或雙引號的欄位必須正確加引號並跳脫，Excel 開啟後仍是一列。",
+        "event_context": "測試呼叫 public export_row，輸入含換行與雙引號的欄位，斷言完整輸出為 RFC 4180 跳脫格式；再用 CSV parser 讀回並確認只有一筆 record。完整 suite 通過。",
+        "assistant_context": "修改只限 exporter 與對應行為測試。"
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["測試 public 行為", "涵蓋換行與雙引號", "parser round trip 通過"],
+        "concept_groups": []
+      }
+    },
+    {
+      "id": "holdout-evolve-clean-central-vat-rule",
+      "title": "Clean centralized VAT exemption rule",
+      "event_type": "stop",
+      "stage": "evolve",
+      "expected_effective_lens": "fowler",
+      "source": {
+        "task_anchor": "將免稅條件由 `country == 'TW'` 改為 `country in {'TW','JP'}`。",
+        "last_assistant_message": "免稅集合只定義在 tax_policy.py；api quote、invoice total、tax export 都呼叫同一個 is_exempt(country)。本次只改集合與跨三個 consumer 的行為測試。",
+        "tool_evidence": "search: one exemption set definition; tests for all 3 consumers passed",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["規則只有一份", "三個 consumer 共用", "行為測試通過"],
+        "concept_groups": []
+      }
+    },
+    {
+      "id": "holdout-review-clean-removed-flag",
+      "title": "Clean removal of a deprecated flag",
+      "event_type": "stop",
+      "stage": "review",
+      "expected_effective_lens": "linus",
+      "source": {
+        "task_anchor": "移除已廢止的 `--legacy-cache` 選項；傳入舊選項時必須回報 unknown option。",
+        "last_assistant_message": "刪除舊 parser branch 與相容 mapper。CLI 只保留 `--cache-mode`；沒有 legacy adapter 或 fallback。",
+        "tool_evidence": "CLI smoke: `app --legacy-cache` exits 2 with `unknown option`; supported option tests pass",
+        "agentcam_evidence": ""
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["相容路徑已刪除", "舊選項 exit 2 unknown", "新選項仍通過"],
+        "concept_groups": []
+      }
+    },
+    {
+      "id": "holdout-lamport-clean-email-outbox",
+      "title": "Clean idempotent receipt delivery",
+      "event_type": "checkpoint",
+      "stage": "review",
+      "expected_effective_lens": "lamport",
+      "source": {
+        "task_anchor": "寄送收據的 worker 可在失敗後 retry，但同一訂單最多寄出一封。",
+        "event_context": "訂單交易內建立唯一鍵為 order_id 的 outbox row。sender 以同一 idempotency key 呼叫郵件服務；crash 後 retry 讀到既有 delivery id，不再寄第二封。測試覆蓋 send 後 crash 與 duplicate delivery，寄送數都是 1。",
+        "assistant_context": "partial failure 與 retry ordering 測試均通過。"
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["outbox unique order_id", "郵件服務 idempotency key", "crash/retry 測試只寄一封"],
+        "concept_groups": []
+      }
+    },
+    {
+      "id": "holdout-carmack-clean-single-decode",
+      "title": "Clean measured single-decode thumbnail path",
+      "event_type": "checkpoint",
+      "stage": "design",
+      "expected_effective_lens": "carmack",
+      "source": {
+        "task_anchor": "將縮圖 API 的 p95 壓到 12 ms 以下，輸出像素不得改變。",
+        "event_context": "benchmark p95=9.4 ms。profile 顯示原始 bytes 只 decode 一次，thumbnail 與 histogram 共用 pixels；500 張圖片輸出 hash 全數與舊版相同，完整測試通過。",
+        "assistant_context": "效能與像素一致性皆有量測。"
+      },
+      "oracle": {
+        "expected_status": "no_finding",
+        "severity": "none",
+        "issue_id": "verified-clean",
+        "support_facts": ["p95 9.4 ms 達標", "只 decode 一次", "500/500 hash 相同"],
+        "concept_groups": []
+      }
+    }
+  ]
+}

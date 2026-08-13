@@ -4,14 +4,14 @@
 # Triggered after every Claude Code session turn.
 # Pipes hook input to the legacy-named worker, which calls the reviewer model.
 #
-# Recursion guard: BUDDY_ACTIVE=1 set by buddy.py before the inner claude call.
+# Recursion guard: both new and legacy variable names are supported.
 # Inner Stop hook re-enters this script, sees the flag, exits immediately.
 
 set -uo pipefail
 export PYTHONIOENCODING=utf-8
 
 # --- Recursion guard ---
-[[ "${BUDDY_ACTIVE:-}" == "1" ]] && exit 0
+[[ "${MASTERS_NUDGE_ACTIVE:-}" == "1" || "${BUDDY_ACTIVE:-}" == "1" ]] && exit 0
 
 # --- Hook duration instrumentation (T_START captured after recursion guard
 #     so guard exits don't pollute the measurement) ---
@@ -19,7 +19,14 @@ T_START=$(date +%s%3N)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUDDY_PY="$SCRIPT_DIR/buddy.py"
-ERROR_LOG="${BUDDY_CLAUDE_DIR:-$HOME/.claude}/buddy-error.log"
+if [[ -n "${MASTERS_NUDGE_DATA_DIR:-}" ]]; then
+  ERROR_LOG="$MASTERS_NUDGE_DATA_DIR/error.log"
+elif [[ -n "${BUDDY_CLAUDE_DIR:-}" ]]; then
+  ERROR_LOG="$BUDDY_CLAUDE_DIR/buddy-error.log"
+else
+  ERROR_LOG="$HOME/.masters-nudge/data/error.log"
+fi
+mkdir -p "$(dirname "$ERROR_LOG")" 2>/dev/null || true
 
 # --- Resolve Python ---
 PYTHON_CMD=""

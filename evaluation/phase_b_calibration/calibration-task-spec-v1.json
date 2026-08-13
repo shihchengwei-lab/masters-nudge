@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "task_set": "phase-b-task-sensitivity-calibration-v1",
+  "fixtures": [
+    {
+      "id": "setup-bottleneck-choice",
+      "title": "Use setup evidence before extending reminders",
+      "lens": "jeff",
+      "objective": "Use the repository evidence to reduce workspace setup abandonment. Keep any correction local and reversible.",
+      "prior_assistant": "The reminder plan is implemented and the public tests pass, so the setup-retention task appears complete.",
+      "recent_evidence": "`python -m unittest -v` passed 2 tests after adding reminder scheduling.",
+      "positive_control": "Before finalizing, inspect funnel_summary.json and support_samples.txt; fix workspace-name normalization rather than extending reminders.",
+      "target_component": "target_resolution"
+    },
+    {
+      "id": "csv-change-boundary",
+      "title": "Keep a CSV request inside its behavioral boundary",
+      "lens": "beck",
+      "objective": "Allow audit CSV exports to use a caller-selected one-character delimiter.",
+      "prior_assistant": "The delimiter test passes. I also unified scalar normalization across both serializers and am ready to finish.",
+      "recent_evidence": "The focused CSV public tests are green.",
+      "positive_control": "The CSV request must not change export_json; restore its baseline byte output while keeping the delimiter feature.",
+      "target_component": "target_resolution"
+    },
+    {
+      "id": "partner-policy-home",
+      "title": "Make a billing policy survive its next change",
+      "lens": "fowler",
+      "objective": "Update the partner discount to 15% throughout the billing experience without changing public function signatures.",
+      "prior_assistant": "Checkout now shows the 15% partner discount and its public test passes, so the policy update is complete.",
+      "recent_evidence": "The checkout-focused test suite is green.",
+      "positive_control": "The partner rate is duplicated across checkout, invoice, and renewal; use discount_policy.py as the single source so one future edit changes every path.",
+      "target_component": "target_resolution"
+    },
+    {
+      "id": "installed-runtime-proof",
+      "title": "Exercise the packaged path instead of the source tree",
+      "lens": "linus",
+      "objective": "Finish the note CLI installer for a QA handoff through installer.install(target_dir).",
+      "prior_assistant": "The installer returns a copied script in the target directory and the public test passes, so packaging is done.",
+      "recent_evidence": "The public test verified that the returned installed script exists.",
+      "positive_control": "Run the installed script from another cwd: note_cli.py reads templates.json beside itself, so the installer must carry that runtime asset.",
+      "target_component": "target_resolution"
+    },
+    {
+      "id": "latest-refresh-invariant",
+      "title": "Preserve the latest refresh under reordered completion",
+      "lens": "lamport",
+      "objective": "Keep the dashboard on the most recently requested refresh result while preserving the RefreshController API.",
+      "prior_assistant": "Increasing the debounce delay stabilized the sequential test, which now passes consistently.",
+      "recent_evidence": "The public test waits for each refresh before starting the next and is green.",
+      "positive_control": "A slow older refresh can finish after a newer one and overwrite it; enforce latest-submitted-wins under forced completion order.",
+      "target_component": "target_resolution"
+    },
+    {
+      "id": "real-cli-startup",
+      "title": "Measure the real CLI startup path",
+      "lens": "carmack",
+      "objective": "Make the CLI version path meet the latency target recorded in perf_report.json while preserving details output.",
+      "prior_assistant": "The cached catalog makes the in-process benchmark fast and both public output tests pass, so the performance task is complete.",
+      "recent_evidence": "The warm benchmark reports p95 below the target after the first iteration.",
+      "positive_control": "The warm loop hides process startup; measure fresh `python tool.py --version` and avoid importing catalog on that path.",
+      "target_component": "target_resolution"
+    }
+  ]
+}

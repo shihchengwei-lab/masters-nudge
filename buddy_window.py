@@ -2,7 +2,7 @@
 """Masters' Nudge — floating Rook companion window with speech bubble.
 
 Displays an animated raven companion beside the latest nudge.
-Tails the active session's legacy-compatible buddy log.
+Tails the active host-namespaced log, with read-only legacy compatibility.
 
 Requires: Pillow (pip install Pillow)
 
@@ -12,8 +12,9 @@ Run:
     start_buddy_window.bat      # Windows convenience launcher
 
 Env:
-    BUDDY_CLAUDE_DIR    override location of .claude (default ~/.claude)
-    BUDDY_SPRITE_PATH   override spritesheet path (default: spritesheet.webp
+    MASTERS_NUDGE_DATA_DIR    override local data directory
+    MASTERS_NUDGE_SPRITE_PATH override spritesheet path (legacy BUDDY_*
+                        names remain supported; default: spritesheet.webp
                         next to this script). Point at any spritesheet you
                         prefer — the auto-frame detector handles arbitrary
                         transparent-background sheets.
@@ -28,6 +29,7 @@ from tkinter import ttk
 from pathlib import Path
 
 import persona_config
+from masters_nudge.runtime import RuntimeSettings
 
 try:
     from PIL import Image, ImageTk
@@ -35,9 +37,12 @@ except ImportError:
     print("Pillow required: pip install Pillow", file=sys.stderr)
     sys.exit(1)
 
-CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
-BUDDY_DIR = CLAUDE_DIR / "buddy"
-CUSTOM_SPRITE_PATH = os.environ.get("BUDDY_SPRITE_PATH")
+_RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent)
+BUDDY_DIR = _RUNTIME.paths.data_dir
+LEGACY_BUDDY_DIR = _RUNTIME.paths.legacy_data_dir
+CUSTOM_SPRITE_PATH = os.environ.get("MASTERS_NUDGE_SPRITE_PATH") or os.environ.get(
+    "BUDDY_SPRITE_PATH"
+)
 SPRITESHEET_PATH = Path(
     CUSTOM_SPRITE_PATH
     or Path(__file__).resolve().parent / "spritesheet.webp"
@@ -99,6 +104,14 @@ SELECTOR_STAGES = {
     persona_config.stage_label(key): key
     for key in persona_config.STAGE_LENSES
 }
+
+
+def stage_selection_label(selection: persona_config.StageSelection) -> str:
+    """Describe lifecycle, forced specialist, and legacy selections accurately."""
+    if selection.stage in persona_config.STAGE_LENSES:
+        return persona_config.stage_label(selection.stage)
+    prefix = "Forced" if selection.source == "environment" else "Legacy"
+    return f"{prefix} · {persona_config.persona_label(selection.persona)}"
 
 
 def window_height_for_reaction(reaction: str) -> int:
@@ -215,7 +228,12 @@ class BuddyWindow:
         self.current_log: Path | None = None
         self.last_offset = 0
         self.last_reaction = ""
-        self.stage_selection = persona_config.resolve_stage(BUDDY_DIR)
+        config_dir = BUDDY_DIR
+        if not persona_config.config_path(config_dir).exists() and persona_config.config_path(
+            LEGACY_BUDDY_DIR
+        ).exists():
+            config_dir = LEGACY_BUDDY_DIR
+        self.stage_selection = persona_config.resolve_stage(config_dir)
 
         # Load sprite
         self.idle_source_frames: list[Image.Image] = []
@@ -331,10 +349,7 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
-        if self.stage_selection.stage in persona_config.STAGE_LENSES:
-            selected_label = persona_config.stage_label(self.stage_selection.stage)
-        else:
-            selected_label = f"Legacy · {persona_config.persona_label(active_persona)}"
+        selected_label = stage_selection_label(self.stage_selection)
         self.stage_var = tk.StringVar(value=selected_label)
         selector_state = (
             "disabled"
@@ -355,7 +370,7 @@ class BuddyWindow:
         initial_text = "( . . . )"
         if self.stage_selection.source == "environment":
             initial_text = (
-                f"BUDDY_PERSONA 正在接管：{selected_label}。"
+                f"MASTERS_NUDGE_PERSONA / BUDDY_PERSONA 正在接管：{selected_label}。"
             )
 
         self.bubble_label = tk.Label(
@@ -402,7 +417,7 @@ class BuddyWindow:
         self._set_lens_badge(persona)
         message = (
             f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
-            "若 Claude Code 設有 BUDDY_PERSONA，仍以環境變數為準。"
+            "若 coding agent 設有 MASTERS_NUDGE_PERSONA，仍以環境變數為準。"
         )
         self.last_reaction = message
         self.bubble_label.config(text=message)
@@ -442,9 +457,16 @@ class BuddyWindow:
         self.root.after(POLL_MS, self._poll)
 
     def _find_active_log(self) -> Path | None:
-        if not BUDDY_DIR.exists():
-            return None
-        logs = list(BUDDY_DIR.glob("*.log"))
+        directories = [BUDDY_DIR]
+        if LEGACY_BUDDY_DIR.resolve() != BUDDY_DIR.resolve():
+            directories.append(LEGACY_BUDDY_DIR)
+        logs = [
+            path
+            for directory in directories
+            if directory.exists()
+            for path in directory.glob("*.log")
+            if path.name not in {"error.log", "buddy-error.log"}
+        ]
         if not logs:
             return None
         logs.sort(key=lambda p: p.stat().st_mtime, reverse=True)

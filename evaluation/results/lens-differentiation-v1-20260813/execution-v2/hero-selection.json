@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "fixture_id": "incremental-index-pilot-checkpoint",
+  "selection_rule": "lowest repeat with a valid finding; no wording edits",
+  "selections": [
+    {
+      "lens": "jeff",
+      "repeat": 1,
+      "finding": "三層抽象與三個 stub 先擴張範圍，pilot 的五萬檔 cold p95 與亂序重送不變量卻未驗證。",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "beck",
+      "repeat": 1,
+      "finding": "完成宣告跑在關鍵回饋前：1,000 筆熱路徑最佳值，無法驗證 50,000 檔 cold-start p",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "fowler",
+      "repeat": 1,
+      "finding": "完成宣告依賴已載入的千筆最佳值，尚未驗證五萬檔 cold-start p95。",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "linus",
+      "repeat": 1,
+      "finding": "完成宣告建立在千檔暖快取最佳值與順序事件上，尚未驗證五萬檔冷啟動 p95 或亂序重送。",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "lamport",
+      "repeat": 1,
+      "finding": "先更新索引再寫 seen-version，若中途失敗又 retry，「只留最新版本」還成立嗎？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "carmack",
+      "repeat": 1,
+      "finding": "1,000 個已載入 path 的最佳值，無法驗證 50,000 檔 cold CLI p95。",
+      "selection_rule": "lowest repeat with a valid finding"
+    }
+  ]
+}

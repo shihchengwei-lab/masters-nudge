@@ -14,7 +14,6 @@ import os
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 from typing import Any
 
@@ -22,10 +21,23 @@ import buddy
 import lens_router
 import persona_config
 import source_context
+from masters_nudge import checkpoints as shared_checkpoints
+from masters_nudge.contracts import (
+    EvidenceBundle,
+    ReviewRequest,
+    SessionRef,
+    ToolCompleted,
+    find_git_root,
+)
+from masters_nudge.core import ReviewCore
+from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
 LARGE_DIFF_THRESHOLD = 80
-CHECKPOINT_TIMEOUT_SEC = int(os.environ.get("BUDDY_CHECKPOINT_TIMEOUT", "15"))
+CHECKPOINT_TIMEOUT_SEC = int(
+    os.environ.get("MASTERS_NUDGE_CHECKPOINT_TIMEOUT")
+    or os.environ.get("BUDDY_CHECKPOINT_TIMEOUT", "15")
+)
 CHECKPOINT_STATE_DIR = buddy.BUDDY_DIR
 MUTATING_TOOLS = {"Edit", "Write", "Bash", "PowerShell"}
 SHELL_TOOLS = {"Bash", "PowerShell"}
@@ -165,77 +177,38 @@ def classify_checkpoint(
     event_name = hook.get("hook_event_name", "")
     tool_name = hook.get("tool_name", "")
     tool_input = hook.get("tool_input") or {}
-
-    if event_name == "PostToolUseFailure":
-        if hook.get("is_interrupt"):
-            return None
-        error = _compact_json(hook.get("error", ""))
-        command = str(tool_input.get("command", ""))
-        reason = (
-            "test-fail"
-            if (
-                (tool_name in SHELL_TOOLS and TEST_COMMAND_RE.search(command))
-                or TEST_FAILURE_RE.search(error)
-            )
-            else "error"
-        )
-        payload = {
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "error": error,
-        }
-        context = (
-            f"reason: {reason}\n"
-            f"tool: {tool_name}\n"
-            f"input: {_compact_json(tool_input)}\n"
-            f"failure: {error}"
-        )
-        return {
-            "reason": reason,
-            "context": context,
-            "fingerprint": _stable_fingerprint(reason, payload),
-        }
-
-    if event_name != "PostToolUse":
+    if event_name not in {"PostToolUse", "PostToolUseFailure"}:
         return None
-
-    response = _compact_json(hook.get("tool_response", ""))
-    if tool_name in SHELL_TOOLS and TEST_FAILURE_RE.search(response):
-        reason = "test-fail"
-        payload = {
-            "tool_name": tool_name,
-            "tool_input": tool_input,
-            "tool_response": response,
-        }
-        return {
-            "reason": reason,
-            "context": (
-                f"reason: {reason}\n"
-                f"tool: {tool_name}\n"
-                f"input: {_compact_json(tool_input)}\n"
-                f"result: {response}"
-            ),
-            "fingerprint": _stable_fingerprint(reason, payload),
-        }
-
-    if tool_name not in MUTATING_TOOLS:
-        return None
-    if changed_line_count is None:
+    failed = event_name == "PostToolUseFailure"
+    output = hook.get("error", "") if failed else hook.get("tool_response", "")
+    if (
+        changed_line_count is None
+        and not failed
+        and tool_name in MUTATING_TOOLS
+        and not (
+            tool_name in SHELL_TOOLS
+            and TEST_FAILURE_RE.search(_compact_json(output))
+        )
+    ):
         changed_line_count = get_changed_line_count(hook.get("cwd") or os.getcwd())
-    if changed_line_count is None or changed_line_count <= LARGE_DIFF_THRESHOLD:
-        return None
-
-    reason = "large-diff"
-    return {
-        "reason": reason,
-        "context": (
-            f"reason: {reason}\n"
-            f"tool: {tool_name}\n"
-            f"input: {_compact_json(tool_input)}\n"
-            f"working tree: 偵測到至少 {changed_line_count} 行變動"
+    cwd = str(hook.get("cwd") or "")
+    event = ToolCompleted(
+        SessionRef(
+            "claude_code",
+            str(hook.get("session_id") or "unknown"),
+            cwd=cwd,
+            repo_root=find_git_root(cwd),
         ),
-        "fingerprint": _stable_fingerprint(reason, {}),
-    }
+        str(tool_name),
+        tool_input=tool_input,
+        tool_output=output,
+        failed=failed,
+        failure_known=failed,
+        interrupted=bool(hook.get("is_interrupt")),
+        mutating=tool_name in MUTATING_TOOLS,
+        native_event_name=str(event_name),
+    )
+    return shared_checkpoints.classify_tool(event, changed_line_count)
 
 
 def _safe_session_id(session_id: str) -> str:
@@ -285,10 +258,6 @@ def generate_nudge(
     route = route or lens_router.resolve_review_route(
         buddy.BUDDY_DIR, event["context"]
     )
-    system_prompt = buddy.build_system_prompt(route)
-    if not system_prompt:
-        return ""
-
     session_id = str(hook.get("session_id") or "unknown")
     transcript_path = str(hook.get("transcript_path") or "")
     state = source_context.load_source_state(buddy.BUDDY_DIR, session_id)
@@ -301,37 +270,45 @@ def generate_nudge(
         assistant_context=assistant_context,
     )
 
-    parts: list[str] = []
-    recent = buddy.read_recent_reactions(session_id)
-    if recent:
-        parts.append("[你最近說過]")
-        parts.extend(f"- {reaction}" for reaction in recent)
-        parts.append("[避免重複上面的話，可以接著講]")
-    parts.append(source_packet)
-
-    buddy.TIMEOUT_SEC = min(buddy.TIMEOUT_SEC, CHECKPOINT_TIMEOUT_SEC)
-    full_system_prompt = system_prompt + CHECKPOINT_PROMPT
-    transcript_text = "\n\n".join(parts)
-    started = time.perf_counter()
-    call_result = buddy.dispatch_call_result(full_system_prompt, transcript_text)
-    latency_ms = round((time.perf_counter() - started) * 1000)
-    reaction = buddy.sanitize_reaction(str(call_result.get("finding") or ""))
-    status = str(call_result.get("status") or "error")
-    if status == "finding" and not reaction:
-        status = "error"
-    buddy.record_review_telemetry(
-        session_id=session_id,
+    cwd = str(hook.get("cwd") or "")
+    session = SessionRef(
+        "claude_code",
+        session_id,
+        cwd=cwd,
+        repo_root=find_git_root(cwd),
+    )
+    request = ReviewRequest(
+        schema_version=1,
         kind="checkpoint",
         reason=event["reason"],
-        status=status,
-        input_chars=len(full_system_prompt) + len(transcript_text),
-        latency_ms=latency_ms,
+        session=session,
+        evidence=EvidenceBundle(
+            task_anchor=str(state.get("task_anchor") or ""),
+            checkpoint_event=event["context"],
+            assistant_claim=assistant_context,
+        ),
+        source_packet=source_packet,
         source_fingerprint=event["fingerprint"],
-        shadow_candidates=[],
-        usage=call_result.get("usage") if isinstance(call_result, dict) else {},
-        route=route,
     )
-    return reaction
+    settings = RuntimeSettings(
+        provider=buddy.PROVIDER,
+        model=buddy.MODEL,
+        timeout_sec=buddy.TIMEOUT_SEC,
+        checkpoint_timeout_sec=CHECKPOINT_TIMEOUT_SEC,
+        paths=RuntimePaths(
+            runtime_dir=buddy.SCRIPT_DIR,
+            data_dir=buddy.BUDDY_DIR,
+            legacy_data_dir=buddy.CLAUDE_DIR / "buddy",
+            error_log=buddy.ERROR_LOG,
+        ),
+    )
+
+    outcome = ReviewCore(settings, log_error=buddy.log_error).review(
+        request,
+        persist_reaction=False,
+        timeout_sec=CHECKPOINT_TIMEOUT_SEC,
+    )
+    return outcome.finding
 
 
 def build_hook_output(

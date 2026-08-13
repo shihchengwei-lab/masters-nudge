@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "run_kind": "phase_a_pilot_validation",
+  "generated_at_utc": "2026-08-13T00:11:30.308618+00:00",
+  "git_commit": "06a110e2e668a3dcf8045646e7fb5a33b4355533",
+  "working_tree_dirty": true,
+  "provider": "openai",
+  "model": "gpt-5.6-sol",
+  "reviewer_cli": "codex-cli 0.147.0",
+  "timeout_seconds": 60,
+  "workers": 2,
+  "repeats": 2,
+  "randomization_seed": 20260814,
+  "call_count": 56,
+  "hashes_sha256": {
+    "buddy.py": "ce70500039600f6f93dd7770274d9e16f7c1d14e4d6e9bf5a8bd8faa1cbd4a85",
+    "source_context.py": "df2ff04c8297d3c40ba98ae5813186ac0a7b17679ad0c2499fc33ad655019936",
+    "lens_router.py": "f8152356812b9ef0723e966303cc96e443f50dba48c084be490cb7c63e6a7b76",
+    "persona_config.py": "4bac8770a57669b2173b049ab154e58f9af5d615d5fb2b9d1d25579f7216298a",
+    "reaction-schema.json": "03100643dc4042c439021fb976d6134218b387d3dd2788ca527f8f44479cc86b",
+    "buddy-prompt.txt": "7d24a4319e1d3f4c4f9cdf0711f9588da744e0b7e9302d0231b4bcd5550a5ef7",
+    "personas/beck.txt": "ceea95cb3c2e70645a46ab9965dacb66e9880901337f1fb80197685cdf146d37",
+    "personas/carmack.txt": "7cb6aebd4581458346854612fb794f5dea5777ea77081e149ba1a87afe5bf232",
+    "personas/fowler.txt": "0a3461563c43811260b8af9180050303f270a1990628a9e346b411e77a1c4d8a",
+    "personas/jeff.txt": "aea049263de88ec497d26f2b9c107bb28332f51021bd7b80c977a7f50f8694c1",
+    "personas/lamport.txt": "0fdf6021ad447a657a668f5814028e76cc4bb8e914b750558bf9402e1550d533",
+    "personas/linus.txt": "e3eb8444c1f8cad7056e6b663bbe2fe32721ead842267ed89ae15f5390482bf7",
+    "evaluation/quality_eval.py": "51698113ffafc20a332041662dbd53c3c354d19af990e203083046bf52ee95cd",
+    "evaluation/fixtures.json": "602561725774bbf63afbf6acbb66e78cf857c0103e688ac5b78e6a9ae3c4c586"
+  }
+}

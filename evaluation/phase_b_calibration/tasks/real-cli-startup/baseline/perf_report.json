@@ -1,0 +1,6 @@
+{
+  "command": "python tool.py --version",
+  "measurement": "fresh process per sample",
+  "target_p95_ms": 160,
+  "current_p95_ms": 274
+}

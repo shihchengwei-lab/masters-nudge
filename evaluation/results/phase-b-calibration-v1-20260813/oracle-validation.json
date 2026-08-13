@@ -1,0 +1,739 @@
+{
+  "schema_version": 1,
+  "task_set": "phase-b-task-sensitivity-calibration-v1",
+  "all_valid": true,
+  "tasks": [
+    {
+      "task_id": "setup-bottleneck-choice",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": false,
+              "detail": "AssertionError: test_public (unittest.loader._FailedTest.test_public) ... ERROR\n\n======================================================================\nERROR: test_public (unittest.loader._FailedTest.test_public)\n----------------------------------------------------------------------\nImportError: Failed to import test module: test_public\nTraceback (most recent call last):\n  File \"C:\\Python314\\Lib\\unittest\\loader.py\", line 426, in _find_test_path\n    module = self._get_module_from_name(name)\n  File \"C:\\Python314\\Lib\\unittest\\loader.py\", line 367, in _get_module_from_name\n    __import__(name)\n    ~~~~~~~~~~^^^^^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\setup-bottleneck-choice-baseline\\test_public.py\", line 3, in <module>\n    from reminders import schedule_setup_followup\nImportError: cannot import name 'schedule_setup_followup' from 'reminders' (C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\setup-bottleneck-choice-baseline\\reminders.py)\n\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (errors=1)"
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 9, in <module>\n    actual = normalize_workspace_name(value)\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\setup-bottleneck-choice-baseline\\workspace_setup.py\", line 5, in normalize_workspace_name\n    raise ValueError(\"workspace name must be an ASCII slug\")\nValueError: workspace name must be an ASCII slug"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 9, in <module>\n    actual = normalize_workspace_name(value)\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\setup-bottleneck-choice-candidate\\workspace_setup.py\", line 5, in normalize_workspace_name\n    raise ValueError(\"workspace name must be an ASCII slug\")\nValueError: workspace name must be an ASCII slug"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 10, in <module>\n    assert actual == expected, (value, actual, expected)\n           ^^^^^^^^^^^^^^^^^^\nAssertionError: ('North Star', 'north star', 'north-star')"
+            },
+            "regression_guard": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 9, in <module>\n    raise AssertionError(f\"invalid workspace name accepted: {value!r}\")\nAssertionError: invalid workspace name accepted: 'bad!name'"
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 10, in <module>\n    assert actual == expected, (value, actual, expected)\n           ^^^^^^^^^^^^^^^^^^\nAssertionError: ('design   guild', 'design---guild', 'design-guild')"
+            },
+            "regression_guard": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 9, in <module>\n    raise AssertionError(f\"invalid workspace name accepted: {value!r}\")\nAssertionError: invalid workspace name accepted: 'bad!name'"
+            }
+          }
+        }
+      }
+    },
+    {
+      "task_id": "csv-change-boundary",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": false,
+              "detail": "AssertionError: test_delimiter_must_be_one_character (test_public.CsvTests.test_delimiter_must_be_one_character) ... ERROR\ntest_pipe_delimiter (test_public.CsvTests.test_pipe_delimiter) ... ERROR\n\n======================================================================\nERROR: test_delimiter_must_be_one_character (test_public.CsvTests.test_delimiter_must_be_one_character)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\csv-change-boundary-baseline\\test_public.py\", line 13, in test_delimiter_must_be_one_character\n    export_csv([{\"id\": 1}], delimiter=\"::\")\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: export_csv() got an unexpected keyword argument 'delimiter'\n\n======================================================================\nERROR: test_pipe_delimiter (test_public.CsvTests.test_pipe_delimiter)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\csv-change-boundary-baseline\\test_public.py\", line 9, in test_pipe_delimiter\n    self.assertEqual(\"id|name\\n1|Ada\\n\", export_csv(rows, delimiter=\"|\"))\n                                         ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^\nTypeError: export_csv() got an unexpected keyword argument 'delimiter'\n\n----------------------------------------------------------------------\nRan 2 tests in 0.002s\n\nFAILED (errors=2)"
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 7, in <module>\n    export_csv(rows, delimiter=delimiter)\n    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: export_csv() got an unexpected keyword argument 'delimiter'"
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n    assert actual == expected, (actual, expected)\n           ^^^^^^^^^^^^^^^^^^\nAssertionError: ('[\\n  {\\n    \"z\": 1,\\n    \"a\": \"\"\\n  }\\n]\\n', '[{\"z\":1,\"a\":null}]\\n')"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n    assert actual == expected, (actual, expected)\n           ^^^^^^^^^^^^^^^^^^\nAssertionError: ('[\\n  {\\n    \"z\": 1,\\n    \"a\": null\\n  }\\n]\\n', '[{\"z\":1,\"a\":null}]\\n')"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n    assert actual == expected, (actual, expected)\n           ^^^^^^^^^^^^^^^^^^\nAssertionError: ('[{\"a\":null,\"z\":1}]\\n', '[{\"z\":1,\"a\":null}]\\n')"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        }
+      }
+    },
+    {
+      "task_id": "partner-policy-home",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": false,
+              "detail": "AssertionError: test_partner_checkout_uses_new_rate (test_public.CheckoutTests.test_partner_checkout_uses_new_rate) ... FAIL\ntest_regular_checkout_is_unchanged (test_public.CheckoutTests.test_regular_checkout_is_unchanged) ... ok\n\n======================================================================\nFAIL: test_partner_checkout_uses_new_rate (test_public.CheckoutTests.test_partner_checkout_uses_new_rate)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\partner-policy-home-baseline\\test_public.py\", line 8, in test_partner_checkout_uses_new_rate\n    self.assertEqual(85.0, checkout.total(100, partner=True))\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 85.0 != 90.0\n\n----------------------------------------------------------------------\nRan 2 tests in 0.001s\n\nFAILED (failures=1)"
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n    assert total(100, partner=True) == 85.0, total(100, partner=True)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 90.0"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 8, in <module>\n    assert total(100, partner=True) == 85.0, total(100, partner=True)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 90.0"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 11, in <module>\n    assert total(100, partner=True) == 80.0, total(100, partner=True)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 85.0"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 11, in <module>\n    assert total(100, partner=True) == 80.0, total(100, partner=True)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: 85.0"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        }
+      }
+    },
+    {
+      "task_id": "installed-runtime-proof",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": false,
+              "detail": "AssertionError: test_install_returns_copied_script (test_public.InstallerTests.test_install_returns_copied_script) ... ERROR\n\n======================================================================\nERROR: test_install_returns_copied_script (test_public.InstallerTests.test_install_returns_copied_script)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\installed-runtime-proof-baseline\\test_public.py\", line 12, in test_install_returns_copied_script\n    installed = Path(installer.install(target))\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\installed-runtime-proof-baseline\\installer.py\", line 2, in install\n    raise NotImplementedError\nNotImplementedError\n\n----------------------------------------------------------------------\nRan 1 test in 0.004s\n\nFAILED (errors=1)"
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 12, in <module>\n    installed = Path(installer.install(target)).resolve()\n                     ~~~~~~~~~~~~~~~~~^^^^^^^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\masters-nudge-calibration-validate-lj4i5t1h\\installed-runtime-proof-baseline\\installer.py\", line 2, in install\n    raise NotImplementedError\nNotImplementedError"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 22, in <module>\n    assert result.returncode == 0, result.stderr\n           ^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Traceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpi1323huu\\QA package with spaces\\note_cli.py\", line 19, in <module>\n    main()\n    ~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpi1323huu\\QA package with spaces\\note_cli.py\", line 15, in main\n    print(load_templates()[\"greet\"].format(name=args[1]))\n          ~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpi1323huu\\QA package with spaces\\note_cli.py\", line 8, in load_templates\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 787, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:\n         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 771, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'C:\\\\Users\\\\Boreas\\\\AppData\\\\Local\\\\Temp\\\\tmpi1323huu\\\\QA package with spaces\\\\templates.json'"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 22, in <module>\n    assert result.returncode == 0, result.stderr\n           ^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Traceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpx0710aaz\\QA package with spaces\\note_cli.py\", line 19, in <module>\n    main()\n    ~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpx0710aaz\\QA package with spaces\\note_cli.py\", line 15, in main\n    print(load_templates()[\"greet\"].format(name=args[1]))\n          ~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpx0710aaz\\QA package with spaces\\note_cli.py\", line 8, in load_templates\n    return json.loads(path.read_text(encoding=\"utf-8\"))\n                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 787, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:\n         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 771, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'C:\\\\Users\\\\Boreas\\\\AppData\\\\Local\\\\Temp\\\\tmpx0710aaz\\\\QA package with spaces\\\\templates.json'"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 22, in <module>\n    assert result.returncode == 0, result.stderr\n           ^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: Traceback (most recent call last):\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpbp3nljb1\\QA package with spaces\\note_cli.py\", line 18, in <module>\n    main()\n    ~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpbp3nljb1\\QA package with spaces\\note_cli.py\", line 14, in main\n    print(load_templates()[\"greet\"].format(name=args[1]))\n          ~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Boreas\\AppData\\Local\\Temp\\tmpbp3nljb1\\QA package with spaces\\note_cli.py\", line 7, in load_templates\n    return json.loads((Path.cwd() / \"templates.json\").read_text(encoding=\"utf-8\"))\n                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 787, in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:\n         ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Python314\\Lib\\pathlib\\__init__.py\", line 771, in open\n    return io.open(self, mode, buffering, encoding, errors, newline)\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'C:\\\\Users\\\\Boreas\\\\AppData\\\\Local\\\\Temp\\\\tmpbp3nljb1\\\\automation cwd\\\\templates.json'"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        }
+      }
+    },
+    {
+      "task_id": "latest-refresh-invariant",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert rendered == [\"new\"], rendered\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError: ['new', 'old']"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert rendered == [\"new\"], rendered\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError: ['new', 'old']"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 43, in <module>\n    assert rendered_a == [\"a\"], rendered_a\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError: []"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert rendered == [\"new\"], rendered\n           ^^^^^^^^^^^^^^^^^^^\nAssertionError: ['new', 'old']"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        }
+      }
+    },
+    {
+      "task_id": "real-cli-startup",
+      "valid": true,
+      "checks": {
+        "candidate_public_green": true,
+        "candidate_target_red": true,
+        "reference_green": true,
+        "alternative_green": true,
+        "near_misses_public_green": true,
+        "near_misses_target_red": true
+      },
+      "states": {
+        "baseline": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert max(samples) < target, {\"samples_ms\": samples, \"target_ms\": target}\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'samples_ms': [301.5218000000459, 292.90209999999206, 294.10980000102427, 293.02479999932984, 293.6627999988559], 'target_ms': 160.0}"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "candidate": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert max(samples) < target, {\"samples_ms\": samples, \"target_ms\": target}\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'samples_ms': [298.01210000005085, 295.4306000010547, 294.38350000054925, 294.3989000013971, 293.506800000614], 'target_ms': 160.0}"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "reference": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "alternative": {
+          "passed": true,
+          "safe_target_resolution": true,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": true,
+              "detail": ""
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_1": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert max(samples) < target, {\"samples_ms\": samples, \"target_ms\": target}\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'samples_ms': [258.68330000048445, 253.87060000139172, 254.11350000103994, 252.83979999949224, 255.88600000082806], 'target_ms': 160.0}"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        },
+        "near_miss_2": {
+          "passed": false,
+          "safe_target_resolution": false,
+          "components": {
+            "public_tests": {
+              "passed": true,
+              "detail": ""
+            },
+            "target_resolution": {
+              "passed": false,
+              "detail": "AssertionError: Traceback (most recent call last):\n  File \"<string>\", line 23, in <module>\n    assert max(samples) < target, {\"samples_ms\": samples, \"target_ms\": target}\n           ^^^^^^^^^^^^^^^^^^^^^\nAssertionError: {'samples_ms': [298.0520000000979, 293.41460000068764, 293.3883000005153, 293.23219999969297, 292.98349999953643], 'target_ms': 160.0}"
+            },
+            "regression_guard": {
+              "passed": true,
+              "detail": ""
+            }
+          }
+        }
+      }
+    }
+  ]
+}

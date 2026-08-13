@@ -3,9 +3,8 @@
 
 Reads the transcript path from the Stop-hook JSON on stdin, gathers the recent
 turns, dispatches to the configured provider's CLI (OpenAI Codex by default,
-or Anthropic Claude via BUDDY_PROVIDER=anthropic) with the Masters' Nudge prompt
-prompt, and appends the reaction to the per-session log at
-~/.claude/buddy/<session_id>.log.
+or Anthropic Claude via MASTERS_NUDGE_PROVIDER=anthropic) with the Masters'
+Nudge prompt, and appends the reaction to the host-namespaced local data log.
 
 Never raises out of main() — hook must not block on our errors.
 """
@@ -14,11 +13,7 @@ import json
 import hashlib
 import os
 import re
-import shutil
-import subprocess
 import sys
-import tempfile
-import time
 from datetime import datetime
 from pathlib import Path
 
@@ -26,29 +21,28 @@ import source_context
 import review_telemetry
 import persona_config
 import lens_router
+from masters_nudge.contracts import EvidenceBundle, ReviewRequest, SessionRef, find_git_root
+from masters_nudge.core import ReviewCore
+from masters_nudge import providers as shared_providers
+from masters_nudge import prompting as shared_prompting
+from masters_nudge.runtime import DEFAULT_MODELS, RuntimePaths, RuntimeSettings
 
-CLAUDE_DIR = Path(os.environ.get("BUDDY_CLAUDE_DIR", os.path.expanduser("~/.claude")))
 SCRIPT_DIR = Path(__file__).resolve().parent
+_RUNTIME = RuntimeSettings.from_env(SCRIPT_DIR)
+CLAUDE_DIR = _RUNTIME.paths.legacy_data_dir.parent
 PROMPT_FILE = SCRIPT_DIR / "buddy-prompt.txt"
 OUTPUT_SCHEMA_FILE = SCRIPT_DIR / "reaction-schema.json"
 PERSONA_DIR = SCRIPT_DIR / "personas"
-BUDDY_DIR = CLAUDE_DIR / "buddy"
-ERROR_LOG = CLAUDE_DIR / "buddy-error.log"
-MAX_REACTION_CHARS = 52
+BUDDY_DIR = _RUNTIME.paths.data_dir
+ERROR_LOG = _RUNTIME.paths.error_log
+MAX_REACTION_CHARS = shared_prompting.MAX_REACTION_CHARS
 
 PERSONAS = persona_config.LENS_PERSONAS
 
-PROVIDER = os.environ.get("BUDDY_PROVIDER", "openai").lower()
-# BUDDY_MODEL meaning depends on provider:
-#   anthropic: sonnet (default), opus, haiku
-#   openai/codex: gpt-5.6-sol (default), other model names codex CLI accepts
-_DEFAULT_MODELS = {
-    "anthropic": "sonnet",
-    "openai": "gpt-5.6-sol",
-    "codex": "gpt-5.6-sol",
-}
-MODEL = os.environ.get("BUDDY_MODEL", _DEFAULT_MODELS.get(PROVIDER, "sonnet"))
-TIMEOUT_SEC = int(os.environ.get("BUDDY_TIMEOUT", "60"))
+PROVIDER = _RUNTIME.provider
+_DEFAULT_MODELS = DEFAULT_MODELS
+MODEL = _RUNTIME.model
+TIMEOUT_SEC = _RUNTIME.timeout_sec
 
 # Transcript shaping: fill a char budget walking backwards from the newest
 # user/assistant entry. Each entry kept in full unless it exceeds the per-
@@ -419,83 +413,24 @@ def save_agentcam_last_mtime(session_id: str, mtime: float) -> None:
 
 
 def build_system_prompt(route: lens_router.ReviewRoute | None = None) -> str:
-    if not PROMPT_FILE.exists():
-        log_error(f"prompt file missing: {PROMPT_FILE}")
-        return ""
-    try:
-        base_prompt = PROMPT_FILE.read_text(encoding="utf-8")
-    except Exception as e:
-        log_error(f"prompt file read failed: {e}")
-        return ""
-
-    route = route or lens_router.resolve_review_route(BUDDY_DIR)
-    persona = route.effective_lens
-    if persona == "general":
-        return base_prompt
-    if persona not in PERSONAS:
-        supported = ", ".join(PERSONAS)
-        log_error(f"unknown persona: {persona!r}; supported: {supported}")
-        return ""
-
-    persona_file = PERSONA_DIR / f"{persona}.txt"
-    try:
-        overlay = persona_file.read_text(encoding="utf-8").strip()
-    except Exception as e:
-        log_error(f"persona prompt read failed ({persona}): {e}")
-        return ""
-
-    persona_header = (
-        "# 工程觀察鏡頭\n\n"
-        f"這一輪以 {PERSONAS[persona]} 常見的工程判斷作為注意力索引。\n"
-        "只套用下方的選題框架；身份與語氣維持 Masters’ Nudge "
-        "的中性、證據優先風格。\n"
-        "上方 Masters’ Nudge 的證據、旁觀者角色、單一 finding 與字數規則仍然優先。"
+    """Backward-compatible entry point backed by the shared prompt contract."""
+    return shared_prompting.build_system_prompt(
+        prompt_file=PROMPT_FILE,
+        persona_dir=PERSONA_DIR,
+        data_dir=BUDDY_DIR,
+        route=route,
+        log_error=log_error,
     )
-    return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
 
 
 def load_output_schema_json() -> str:
-    """Return the shared output schema as compact JSON, or fail closed."""
-    try:
-        schema = json.loads(OUTPUT_SCHEMA_FILE.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        log_error(f"reaction schema unavailable: {exc}")
-        return ""
-    if not isinstance(schema, dict):
-        log_error("reaction schema root must be an object")
-        return ""
-    return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+    """Backward-compatible entry point backed by the shared schema loader."""
+    return shared_providers.load_output_schema_json(OUTPUT_SCHEMA_FILE, log_error)
 
 
 def parse_reaction_result(stdout: str) -> dict:
-    """Extract and validate one finding from structured CLI output.
-
-    Both direct schema objects (Codex) and Claude's JSON result envelope are
-    accepted. Anything outside the shared two-field contract fails closed.
-    """
-    stdout = stdout.strip()
-    if not stdout:
-        return {"status": "error", "finding": ""}
-    try:
-        obj = json.loads(stdout)
-    except (TypeError, ValueError):
-        return {"status": "error", "finding": ""}
-    if isinstance(obj, dict) and "structured_output" in obj:
-        obj = obj.get("structured_output")
-    if not isinstance(obj, dict) or set(obj) != {"status", "finding"}:
-        return {"status": "error", "finding": ""}
-    status = obj.get("status")
-    finding = obj.get("finding")
-    if not isinstance(finding, str):
-        return {"status": "error", "finding": ""}
-    if status == "no_finding":
-        return {"status": "no_finding", "finding": ""}
-    if status != "finding":
-        return {"status": "error", "finding": ""}
-    finding = finding.strip()
-    if not finding or len(finding) > MAX_REACTION_CHARS:
-        return {"status": "error", "finding": ""}
-    return {"status": "finding", "finding": finding}
+    """Backward-compatible entry point backed by the shared output parser."""
+    return shared_providers.parse_reaction_result(stdout)
 
 
 def parse_reaction(stdout: str) -> str:
@@ -504,91 +439,27 @@ def parse_reaction(stdout: str) -> str:
 
 
 def parse_usage(stdout: str) -> dict[str, int]:
-    """Best-effort extraction of token counters from CLI JSON/JSONL output."""
-    usage_fields = {
-        "input_tokens",
-        "cached_input_tokens",
-        "cache_write_input_tokens",
-        "output_tokens",
-        "reasoning_output_tokens",
-        "total_tokens",
-    }
-    best: dict[str, int] = {}
-
-    def visit(value) -> None:
-        nonlocal best
-        if isinstance(value, dict):
-            candidate = {
-                key: int(item)
-                for key, item in value.items()
-                if key in usage_fields and isinstance(item, (int, float))
-            }
-            if len(candidate) > len(best):
-                best = candidate
-            for item in value.values():
-                visit(item)
-        elif isinstance(value, list):
-            for item in value:
-                visit(item)
-
-    for line in str(stdout or "").splitlines():
-        try:
-            visit(json.loads(line))
-        except (TypeError, ValueError):
-            continue
-    return best
+    """Backward-compatible entry point backed by shared usage parsing."""
+    return shared_providers.parse_usage(stdout)
 
 
-def _call_result(status: str = "error", finding: str = "", **extra) -> dict:
-    return {"status": status, "finding": finding, "usage": {}, **extra}
-
-
-def call_claude_result(system_prompt: str, transcript_text: str, model: str) -> dict:
-    user_prompt = "請對 stdin 提供的對話片段寫一句簡短的旁觀者反應。"
-    schema_json = load_output_schema_json()
-    if not schema_json:
-        return _call_result()
-
-    fd = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
+def call_claude_result(
+    system_prompt: str,
+    transcript_text: str,
+    model: str,
+    *,
+    capture_raw: bool = False,
+) -> dict:
+    """Backward-compatible entry point backed by the shared Claude client."""
+    return shared_providers.call_claude_result(
+        system_prompt,
+        transcript_text,
+        model,
+        schema_path=OUTPUT_SCHEMA_FILE,
+        timeout_sec=TIMEOUT_SEC,
+        capture_raw=capture_raw,
+        log_error=log_error,
     )
-    fd.write(system_prompt)
-    fd.close()
-
-    env = {**os.environ, "BUDDY_ACTIVE": "1"}
-    try:
-        r = subprocess.run(
-            [
-                "claude", "-p", user_prompt,
-                "--model", model,
-                "--append-system-prompt-file", fd.name,
-                "--output-format", "json",
-                "--json-schema", schema_json,
-            ],
-            input=transcript_text,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=env,
-            timeout=TIMEOUT_SEC,
-        )
-        if r.returncode != 0:
-            log_error(f"claude CLI exit {r.returncode}: {r.stderr[:500]}")
-            return _call_result()
-        result = parse_reaction_result(r.stdout)
-        result["usage"] = parse_usage(r.stdout)
-        return result
-    except subprocess.TimeoutExpired:
-        log_error("claude CLI timeout")
-        return _call_result()
-    except FileNotFoundError:
-        log_error("claude CLI not found in PATH")
-        return _call_result()
-    finally:
-        try:
-            os.unlink(fd.name)
-        except OSError:
-            pass
 
 
 def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
@@ -597,109 +468,28 @@ def call_claude(system_prompt: str, transcript_text: str, model: str) -> str:
 
 
 def _resolve_codex_bin() -> str | None:
-    """Find codex executable. PATH lookup may miss it (e.g. npm on Windows
-    isn't in the env Python sees), so probe known install locations too."""
-    direct = shutil.which("codex")
-    if direct and os.path.exists(direct):
-        return direct
-    candidates = [
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex.cmd"),
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex.exe"),
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex"),
-        os.path.expanduser("~/.codex/bin/codex"),
-        "/usr/local/bin/codex",
-        "/usr/bin/codex",
-    ]
-    for c in candidates:
-        if c and os.path.exists(c):
-            return c
-    return None
+    """Backward-compatible entry point backed by shared executable discovery."""
+    return shared_providers.resolve_codex_bin()
 
 
-def call_codex_result(system_prompt: str, transcript_text: str, model: str) -> dict:
-    """Invoke codex exec and return structured status plus best-effort usage."""
-    codex_bin = _resolve_codex_bin()
-    if not codex_bin:
-        log_error("codex CLI not found (checked PATH + common npm paths)")
-        return _call_result()
-    if not load_output_schema_json():
-        return _call_result()
-
-    # codex has no separate system-prompt slot — bundle everything into one prompt.
-    user_prompt = "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。"
-    combined = (
-        f"{system_prompt}\n\n"
-        f"---\n\n"
-        f"{user_prompt}\n\n"
-        f"[transcript]\n{transcript_text}\n[end transcript]"
+def call_codex_result(
+    system_prompt: str,
+    transcript_text: str,
+    model: str,
+    *,
+    capture_raw: bool = False,
+) -> dict:
+    """Backward-compatible entry point backed by the shared Codex client."""
+    return shared_providers.call_codex_result(
+        system_prompt,
+        transcript_text,
+        model,
+        schema_path=OUTPUT_SCHEMA_FILE,
+        timeout_sec=TIMEOUT_SEC,
+        capture_raw=capture_raw,
+        log_error=log_error,
+        codex_bin_resolver=_resolve_codex_bin,
     )
-
-    output_fd = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    output_fd.close()
-
-    env = {**os.environ, "BUDDY_ACTIVE": "1"}
-    # On Windows, .cmd files need shell=True or cmd /c. Detect by extension.
-    use_shell = codex_bin.lower().endswith((".cmd", ".bat"))
-    try:
-        cmd = [
-            codex_bin, "exec",
-            "--skip-git-repo-check",
-            "--ephemeral",
-            "--ignore-user-config",
-            "--json",
-            "-s", "read-only",
-            "-m", model,
-            "--output-schema", str(OUTPUT_SCHEMA_FILE),
-            "-o", output_fd.name,
-            "-",  # read prompt from stdin
-        ]
-        if use_shell:
-            # Quote args properly for cmd shell
-            cmd_str = " ".join(f'"{a}"' if " " in a else a for a in cmd)
-            r = subprocess.run(
-                cmd_str,
-                input=combined,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                env=env,
-                timeout=TIMEOUT_SEC,
-                shell=True,
-            )
-        else:
-            r = subprocess.run(
-                cmd,
-                input=combined,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                env=env,
-                timeout=TIMEOUT_SEC,
-            )
-        if r.returncode != 0:
-            log_error(f"codex exit {r.returncode}: {r.stderr[:500]}")
-            return _call_result(usage=parse_usage(r.stdout))
-        try:
-            with open(output_fd.name, "r", encoding="utf-8") as f:
-                result = parse_reaction_result(f.read())
-                result["usage"] = parse_usage(r.stdout)
-                return result
-        except Exception as e:
-            log_error(f"codex output read failed: {e}")
-            return _call_result(usage=parse_usage(r.stdout))
-    except subprocess.TimeoutExpired:
-        log_error("codex timeout")
-        return _call_result()
-    except FileNotFoundError:
-        log_error(f"codex CLI not executable: {codex_bin}")
-        return _call_result()
-    finally:
-        try:
-            os.unlink(output_fd.name)
-        except OSError:
-            pass
 
 
 def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
@@ -707,64 +497,9 @@ def call_codex(system_prompt: str, transcript_text: str, model: str) -> str:
     return str(call_codex_result(system_prompt, transcript_text, model)["finding"])
 
 
-_WRAPPER_RE = re.compile(
-    r"\[(?:end )?(?:Buddy|Masters[’'] Nudge)[^\]]*\]"
-)
-_CODEBLOCK_RE = re.compile(r"```[\s\S]*?```")
-_INLINE_CODE_RE = re.compile(r"`([^`]*)`")
-_MD_BOLD_RE = re.compile(r"\*{1,3}([^*]+)\*{1,3}")
-_MD_HEADER_RE = re.compile(r"^#{1,6}\s*", re.MULTILINE)
-_BOILERPLATE_PREFIX_RES = (
-    re.compile(r"^(?:作為|身為)[^，,：:。！？!?]{1,40}[，,：:]\s*"),
-    re.compile(
-        r"^(?:整體來說|總體而言|總的來說|簡單來說|先說結論|"
-        r"值得注意的是|需要注意的是|我認為|在我看來|以下是我的觀察)"
-        r"[，,:：。.!！\s]*"
-    ),
-    re.compile(
-        r"^(?:做得很好|整體做得不錯|這個方向很好|方向很清楚|"
-        r"這是一個很好的(?:做法|方向|實作))"
-        r"[，,:：。.!！\s]*"
-    ),
-)
-_BOILERPLATE_SUFFIX_RE = re.compile(
-    r"(?:希望(?:這|以上)?(?:對你)?有幫助|希望能幫到你|供參考|"
-    r"以上(?:是我的觀察)?|謝謝(?:閱讀)?)"
-    r"[。.!！\s]*$"
-)
-def _strip_boilerplate(text: str) -> str:
-    """Remove anchored social filler without rewriting finding content."""
-    previous = None
-    while text and text != previous:
-        previous = text
-        for pattern in _BOILERPLATE_PREFIX_RES:
-            text = pattern.sub("", text, count=1).lstrip()
-        text = _BOILERPLATE_SUFFIX_RE.sub("", text, count=1).rstrip()
-    return text
-
-
 def sanitize_reaction(raw: str) -> str:
-    """Clean model output before logging.
-
-    - Strip code blocks and markdown formatting
-    - Remove current and legacy wrapper collision markers
-    - Collapse whitespace
-    - Remove common leading/trailing social filler
-    - Hard truncate to MAX_REACTION_CHARS
-    """
-    text = raw.strip()
-    if not text:
-        return ""
-    text = _CODEBLOCK_RE.sub("", text)
-    text = _INLINE_CODE_RE.sub(r"\1", text)
-    text = _MD_BOLD_RE.sub(r"\1", text)
-    text = _MD_HEADER_RE.sub("", text)
-    text = _WRAPPER_RE.sub("", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    text = _strip_boilerplate(text)
-    if len(text) > MAX_REACTION_CHARS:
-        text = text[:MAX_REACTION_CHARS]
-    return text
+    """Backward-compatible entry point backed by shared output sanitation."""
+    return shared_prompting.sanitize_reaction(raw)
 
 
 def dispatch_call(system_prompt: str, transcript_text: str) -> str:
@@ -773,10 +508,16 @@ def dispatch_call(system_prompt: str, transcript_text: str) -> str:
 
 
 def dispatch_call_result(system_prompt: str, transcript_text: str) -> dict:
-    """Route to a provider while preserving outcome and usage metadata."""
-    if PROVIDER in ("openai", "codex"):
-        return call_codex_result(system_prompt, transcript_text, MODEL)
-    return call_claude_result(system_prompt, transcript_text, MODEL)
+    """Compatibility wrapper around the host-neutral provider boundary."""
+    return shared_providers.dispatch_call_result(
+        PROVIDER,
+        system_prompt,
+        transcript_text,
+        MODEL,
+        schema_path=OUTPUT_SCHEMA_FILE,
+        timeout_sec=TIMEOUT_SEC,
+        log_error=log_error,
+    )
 
 
 def append_buddy_log(
@@ -811,14 +552,8 @@ def _selected_persona(route: lens_router.ReviewRoute | None = None) -> str:
 
 
 def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
-    return {
-        "stage": route.stage,
-        "primary_lens": route.primary_lens,
-        "effective_lens": route.effective_lens,
-        "override_lens": route.override_lens,
-        "trigger": route.trigger,
-        "route_source": route.source,
-    }
+    """Backward-compatible entry point backed by shared route metadata."""
+    return shared_prompting.route_metadata(route)
 
 
 def _checkpoint_delivery_path(session_id: str) -> Path:
@@ -960,56 +695,55 @@ def main() -> None:
         log_error("empty source packet, skipping")
         return
 
-    route = lens_router.resolve_review_route(BUDDY_DIR, source_packet)
-    system_prompt = build_system_prompt(route)
-    if not system_prompt:
-        return
-
-    # --- recent reactions context ---
-    recent = read_recent_reactions(session_id)
-
-    context_parts = []
-    if recent:
-        context_parts.append("[你最近說過]")
-        for r in recent:
-            context_parts.append(f"- {r}")
-        context_parts.append("[避免重複上面的話，可以接著講]")
-    context_parts.append("")
-    context_parts.append(source_packet)
-
-    enriched_text = "\n".join(context_parts)
-
     candidates = review_telemetry.stop_shadow_candidates(
         tool_evidence=str(source["tool_evidence"]),
         agentcam_evidence=str(source["agentcam_evidence"]),
         checkpoint_overlap=bool(source["checkpoint_overlap"]),
     )
-    fingerprint = hashlib.sha256(
-        f"{system_prompt}\0{enriched_text}".encode("utf-8", errors="replace")
-    ).hexdigest()[:24]
-    started = time.perf_counter()
-    call_result = dispatch_call_result(system_prompt, enriched_text)
-    latency_ms = round((time.perf_counter() - started) * 1000)
-    raw_reaction = str(call_result.get("finding") or "")
-    reaction = sanitize_reaction(raw_reaction)
-    if reaction:
-        append_buddy_log(session_id, PROVIDER, MODEL, reaction, route)
-    else:
-        log_error("empty reaction, not logged")
-    status = str(call_result.get("status") or "error")
-    if status == "finding" and not reaction:
-        status = "error"
-    record_review_telemetry(
-        session_id=str(session_id),
+    session = SessionRef(
+        "claude_code",
+        str(session_id),
+        cwd=str(cwd),
+        repo_root=find_git_root(str(cwd)),
+    )
+    request = ReviewRequest(
+        schema_version=1,
         kind="stop",
         reason="stop",
-        status=status,
-        input_chars=len(system_prompt) + len(enriched_text),
-        latency_ms=latency_ms,
-        source_fingerprint=fingerprint,
-        shadow_candidates=candidates,
-        usage=call_result.get("usage") if isinstance(call_result, dict) else {},
-        route=route,
+        session=session,
+        evidence=EvidenceBundle(
+            task_anchor=str(
+                source_context.load_source_state(BUDDY_DIR, str(session_id)).get(
+                    "task_anchor"
+                )
+                or ""
+            ),
+            assistant_claim=str(hook.get("last_assistant_message") or ""),
+            tool_evidence=str(source["tool_evidence"]),
+            agentcam_evidence=str(source["agentcam_evidence"]),
+        ),
+        source_packet=source_packet,
+        source_fingerprint=hashlib.sha256(
+            source_packet.encode("utf-8", errors="replace")
+        ).hexdigest()[:24],
+        shadow_candidates=tuple(candidates),
+    )
+
+    settings = RuntimeSettings(
+        provider=PROVIDER,
+        model=MODEL,
+        timeout_sec=TIMEOUT_SEC,
+        checkpoint_timeout_sec=_RUNTIME.checkpoint_timeout_sec,
+        paths=RuntimePaths(
+            runtime_dir=SCRIPT_DIR,
+            data_dir=BUDDY_DIR,
+            legacy_data_dir=CLAUDE_DIR / "buddy",
+            error_log=ERROR_LOG,
+        ),
+    )
+
+    ReviewCore(settings, log_error=log_error).review(
+        request, persist_reaction=True
     )
 
 

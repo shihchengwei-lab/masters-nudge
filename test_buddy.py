@@ -169,6 +169,15 @@ class TestBranding(unittest.TestCase):
         self.assertIn("one finding or silence", readme)
         self.assertIn("一則 finding，要嘛靜默", readme_zh)
 
+    def test_readmes_define_a_workflow_nudge_not_another_code_review(self):
+        readme = (HERE / "README.md").read_text(encoding="utf-8")
+        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("workflow tension or question", readme)
+        self.assertIn("not to produce another answer or another code review", readme)
+        self.assertIn("工作流張力或問題", readme_zh)
+        self.assertIn("不是多給一份答案或 code review", readme_zh)
+
     def test_roadmap_matches_shipped_selector_and_shadow_evaluation(self):
         roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
 
@@ -289,6 +298,15 @@ class TestBranding(unittest.TestCase):
             self.assertRegex(color, r"^#[0-9A-Fa-f]{6}$")
             self.assertLess(max(int(color[i:i + 2], 16) for i in (1, 3, 5)), 100)
 
+    def test_specialist_selection_label_distinguishes_forced_from_legacy(self):
+        import buddy_window
+        from persona_config import StageSelection
+
+        forced = StageSelection("forced", "lamport", "environment", True)
+        legacy = StageSelection("forced", "lamport", "legacy_config", True)
+        self.assertTrue(buddy_window.stage_selection_label(forced).startswith("Forced ·"))
+        self.assertTrue(buddy_window.stage_selection_label(legacy).startswith("Legacy ·"))
+
 
 class TestPersonaPromptSelection(unittest.TestCase):
     PERSONAS = {
@@ -316,7 +334,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
             result = self.buddy.build_system_prompt()
 
         self.assertIn("你是 Masters’ Nudge", result)
-        self.assertIn("# 工程觀察鏡頭", result)
+        self.assertIn("# 工作流觀察鏡頭", result)
         self.assertIn("Kent Beck", result)
 
     def test_each_supported_persona_appends_its_overlay(self):
@@ -326,63 +344,60 @@ class TestPersonaPromptSelection(unittest.TestCase):
                     result = self.buddy.build_system_prompt()
 
                 self.assertIn("你是 Masters’ Nudge", result)
-                self.assertIn("# 工程觀察鏡頭", result)
+                self.assertIn("# 工作流觀察鏡頭", result)
                 self.assertIn(display_name, result)
-                self.assertIn("作為注意力索引", result)
-                self.assertIn("身份與語氣維持 Masters’ Nudge", result)
-                self.assertNotIn("不要假裝自己是這位人物", result)
-                self.assertNotIn("模仿口吻、迷因", result)
+                self.assertIn("核心概念與關注面向", result)
+                self.assertIn("不是扮演或模仿人物", result)
+                self.assertIn("不是增加一份 code review", result)
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                     encoding="utf-8"
                 ).strip()
                 self.assertTrue(overlay)
                 self.assertTrue(result.endswith(f"{overlay}\n"))
 
-    def test_each_persona_has_exactly_two_short_selection_examples(self):
-        marker = "選題例（只示範先檢查哪裡，不示範輸出字數或固定措辭）："
-
+    def test_each_persona_defines_concepts_focus_and_two_internal_questions(self):
         for persona in self.PERSONAS:
             with self.subTest(persona=persona):
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                     encoding="utf-8"
                 )
-                self.assertEqual(overlay.count(marker), 1)
-                example_block = overlay.split(marker, 1)[1].split("\n\n", 1)[0]
-                examples = [
+                for heading in (
+                    "### 核心概念",
+                    "### 關注面向",
+                    "### 內部追問",
+                    "### 形成 Nudge",
+                ):
+                    self.assertEqual(overlay.count(heading), 1)
+                question_block = overlay.split("### 內部追問", 1)[1].split(
+                    "### 形成 Nudge", 1
+                )[0]
+                questions = [
                     line.removeprefix("- ").strip()
-                    for line in example_block.splitlines()
+                    for line in question_block.splitlines()
                     if line.startswith("- ")
                 ]
-                self.assertEqual(len(examples), 2)
-                for example in examples:
-                    self.assertIn("→", example)
-                    self.assertLessEqual(len(example), 46)
+                self.assertEqual(len(questions), 2)
+                for question in questions:
+                    self.assertTrue(question.endswith("？"))
 
-    def test_each_persona_has_a_distinct_scene_and_shared_evidence_gate(self):
-        scene_anchors = {
-            "jeff": "把 packet 裡可見的元件、資料流與 state 畫上白板",
-            "beck": "把 task anchor、可見測試與本輪修改排在桌上",
-            "fowler": "沿著它翻過所有受影響的檔案、條件與責任",
-            "linus": "沿著 packet 顯示的實際 control flow 往下讀",
-            "lamport": "再交換成 `B → A`",
-            "carmack": "把每次 allocation、copy、轉換與 I/O 逐一計數",
+    def test_each_persona_has_a_distinct_workflow_thesis_and_grounding_rule(self):
+        concept_anchors = {
+            "jeff": "constraint、ownership 或 source of truth",
+            "beck": "從假設到回饋的距離",
+            "fowler": "某份知識可能沒有清楚的家",
+            "linus": "把決定往後延",
+            "lamport": "所有可能發生的事件順序",
+            "carmack": "抽象描述不會讓成本消失",
         }
 
-        for persona, scene_anchor in scene_anchors.items():
+        for persona, concept_anchor in concept_anchors.items():
             with self.subTest(persona=persona):
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                     encoding="utf-8"
                 )
-                self.assertEqual(overlay.count("### 思考場景"), 1)
-                self.assertEqual(overlay.count("### 證據閘門"), 1)
-                self.assertIn(scene_anchor, overlay)
-                self.assertIn("不表示 packet 裡一定有問題", overlay)
-                self.assertIn("人物的反應、名聲與工程偏好都不是證據", overlay)
-                self.assertIn("status=no_finding", overlay)
-                if persona == "linus":
-                    self.assertIn("才笑出來", overlay)
-                else:
-                    self.assertNotIn("笑", overlay)
+                self.assertIn(concept_anchor, overlay)
+                self.assertIn("packet 必須", overlay)
+                self.assertIn("提醒要", overlay)
 
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
@@ -447,7 +462,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.buddy.BUDDY_DIR = original_dir
 
         self.assertIn("你是 Masters’ Nudge", result)
-        self.assertIn("# 工程觀察鏡頭", result)
+        self.assertIn("# 工作流觀察鏡頭", result)
         self.assertIn("Kent Beck", result)
 
     def test_installer_copies_persona_overlays(self):
@@ -456,31 +471,36 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn('cp "$SRC_DIR/persona_config.py" "$TARGET_DIR/"', installer)
         self.assertIn('cp "$SRC_DIR/lens_router.py" "$TARGET_DIR/"', installer)
 
-    def test_base_prompt_delegates_attention_after_high_risk_screen(self):
+    def test_base_prompt_delegates_workflow_attention_after_stop_the_line_screen(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("先做高風險篩選", base_prompt)
-        self.assertIn("由該鏡頭決定先檢查哪類工程問題", base_prompt)
-        self.assertIn("未使用工程觀察鏡頭時", base_prompt)
-        self.assertNotIn("其他問題只有非常明確時才提", base_prompt)
+        self.assertIn("先看是否需要立即踩煞車", base_prompt)
+        self.assertIn("直接由它決定這輪值得重看的面向", base_prompt)
+        self.assertIn("不要先做一輪通用挑錯", base_prompt)
+        self.assertIn("未使用鏡頭時", base_prompt)
 
-    def test_base_prompt_preserves_problem_and_location_inside_length_cap(self):
+    def test_base_prompt_preserves_workflow_tension_and_a_complete_sentence(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("優先保留問題與位置", base_prompt)
-        self.assertIn("不犧牲前兩者", base_prompt)
+        self.assertIn("工作上的張力與必要的證據錨點", base_prompt)
+        self.assertIn("如果草稿太長就重寫", base_prompt)
+        self.assertIn("不能停在助詞、連接詞、半個片語", base_prompt)
+        self.assertNotIn("優先保留問題與位置", base_prompt)
 
-    def test_base_prompt_targets_48_to_52_useful_characters_without_filler(self):
+    def test_base_prompt_has_no_minimum_and_examples_fit_the_hard_cap(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("目標 48–52 字", base_prompt)
+        self.assertIn("不設最低字數", base_prompt)
+        self.assertIn("優先在 42 字內完成回答閉環", base_prompt)
+        self.assertIn("保留約 20% 緩衝", base_prompt)
         self.assertIn("硬上限 52 字", base_prompt)
+        self.assertNotIn("目標 48–52 字", base_prompt)
         self.assertIn("客套話", base_prompt)
         self.assertIn("角色自介", base_prompt)
         self.assertNotIn("28 字", base_prompt)
 
         examples = base_prompt.split("# 可以參考的語氣", 1)[1].split(
-            "# 送出前只問一件事", 1
+            "# 送出前確認", 1
         )[0]
         finding_examples = [
             line.strip()
@@ -490,8 +510,18 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertTrue(finding_examples)
         for example in finding_examples:
             with self.subTest(example=example):
-                self.assertGreaterEqual(len(example), 48)
+                self.assertGreater(len(example), 0)
                 self.assertLessEqual(len(example), 52)
+
+    def test_base_prompt_is_workflow_review_not_code_review(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("檢視主模型如何推進工作", base_prompt)
+        self.assertIn("不替它重做一輪產物審查", base_prompt)
+        self.assertIn("不要把封包預設成 PR、diff", base_prompt)
+        self.assertIn("內容是一則 workflow Nudge", base_prompt)
+        self.assertNotIn("只找一個最有用的 review finding", base_prompt)
+        self.assertNotIn("把可見內容當成一小段 PR / diff", base_prompt)
 
     def test_base_prompt_matches_structured_output_contract(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -874,6 +904,8 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIn('cp "$SRC_DIR/review_telemetry.py" "$TARGET_DIR/"', installer)
 
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
+        from masters_nudge import prompting, providers
+
         hook = {
             "session_id": "session-1",
             "transcript_path": "/session.jsonl",
@@ -896,13 +928,15 @@ class TestCheckpointDelivery(unittest.TestCase):
                 return_value="正在檢查路徑",
             ),
             mock.patch.object(
-                self.checkpoint.buddy, "build_system_prompt", return_value="system"
+                prompting,
+                "build_system_prompt",
+                return_value="system",
             ),
             mock.patch.object(
                 self.checkpoint.buddy, "read_recent_reactions", return_value=[]
             ),
             mock.patch.object(
-                self.checkpoint.buddy,
+                providers,
                 "dispatch_call_result",
                 return_value={
                     "status": "finding",
@@ -910,24 +944,21 @@ class TestCheckpointDelivery(unittest.TestCase):
                     "usage": {"input_tokens": 100},
                 },
             ) as dispatch,
-            mock.patch.object(
-                self.checkpoint.buddy, "record_review_telemetry"
-            ) as telemetry,
+            mock.patch("masters_nudge.core.review_telemetry.record_review") as telemetry,
         ):
             result = self.checkpoint.generate_nudge(hook, event)
 
         self.assertEqual(result, "路徑前提還沒成立。")
-        payload = dispatch.call_args.args[1]
+        payload = dispatch.call_args.args[2]
         self.assertIn("只修路徑問題", payload)
         self.assertIn("missing file", payload)
         self.assertIn("正在檢查路徑", payload)
         self.assertNotIn("[transcript", payload)
         telemetry.assert_called_once()
-        self.assertEqual(telemetry.call_args.kwargs["kind"], "checkpoint")
-        self.assertEqual(telemetry.call_args.kwargs["reason"], "error")
-        self.assertEqual(
-            telemetry.call_args.kwargs["route"].effective_lens, "beck"
-        )
+        telemetry_record = telemetry.call_args.args[1]
+        self.assertEqual(telemetry_record["kind"], "checkpoint")
+        self.assertEqual(telemetry_record["reason"], "error")
+        self.assertEqual(telemetry_record["effective_lens"], "beck")
 
 
 # ── 5. Transcript parser ─────────────────────────────────────────────
@@ -1637,7 +1668,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         )
         self.assertEqual(
             buddy_window.lens_badge(None)[0],
-            "● General lens（通用證據審查）",
+            "● General lens（工作流與證據）",
         )
 
     def test_window_grows_for_a_52_character_reaction(self):
@@ -1804,6 +1835,15 @@ class TestCallClaude(unittest.TestCase):
         self.assertEqual(schema["properties"]["status"]["enum"], ["finding", "no_finding"])
 
     @mock.patch("subprocess.run")
+    def test_call_claude_can_capture_raw_output_for_evaluation(self, mock_run):
+        stdout = json.dumps({"status": "finding", "finding": "這裡有問題"})
+        mock_run.return_value = mock.Mock(returncode=0, stdout=stdout, stderr="")
+        result = self.buddy.call_claude_result(
+            "system prompt", "transcript", "sonnet", capture_raw=True
+        )
+        self.assertEqual(stdout, result["raw_output"])
+
+    @mock.patch("subprocess.run")
     def test_call_claude_nonzero_exit(self, mock_run):
         mock_run.return_value = mock.Mock(returncode=1, stdout="", stderr="error")
         result = self.buddy.call_claude("sp", "tx", "sonnet")
@@ -1858,6 +1898,22 @@ class TestCallCodex(unittest.TestCase):
         cmd = mock_run.call_args.args[0]
         schema_index = cmd.index("--output-schema")
         self.assertEqual(Path(cmd[schema_index + 1]), HERE / "reaction-schema.json")
+
+    @mock.patch("subprocess.run")
+    @mock.patch("buddy._resolve_codex_bin", return_value="/usr/bin/codex")
+    def test_call_codex_can_capture_raw_output_for_evaluation(self, _, mock_run):
+        payload = {"status": "finding", "finding": "具體問題"}
+
+        def fake_run(cmd, **kwargs):
+            output_path = Path(cmd[cmd.index("-o") + 1])
+            output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        mock_run.side_effect = fake_run
+        result = self.buddy.call_codex_result(
+            "system prompt", "transcript", "gpt-5.5", capture_raw=True
+        )
+        self.assertEqual(json.dumps(payload, ensure_ascii=False), result["raw_output"])
 
 
 class TestParseReaction(unittest.TestCase):

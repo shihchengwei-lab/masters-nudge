@@ -1,0 +1,1 @@
+PARTNER_RATE = 0.10

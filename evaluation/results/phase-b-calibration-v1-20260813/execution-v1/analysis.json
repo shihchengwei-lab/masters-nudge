@@ -1,0 +1,176 @@
+{
+  "rows": 36,
+  "conditions": {
+    "control": {
+      "runs": 18,
+      "agent_valid": 18,
+      "grader_valid": 18,
+      "safe_target_successes": 13,
+      "full_task_passes": 13,
+      "total_cost_usd": 2.499633,
+      "mean_turns": 10.44,
+      "mean_wall_ms": 33841
+    },
+    "positive_control": {
+      "runs": 18,
+      "agent_valid": 18,
+      "grader_valid": 18,
+      "safe_target_successes": 13,
+      "full_task_passes": 13,
+      "total_cost_usd": 2.433655,
+      "mean_turns": 10.33,
+      "mean_wall_ms": 32272
+    }
+  },
+  "paired": {
+    "pairs": 18,
+    "wins": 1,
+    "losses": 1,
+    "both_success": 12,
+    "both_fail": 4,
+    "net": 0
+  },
+  "by_task": {
+    "csv-change-boundary": {
+      "control_safe_target": 3,
+      "positive_control_safe_target": 3,
+      "paired_wins": 0,
+      "paired_losses": 0,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 2,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_success"
+        }
+      ]
+    },
+    "installed-runtime-proof": {
+      "control_safe_target": 3,
+      "positive_control_safe_target": 3,
+      "paired_wins": 0,
+      "paired_losses": 0,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 2,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_success"
+        }
+      ]
+    },
+    "latest-refresh-invariant": {
+      "control_safe_target": 3,
+      "positive_control_safe_target": 3,
+      "paired_wins": 0,
+      "paired_losses": 0,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 2,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_success"
+        }
+      ]
+    },
+    "partner-policy-home": {
+      "control_safe_target": 0,
+      "positive_control_safe_target": 0,
+      "paired_wins": 0,
+      "paired_losses": 0,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "both_fail"
+        },
+        {
+          "repeat": 2,
+          "outcome": "both_fail"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_fail"
+        }
+      ]
+    },
+    "real-cli-startup": {
+      "control_safe_target": 3,
+      "positive_control_safe_target": 3,
+      "paired_wins": 0,
+      "paired_losses": 0,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 2,
+          "outcome": "both_success"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_success"
+        }
+      ]
+    },
+    "setup-bottleneck-choice": {
+      "control_safe_target": 1,
+      "positive_control_safe_target": 1,
+      "paired_wins": 1,
+      "paired_losses": 1,
+      "accepted": false,
+      "pairs": [
+        {
+          "repeat": 1,
+          "outcome": "win"
+        },
+        {
+          "repeat": 2,
+          "outcome": "loss"
+        },
+        {
+          "repeat": 3,
+          "outcome": "both_fail"
+        }
+      ]
+    }
+  },
+  "gates": {
+    "run_integrity": {
+      "passed": true,
+      "measured": "rows 36/36; agent-valid 36/36; grader-valid 36/36"
+    },
+    "all_six_patterns_accepted": {
+      "passed": false,
+      "measured": "accepted tasks 0/6"
+    },
+    "synthetic_fixture_viability_floor": {
+      "passed": false,
+      "measured": "accepted tasks 0/6; stop if fewer than 4"
+    }
+  },
+  "stage1_passed": false
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "provider": "openai",
+  "model": "gpt-5.6-sol",
+  "prompt_sha256": "d79ac82a7608c73b38f4321abf21c756cbdf4b73b071e564d1c4bc5e8b251878",
+  "treatments": [
+    {
+      "task_id": "onboarding-problem-location",
+      "lens": "jeff",
+      "nudge": "最大掉點與客服證據都指向電話格式，先加提醒排程是在補流失後果，而非處理最早限制。",
+      "chars": 40,
+      "provenance": "single replacement generation after excluding the incomplete ownership task"
+    },
+    {
+      "task_id": "csv-scope-control",
+      "lens": "beck",
+      "nudge": "CSV 已全綠卻擴改 JSON，正把回饋明確的需求換成未被要求的統一。",
+      "chars": 35,
+      "provenance": "treatment generation R2"
+    },
+    {
+      "task_id": "discount-policy-home",
+      "lens": "fowler",
+      "nudge": "只驗 checkout 就準備結束，三條路徑共用規則的邊界仍未落地。",
+      "chars": 34,
+      "provenance": "treatment generation R2"
+    },
+    {
+      "task_id": "clean-install-proof",
+      "lens": "linus",
+      "nudge": "完成宣告只驗證檔案存在，尚未走過乾淨目錄的實際執行路徑。",
+      "chars": 28,
+      "provenance": "treatment generation R2"
+    },
+    {
+      "task_id": "last-query-wins",
+      "lens": "lamport",
+      "nudge": "debounce 只改時機，A 晚於 B 時仍會覆蓋最後送出的查詢結果。",
+      "chars": 36,
+      "provenance": "treatment generation R2"
+    },
+    {
+      "task_id": "cold-start-cli",
+      "lens": "carmack",
+      "nudge": "量到的是已載入程序；fresh process 仍先停 250ms，完成宣告尚未驗證真正門檻。",
+      "chars": 47,
+      "provenance": "treatment generation R2"
+    }
+  ],
+  "excluded": [
+    {
+      "task_id": "ownership-role-store",
+      "reason": "The only generated Nudge reached 52 characters and ended mid-phrase; it was not retried or rewritten."
+    }
+  ]
+}

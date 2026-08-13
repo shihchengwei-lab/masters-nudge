@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "job_id": "jeff-1",
+      "lens": "jeff",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，就先鋪三個 backend；這是在解 pilot，還是在替過早的責",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 17122,
+      "usage": {
+        "input_tokens": 15328,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 197,
+        "reasoning_output_tokens": 147
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，就先鋪三個 backend；這是在解 pilot，還是在替過早的責\" }"
+    },
+    {
+      "job_id": "jeff-2",
+      "lens": "jeff",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，三個 stub 與 cloud 卻已先排進來，責任邊界是否鎖得太早",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 19635,
+      "usage": {
+        "input_tokens": 15536,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 156,
+        "reasoning_output_tokens": 101
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，三個 stub 與 cloud 卻已先排進來，責任邊界是否鎖得太早\"}"
+    },
+    {
+      "job_id": "jeff-3",
+      "lens": "jeff",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "三層抽象與未用 stub 已先落地，端到端尚未跑，這是在驗證需求還是替過早邊界還債？",
+      "characters": 42,
+      "raw_schema_valid": true,
+      "latency_ms": 12718,
+      "usage": {
+        "input_tokens": 15367,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 150,
+        "reasoning_output_tokens": 92
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"三層抽象與未用 stub 已先落地，端到端尚未跑，這是在驗證需求還是替過早邊界還債？\"}"
+    },
+    {
+      "job_id": "beck-1",
+      "lens": "beck",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，範圍卻已擴到三個 stub 與 cloud backend。",
+      "characters": 49,
+      "raw_schema_valid": true,
+      "latency_ms": 15018,
+      "usage": {
+        "input_tokens": 15539,
+        "cached_input_tokens": 9984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 133,
+        "reasoning_output_tokens": 85
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，範圍卻已擴到三個 stub 與 cloud backend。\"}"
+    },
+    {
+      "job_id": "beck-2",
+      "lens": "beck",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端試跑，就鋪三個未用 backend 並準備 cloud，最小驗證路徑已擴",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 15143,
+      "usage": {
+        "input_tokens": 15539,
+        "cached_input_tokens": 9984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 295,
+        "reasoning_output_tokens": 242
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端試跑，就鋪三個未用 backend 並準備 cloud，最小驗證路徑已擴\"}"
+    },
+    {
+      "job_id": "beck-3",
+      "lens": "beck",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，就準備 cloud；最小 pilot 的停止條件還清楚嗎？",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 8332,
+      "usage": {
+        "input_tokens": 15539,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 172,
+        "reasoning_output_tokens": 126
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，就準備 cloud；最小 pilot 的停止條件還清楚嗎？\"}"
+    },
+    {
+      "job_id": "fowler-1",
+      "lens": "fowler",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，卻先鋪三個 stub 並轉做 cloud，責任邊界是否反而擴散？",
+      "characters": 51,
+      "raw_schema_valid": true,
+      "latency_ms": 21155,
+      "usage": {
+        "input_tokens": 15347,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 179,
+        "reasoning_output_tokens": 123
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，卻先鋪三個 stub 並轉做 cloud，責任邊界是否反而擴散？\"}"
+    },
+    {
+      "job_id": "fowler-2",
+      "lens": "fowler",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，卻先鋪三個未用 backend；擴充已跑在責任邊界確認前。",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 13401,
+      "usage": {
+        "input_tokens": 15516,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 161,
+        "reasoning_output_tokens": 106
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，卻先鋪三個未用 backend；擴充已跑在責任邊界確認前。\"}"
+    },
+    {
+      "job_id": "fowler-3",
+      "lens": "fowler",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "規則已散落三處、三個 backend 仍未使用，先擴充 cloud 是否正把未驗證的責任邊界固化？",
+      "characters": 49,
+      "raw_schema_valid": true,
+      "latency_ms": 10661,
+      "usage": {
+        "input_tokens": 15516,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 190,
+        "reasoning_output_tokens": 134
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"規則已散落三處、三個 backend 仍未使用，先擴充 cloud 是否正把未驗證的責任邊界固化？\"}"
+    },
+    {
+      "job_id": "linus-1",
+      "lens": "linus",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "三層轉交與未使用 stub 已先鋪開，local-json 端到端卻還沒驗證，責任邊界真的已決定嗎？",
+      "characters": 50,
+      "raw_schema_valid": true,
+      "latency_ms": 6102,
+      "usage": {
+        "input_tokens": 15362,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 57,
+        "reasoning_output_tokens": 0
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"三層轉交與未使用 stub 已先鋪開，local-json 端到端卻還沒驗證，責任邊界真的已決定嗎？\"}"
+    },
+    {
+      "job_id": "linus-2",
+      "lens": "linus",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，就先鋪三層轉交與三個未用 backend；各層增加了什麼不可替代行",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 9172,
+      "usage": {
+        "input_tokens": 15531,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 209,
+        "reasoning_output_tokens": 153
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，就先鋪三層轉交與三個未用 backend；各層增加了什麼不可替代行\"}"
+    },
+    {
+      "job_id": "linus-3",
+      "lens": "linus",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 端到端尚未跑，就先鋪三層與未用 backend，責任邊界反而更難驗證。",
+      "characters": 46,
+      "raw_schema_valid": true,
+      "latency_ms": 8213,
+      "usage": {
+        "input_tokens": 15531,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 135,
+        "reasoning_output_tokens": 82
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 端到端尚未跑，就先鋪三層與未用 backend，責任邊界反而更難驗證。\"}"
+    },
+    {
+      "job_id": "lamport-1",
+      "lens": "lamport",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "若 index 已更新、version 尚未寫入就 timeout，retry 後如何維持不重複？",
+      "characters": 49,
+      "raw_schema_valid": true,
+      "latency_ms": 23265,
+      "usage": {
+        "input_tokens": 15530,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 137,
+        "reasoning_output_tokens": 93
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"若 index 已更新、version 尚未寫入就 timeout，retry 後如何維持不重複？\"}"
+    },
+    {
+      "job_id": "lamport-2",
+      "lens": "lamport",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 先更新索引再寫版本；若中途 timeout 重試，增量只套用一次還成立嗎？",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 15051,
+      "usage": {
+        "input_tokens": 15530,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 154,
+        "reasoning_output_tokens": 106
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 先更新索引再寫版本；若中途 timeout 重試，增量只套用一次還成立嗎？\"}"
+    },
+    {
+      "job_id": "lamport-3",
+      "lens": "lamport",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "索引先更新、version 後寫；若中間逾時重試，「只處理一次」仍成立嗎？",
+      "characters": 37,
+      "raw_schema_valid": true,
+      "latency_ms": 24635,
+      "usage": {
+        "input_tokens": 15530,
+        "cached_input_tokens": 9984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 126,
+        "reasoning_output_tokens": 78
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"索引先更新、version 後寫；若中間逾時重試，「只處理一次」仍成立嗎？\"}"
+    },
+    {
+      "job_id": "carmack-1",
+      "lens": "carmack",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "尚無冷啟動 CLI 基準，卻先鋪三個未用 backend；pilot 的最小路徑是否已被擴充成本淹沒？",
+      "characters": 51,
+      "raw_schema_valid": true,
+      "latency_ms": 9361,
+      "usage": {
+        "input_tokens": 15527,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 172,
+        "reasoning_output_tokens": 113
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"尚無冷啟動 CLI 基準，卻先鋪三個未用 backend；pilot 的最小路徑是否已被擴充成本淹沒？\"}"
+    },
+    {
+      "job_id": "carmack-2",
+      "lens": "carmack",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "pilot只用 local-json，cold CLI 基準與端到端尚未建立，為何先擴 cloud？",
+      "characters": 50,
+      "raw_schema_valid": true,
+      "latency_ms": 10597,
+      "usage": {
+        "input_tokens": 15527,
+        "cached_input_tokens": 9984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 228,
+        "reasoning_output_tokens": 183
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"pilot只用 local-json，cold CLI 基準與端到端尚未建立，為何先擴 cloud？\"}"
+    },
+    {
+      "job_id": "carmack-3",
+      "lens": "carmack",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "基準只量同程序熱路徑，尚未驗證冷啟 CLI，擴充 cloud 的依據是什麼？",
+      "characters": 38,
+      "raw_schema_valid": true,
+      "latency_ms": 34212,
+      "usage": {
+        "input_tokens": 15676,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 146,
+        "reasoning_output_tokens": 95
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"基準只量同程序熱路徑，尚未驗證冷啟 CLI，擴充 cloud 的依據是什麼？\"}"
+    }
+  ]
+}

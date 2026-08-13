@@ -35,7 +35,7 @@ STAGE_NAMES = {
 }
 PERSONA_NAMES = {"general": "General", **LENS_PERSONAS}
 PERSONA_FOCUS = {
-    "general": "通用證據審查",
+    "general": "工作流與證據",
     "jeff": "系統因果與成本",
     "linus": "簡化與責任歸屬",
     "fowler": "重構與變更成本",
@@ -83,7 +83,11 @@ def resolve_stage(
 ) -> StageSelection:
     """Resolve env override, new stage config, legacy persona config, then Build."""
     environment = os.environ if environ is None else environ
-    env_persona = str(environment.get("BUDDY_PERSONA") or "").strip().lower()
+    env_persona = str(
+        environment.get("MASTERS_NUDGE_PERSONA")
+        or environment.get("BUDDY_PERSONA")
+        or ""
+    ).strip().lower()
     if env_persona:
         if env_persona == "general":
             return StageSelection("build", "beck", "environment", True)

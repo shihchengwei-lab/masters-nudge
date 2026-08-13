@@ -1,0 +1,2018 @@
+[
+  {
+    "blind_id": "W001",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W002",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "compensation-built-before-source-of-truth-decision",
+    "support_facts": [
+      "canonical owner 尚未決定",
+      "兩份 cache 都可寫",
+      "已加入同步與 repair 機制"
+    ],
+    "packet": "[task anchor]\n設計多租戶權限資料的責任邊界，避免不同服務看到不同結果。\n[end task anchor]\n\n[agent final claim]\n先讓 gateway cache 與 billing cache 各存一份組織角色，再加同步 worker 與 nightly repair job 對齊兩邊。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical owner = TBD；gateway、billing 與同步機制都可改寫角色資料。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W003",
+    "expected_status": "no_finding",
+    "intended_lens": "linus",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "runtime 只有單一路徑",
+      "相容層已刪除",
+      "安裝與遷移驗證通過"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n舊格式先由一次性 migration 轉成新格式，runtime 只保留 new config 單一路徑；舊 adapter 與 fallback 均已刪除。\n[end agent final claim]\n\n[tool evidence]\nclean install smoke passed；migration fixture passed；search confirms one runtime config reader and writer\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W004",
+    "expected_status": "no_finding",
+    "intended_lens": "linus",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "runtime 只有單一路徑",
+      "相容層已刪除",
+      "安裝與遷移驗證通過"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n舊格式先由一次性 migration 轉成新格式，runtime 只保留 new config 單一路徑；舊 adapter 與 fallback 均已刪除。\n[end agent final claim]\n\n[tool evidence]\nclean install smoke passed；migration fixture passed；search confirms one runtime config reader and writer\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W005",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "compensation-built-before-source-of-truth-decision",
+    "support_facts": [
+      "canonical owner 尚未決定",
+      "兩份 cache 都可寫",
+      "已加入同步與 repair 機制"
+    ],
+    "packet": "[task anchor]\n設計多租戶權限資料的責任邊界，避免不同服務看到不同結果。\n[end task anchor]\n\n[agent final claim]\n先讓 gateway cache 與 billing cache 各存一份組織角色，再加同步 worker 與 nightly repair job 對齊兩邊。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical owner = TBD；gateway、billing 與同步機制都可改寫角色資料。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W006",
+    "expected_status": "no_finding",
+    "intended_lens": "beck",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先建立最小失敗案例",
+      "只做必要修改",
+      "回歸通過即停止"
+    ],
+    "packet": "[task anchor]\n讓日期 parser 接受尾端空白，其他格式維持不變。\n[end task anchor]\n\n[checkpoint evidence]\n先新增一個 public parse 行為的失敗案例，只改輸入正規化一行；目標案例與完整回歸測試均通過後停止，沒有順帶整理其他 parser。\n[end checkpoint evidence]\n\n[recent agent context]\n需求的可觀察行為已由新測試保護，本輪不擴張範圍。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W007",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "checklist-substitutes-for-required-install-proof",
+    "support_facts": [
+      "驗收要求兩平台實際安裝",
+      "兩邊都未執行",
+      "仍宣告可交付"
+    ],
+    "packet": "[task anchor]\n發布 CLI；完成前必須在乾淨的 Windows 與 Linux 環境各安裝並執行一次。\n[end task anchor]\n\n[agent final claim]\nREADME、壓縮檔、checksum 與 release checklist 都完成，版本已可交付。\n[end agent final claim]\n\n[tool evidence]\nclean-machine install: NOT RUN；Windows runner unavailable，Linux install 也未執行\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W008",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W009",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "refactor-precedes-behavior-baseline",
+    "support_facts": [
+      "需求要求 JSON 行為不變",
+      "尚未記錄既有輸出",
+      "先進行七檔案的大範圍重構"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n在記錄目前 JSON 輸出或建立 characterization test 前，先抽出 serializer hierarchy、移動七個檔案並重新命名 public helpers；第一個 checkpoint 已累積 430 行變更。\n[end checkpoint evidence]\n\n[recent agent context]\n等整個 hierarchy 穩定後，再一次補齊 JSON 與 YAML 測試。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W010",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "refactor-precedes-behavior-baseline",
+    "support_facts": [
+      "需求要求 JSON 行為不變",
+      "尚未記錄既有輸出",
+      "先進行七檔案的大範圍重構"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n在記錄目前 JSON 輸出或建立 characterization test 前，先抽出 serializer hierarchy、移動七個檔案並重新命名 public helpers；第一個 checkpoint 已累積 430 行變更。\n[end checkpoint evidence]\n\n[recent agent context]\n等整個 hierarchy 穩定後，再一次補齊 JSON 與 YAML 測試。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W011",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "layers-defer-canonical-path-decision",
+    "support_facts": [
+      "需求要求單一路徑",
+      "canonical owner 未決定",
+      "adapter/fallback/reconciliation 保留四條路徑"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n保留 old config 與 new config，加入 adapter、fallback 與 reconciliation layer，兩邊都能繼續寫入。所有現有測試通過。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical format owner = TBD；delivery diagram 顯示四條可能路徑\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W012",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "layers-defer-canonical-path-decision",
+    "support_facts": [
+      "需求要求單一路徑",
+      "canonical owner 未決定",
+      "adapter/fallback/reconciliation 保留四條路徑"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n保留 old config 與 new config，加入 adapter、fallback 與 reconciliation layer，兩邊都能繼續寫入。所有現有測試通過。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical format owner = TBD；delivery diagram 顯示四條可能路徑\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W013",
+    "expected_status": "no_finding",
+    "intended_lens": "jeff",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定位問題",
+      "先做可逆原型",
+      "成功與退回條件明確"
+    ],
+    "packet": "[task anchor]\n改善新會員首次設定流程。\n[end task anchor]\n\n[agent final claim]\nfunnel 與客服紀錄都指向網域驗證說明不清；先用不改後端的文案原型驗證理解度，通過後才決定是否改流程。\n[end agent final claim]\n\n[tool evidence]\nplan check: 問題位置、成功條件、對照組與不成立時的退回方案均已列出；尚未開始實作。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W014",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W015",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "solution-chosen-before-problem-location",
+    "support_facts": [
+      "目標是降低 onboarding 流失",
+      "尚未確認流失發生在哪一步",
+      "已先選 event-driven reminder 架構"
+    ],
+    "packet": "[task anchor]\n降低新會員在 onboarding 流程中的流失。\n[end task anchor]\n\n[agent final claim]\n我決定新增 event-driven reminder service，接下來會先建 queue、排程器與通知模板。\n[end agent final claim]\n\n[tool evidence]\nplan check: 尚未查看 funnel 各步驟流失、使用者訪談或既有客服紀錄；成功指標與主要流失點皆未定義。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W016",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "scope-keeps-growing-after-stopping-condition",
+    "support_facts": [
+      "驗收與回歸測試已通過",
+      "工作繼續擴張到 framework 與 JSON helpers",
+      "沒有額外需求"
+    ],
+    "packet": "[task anchor]\n替 CSV 匯出新增 `--delimiter` 選項，既有格式不得改變。\n[end task anchor]\n\n[checkpoint evidence]\npublic CLI acceptance test 已通過，既有 CSV 測試也全綠。之後又開始抽出通用 serialization framework，並重新命名與任務無關的 JSON helpers；沒有新增需求或失敗檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n既然碰到序列化，順便把整個模組整理乾淨再交付。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W017",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W018",
+    "expected_status": "no_finding",
+    "intended_lens": "jeff",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定位問題",
+      "先做可逆原型",
+      "成功與退回條件明確"
+    ],
+    "packet": "[task anchor]\n改善新會員首次設定流程。\n[end task anchor]\n\n[agent final claim]\nfunnel 與客服紀錄都指向網域驗證說明不清；先用不改後端的文案原型驗證理解度，通過後才決定是否改流程。\n[end agent final claim]\n\n[tool evidence]\nplan check: 問題位置、成功條件、對照組與不成立時的退回方案均已列出；尚未開始實作。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W019",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W020",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "compensation-built-before-source-of-truth-decision",
+    "support_facts": [
+      "canonical owner 尚未決定",
+      "兩份 cache 都可寫",
+      "已加入同步與 repair 機制"
+    ],
+    "packet": "[task anchor]\n設計多租戶權限資料的責任邊界，避免不同服務看到不同結果。\n[end task anchor]\n\n[agent final claim]\n先讓 gateway cache 與 billing cache 各存一份組織角色，再加同步 worker 與 nightly repair job 對齊兩邊。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical owner = TBD；gateway、billing 與同步機制都可改寫角色資料。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W021",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W022",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W023",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "policy-change-reveals-missing-knowledge-boundary",
+    "support_facts": [
+      "同一折扣知識存在五處",
+      "本次必須同步修改五處",
+      "測試只證明當下同步"
+    ],
+    "packet": "[task anchor]\n把學生折扣從 10% 調整為 15%。\n[end task anchor]\n\n[agent final claim]\n已修改 checkout、invoice、refund、admin preview 與 email template；五處仍各自保存折扣比例與學生資格判斷，測試通過。\n[end agent final claim]\n\n[tool evidence]\nchange summary: identical student percentage and eligibility expression edited in five locations\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W024",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "scope-keeps-growing-after-stopping-condition",
+    "support_facts": [
+      "驗收與回歸測試已通過",
+      "工作繼續擴張到 framework 與 JSON helpers",
+      "沒有額外需求"
+    ],
+    "packet": "[task anchor]\n替 CSV 匯出新增 `--delimiter` 選項，既有格式不得改變。\n[end task anchor]\n\n[checkpoint evidence]\npublic CLI acceptance test 已通過，既有 CSV 測試也全綠。之後又開始抽出通用 serialization framework，並重新命名與任務無關的 JSON helpers；沒有新增需求或失敗檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n既然碰到序列化，順便把整個模組整理乾淨再交付。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W025",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W026",
+    "expected_status": "no_finding",
+    "intended_lens": "fowler",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先固定既有行為",
+      "一次移動一個責任",
+      "每步驗證且可退回"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先以 characterization tests 固定三種 JSON 輸出，再抽出一個純資料模型；每移動一個責任就重跑 JSON tests。YAML 目前只新增一個最小案例。\n[end checkpoint evidence]\n\n[recent agent context]\n每一步都保持 JSON 行為，下一步仍可單獨退回。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W027",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "solution-chosen-before-problem-location",
+    "support_facts": [
+      "目標是降低 onboarding 流失",
+      "尚未確認流失發生在哪一步",
+      "已先選 event-driven reminder 架構"
+    ],
+    "packet": "[task anchor]\n降低新會員在 onboarding 流程中的流失。\n[end task anchor]\n\n[agent final claim]\n我決定新增 event-driven reminder service，接下來會先建 queue、排程器與通知模板。\n[end agent final claim]\n\n[tool evidence]\nplan check: 尚未查看 funnel 各步驟流失、使用者訪談或既有客服紀錄；成功指標與主要流失點皆未定義。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W028",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "solution-chosen-before-problem-location",
+    "support_facts": [
+      "目標是降低 onboarding 流失",
+      "尚未確認流失發生在哪一步",
+      "已先選 event-driven reminder 架構"
+    ],
+    "packet": "[task anchor]\n降低新會員在 onboarding 流程中的流失。\n[end task anchor]\n\n[agent final claim]\n我決定新增 event-driven reminder service，接下來會先建 queue、排程器與通知模板。\n[end agent final claim]\n\n[tool evidence]\nplan check: 尚未查看 funnel 各步驟流失、使用者訪談或既有客服紀錄；成功指標與主要流失點皆未定義。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W029",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W030",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "checklist-substitutes-for-required-install-proof",
+    "support_facts": [
+      "驗收要求兩平台實際安裝",
+      "兩邊都未執行",
+      "仍宣告可交付"
+    ],
+    "packet": "[task anchor]\n發布 CLI；完成前必須在乾淨的 Windows 與 Linux 環境各安裝並執行一次。\n[end task anchor]\n\n[agent final claim]\nREADME、壓縮檔、checksum 與 release checklist 都完成，版本已可交付。\n[end agent final claim]\n\n[tool evidence]\nclean-machine install: NOT RUN；Windows runner unavailable，Linux install 也未執行\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W031",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W032",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "refactor-precedes-behavior-baseline",
+    "support_facts": [
+      "需求要求 JSON 行為不變",
+      "尚未記錄既有輸出",
+      "先進行七檔案的大範圍重構"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n在記錄目前 JSON 輸出或建立 characterization test 前，先抽出 serializer hierarchy、移動七個檔案並重新命名 public helpers；第一個 checkpoint 已累積 430 行變更。\n[end checkpoint evidence]\n\n[recent agent context]\n等整個 hierarchy 穩定後，再一次補齊 JSON 與 YAML 測試。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W033",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W034",
+    "expected_status": "no_finding",
+    "intended_lens": "fowler",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先固定既有行為",
+      "一次移動一個責任",
+      "每步驗證且可退回"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先以 characterization tests 固定三種 JSON 輸出，再抽出一個純資料模型；每移動一個責任就重跑 JSON tests。YAML 目前只新增一個最小案例。\n[end checkpoint evidence]\n\n[recent agent context]\n每一步都保持 JSON 行為，下一步仍可單獨退回。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W035",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W036",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W037",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "checklist-substitutes-for-required-install-proof",
+    "support_facts": [
+      "驗收要求兩平台實際安裝",
+      "兩邊都未執行",
+      "仍宣告可交付"
+    ],
+    "packet": "[task anchor]\n發布 CLI；完成前必須在乾淨的 Windows 與 Linux 環境各安裝並執行一次。\n[end task anchor]\n\n[agent final claim]\nREADME、壓縮檔、checksum 與 release checklist 都完成，版本已可交付。\n[end agent final claim]\n\n[tool evidence]\nclean-machine install: NOT RUN；Windows runner unavailable，Linux install 也未執行\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W038",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W039",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W040",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W041",
+    "expected_status": "no_finding",
+    "intended_lens": "fowler",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先固定既有行為",
+      "一次移動一個責任",
+      "每步驗證且可退回"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先以 characterization tests 固定三種 JSON 輸出，再抽出一個純資料模型；每移動一個責任就重跑 JSON tests。YAML 目前只新增一個最小案例。\n[end checkpoint evidence]\n\n[recent agent context]\n每一步都保持 JSON 行為，下一步仍可單獨退回。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W042",
+    "expected_status": "no_finding",
+    "intended_lens": "fowler",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先固定既有行為",
+      "一次移動一個責任",
+      "每步驗證且可退回"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先以 characterization tests 固定三種 JSON 輸出，再抽出一個純資料模型；每移動一個責任就重跑 JSON tests。YAML 目前只新增一個最小案例。\n[end checkpoint evidence]\n\n[recent agent context]\n每一步都保持 JSON 行為，下一步仍可單獨退回。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W043",
+    "expected_status": "no_finding",
+    "intended_lens": "beck",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先建立最小失敗案例",
+      "只做必要修改",
+      "回歸通過即停止"
+    ],
+    "packet": "[task anchor]\n讓日期 parser 接受尾端空白，其他格式維持不變。\n[end task anchor]\n\n[checkpoint evidence]\n先新增一個 public parse 行為的失敗案例，只改輸入正規化一行；目標案例與完整回歸測試均通過後停止，沒有順帶整理其他 parser。\n[end checkpoint evidence]\n\n[recent agent context]\n需求的可觀察行為已由新測試保護，本輪不擴張範圍。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W044",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W045",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "scope-keeps-growing-after-stopping-condition",
+    "support_facts": [
+      "驗收與回歸測試已通過",
+      "工作繼續擴張到 framework 與 JSON helpers",
+      "沒有額外需求"
+    ],
+    "packet": "[task anchor]\n替 CSV 匯出新增 `--delimiter` 選項，既有格式不得改變。\n[end task anchor]\n\n[checkpoint evidence]\npublic CLI acceptance test 已通過，既有 CSV 測試也全綠。之後又開始抽出通用 serialization framework，並重新命名與任務無關的 JSON helpers；沒有新增需求或失敗檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n既然碰到序列化，順便把整個模組整理乾淨再交付。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W046",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "policy-change-reveals-missing-knowledge-boundary",
+    "support_facts": [
+      "同一折扣知識存在五處",
+      "本次必須同步修改五處",
+      "測試只證明當下同步"
+    ],
+    "packet": "[task anchor]\n把學生折扣從 10% 調整為 15%。\n[end task anchor]\n\n[agent final claim]\n已修改 checkout、invoice、refund、admin preview 與 email template；五處仍各自保存折扣比例與學生資格判斷，測試通過。\n[end agent final claim]\n\n[tool evidence]\nchange summary: identical student percentage and eligibility expression edited in five locations\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W047",
+    "expected_status": "no_finding",
+    "intended_lens": "beck",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先建立最小失敗案例",
+      "只做必要修改",
+      "回歸通過即停止"
+    ],
+    "packet": "[task anchor]\n讓日期 parser 接受尾端空白，其他格式維持不變。\n[end task anchor]\n\n[checkpoint evidence]\n先新增一個 public parse 行為的失敗案例，只改輸入正規化一行；目標案例與完整回歸測試均通過後停止，沒有順帶整理其他 parser。\n[end checkpoint evidence]\n\n[recent agent context]\n需求的可觀察行為已由新測試保護，本輪不擴張範圍。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W048",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "solution-chosen-before-problem-location",
+    "support_facts": [
+      "目標是降低 onboarding 流失",
+      "尚未確認流失發生在哪一步",
+      "已先選 event-driven reminder 架構"
+    ],
+    "packet": "[task anchor]\n降低新會員在 onboarding 流程中的流失。\n[end task anchor]\n\n[agent final claim]\n我決定新增 event-driven reminder service，接下來會先建 queue、排程器與通知模板。\n[end agent final claim]\n\n[tool evidence]\nplan check: 尚未查看 funnel 各步驟流失、使用者訪談或既有客服紀錄；成功指標與主要流失點皆未定義。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W049",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W050",
+    "expected_status": "no_finding",
+    "intended_lens": "linus",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "runtime 只有單一路徑",
+      "相容層已刪除",
+      "安裝與遷移驗證通過"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n舊格式先由一次性 migration 轉成新格式，runtime 只保留 new config 單一路徑；舊 adapter 與 fallback 均已刪除。\n[end agent final claim]\n\n[tool evidence]\nclean install smoke passed；migration fixture passed；search confirms one runtime config reader and writer\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W051",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W052",
+    "expected_status": "finding",
+    "intended_lens": "jeff",
+    "workflow_target": "compensation-built-before-source-of-truth-decision",
+    "support_facts": [
+      "canonical owner 尚未決定",
+      "兩份 cache 都可寫",
+      "已加入同步與 repair 機制"
+    ],
+    "packet": "[task anchor]\n設計多租戶權限資料的責任邊界，避免不同服務看到不同結果。\n[end task anchor]\n\n[agent final claim]\n先讓 gateway cache 與 billing cache 各存一份組織角色，再加同步 worker 與 nightly repair job 對齊兩邊。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical owner = TBD；gateway、billing 與同步機制都可改寫角色資料。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W053",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "policy-change-reveals-missing-knowledge-boundary",
+    "support_facts": [
+      "同一折扣知識存在五處",
+      "本次必須同步修改五處",
+      "測試只證明當下同步"
+    ],
+    "packet": "[task anchor]\n把學生折扣從 10% 調整為 15%。\n[end task anchor]\n\n[agent final claim]\n已修改 checkout、invoice、refund、admin preview 與 email template；五處仍各自保存折扣比例與學生資格判斷，測試通過。\n[end agent final claim]\n\n[tool evidence]\nchange summary: identical student percentage and eligibility expression edited in five locations\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W054",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W055",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W056",
+    "expected_status": "no_finding",
+    "intended_lens": "linus",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "runtime 只有單一路徑",
+      "相容層已刪除",
+      "安裝與遷移驗證通過"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n舊格式先由一次性 migration 轉成新格式，runtime 只保留 new config 單一路徑；舊 adapter 與 fallback 均已刪除。\n[end agent final claim]\n\n[tool evidence]\nclean install smoke passed；migration fixture passed；search confirms one runtime config reader and writer\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W057",
+    "expected_status": "no_finding",
+    "intended_lens": "jeff",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定位問題",
+      "先做可逆原型",
+      "成功與退回條件明確"
+    ],
+    "packet": "[task anchor]\n改善新會員首次設定流程。\n[end task anchor]\n\n[agent final claim]\nfunnel 與客服紀錄都指向網域驗證說明不清；先用不改後端的文案原型驗證理解度，通過後才決定是否改流程。\n[end agent final claim]\n\n[tool evidence]\nplan check: 問題位置、成功條件、對照組與不成立時的退回方案均已列出；尚未開始實作。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W058",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W059",
+    "expected_status": "no_finding",
+    "intended_lens": "beck",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先建立最小失敗案例",
+      "只做必要修改",
+      "回歸通過即停止"
+    ],
+    "packet": "[task anchor]\n讓日期 parser 接受尾端空白，其他格式維持不變。\n[end task anchor]\n\n[checkpoint evidence]\n先新增一個 public parse 行為的失敗案例，只改輸入正規化一行；目標案例與完整回歸測試均通過後停止，沒有順帶整理其他 parser。\n[end checkpoint evidence]\n\n[recent agent context]\n需求的可觀察行為已由新測試保護，本輪不擴張範圍。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W060",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "layers-defer-canonical-path-decision",
+    "support_facts": [
+      "需求要求單一路徑",
+      "canonical owner 未決定",
+      "adapter/fallback/reconciliation 保留四條路徑"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n保留 old config 與 new config，加入 adapter、fallback 與 reconciliation layer，兩邊都能繼續寫入。所有現有測試通過。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical format owner = TBD；delivery diagram 顯示四條可能路徑\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W061",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W062",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "refactor-precedes-behavior-baseline",
+    "support_facts": [
+      "需求要求 JSON 行為不變",
+      "尚未記錄既有輸出",
+      "先進行七檔案的大範圍重構"
+    ],
+    "packet": "[task anchor]\n新增 YAML export，既有 JSON export 的可觀察輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n在記錄目前 JSON 輸出或建立 characterization test 前，先抽出 serializer hierarchy、移動七個檔案並重新命名 public helpers；第一個 checkpoint 已累積 430 行變更。\n[end checkpoint evidence]\n\n[recent agent context]\n等整個 hierarchy 穩定後，再一次補齊 JSON 與 YAML 測試。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W063",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "fixes-change-without-discriminating-feedback",
+    "support_facts": [
+      "連續修改三個不同位置",
+      "每次仍是同一失敗",
+      "沒有最小重現或可排除假設"
+    ],
+    "packet": "[task anchor]\n修復結帳日期驗證在整合測試中的失敗。\n[end task anchor]\n\n[checkpoint evidence]\n同一個 assertion 失敗後，依序修改 parser、timezone conversion 與 formatter；每次都重跑完整 suite，結果仍是同一個失敗。沒有建立最小重現、提出可排除的原因或跑聚焦檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n下一步準備再改 validation middleware 試試看。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W064",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W065",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W066",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W067",
+    "expected_status": "finding",
+    "intended_lens": "fowler",
+    "workflow_target": "policy-change-reveals-missing-knowledge-boundary",
+    "support_facts": [
+      "同一折扣知識存在五處",
+      "本次必須同步修改五處",
+      "測試只證明當下同步"
+    ],
+    "packet": "[task anchor]\n把學生折扣從 10% 調整為 15%。\n[end task anchor]\n\n[agent final claim]\n已修改 checkout、invoice、refund、admin preview 與 email template；五處仍各自保存折扣比例與學生資格判斷，測試通過。\n[end agent final claim]\n\n[tool evidence]\nchange summary: identical student percentage and eligibility expression edited in five locations\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W068",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "scope-keeps-growing-after-stopping-condition",
+    "support_facts": [
+      "驗收與回歸測試已通過",
+      "工作繼續擴張到 framework 與 JSON helpers",
+      "沒有額外需求"
+    ],
+    "packet": "[task anchor]\n替 CSV 匯出新增 `--delimiter` 選項，既有格式不得改變。\n[end task anchor]\n\n[checkpoint evidence]\npublic CLI acceptance test 已通過，既有 CSV 測試也全綠。之後又開始抽出通用 serialization framework，並重新命名與任務無關的 JSON helpers；沒有新增需求或失敗檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n既然碰到序列化，順便把整個模組整理乾淨再交付。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W069",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W070",
+    "expected_status": "no_finding",
+    "intended_lens": "lamport",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定義 invariant",
+      "列出失敗順序",
+      "failure injection 證明只寄一封"
+    ],
+    "packet": "[task anchor]\nreceipt worker 可以 retry，但同一訂單最多寄一封。\n[end task anchor]\n\n[checkpoint evidence]\n先寫出 at-most-once invariant，再列出 enqueue、send、commit 與 retry 的可能順序；郵件服務使用 order idempotency key。failure injection 覆蓋 send 後中斷與重複 delivery，寄送數都為 1。\n[end checkpoint evidence]\n\n[recent agent context]\nhappy path 與兩個 partial failure histories 均已驗證。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W071",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W072",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "checklist-substitutes-for-required-install-proof",
+    "support_facts": [
+      "驗收要求兩平台實際安裝",
+      "兩邊都未執行",
+      "仍宣告可交付"
+    ],
+    "packet": "[task anchor]\n發布 CLI；完成前必須在乾淨的 Windows 與 Linux 環境各安裝並執行一次。\n[end task anchor]\n\n[agent final claim]\nREADME、壓縮檔、checksum 與 release checklist 都完成，版本已可交付。\n[end agent final claim]\n\n[tool evidence]\nclean-machine install: NOT RUN；Windows runner unavailable，Linux install 也未執行\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W073",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W074",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W075",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "optimization-direction-precedes-measurement",
+    "support_facts": [
+      "同時嘗試三種優化",
+      "沒有 baseline 或 profiler",
+      "只憑體感繼續調整"
+    ],
+    "packet": "[task anchor]\n降低報表產生時間，輸出內容不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先後改用新資料結構、加入 cache、再平行化三個步驟。沒有 baseline；profiler 尚未執行，也沒有輸出等價檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n從體感看起來更快，準備繼續調整 thread pool。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W076",
+    "expected_status": "finding",
+    "intended_lens": "carmack",
+    "workflow_target": "warm-benchmark-does-not-answer-cold-start-goal",
+    "support_facts": [
+      "目標是 cold start",
+      "量測使用同一已載入 process",
+      "未驗證首次輸出"
+    ],
+    "packet": "[task anchor]\n改善 CLI cold start p95，首次執行輸出必須保持一致。\n[end task anchor]\n\n[agent final claim]\nbenchmark 顯示快 40%，效能任務已完成。\n[end agent final claim]\n\n[tool evidence]\nbenchmark loop 在同一 process 內重複 500 次，設定與 modules 已載入；沒有 cold process run，也沒有比對首次輸出\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W077",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "deployment-precedes-retry-invariant-review",
+    "support_facts": [
+      "承諾最多扣款一次",
+      "charge 與 marker 分兩步",
+      "只有 happy path 即準備部署"
+    ],
+    "packet": "[task anchor]\ninvoice worker 可以 retry，但每張發票最多扣款一次。\n[end task anchor]\n\n[checkpoint evidence]\nqueue 在 timeout 後會 retry。實作先 charge，再寫 charged marker；目前只有 happy path test，沒有列出兩步之間中斷時的 invariant 或 failure sequence。\n[end checkpoint evidence]\n\n[recent agent context]\n成功案例已通過，下一步準備部署到 staging。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W078",
+    "expected_status": "no_finding",
+    "intended_lens": "carmack",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先量測定位",
+      "一次只移除一份工作",
+      "重複量測與輸出等價通過"
+    ],
+    "packet": "[task anchor]\n降低縮圖 API latency，像素輸出不得改變。\n[end task anchor]\n\n[checkpoint evidence]\n先跑 baseline 與 profiler，確認一個重複 copy 佔主要時間；只移除該 copy。相同資料集重跑 benchmark 五次，p95 由 16.1 ms 降到 10.3 ms，500 個 pixel hashes 全部一致。\n[end checkpoint evidence]\n\n[recent agent context]\n保留原始 baseline、命令與輸出等價證據，沒有追加其他優化。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W079",
+    "expected_status": "finding",
+    "intended_lens": "lamport",
+    "workflow_target": "timing-patch-replaces-ordering-experiment",
+    "support_facts": [
+      "已知 A 晚於 B 覆寫",
+      "第三次只增加 debounce",
+      "測試沒有交錯事件"
+    ],
+    "packet": "[task anchor]\n搜尋結果必須永遠對應使用者最後輸入的查詢。\n[end task anchor]\n\n[checkpoint evidence]\n發現 Query A 的舊回應會在 Query B 後抵達並覆寫畫面，形成亂序結果。這輪第三次調高 debounce，從 80 ms 改到 200 ms；測試仍只送單一 request，沒有重現 A、B 交錯順序。\n[end checkpoint evidence]\n\n[recent agent context]\n再增加延遲應該能降低 stale result 出現機率。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W080",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "fixes-change-without-discriminating-feedback",
+    "support_facts": [
+      "連續修改三個不同位置",
+      "每次仍是同一失敗",
+      "沒有最小重現或可排除假設"
+    ],
+    "packet": "[task anchor]\n修復結帳日期驗證在整合測試中的失敗。\n[end task anchor]\n\n[checkpoint evidence]\n同一個 assertion 失敗後，依序修改 parser、timezone conversion 與 formatter；每次都重跑完整 suite，結果仍是同一個失敗。沒有建立最小重現、提出可排除的原因或跑聚焦檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n下一步準備再改 validation middleware 試試看。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W081",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "fixes-change-without-discriminating-feedback",
+    "support_facts": [
+      "連續修改三個不同位置",
+      "每次仍是同一失敗",
+      "沒有最小重現或可排除假設"
+    ],
+    "packet": "[task anchor]\n修復結帳日期驗證在整合測試中的失敗。\n[end task anchor]\n\n[checkpoint evidence]\n同一個 assertion 失敗後，依序修改 parser、timezone conversion 與 formatter；每次都重跑完整 suite，結果仍是同一個失敗。沒有建立最小重現、提出可排除的原因或跑聚焦檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n下一步準備再改 validation middleware 試試看。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W082",
+    "expected_status": "no_finding",
+    "intended_lens": "jeff",
+    "workflow_target": "verified-clean",
+    "support_facts": [
+      "先定位問題",
+      "先做可逆原型",
+      "成功與退回條件明確"
+    ],
+    "packet": "[task anchor]\n改善新會員首次設定流程。\n[end task anchor]\n\n[agent final claim]\nfunnel 與客服紀錄都指向網域驗證說明不清；先用不改後端的文案原型驗證理解度，通過後才決定是否改流程。\n[end agent final claim]\n\n[tool evidence]\nplan check: 問題位置、成功條件、對照組與不成立時的退回方案均已列出；尚未開始實作。\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W083",
+    "expected_status": "finding",
+    "intended_lens": "beck",
+    "workflow_target": "fixes-change-without-discriminating-feedback",
+    "support_facts": [
+      "連續修改三個不同位置",
+      "每次仍是同一失敗",
+      "沒有最小重現或可排除假設"
+    ],
+    "packet": "[task anchor]\n修復結帳日期驗證在整合測試中的失敗。\n[end task anchor]\n\n[checkpoint evidence]\n同一個 assertion 失敗後，依序修改 parser、timezone conversion 與 formatter；每次都重跑完整 suite，結果仍是同一個失敗。沒有建立最小重現、提出可排除的原因或跑聚焦檢查。\n[end checkpoint evidence]\n\n[recent agent context]\n下一步準備再改 validation middleware 試試看。\n[end recent agent context]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  },
+  {
+    "blind_id": "W084",
+    "expected_status": "finding",
+    "intended_lens": "linus",
+    "workflow_target": "layers-defer-canonical-path-decision",
+    "support_facts": [
+      "需求要求單一路徑",
+      "canonical owner 未決定",
+      "adapter/fallback/reconciliation 保留四條路徑"
+    ],
+    "packet": "[task anchor]\n完成設定格式遷移，交付時必須只有一條清楚的讀寫路徑。\n[end task anchor]\n\n[agent final claim]\n保留 old config 與 new config，加入 adapter、fallback 與 reconciliation layer，兩邊都能繼續寫入。所有現有測試通過。\n[end agent final claim]\n\n[tool evidence]\ndecision log: canonical format owner = TBD；delivery diagram 顯示四條可能路徑\n[end tool evidence]",
+    "observed_status": "error",
+    "nudge": "",
+    "chars": 0,
+    "raw_chars": 0,
+    "judgment": {
+      "grounded": null,
+      "workflow_level": null,
+      "target_relevant": null,
+      "lens_aligned": null,
+      "complete": null,
+      "note": ""
+    }
+  }
+]

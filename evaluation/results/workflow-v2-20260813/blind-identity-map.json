@@ -1,0 +1,506 @@
+[
+  {
+    "blind_id": "W001",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W002",
+    "fixture_id": "workflow-jeff-compensation-before-owner",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W003",
+    "fixture_id": "workflow-linus-clean-single-path-proof",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W004",
+    "fixture_id": "workflow-linus-clean-single-path-proof",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W005",
+    "fixture_id": "workflow-jeff-compensation-before-owner",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W006",
+    "fixture_id": "workflow-beck-clean-short-feedback-loop",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W007",
+    "fixture_id": "workflow-linus-checklist-before-real-install",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W008",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W009",
+    "fixture_id": "workflow-fowler-refactor-before-characterization",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W010",
+    "fixture_id": "workflow-fowler-refactor-before-characterization",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W011",
+    "fixture_id": "workflow-linus-layers-hide-undecided-owner",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W012",
+    "fixture_id": "workflow-linus-layers-hide-undecided-owner",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W013",
+    "fixture_id": "workflow-jeff-clean-evidence-first-design",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W014",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W015",
+    "fixture_id": "workflow-jeff-solution-before-problem",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W016",
+    "fixture_id": "workflow-beck-scope-after-acceptance",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W017",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W018",
+    "fixture_id": "workflow-jeff-clean-evidence-first-design",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W019",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W020",
+    "fixture_id": "workflow-jeff-compensation-before-owner",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W021",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W022",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W023",
+    "fixture_id": "workflow-fowler-policy-has-no-home",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W024",
+    "fixture_id": "workflow-beck-scope-after-acceptance",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W025",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W026",
+    "fixture_id": "workflow-fowler-clean-characterize-then-change",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W027",
+    "fixture_id": "workflow-jeff-solution-before-problem",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W028",
+    "fixture_id": "workflow-jeff-solution-before-problem",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W029",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W030",
+    "fixture_id": "workflow-linus-checklist-before-real-install",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W031",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W032",
+    "fixture_id": "workflow-fowler-refactor-before-characterization",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W033",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W034",
+    "fixture_id": "workflow-fowler-clean-characterize-then-change",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W035",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W036",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W037",
+    "fixture_id": "workflow-linus-checklist-before-real-install",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W038",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W039",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W040",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W041",
+    "fixture_id": "workflow-fowler-clean-characterize-then-change",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W042",
+    "fixture_id": "workflow-fowler-clean-characterize-then-change",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W043",
+    "fixture_id": "workflow-beck-clean-short-feedback-loop",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W044",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W045",
+    "fixture_id": "workflow-beck-scope-after-acceptance",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W046",
+    "fixture_id": "workflow-fowler-policy-has-no-home",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W047",
+    "fixture_id": "workflow-beck-clean-short-feedback-loop",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W048",
+    "fixture_id": "workflow-jeff-solution-before-problem",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W049",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W050",
+    "fixture_id": "workflow-linus-clean-single-path-proof",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W051",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W052",
+    "fixture_id": "workflow-jeff-compensation-before-owner",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W053",
+    "fixture_id": "workflow-fowler-policy-has-no-home",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W054",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W055",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W056",
+    "fixture_id": "workflow-linus-clean-single-path-proof",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W057",
+    "fixture_id": "workflow-jeff-clean-evidence-first-design",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W058",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W059",
+    "fixture_id": "workflow-beck-clean-short-feedback-loop",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W060",
+    "fixture_id": "workflow-linus-layers-hide-undecided-owner",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W061",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W062",
+    "fixture_id": "workflow-fowler-refactor-before-characterization",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W063",
+    "fixture_id": "workflow-beck-fix-thrashing-without-experiment",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W064",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W065",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W066",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W067",
+    "fixture_id": "workflow-fowler-policy-has-no-home",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W068",
+    "fixture_id": "workflow-beck-scope-after-acceptance",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W069",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W070",
+    "fixture_id": "workflow-lamport-clean-invariant-first",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W071",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W072",
+    "fixture_id": "workflow-linus-checklist-before-real-install",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W073",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "effective",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W074",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W075",
+    "fixture_id": "workflow-carmack-optimizes-before-measurement",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W076",
+    "fixture_id": "workflow-carmack-warm-benchmark-for-cold-goal",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W077",
+    "fixture_id": "workflow-lamport-happy-path-before-invariant",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W078",
+    "fixture_id": "workflow-carmack-clean-measure-one-change",
+    "condition": "primary",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W079",
+    "fixture_id": "workflow-lamport-delay-patches-ordering",
+    "condition": "primary",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W080",
+    "fixture_id": "workflow-beck-fix-thrashing-without-experiment",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W081",
+    "fixture_id": "workflow-beck-fix-thrashing-without-experiment",
+    "condition": "effective",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W082",
+    "fixture_id": "workflow-jeff-clean-evidence-first-design",
+    "condition": "baseline",
+    "repeat": 2
+  },
+  {
+    "blind_id": "W083",
+    "fixture_id": "workflow-beck-fix-thrashing-without-experiment",
+    "condition": "baseline",
+    "repeat": 1
+  },
+  {
+    "blind_id": "W084",
+    "fixture_id": "workflow-linus-layers-hide-undecided-owner",
+    "condition": "effective",
+    "repeat": 1
+  }
+]

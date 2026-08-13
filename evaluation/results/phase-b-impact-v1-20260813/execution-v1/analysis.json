@@ -1,0 +1,321 @@
+{
+  "rows": 36,
+  "conditions": {
+    "control": {
+      "runs": 18,
+      "agent_valid": 18,
+      "grader_valid": 18,
+      "task_passes": 13,
+      "components_passed": 64,
+      "components_total": 69,
+      "total_cost_usd": 2.469823,
+      "mean_turns": 10.39,
+      "mean_wall_ms": 29228
+    },
+    "treatment": {
+      "runs": 18,
+      "agent_valid": 18,
+      "grader_valid": 18,
+      "task_passes": 13,
+      "components_passed": 64,
+      "components_total": 69,
+      "total_cost_usd": 2.710132,
+      "mean_turns": 10.83,
+      "mean_wall_ms": 32504
+    }
+  },
+  "paired": {
+    "pairs": 18,
+    "wins": 1,
+    "losses": 1,
+    "both_pass": 12,
+    "both_fail": 4,
+    "component_pass_delta": 0,
+    "exact_one_sided_p": 0.75,
+    "details": [
+      {
+        "task_id": "clean-install-proof",
+        "repeat": 1,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "clean-install-proof",
+        "repeat": 2,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "clean-install-proof",
+        "repeat": 3,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "cold-start-cli",
+        "repeat": 1,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "cold-start-cli",
+        "repeat": 2,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "cold-start-cli",
+        "repeat": 3,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "csv-scope-control",
+        "repeat": 1,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "csv-scope-control",
+        "repeat": 2,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "csv-scope-control",
+        "repeat": 3,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "discount-policy-home",
+        "repeat": 1,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "discount-policy-home",
+        "repeat": 2,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "discount-policy-home",
+        "repeat": 3,
+        "outcome": "both_pass",
+        "component_delta": 0
+      },
+      {
+        "task_id": "last-query-wins",
+        "repeat": 1,
+        "outcome": "win",
+        "component_delta": 1
+      },
+      {
+        "task_id": "last-query-wins",
+        "repeat": 2,
+        "outcome": "loss",
+        "component_delta": -1
+      },
+      {
+        "task_id": "last-query-wins",
+        "repeat": 3,
+        "outcome": "both_fail",
+        "component_delta": 0
+      },
+      {
+        "task_id": "onboarding-problem-location",
+        "repeat": 1,
+        "outcome": "both_fail",
+        "component_delta": 0
+      },
+      {
+        "task_id": "onboarding-problem-location",
+        "repeat": 2,
+        "outcome": "both_fail",
+        "component_delta": 0
+      },
+      {
+        "task_id": "onboarding-problem-location",
+        "repeat": 3,
+        "outcome": "both_fail",
+        "component_delta": 0
+      }
+    ]
+  },
+  "by_task": {
+    "clean-install-proof": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 9,
+        "components_total": 9,
+        "total_cost_usd": 0.483463,
+        "mean_turns": 12.67,
+        "mean_wall_ms": 36482
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 9,
+        "components_total": 9,
+        "total_cost_usd": 0.55849,
+        "mean_turns": 13.33,
+        "mean_wall_ms": 37038
+      },
+      "net_paired_wins": 0
+    },
+    "cold-start-cli": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.413941,
+        "mean_turns": 10.67,
+        "mean_wall_ms": 33847
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.51278,
+        "mean_turns": 10.67,
+        "mean_wall_ms": 43165
+      },
+      "net_paired_wins": 0
+    },
+    "csv-scope-control": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.464612,
+        "mean_turns": 8.67,
+        "mean_wall_ms": 23773
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.39146,
+        "mean_turns": 9.33,
+        "mean_wall_ms": 28120
+      },
+      "net_paired_wins": 0
+    },
+    "discount-policy-home": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.382119,
+        "mean_turns": 12.33,
+        "mean_wall_ms": 26304
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 3,
+        "components_passed": 12,
+        "components_total": 12,
+        "total_cost_usd": 0.416435,
+        "mean_turns": 13.33,
+        "mean_wall_ms": 30115
+      },
+      "net_paired_wins": 0
+    },
+    "last-query-wins": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 1,
+        "components_passed": 10,
+        "components_total": 12,
+        "total_cost_usd": 0.316903,
+        "mean_turns": 8.0,
+        "mean_wall_ms": 25057
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 1,
+        "components_passed": 10,
+        "components_total": 12,
+        "total_cost_usd": 0.448696,
+        "mean_turns": 8.33,
+        "mean_wall_ms": 26879
+      },
+      "net_paired_wins": 0
+    },
+    "onboarding-problem-location": {
+      "control": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 0,
+        "components_passed": 9,
+        "components_total": 12,
+        "total_cost_usd": 0.408787,
+        "mean_turns": 10.0,
+        "mean_wall_ms": 29908
+      },
+      "treatment": {
+        "runs": 3,
+        "agent_valid": 3,
+        "grader_valid": 3,
+        "task_passes": 0,
+        "components_passed": 9,
+        "components_total": 12,
+        "total_cost_usd": 0.382271,
+        "mean_turns": 10.0,
+        "mean_wall_ms": 29709
+      },
+      "net_paired_wins": 0
+    }
+  },
+  "gates": {
+    "run_integrity": {
+      "passed": true,
+      "measured": "rows 36/36; agent-valid 36/36; grader-valid 36/36"
+    },
+    "treatment_not_lower_full_task_success": {
+      "passed": true,
+      "measured": "treatment 13/18; control 13/18"
+    },
+    "paired_net_benefit": {
+      "passed": false,
+      "measured": "wins 1; losses 1; net 0"
+    },
+    "benefit_spans_tasks": {
+      "passed": false,
+      "measured": "tasks with net benefit 0/6"
+    },
+    "no_task_majority_harm": {
+      "passed": true,
+      "measured": "{\"clean-install-proof\": 0, \"cold-start-cli\": 0, \"csv-scope-control\": 0, \"discount-policy-home\": 0, \"last-query-wins\": 0, \"onboarding-problem-location\": 0}"
+    }
+  },
+  "positive_pilot_signal": false
+}

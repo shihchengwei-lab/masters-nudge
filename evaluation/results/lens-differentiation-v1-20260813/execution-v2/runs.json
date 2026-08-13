@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "job_id": "jeff-1",
+      "lens": "jeff",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "三層抽象與三個 stub 先擴張範圍，pilot 的五萬檔 cold p95 與亂序重送不變量卻未驗證。",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 20362,
+      "usage": {
+        "input_tokens": 15621,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 257,
+        "reasoning_output_tokens": 194
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"三層抽象與三個 stub 先擴張範圍，pilot 的五萬檔 cold p95 與亂序重送不變量卻未驗證。\"}"
+    },
+    {
+      "job_id": "jeff-2",
+      "lens": "jeff",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "把1,000筆暖態最佳值當成50,000檔 cold-start p95，完成宣告跑在驗證前。",
+      "characters": 47,
+      "raw_schema_valid": true,
+      "latency_ms": 12721,
+      "usage": {
+        "input_tokens": 15621,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 336,
+        "reasoning_output_tokens": 286
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"把1,000筆暖態最佳值當成50,000檔 cold-start p95，完成宣告跑在驗證前。\"}"
+    },
+    {
+      "job_id": "jeff-3",
+      "lens": "jeff",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "版本狀態只在記憶體且晚於索引寫入，讓 restart／retry 成為最新版本保證的缺口，卻都未驗證。",
+      "characters": 51,
+      "raw_schema_valid": true,
+      "latency_ms": 9134,
+      "usage": {
+        "input_tokens": 15621,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 175,
+        "reasoning_output_tokens": 116
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"版本狀態只在記憶體且晚於索引寫入，讓 restart／retry 成為最新版本保證的缺口，卻都未驗證。\"}"
+    },
+    {
+      "job_id": "beck-1",
+      "lens": "beck",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告跑在關鍵回饋前：1,000 筆熱路徑最佳值，無法驗證 50,000 檔 cold-start p",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 10225,
+      "usage": {
+        "input_tokens": 15624,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 164,
+        "reasoning_output_tokens": 105
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告跑在關鍵回饋前：1,000 筆熱路徑最佳值，無法驗證 50,000 檔 cold-start p\" }"
+    },
+    {
+      "job_id": "beck-2",
+      "lens": "beck",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告跑在需求驗證前：千筆熱路徑最佳值，無法回答五萬檔冷啟動 p95。",
+      "characters": 36,
+      "raw_schema_valid": true,
+      "latency_ms": 11861,
+      "usage": {
+        "input_tokens": 15455,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 165,
+        "reasoning_output_tokens": 112
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告跑在需求驗證前：千筆熱路徑最佳值，無法回答五萬檔冷啟動 p95。\"}"
+    },
+    {
+      "job_id": "beck-3",
+      "lens": "beck",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告跑在需求驗證前：benchmark 未測五萬檔 cold p95，測試也未涵蓋 retry／亂序",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 12579,
+      "usage": {
+        "input_tokens": 15624,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 148,
+        "reasoning_output_tokens": 96
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告跑在需求驗證前：benchmark 未測五萬檔 cold p95，測試也未涵蓋 retry／亂序\"}"
+    },
+    {
+      "job_id": "fowler-1",
+      "lens": "fowler",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告依賴已載入的千筆最佳值，尚未驗證五萬檔 cold-start p95。",
+      "characters": 39,
+      "raw_schema_valid": true,
+      "latency_ms": 17884,
+      "usage": {
+        "input_tokens": 15393,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 126,
+        "reasoning_output_tokens": 78
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告依賴已載入的千筆最佳值，尚未驗證五萬檔 cold-start p95。\"}"
+    },
+    {
+      "job_id": "fowler-2",
+      "lens": "fowler",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "用千筆暖機最佳值代替五萬檔冷啟動 p95，完成判準已被換掉。",
+      "characters": 30,
+      "raw_schema_valid": true,
+      "latency_ms": 10005,
+      "usage": {
+        "input_tokens": 15601,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 197,
+        "reasoning_output_tokens": 149
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"用千筆暖機最佳值代替五萬檔冷啟動 p95，完成判準已被換掉。\"}"
+    },
+    {
+      "job_id": "fowler-3",
+      "lens": "fowler",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告跑在關鍵驗證前：五萬檔 cold p95 與亂序、重試都未實測。",
+      "characters": 36,
+      "raw_schema_valid": true,
+      "latency_ms": 9539,
+      "usage": {
+        "input_tokens": 15601,
+        "cached_input_tokens": 14080,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 155,
+        "reasoning_output_tokens": 105
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告跑在關鍵驗證前：五萬檔 cold p95 與亂序、重試都未實測。\"}"
+    },
+    {
+      "job_id": "linus-1",
+      "lens": "linus",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告建立在千檔暖快取最佳值與順序事件上，尚未驗證五萬檔冷啟動 p95 或亂序重送。",
+      "characters": 43,
+      "raw_schema_valid": true,
+      "latency_ms": 8701,
+      "usage": {
+        "input_tokens": 15616,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 160,
+        "reasoning_output_tokens": 101
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告建立在千檔暖快取最佳值與順序事件上，尚未驗證五萬檔冷啟動 p95 或亂序重送。\"}"
+    },
+    {
+      "job_id": "linus-2",
+      "lens": "linus",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "完成宣告建立在暖快取最佳值與順序測試上，尚未驗證冷啟動 p95 與亂序重送。",
+      "characters": 38,
+      "raw_schema_valid": true,
+      "latency_ms": 9094,
+      "usage": {
+        "input_tokens": 15616,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 154,
+        "reasoning_output_tokens": 100
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"完成宣告建立在暖快取最佳值與順序測試上，尚未驗證冷啟動 p95 與亂序重送。\"}"
+    },
+    {
+      "job_id": "linus-3",
+      "lens": "linus",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "擴充層與未用 stub 已先落地，五萬檔 cold CLI p95 卻尚未驗證。",
+      "characters": 40,
+      "raw_schema_valid": true,
+      "latency_ms": 10286,
+      "usage": {
+        "input_tokens": 15447,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 191,
+        "reasoning_output_tokens": 142
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"擴充層與未用 stub 已先落地，五萬檔 cold CLI p95 卻尚未驗證。\"}"
+    },
+    {
+      "job_id": "lamport-1",
+      "lens": "lamport",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "先更新索引再寫 seen-version，若中途失敗又 retry，「只留最新版本」還成立嗎？",
+      "characters": 47,
+      "raw_schema_valid": true,
+      "latency_ms": 11749,
+      "usage": {
+        "input_tokens": 15615,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 125,
+        "reasoning_output_tokens": 79
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"先更新索引再寫 seen-version，若中途失敗又 retry，「只留最新版本」還成立嗎？\"}"
+    },
+    {
+      "job_id": "lamport-2",
+      "lens": "lamport",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "索引先更新、版本後落盤；中斷重試時，「只留最新」仍成立嗎？",
+      "characters": 29,
+      "raw_schema_valid": true,
+      "latency_ms": 6344,
+      "usage": {
+        "input_tokens": 15446,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 43,
+        "reasoning_output_tokens": 0
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"索引先更新、版本後落盤；中斷重試時，「只留最新」仍成立嗎？\"}"
+    },
+    {
+      "job_id": "lamport-3",
+      "lens": "lamport",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "索引先寫、版本狀態後寫；兩步間逾時重試時，如何保證亂序事件只留下最新版？",
+      "characters": 36,
+      "raw_schema_valid": true,
+      "latency_ms": 15732,
+      "usage": {
+        "input_tokens": 15615,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 143,
+        "reasoning_output_tokens": 91
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"索引先寫、版本狀態後寫；兩步間逾時重試時，如何保證亂序事件只留下最新版？\"}"
+    },
+    {
+      "job_id": "carmack-1",
+      "lens": "carmack",
+      "repeat": 1,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "1,000 個已載入 path 的最佳值，無法驗證 50,000 檔 cold CLI p95。",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 12071,
+      "usage": {
+        "input_tokens": 15612,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 199,
+        "reasoning_output_tokens": 151
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"1,000 個已載入 path 的最佳值，無法驗證 50,000 檔 cold CLI p95。\"}"
+    },
+    {
+      "job_id": "carmack-2",
+      "lens": "carmack",
+      "repeat": 2,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "1,000 筆熱路徑最佳值無法回答 50,000 檔 cold CLI p95，交付判定跑在真實量測前。",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 8763,
+      "usage": {
+        "input_tokens": 15612,
+        "cached_input_tokens": 14080,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 151,
+        "reasoning_output_tokens": 93
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"1,000 筆熱路徑最佳值無法回答 50,000 檔 cold CLI p95，交付判定跑在真實量測前。\"}"
+    },
+    {
+      "job_id": "carmack-3",
+      "lens": "carmack",
+      "repeat": 3,
+      "packet_sha256": "32da05efe9bd6617c9a04a224400d01c9a09ae84a267b0eeabd6d8701a95da59",
+      "status": "finding",
+      "finding": "只量同程序千筆已載入路徑的最佳值，如何支撐五萬檔 cold CLI p95 達標？",
+      "characters": 41,
+      "raw_schema_valid": true,
+      "latency_ms": 9975,
+      "usage": {
+        "input_tokens": 15443,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 198,
+        "reasoning_output_tokens": 146
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"只量同程序千筆已載入路徑的最佳值，如何支撐五萬檔 cold CLI p95 達標？\"}"
+    }
+  ]
+}

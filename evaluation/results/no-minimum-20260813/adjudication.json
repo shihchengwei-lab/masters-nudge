@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "source_results": "calibration-latest.jsonl",
+  "review_type": "single-rater non-blind semantic and grounding adjudication",
+  "scope": "automatic oracle mismatches only",
+  "frozen_runner_sha256": "dfa78671791658ac1d0d794b4bb63697e95986c297ce5c56f20b2c41d092eba8",
+  "frozen_fixtures_sha256": "602561725774bbf63afbf6acbb66e78cf857c0103e688ac5b78e6a9ae3c4c586",
+  "base_prompt_sha256": "f76a64c860bd9a1c8c52542cc7957fcfddcada3a8787535bca4ffafe767897ba",
+  "policy": "pass requires a concrete, packet-grounded cue to the seeded issue; punctuation and stylistic completeness are tracked separately",
+  "items": [
+    {
+      "fixture_id": "carmack-redundant-json-roundtrips",
+      "condition": "baseline",
+      "repeat": 2,
+      "verdict": "pass",
+      "note": "指出三次完整轉換與 p95 未達目標；oracle 詞表漏接同義措辭。"
+    },
+    {
+      "fixture_id": "design-dual-status-writers",
+      "condition": "baseline",
+      "repeat": 1,
+      "verdict": "pass",
+      "note": "完整指出雙欄位可寫、延遲同步、互相覆寫與畫面不一致。"
+    },
+    {
+      "fixture_id": "design-dual-status-writers",
+      "condition": "baseline",
+      "repeat": 2,
+      "verdict": "pass",
+      "note": "指出兩欄位各自可寫且同步衝突時沒有唯一真相；句尾截斷但 cue 已成立。"
+    },
+    {
+      "fixture_id": "design-dual-status-writers",
+      "condition": "effective",
+      "repeat": 1,
+      "verdict": "pass",
+      "note": "指出兩欄位都可寫、雙向同步且缺乏單一真實來源；句尾截斷。"
+    },
+    {
+      "fixture_id": "design-dual-status-writers",
+      "condition": "effective",
+      "repeat": 2,
+      "verdict": "pass",
+      "note": "指出兩欄位都可寫、雙向同步且沒有單一狀態來源；句尾截斷。"
+    },
+    {
+      "fixture_id": "lamport-stale-search-overwrite",
+      "condition": "baseline",
+      "repeat": 1,
+      "verdict": "pass",
+      "note": "完整指出缺少 request_id 檢查，舊 A 會覆蓋最後輸入 B。"
+    },
+    {
+      "fixture_id": "review-forward-only-layers",
+      "condition": "baseline",
+      "repeat": 1,
+      "verdict": "unsupported",
+      "note": "packet 只說測試結果顯示 header 存在，沒有證據證明測試只驗存在而未驗版本值。"
+    },
+    {
+      "fixture_id": "review-forward-only-layers",
+      "condition": "effective",
+      "repeat": 1,
+      "verdict": "pass",
+      "note": "指出三個類別只轉交同一字串且固定標頭被拆成多層；句尾截斷。"
+    }
+  ]
+}

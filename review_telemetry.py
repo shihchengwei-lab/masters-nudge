@@ -22,7 +22,10 @@ DEFAULT_EVALUATION_DAYS = 7
 DEFAULT_TARGET_CALLS = 300
 
 _RECORD_FIELDS = {
+    "schema_version",
+    "host",
     "session_id",
+    "turn_id",
     "kind",
     "reason",
     "provider",
@@ -72,13 +75,17 @@ def _positive_int(value: Any, default: int) -> int:
 
 def configured_evaluation_days() -> int:
     return _positive_int(
-        os.environ.get("BUDDY_SHADOW_EVALUATION_DAYS"), DEFAULT_EVALUATION_DAYS
+        os.environ.get("MASTERS_NUDGE_SHADOW_EVALUATION_DAYS")
+        or os.environ.get("BUDDY_SHADOW_EVALUATION_DAYS"),
+        DEFAULT_EVALUATION_DAYS,
     )
 
 
 def configured_target_calls() -> int:
     return _positive_int(
-        os.environ.get("BUDDY_SHADOW_TARGET_CALLS"), DEFAULT_TARGET_CALLS
+        os.environ.get("MASTERS_NUDGE_SHADOW_TARGET_CALLS")
+        or os.environ.get("BUDDY_SHADOW_TARGET_CALLS"),
+        DEFAULT_TARGET_CALLS,
     )
 
 
@@ -271,7 +278,14 @@ def _render_report(state: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _append_notice(base_dir: Path, session_id: str, state: dict[str, Any], now: datetime) -> None:
+def _append_notice(
+    base_dir: Path,
+    session_id: str,
+    state: dict[str, Any],
+    now: datetime,
+    *,
+    log_path: Path | None = None,
+) -> None:
     if not session_id:
         return
     summary = state["summary"]
@@ -297,7 +311,9 @@ def _append_notice(base_dir: Path, session_id: str, state: dict[str, Any], now: 
         "persona": "general",
         "reaction": reaction,
     }
-    with (base_dir / f"{session_id}.log").open("a", encoding="utf-8") as handle:
+    with (log_path or base_dir / f"{session_id}.log").open(
+        "a", encoding="utf-8"
+    ) as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
@@ -308,6 +324,7 @@ def record_review(
     now: datetime | None = None,
     evaluation_days: int | None = None,
     target_calls: int | None = None,
+    notice_log_path: Path | None = None,
 ) -> dict[str, Any]:
     """Append metadata and close the fixed shadow window when it becomes due."""
     now = now or _utc_now()
@@ -360,7 +377,13 @@ def record_review(
     state["summary"] = summary
     (base_dir / REPORT_FILE).write_text(_render_report(state), encoding="utf-8")
     if not state.get("notice_emitted"):
-        _append_notice(base_dir, str(safe.get("session_id") or ""), state, now)
+        _append_notice(
+            base_dir,
+            str(safe.get("session_id") or ""),
+            state,
+            now,
+            log_path=notice_log_path,
+        )
         state["notice_emitted"] = True
     _save_state(state_path, state)
     return {"evaluation_due": True, "state": state}

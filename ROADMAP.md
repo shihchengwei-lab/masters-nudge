@@ -10,27 +10,59 @@ evidence to delete it, not to do it.
 
 ## Current product directions
 
-### 1. Reaction quality and impact evaluation（短評品質與後續影響） — NEXT, IN TWO PHASES
+### 1. Reaction quality and impact evaluation（短評品質與後續影響） — SYNTHETIC CALIBRATION STOPPED; NATURAL TRACES NEEDED
 
-**Goal:** First establish that a finding is reliable, then test whether injecting
-it changes the main agent's work for the better. A good-sounding reaction is not
-the product outcome; the intended outcome is a better decision by the combined
-user-and-agent workflow.
+**Goal:** First establish that a Nudge is grounded and exposes a useful workflow
+blind spot, then test whether injecting it changes the main agent's work for the
+better. A good-sounding reaction is not the product outcome; the intended
+outcome is a better decision by the combined user-and-agent workflow.
 
 **Why now:** Lifecycle lens routing changed what the reviewer looks for, so the
 trigger in item 5 has been reached. Cost telemetry only counts call outcomes; it
 cannot tell whether a finding was correct or whether a lens improved the review.
 
+**Phase A pilot result (2026-08-13):** Workflow Holdout V2 passed all eight
+preregistered gates. The effective routed lenses found 24/24 seeded workflow
+blind spots, produced 24/24 human-valid workflow-level complete Nudges, stayed
+silent on 11/12 seeded-clean calls, emitted 0/24 local-artifact-only critiques,
+and had no 52-character cap hits. The lone silence miss exposed contamination in
+the supposedly clean YAML fixture and was still judged a defensible workflow
+warning. The run used synthetic fixtures, two repeats, and one condition-blind
+author-rater, so it is a pilot rather than a confirmatory benchmark. Full result:
+`evaluation/results/workflow-v2-20260813-r2/WORKFLOW_SUMMARY.md`.
+
+**Phase B V1 result (2026-08-13):** All 36 randomized main-agent jobs and graders
+were valid, but treatment tied control at 13/18 full-task passes and 64/69
+components. The 18 matched pairs produced one treatment win, one loss, and net
+zero, so the preregistered positive pilot signal failed. Four tasks were
+ceiling-saturated, onboarding exposed an overconstrained oracle, and only one
+task produced discordance. Preserve V1 as a null pilot; do not interpret it as
+evidence of harm or retune the General prompt against it. The next step is the
+measurement-first calibration and held-out V2 plan in
+`evaluation/phase_b/PHASE_B_V2_PLAN.md`.
+
+**Task-sensitivity calibration result (2026-08-13):** All 36 control/direct-hint
+runs and graders were valid, but 0/6 synthetic patterns met the preregistered
+sensitivity gate (control 13/18, positive control 13/18; one paired win and one
+loss). Four patterns were already 3/3 in control; the other two exposed oracle
+overconstraint. Even a generous semantic reclassification yields at most 1/6,
+below the 4/6 stop line. Do not proceed to held-out V2 or tune prompts against
+these micro-repositories. Acquire consented, anonymized natural traces first.
+Full result: `evaluation/results/phase-b-calibration-v1-20260813/CALIBRATION_RESULT_V1.md`.
+
 **Phase A — reaction quality:** Build labeled evidence packets covering the
 internal no-overlay baseline, the four lifecycle stages, both specialist
-takeovers, and cases that should stay silent. Prefer packets with an objective
-oracle: a seeded defect, a known unsupported claim, an explicit scope conflict,
-or a verified no-finding case. Check schema compliance, evidence grounding,
-issue identification, and correct silence automatically. Use blind rubric-based
-human adjudication only when more than one finding could legitimately be useful;
-record disagreement instead of hiding it in one average score. Compare the
-internal baseline with the intended lens under the same model and prompt budget.
-The baseline is not a user-selectable mode.
+takeovers, and cases that should stay silent. Cover problem framing, assumptions,
+sequence, scope, feedback, verification, reversibility, and stopping conditions;
+retain explicit safety and completion-claim contradictions as stop-the-line
+cases. Prefer packets with an objective oracle, but do not reduce the benchmark
+to seeded code defects. Check schema compliance, evidence grounding, workflow
+target identification, and correct silence automatically. Blind rubric-based
+human adjudication asks whether the Nudge exposes a decision-relevant workflow
+tension rather than merely naming a local code issue; record disagreement instead
+of hiding it in one average score. Compare the internal baseline with the intended
+lens under the same model and prompt budget. The baseline is not a user-selectable
+mode.
 
 **Phase B — reaction impact:** Start only after Phase A reaches a declared
 quality floor. Run matched tasks from the same repository state with Nudge
@@ -48,7 +80,7 @@ wording, or production telemetry correlations as proof of impact. Until Phase B
 shows a repeatable difference, describe Masters' Nudge as increasing the chance
 of noticing a different problem, not as proven to improve task outcomes.
 
-### 2. Generalization（通用化） — PLANNED AFTER THE EVALUATION BASELINE
+### 2. Generalization（通用化） — ✅ SHIPPED 2026-08-13
 
 **Goal:** Keep the review engine, evidence policy, lenses, output schema,
 telemetry, and floating UI reusable while host-specific code becomes a thin
@@ -56,25 +88,37 @@ adapter. A normalized review event should carry the task anchor, checkpoint
 reason, bounded evidence, session identity, and repository context without
 requiring the core to understand one host's hook JSON.
 
-**Current boundary:** Claude Code is the only supported host. Its
-`UserPromptSubmit`, `PostToolUse`, `PostToolUseFailure`, and `Stop` payloads are
-still interpreted directly by the current scripts. Do not advertise another
-host until its adapter, installer, smoke test, and data-disclosure docs exist.
+**Result:** The Claude Code adapter and Codex CLI 0.147+ adapter now feed a
+shared reviewer core through a normalized review event. The core owns evidence
+packets, routing, prompts/lenses, provider calls, the 42-character completion
+target and 52-character hard cap, structured output, storage, and telemetry.
+Host adapters own only payload interpretation and delivery timing.
 
-**Sequence:** First preserve today's behavior with the Phase A quality baseline
-and run a small Phase B impact study. Then treat the current integration as the
-Claude Code adapter and separate it from a shared reviewer core. Validate that
-boundary with one real second agent instead of designing a universal event
-format from imagined integrations.
+This satisfies the one real second agent gate rather than describing an
+imagined adapter: a Codex CLI 0.147.0 live smoke
+captured `UserPromptSubmit`, journaled a successful Bash `PostToolUse`, launched
+Stop review off the critical path, and completed a real Anthropic reviewer call.
+Shell and PowerShell installers, a Codex hooks snippet, host-namespaced neutral
+data paths, legacy read compatibility, privacy disclosure, and regression tests
+ship together. Details:
+`evaluation/results/phase-c-codex-smoke-20260813/SMOKE_RESULT.md`.
 
-### 3. Local reviewer evaluation（本地審查模型評估） — AFTER SHARED CORE
+**Compatibility boundary:** The tested Windows 0.147.0 build skipped native
+`async: true` hooks, so Stop uses a detached-worker shim. It also did not emit
+`PostToolUse` for a non-zero Bash result despite current documentation, making
+immediate failure checkpoints best-effort on that build; Stop review still
+runs. No Codex transcript parsing was added because its format is explicitly
+not a stable hook interface.
+
+### 3. Local reviewer evaluation（本地審查模型評估） — AFTER SHARED CORE; READY TO DESIGN
 
 **Goal:** Evaluate whether a local model can produce useful, evidence-backed
 findings with reliable silence and schema compliance at acceptable latency.
 
-**Dependency:** Do this only after the shared reviewer core exposes a clean
-provider boundary. Reuse the reaction quality fixtures to compare local and
-cloud reviewers under the same evidence packets and scoring rules.
+**Dependency reached:** The shared reviewer core now exposes a clean provider
+boundary. Reuse the reaction quality fixtures to compare local and cloud
+reviewers under the same evidence packets and scoring rules. The next work is a
+benchmark and promotion gate, not immediately shipping a local provider.
 
 **Current boundary:** No local provider is promised. Model size, speed, and
 quality are measurements to collect, not assumptions; selecting a lifecycle
@@ -96,15 +140,21 @@ quality eval in item 5; lower token count alone is not proof of preserved qualit
 or enables skipping automatically, and no model downgrade is scheduled.
 
 Concrete unshipped items below are **2. Plugin format packaging**, **5. Reaction
-quality and impact eval**, and **11. Local reviewer evaluation**. Item 5 Phase A
-is next, followed by its small Phase B study; item 2 waits for a real sharing
-need, and item 11 waits for the shared reviewer core. Everything else below is
+quality and impact confirmation**, and **11. Local reviewer evaluation**. Item 5's Phase A,
+Phase B V1, and task-sensitivity calibration are complete. The calibration hit
+the preregistered stop rule: synthetic micro-repositories are not discriminating
+enough for held-out V2. The current General prompt remains frozen and V2 waits
+for consented, anonymized natural traces. Repairing the contaminated clean case
+and obtaining an independent rater remain useful Phase A confirmation work.
+Item 2 waits for a real sharing need. Item 11 is now the next technically
+unblocked phase because the shared core is shipped. Everything else below is
 either shipped or explicitly cut from scope.
 
 ## 1. Floating window UI — ✅ SHIPPED 2026-05-09
 
 `buddy_window.py` + `start_buddy_window.bat`. Single-file Tk app, watches
-`~/.claude/buddy/` and tails the most-recently-modified per-session log file.
+`~/.masters-nudge/data/` plus legacy `~/.claude/buddy/` and tails the
+most-recently-modified per-session log file.
 Pinned to bottom-right, always on top. Switches automatically when a different
 session's log gets newer activity.
 
@@ -139,7 +189,7 @@ log. The existing asynchronous Stop path remains as supplementary review.
 
 ## 4. Multi-model switching — ✅ SHIPPED (cross-vendor)
 
-`BUDDY_PROVIDER` env var routes between Anthropic (`claude -p`) and OpenAI
+`MASTERS_NUDGE_PROVIDER` (legacy alias `BUDDY_PROVIDER`) routes between Anthropic (`claude -p`) and OpenAI
 (`codex exec`). Default is `openai` with `gpt-5.6-sol` so the side-review view is
 independent from the main agent's Anthropic Sonnet — different blind spots.
 
@@ -147,7 +197,7 @@ Smart routing (different models per turn type) remains cut: checkpoint reasons
 select when to review, not which model to use. The configured provider remains
 stable while the lifecycle router selects the engineering lens.
 
-## 5. Reaction quality and impact eval — NEXT, IN TWO PHASES
+## 5. Reaction quality and impact eval — SYNTHETIC CALIBRATION STOPPED; NATURAL TRACES NEEDED
 
 **Why kept:** Currently no measurement of whether Masters’ Nudge reactions are
 reliable or whether the main agent makes a better decision after receiving one.
@@ -160,13 +210,33 @@ reaction correctness nor downstream impact.
 2026-08-12. Build the baseline before refactoring the core or evaluating a
 different reviewer model.
 
-**Phase A — quality:** Use fixed, labeled evidence packets with known issues or
-verified no-finding cases. Automatically check schema compliance, grounding,
-issue match, and correct silence. Compare the internal no-overlay baseline with
-the intended lens while keeping the reviewer model, prompt budget, and output
-contract fixed. Blind human adjudication handles only cases with multiple
-defensible findings and reports inter-rater disagreement. The baseline is not
-exposed as a product mode.
+**Phase A completed:** The 2026-08-13 Workflow Holdout V2 result passed all eight
+declared quality gates. Replace or repair the YAML clean fixture, add natural
+project traces, and obtain an independent condition-blind rating in later
+confirmation work; these limitations bound the claim but do not block the frozen
+Phase B pilot. Do not tune the current prompt against the pilot again.
+
+**Six-lens differentiation explored:** On one fixed, non-terminal checkpoint,
+all 18 production reviewer calls were valid and yielded distinct wording. Jeff,
+Beck, Linus, Lamport, and Carmack stayed on their declared attention area in 3/3
+repeats; Fowler did so in 1/3 and otherwise overlapped Jeff's responsibility-
+boundary concern. Six unedited distinct representatives exist and are shown by
+real Tk windows in the README hero, but the preregistered reliability claim
+remains 5/6 rather than 6/6. Four lines hit 52 characters and three were
+incomplete. See
+`evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md`.
+
+**Phase A — quality:** Use fixed, labeled evidence packets with known workflow
+blind spots or verified no-Nudge cases. Cover framing, assumptions, order, scope,
+feedback, verification, reversibility, and stopping conditions, with explicit
+safety and evidence contradictions retained as objective stop-the-line cases.
+Automatically check schema compliance, grounding, target match, and correct
+silence; do not let seeded code defects stand in for workflow-review quality.
+Compare the internal no-overlay baseline with the intended lens while keeping
+the reviewer model, prompt budget, and output contract fixed. Blind human
+adjudication evaluates whether each reaction exposes a decision-relevant tension
+and reports inter-rater disagreement. The baseline is not exposed as a product
+mode.
 
 **Phase B — impact:** For reactions that pass the quality floor, run paired
 agent tasks from identical starting states with injection enabled or withheld.
@@ -175,6 +245,21 @@ and support for the final completion claim as primary outcomes. Hold the main
 model and task budget constant, randomize or alternate condition order, and run
 enough repeats to report a distribution rather than a showcase. Use blind human
 review only where no executable oracle can represent the design trade-off.
+
+**Phase B V1 completed:** The frozen 36-run pilot tied at 13/18 full-task passes
+with one paired win and one paired loss. Its integrity gates passed, but its
+efficacy and breadth gates failed. Because four tasks saturated at the ceiling
+and one oracle overconstrained an acceptable revert, V2 begins with a separate
+task-sensitivity calibration rather than a prompt edit. See
+`evaluation/results/phase-b-impact-v1-20260813/PHASE_B_RESULT.md` and
+`evaluation/phase_b/PHASE_B_V2_PLAN.md`.
+
+**Stage 1 calibration completed:** The frozen direct-hint calibration preserved
+36/36 transport and grader integrity but accepted 0/6 patterns, below its 4/6
+viability floor. Four control conditions saturated at 3/3; two remaining
+patterns contained overconstrained oracle semantics. A post-hoc audit does not
+rescue viability (at most 1/6), so held-out V2 is paused pending natural traces.
+See `evaluation/results/phase-b-calibration-v1-20260813/CALIBRATION_RESULT_V1.md`.
 
 **Claim boundary:** Agent acknowledgement, evaluator-model preference, fewer
 turns, smaller diffs, or observational production telemetry cannot by themselves
@@ -211,7 +296,7 @@ graphite black. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
 
 The floating window offers Design, Build, Evolve, and Review stages. These map
 to Jeff Dean, Kent Beck, Martin Fowler, and Linus Torvalds. Build is the default;
-General remains the shared evidence and high-risk review base rather than a
+General remains the shared workflow-evidence and stop-the-line base rather than a
 selectable stage. Stop and checkpoint reviews use the same local, deterministic
 router without an extra model call.
 
@@ -240,15 +325,16 @@ insufficient. The evaluation never silently extends and never enables skipping a
 explicit approval after the evidence window; it is not a current implementation
 task merely because telemetry is present.
 
-## 11. Local reviewer evaluation — AFTER SHARED CORE
+## 11. Local reviewer evaluation — AFTER SHARED CORE; READY TO DESIGN
 
 **Why kept:** A local reviewer could avoid a second cloud egress and may reduce
 per-call cost and latency. Those benefits matter only if review quality remains
 useful.
 
-**Prerequisite:** Extract the shared reviewer core and provider boundary, then
-reuse item 5's fixtures and score card. Do not add an Ollama-compatible or other
-local provider directly to the current Claude-specific path first.
+**Prerequisite reached:** The shared reviewer core and provider boundary are
+extracted. Reuse item 5's fixtures and score card. Do not add an
+Ollama-compatible or other local provider until the benchmark and promotion
+gate are frozen.
 
 **Promotion gate:** A candidate must meet an explicit quality floor for correct
 findings, correct silence, schema compliance, and latency. Do not promise that a
@@ -266,10 +352,6 @@ These were considered and removed by the user during the v1 scope discussion:
   separate CLI layer adds surface area for no real benefit.
 - **buddy.log dashboard** — JSONL 可以直接看，trigger 沒到過，log 量不大。
 - **Smart model routing** — reason-based 路由被明確拒絕，trigger 是場景上下文不是路由信號。
-- **Live Claude Code integration tests** — unit tests cover checkpoint payload
-  classification, settings registration, deduplication, and output shape. A real
-  Claude Code session, provider latency, shell-wrapper startup, and Tk startup
-  remain manual checks rather than CI requirements.
 - **Built-in custom lens/rule management** — this is an open-source prompt-based
   tool. Users who need different rules can edit or fork `buddy-prompt.txt` and
   `personas/*.txt`; a loader, marketplace, merge policy, and management UI would

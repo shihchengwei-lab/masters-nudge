@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "task_id": "onboarding-problem-location",
+      "expected_lens": "jeff",
+      "actual_lens": "jeff",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "2/4",
+      "candidate_failures": [
+        "documented_phone_formats_normalized",
+        "unneeded_reminder_mechanism_removed"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "4/4",
+      "valid": true
+    },
+    {
+      "task_id": "csv-scope-control",
+      "expected_lens": "beck",
+      "actual_lens": "beck",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "3/4",
+      "candidate_failures": [
+        "json_byte_compatibility"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "4/4",
+      "valid": true
+    },
+    {
+      "task_id": "discount-policy-home",
+      "expected_lens": "fowler",
+      "actual_lens": "fowler",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "2/4",
+      "candidate_failures": [
+        "all_student_paths_use_fifteen_percent",
+        "single_policy_definition"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "4/4",
+      "valid": true
+    },
+    {
+      "task_id": "clean-install-proof",
+      "expected_lens": "linus",
+      "actual_lens": "linus",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "1/3",
+      "candidate_failures": [
+        "clean_install_runs_from_unrelated_cwd",
+        "runtime_asset_is_self_contained"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "3/3",
+      "valid": true
+    },
+    {
+      "task_id": "last-query-wins",
+      "expected_lens": "lamport",
+      "actual_lens": "lamport",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "2/4",
+      "candidate_failures": [
+        "forced_out_of_order_latest_wins",
+        "ordering_does_not_use_sleep"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "4/4",
+      "valid": true
+    },
+    {
+      "task_id": "cold-start-cli",
+      "expected_lens": "carmack",
+      "actual_lens": "carmack",
+      "candidate_public_green": true,
+      "candidate_hidden_passed": false,
+      "candidate_components": "3/4",
+      "candidate_failures": [
+        "cold_process_p95_below_180ms"
+      ],
+      "reference_hidden_passed": true,
+      "reference_components": "4/4",
+      "valid": true
+    }
+  ],
+  "all_valid": true
+}

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "run_kind": "phase_a_holdout_v1",
+  "generated_at_utc": "2026-08-13T00:55:49.3370103Z",
+  "git_commit": "06a110e2e668a3dcf8045646e7fb5a33b4355533",
+  "working_tree_dirty": true,
+  "provider": "openai",
+  "model": "gpt-5.6-sol",
+  "reviewer_cli": "codex-cli 0.147.0",
+  "timeout_seconds": 60,
+  "workers": 2,
+  "repeats": 2,
+  "randomization_seed": 20260815,
+  "unique_fixtures": 16,
+  "call_count": 72,
+  "wall_time_seconds": 276,
+  "hashes_sha256": {
+    "buddy-prompt.txt": "f76a64c860bd9a1c8c52542cc7957fcfddcada3a8787535bca4ffafe767897ba",
+    "evaluation/quality_eval.py": "dfa78671791658ac1d0d794b4bb63697e95986c297ce5c56f20b2c41d092eba8",
+    "evaluation/holdout-fixtures-v1.json": "2d4e0b8a2afa34f829bd6df2138b9f3b60acc525b3405b2ea1eedddbd2d923c7",
+    "reaction-schema.json": "03100643dc4042c439021fb976d6134218b387d3dd2788ca527f8f44479cc86b",
+    "calibration-latest.jsonl": "4892a11af6fca146ac58b28818b8fb9bca9a0cc7f019ff08f6821e7ea7909aa4",
+    "calibration-latest.md": "53a59cb6522e58e01cd8b3ea17be3978540807e28e1aa9bb6b9c8f127e24c78a"
+  },
+  "protocol_deviations": [
+    "Manual rater had seen condition labels before adjudication.",
+    "Fixture author and manual rater were the same agent; this limitation was predeclared."
+  ]
+}

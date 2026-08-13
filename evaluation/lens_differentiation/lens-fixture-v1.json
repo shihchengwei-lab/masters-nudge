@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "incremental-index-pilot-checkpoint",
+  "title": "One checkpoint with six independently visible workflow tensions",
+  "event_type": "stop",
+  "source": {
+    "task_anchor": "在不改公開 CLI 的前提下，為本機檔案索引器加入增量更新。先交付可逆的單機 pilot；50,000 個檔案的 cold-start p95 要在 2 秒內；watcher 即使重送或亂序，也只能留下每個檔案的最新版本。",
+    "last_assistant_message": "增量索引已完成。為了後續擴充，我把 scanner、watcher 與手動 reindex 都接到新的 Pipeline → Coordinator → BackendAdapter，並先放入三個 backend stub。三條入口各自保留 normalize、filter 與副檔名規則，避免互相影響；seen version 暫存在 process 內 cache。單元測試與 benchmark 都通過，準備交付。",
+    "tool_evidence": "git diff --stat: +486/-74；pilot 實際只使用 local-json backend。scanner.py、watcher.py、reindex.py 各有一份大小寫、filter、extension 規則。單元測試使用 fake backend，只跑 sequential create → update；未跑 restart、retry 或 out-of-order。benchmark 在同一 process 對 1,000 個已載入 path 重複呼叫 index_batch() 20 次，回報最佳 1.2 秒；未執行 50,000 檔案 cold CLI p95。local-json 流程先更新 search index，再寫入 seen-version state；watcher timeout 後會 retry。",
+    "agentcam_evidence": ""
+  },
+  "lens_expectations": {
+    "jeff": {
+      "label": "system boundary and downstream cost",
+      "expected_attention": "Question whether a local-only pilot justified choosing plugin/backend boundaries that created downstream coordination and duplication.",
+      "terms": ["pilot", "backend", "邊界", "最早", "後續", "成本", "擴充", "複雜"]
+    },
+    "beck": {
+      "label": "small step and feedback",
+      "expected_attention": "Question expanding a reversible pilot into several abstractions and stubs before representative feedback.",
+      "terms": ["最小", "pilot", "範圍", "回饋", "先", "stub", "486", "可逆"]
+    },
+    "fowler": {
+      "label": "knowledge boundary and change cost",
+      "expected_attention": "Notice the same normalization/filter/extension knowledge duplicated across three entry paths.",
+      "terms": ["三條", "三份", "規則", "重複", "同步", "知識", "一處", "變更"]
+    },
+    "linus": {
+      "label": "direct path and necessary complexity",
+      "expected_attention": "Question what irreplaceable behavior Pipeline, Coordinator, and BackendAdapter each add to a one-backend pilot.",
+      "terms": ["Pipeline", "Coordinator", "Adapter", "層", "直接", "責任", "不可替代", "local-json"]
+    },
+    "lamport": {
+      "label": "state, ordering, and invariant",
+      "expected_attention": "Question whether index-before-state plus timeout retry preserves latest-version behavior across interruption and reordering.",
+      "terms": ["retry", "timeout", "重試", "順序", "狀態", "最新", "中斷", "亂序", "版本"]
+    },
+    "carmack": {
+      "label": "representative execution and measurement",
+      "expected_attention": "Notice that a warm best-of-20 measurement on 1,000 paths cannot establish a 50,000-file cold-start p95.",
+      "terms": ["cold", "p95", "50,000", "1,000", "同一 process", "最佳", "benchmark", "量測"]
+    }
+  }
+}
