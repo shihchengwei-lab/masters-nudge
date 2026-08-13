@@ -77,10 +77,18 @@ Coding agent 正常工作
 - Claude Code、Codex CLI 0.147+，或兩者
 - 可呼叫的 reviewer CLI：預設為 [Codex CLI](https://github.com/openai/codex)，或設 `MASTERS_NUDGE_PROVIDER=anthropic` 使用 `claude -p`
 - Python 3.10+
+- Git
 
 ### 步驟
 
-1. 安裝共用 runtime 與 adapter；兩種 installer 都不會修改 host 設定：
+1. Clone 此 repository 並進入目錄：
+
+```bash
+git clone https://github.com/shihchengwei-lab/masters-nudge.git
+cd masters-nudge
+```
+
+2. 安裝共用 runtime 與 adapter；兩種 installer 都不會修改 host 設定：
 
 ```bash
 bash install.sh --all
@@ -94,14 +102,14 @@ Windows PowerShell：
 
 只裝單一 host 可用 `--claude` / `--codex`，或 `-HostName claude` / `codex`。共用 runtime 在 `~/.masters-nudge/runtime/`；為了既有安裝相容，Claude 仍保留 `~/.claude/scripts/buddy/` target。
 
-2. 依使用的 host 啟用 hooks：
+3. 依使用的 host 啟用 hooks：
 
    - **Claude Code：**把 [`settings-snippet.json`](settings-snippet.json) 的 `hooks` 合併進 `~/.claude/settings.json`。
    - **Codex CLI 0.147+：**把 [`codex-hooks-snippet.json`](codex-hooks-snippet.json) 的 `hooks` 合併進 `~/.codex/hooks.json`，保留既有 hooks，再以 `/hooks` 檢查並信任。自動化環境也有 `--dangerously-bypass-hook-trust`，只能在先看過命令後使用。詳見 [官方 hooks 文件](https://learn.chatgpt.com/docs/hooks)。
 
 兩者都不要整檔覆蓋。
 
-3. （可選）開浮動視窗，否則你在 UI 上幾乎看不到回合末短評：
+4. （可選）開浮動視窗，否則你在 UI 上幾乎看不到回合末短評：
 
 ```bash
 pip install Pillow
