@@ -2284,7 +2284,7 @@ class TestAgentcamReport(unittest.TestCase):
         result = self.buddy.read_latest_agentcam_report(str(repo))
         self.assertIsNotNone(result)
         self.assertIn("Risk Flags", result["content"])
-        self.assertEqual(result["path"], str(report_path))
+        self.assertTrue(os.path.samefile(result["path"], report_path))
         self.assertGreater(result["mtime"], 0)
 
     def test_finds_report_from_subdirectory(self):
@@ -2296,7 +2296,7 @@ class TestAgentcamReport(unittest.TestCase):
         subdir.mkdir(parents=True)
         result = self.buddy.read_latest_agentcam_report(str(subdir))
         self.assertIsNotNone(result)
-        self.assertEqual(result["path"], str(report_path))
+        self.assertTrue(os.path.samefile(result["path"], report_path))
 
     def test_picks_newest_by_mtime(self):
         repo = self._make_fake_repo()
@@ -2309,7 +2309,7 @@ class TestAgentcamReport(unittest.TestCase):
         # bump r2's mtime above r1's even on fast filesystems
         os.utime(r2, (r2.stat().st_atime, r2.stat().st_mtime + 10))
         result = self.buddy.read_latest_agentcam_report(str(repo))
-        self.assertEqual(result["path"], str(r2))
+        self.assertTrue(os.path.samefile(result["path"], r2))
         self.assertEqual(result["content"], "second")
 
     def test_content_preserves_head_and_tail_with_read_cap(self):
