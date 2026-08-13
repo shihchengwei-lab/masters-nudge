@@ -2,24 +2,35 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-**Add a different voice to long-running Claude Code or Codex CLI tasks.**
+**Before a coding agent decides what to do next, add one brief reminder from a different angle.**
 
-![Six Masters' Nudge lenses showing different workflow observations from the same checkpoint](docs/images/masters-nudge-six-lenses-hero.png)
+At a few key moments, Masters’ Nudge asks another model to generate one brief reminder from the current progress, then adds it to the main agent's context. It does not take over the task or inspect code line by line; the reminder simply makes the model more likely to notice a direction it may have overlooked.
 
-*Same evidence and model; only the lens changes. These are unedited reviewer
-outputs rendered by six real Tk windows. Representatives were selected for
-completeness and lens alignment; the controlled run found stable differentiation
-for five of six lenses. [See the evaluation and selection details.](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
+In LLM terms, it uses a dynamic frame to guide the reviewer in generating a Nudge, then injects that Nudge into the main agent's context, indirectly shifting the conditional probability distribution of the tokens that follow.
 
-## Overview
+## Start with an example
 
-The longer a coding agent works, the more its early choices shape everything that follows.
+**Original next move**
 
-When the direction is right, this builds momentum. When it is wrong, the agent may keep patching and working around the same idea until the task looks finished but still carries a problem nobody stopped to question.
+The feature and automated tests are done, so the main agent is ready to call the installation experience complete.
 
-At a few key moments, Masters’ Nudge asks another model to look at a small piece of how the work is unfolding and leave one useful reason to reconsider the next move. If the evidence offers no grounded new angle, it stays quiet.
+**Nudge**
 
-Your coding agent still does the work and makes the decisions. Masters’ Nudge simply adds a different voice beside it. Supported hosts are Claude Code and Codex CLI 0.147+.
+> The clean install is still unverified.
+
+**Reconsidered next move**
+
+The main agent first follows the README from a clean environment, then decides whether the work is ready to call complete.
+
+The Nudge did not identify a bad line or issue an instruction. It brought an implicit way of working back onto the decision table, giving the main agent one chance to reconsider before more cost accumulates.
+
+## What problem it solves
+
+The problem is not that coding agents cannot write code. In a long task, the same agent plans, executes, and judges its own work, so early assumptions can survive all the way to completion. When the direction is sound, that momentum helps. When it is not, the agent can keep patching and elaborating without stopping to reconsider.
+
+At a few key moments, Masters’ Nudge captures a small evidence packet and asks a separate model to look only at how the work is framed, advanced, and verified. It either leaves one short Nudge or stays silent; the main agent still makes every decision and performs every change.
+
+Claude Code and Codex CLI 0.147+ are supported.
 
 ## Why only one line?
 
@@ -174,6 +185,13 @@ Clone the repository, run `bash install.sh --all` or `.\install.ps1 -HostName al
 Different parts of a project make different problems easy to miss.
 
 During design, data, state, and ownership matter most. During implementation, scope can quietly grow. As the code evolves, today's structure can make tomorrow's change harder. Before delivery, it is worth asking which layers never needed to exist.
+
+![Six Masters' Nudge lenses showing different workflow observations from the same checkpoint](docs/images/masters-nudge-six-lenses-hero.png)
+
+*Same evidence and model; only the lens changes. These are unedited reviewer
+outputs rendered by six real Tk windows. Representatives were selected for
+completeness and lens alignment; the controlled run found stable differentiation
+for five of six lenses. [See the evaluation and selection details.](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
 
 | Stage | Viewpoint | First question |
 |---|---|---|

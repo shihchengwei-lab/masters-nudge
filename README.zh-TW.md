@@ -2,23 +2,35 @@
 
 繁體中文 | [English](README.md)
 
-**在長任務裡，替 Claude Code 或 Codex CLI 加一個不同的聲音。**
+**在 coding agent 決定下一步前，加入一句不同角度的提醒。**
 
-![同一個 checkpoint 經六種 Masters’ Nudge 工作流視角呈現的實際浮窗](docs/images/masters-nudge-six-lenses-hero.png)
+Masters’ Nudge 會在少數關鍵時刻，請另一個模型根據目前進度生成一句短提醒，再把它放進主 agent 的 context。它不接手任務，也不逐行審 code；這句提醒只會讓模型更可能注意到原本忽略的方向。
 
-*同一份證據、同一個模型，只更換 lens。圖中是未改字的 reviewer 輸出，
-由六個真實 Tk 浮窗呈現；代表句依完整性與 lens 對齊挑選。控制測試中，
-六個 lens 有五個能穩定分流。[查看評估與選圖細節。](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
+用 LLM 的語言來說：它先用動態框架引導 reviewer 生成 Nudge，再將 Nudge 注入主 agent 的 context，間接改變後續 token 的條件機率分布。
 
-## 簡介
+## 先看一個例子
 
-coding agent 做得越久，前面的選擇越容易一路影響後面的工作。
+**原本下一步**
 
-方向對了，工作會越來越順；方向偏了，它也可能沿著同一條路繼續補、繼續繞，直到看起來完成，卻留下原本沒看見的問題。
+功能與自動測試都完成後，主 agent 準備宣布安裝體驗已可交付。
 
-Masters’ Nudge 會在幾個關鍵時刻，請另一個模型看一小段工作如何推進，再留下一個值得重看下一步的理由。證據裡沒有可靠的新角度，就保持安靜。
+**Nudge**
 
-主 agent 照常工作與決定；Masters’ Nudge 只在旁邊加一個不同的聲音。目前支援 Claude Code 與 Codex CLI 0.147+。
+> 自動測試通過，仍沒走過一次乾淨安裝流程。
+
+**重新選擇**
+
+主 agent 先在乾淨環境裡照 README 完整安裝一次，再決定能不能宣布完成。
+
+Nudge 沒有找出哪一行錯，也沒有替 agent 下指令。它只是把一個正在被默認的工作方式拉回決策桌面，讓主 agent 在成本繼續累積前，多一次重看下一步的機會。
+
+## 它解決什麼問題？
+
+問題不是 coding agent 不會寫 code，而是同一個 agent 在長任務裡同時規劃、執行、驗收自己的工作，很容易把早期假設一路帶到完成。方向對了，工作會越來越順；方向偏了，它也可能一路補、一路繞，卻沒有停下來重看。
+
+Masters’ Nudge 會在幾個關鍵時刻，擷取一小份當下證據，請另一個模型只看工作如何被框定、推進與驗證。它要嘛留下一句 Nudge，要嘛保持安靜；主 agent 仍然負責所有決定與實作。
+
+目前支援 Claude Code 與 Codex CLI 0.147+。
 
 ## 為什麼只說一句？
 
@@ -173,6 +185,12 @@ Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName a
 專案在不同階段，容易忽略的事情也不同。
 
 設計時，要留意資料、狀態與責任放在哪裡；實作時，要留意是否越做越多；程式開始成長後，要留意下一次修改會不會變難；準備交付時，則重新看看哪些複雜度其實不需要存在。
+
+![同一個 checkpoint 經六種 Masters’ Nudge 工作流視角呈現的實際浮窗](docs/images/masters-nudge-six-lenses-hero.png)
+
+*同一份證據、同一個模型，只更換 lens。圖中是未改字的 reviewer 輸出，
+由六個真實 Tk 浮窗呈現；代表句依完整性與 lens 對齊挑選。控制測試中，
+六個 lens 有五個能穩定分流。[查看評估與選圖細節。](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
 
 | 階段 | 視角 | 它會先問 |
 |---|---|---|
