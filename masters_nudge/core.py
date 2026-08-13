@@ -102,6 +102,7 @@ class ReviewCore:
             self.settings.model,
             schema_path=self.schema_path,
             timeout_sec=timeout_sec or self.settings.timeout_sec,
+            ollama_url=self.settings.ollama_url,
             log_error=self.log_error,
         )
         if not isinstance(result, dict):

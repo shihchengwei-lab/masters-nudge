@@ -1,21 +1,26 @@
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
 import buddy
 import checkpoint
+import masters_nudge_cli
 from masters_nudge.management import (
+    configure_local,
     doctor,
     inspect_legacy_config,
     launch_window,
     migrate_legacy,
     migrate_legacy_config,
+    reset_local,
 )
-from masters_nudge.runtime import RuntimeSettings
+from masters_nudge.runtime import RuntimeSettings, reviewer_config_path
 from tools import build_plugin
 
 
@@ -73,6 +78,270 @@ class HostDefaultTests(unittest.TestCase):
         checkpoint_input.assert_not_called()
 
 
+class LocalConfigurationTests(unittest.TestCase):
+    @staticmethod
+    def _environment(root: str) -> dict[str, str]:
+        return {
+            "HOME": root,
+            "USERPROFILE": root,
+            "MASTERS_NUDGE_DATA_DIR": str(Path(root) / "data"),
+        }
+
+    @staticmethod
+    def _ready(endpoint: str, _model: str, **_kwargs) -> dict:
+        return {
+            "ready": True,
+            "endpoint": endpoint,
+            "endpoint_loopback": True,
+            "server_ready": True,
+            "cloud_disabled": True,
+            "model_ready": True,
+            "model_local": True,
+            "error": "",
+        }
+
+    def test_persistent_local_config_is_shared_by_both_hosts(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        "provider": "ollama-local",
+                        "model": "user-model",
+                        "ollama_url": "http://localhost:11434",
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            claude = RuntimeSettings.from_env(
+                environ=environment, host="claude_code"
+            )
+            codex = RuntimeSettings.from_env(
+                environ=environment, host="codex_cli"
+            )
+
+        for settings in (claude, codex):
+            self.assertEqual(settings.provider, "ollama-local")
+            self.assertEqual(settings.model, "user-model")
+            self.assertEqual(settings.ollama_url, "http://localhost:11434")
+            self.assertEqual(settings.configuration_source, "config")
+
+    def test_environment_provider_does_not_reuse_stale_config_model(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        "provider": "ollama-local",
+                        "model": "local-model",
+                        "ollama_url": "http://localhost:11434",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            environment["MASTERS_NUDGE_PROVIDER"] = "anthropic"
+            settings = RuntimeSettings.from_env(
+                environ=environment, host="codex_cli"
+            )
+
+        self.assertEqual((settings.provider, settings.model), ("anthropic", "sonnet"))
+        self.assertEqual(settings.configuration_source, "environment")
+
+    def test_invalid_persistent_config_fails_closed_instead_of_using_cloud(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            path.write_text("{broken", encoding="utf-8")
+            settings = RuntimeSettings.from_env(
+                environ=environment, host="claude_code"
+            )
+
+        self.assertEqual(settings.provider, "configuration-error")
+        self.assertEqual(settings.model, "")
+        self.assertTrue(settings.configuration_error)
+
+    def test_unreadable_persistent_config_fails_closed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
+                settings = RuntimeSettings.from_env(
+                    environ=environment, host="codex_cli"
+                )
+
+        self.assertEqual(settings.provider, "configuration-error")
+        self.assertIn("denied", settings.configuration_error)
+
+    def test_explicit_local_provider_requires_an_explicit_model(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            environment["MASTERS_NUDGE_PROVIDER"] = "ollama-local"
+            settings = RuntimeSettings.from_env(
+                environ=environment, host="claude_code"
+            )
+
+        self.assertEqual(settings.provider, "ollama-local")
+        self.assertEqual(settings.model, "")
+
+    def test_legacy_environment_aliases_configure_local_provider(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                **self._environment(raw),
+                "BUDDY_PROVIDER": "ollama-local",
+                "BUDDY_MODEL": "legacy-model",
+                "BUDDY_OLLAMA_URL": "http://localhost:22434",
+            }
+            settings = RuntimeSettings.from_env(
+                environ=environment, host="codex_cli"
+            )
+
+        self.assertEqual(settings.provider, "ollama-local")
+        self.assertEqual(settings.model, "legacy-model")
+        self.assertEqual(settings.ollama_url, "http://localhost:22434")
+        self.assertEqual(settings.configuration_source, "environment")
+
+    def test_configure_preflights_then_writes_atomically_and_reset_is_scoped(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            result = configure_local(
+                "user-model",
+                "http://localhost:11434/",
+                environ=environment,
+                inspector=self._ready,
+            )
+            path = Path(result["path"])
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            unrelated = path.parent / "reactions.log"
+            unrelated.write_text("keep", encoding="utf-8")
+            reset = reset_local(environ=environment)
+
+            self.assertTrue(result["saved"])
+            self.assertEqual(payload["provider"], "ollama-local")
+            self.assertEqual(payload["model"], "user-model")
+            self.assertEqual(payload["ollama_url"], "http://localhost:11434")
+            self.assertTrue(reset["reset"])
+            self.assertTrue(reset["removed"])
+            self.assertFalse(path.exists())
+            self.assertEqual(unrelated.read_text(encoding="utf-8"), "keep")
+
+    def test_failed_preflight_preserves_existing_config(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            original = {
+                "provider": "ollama-local",
+                "model": "old-model",
+                "ollama_url": "http://127.0.0.1:11434",
+            }
+            path.write_text(json.dumps(original), encoding="utf-8")
+            result = configure_local(
+                "new-model",
+                environ=environment,
+                inspector=lambda *_args, **_kwargs: {
+                    "ready": False,
+                    "error": "cloud is enabled",
+                },
+            )
+
+            self.assertFalse(result["saved"])
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
+
+    def test_invalid_preflight_result_does_not_replace_existing_config(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            original = {
+                "provider": "ollama-local",
+                "model": "old-model",
+                "ollama_url": "http://127.0.0.1:11434",
+            }
+            path.write_text(json.dumps(original), encoding="utf-8")
+
+            result = configure_local(
+                "new-model",
+                environ=environment,
+                inspector=lambda *_args, **_kwargs: None,
+            )
+
+            self.assertFalse(result["saved"])
+            self.assertIn("invalid result", result["error"])
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
+
+    @unittest.skipIf(os.name == "nt", "POSIX file modes are not stable on Windows")
+    def test_new_local_config_is_private_on_posix(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = self._environment(raw)
+            result = configure_local(
+                "user-model",
+                environ=environment,
+                inspector=self._ready,
+            )
+
+            self.assertEqual(Path(result["path"]).stat().st_mode & 0o777, 0o600)
+
+
+class LocalCliTests(unittest.TestCase):
+    def test_local_configure_json_exit_status_matches_save_result(self):
+        configured = {
+            "saved": True,
+            "path": "/tmp/reviewer.json",
+            "provider": "ollama-local",
+            "model": "chosen-model",
+            "ollama_url": "http://127.0.0.1:11434",
+            "diagnostic": {"ready": True},
+            "error": "",
+        }
+        output = io.StringIO()
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "masters-nudge",
+                "local",
+                "configure",
+                "--model",
+                "chosen-model",
+                "--json",
+            ],
+        ), patch.object(
+            masters_nudge_cli, "configure_local", return_value=configured
+        ) as configure, redirect_stdout(output):
+            status = masters_nudge_cli.main()
+
+        self.assertEqual(status, 0)
+        self.assertEqual(json.loads(output.getvalue())["model"], "chosen-model")
+        configure.assert_called_once_with(
+            "chosen-model", "http://127.0.0.1:11434"
+        )
+
+    def test_local_reset_warns_that_cloud_defaults_return(self):
+        output = io.StringIO()
+        with patch.object(
+            sys, "argv", ["masters-nudge", "local", "reset"]
+        ), patch.object(
+            masters_nudge_cli,
+            "reset_local",
+            return_value={
+                "reset": True,
+                "removed": True,
+                "path": "/tmp/reviewer.json",
+                "error": "",
+            },
+        ), redirect_stdout(output):
+            status = masters_nudge_cli.main()
+
+        self.assertEqual(status, 0)
+        self.assertIn("cloud defaults", output.getvalue())
+
+
 class PluginPackagingTests(unittest.TestCase):
     def test_generated_runtime_matches_canonical_sources(self):
         self.assertEqual(build_plugin.check_plugin(), [])
@@ -100,11 +369,11 @@ class PluginPackagingTests(unittest.TestCase):
         )
 
         self.assertEqual(codex["name"], "masters-nudge")
-        self.assertEqual(codex["version"], "0.1.0-dev.1")
+        self.assertEqual(codex["version"].split("+", 1)[0], "0.1.0-dev.2")
         self.assertTrue(
             codex["interface"]["privacyPolicyURL"].endswith("#privacy")
         )
-        self.assertEqual(claude["version"], codex["version"])
+        self.assertEqual(claude["version"], "0.1.0-dev.2")
         self.assertNotIn("hooks", codex)
         self.assertEqual(claude["hooks"], "./hooks/claude.json")
         self.assertEqual(
@@ -116,7 +385,11 @@ class PluginPackagingTests(unittest.TestCase):
             "./plugins/masters-nudge",
         )
         self.assertEqual(
-            claude_marketplace["plugins"][0]["version"], codex["version"]
+            claude_marketplace["plugins"][0]["version"], claude["version"]
+        )
+        self.assertIn(
+            "local Ollama",
+            " ".join(codex["interface"]["defaultPrompt"]),
         )
 
     def test_host_hook_files_are_separate_and_reference_plugin_roots(self):
@@ -147,9 +420,12 @@ class PluginPackagingTests(unittest.TestCase):
             self.assertIn("--config python_command=python", text)
             self.assertIn("codex plugin add masters-nudge@masters-nudge", text)
             self.assertIn(
-                "0.1.0-dev.1",
+                "0.1.0-dev.2",
                 (HERE / "CHANGELOG.md").read_text(encoding="utf-8"),
             )
+        self.assertTrue(
+            (PLUGIN_ROOT / "skills" / "setup-local" / "SKILL.md").exists()
+        )
 
 
 class LegacyMigrationTests(unittest.TestCase):
@@ -398,6 +674,66 @@ class DoctorTests(unittest.TestCase):
 
             self.assertFalse(result["core_ready"])
             self.assertFalse(result["hosts"][0]["provider_ready"])
+
+    def test_doctor_reports_local_metadata_without_generating(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                **LocalConfigurationTests._environment(raw),
+                "PATH": "",
+                "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
+            }
+            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        "provider": "ollama-local",
+                        "model": "user-model",
+                        "ollama_url": "http://127.0.0.1:11434",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            calls = []
+
+            def inspect(endpoint, model, **kwargs):
+                calls.append((endpoint, model, kwargs))
+                return LocalConfigurationTests._ready(endpoint, model)
+
+            result = doctor(
+                HERE,
+                "all",
+                environ=environment,
+                local_inspector=inspect,
+            )
+
+            self.assertTrue(result["core_ready"])
+            self.assertEqual(len(calls), 2)
+            self.assertTrue(all(item["local"]["ready"] for item in result["hosts"]))
+            self.assertTrue(
+                all(item["provider_cli"] == "" for item in result["hosts"])
+            )
+
+    def test_doctor_handles_invalid_local_inspection_result(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                **LocalConfigurationTests._environment(raw),
+                "MASTERS_NUDGE_PROVIDER": "ollama-local",
+                "MASTERS_NUDGE_MODEL": "user-model",
+                "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
+            }
+
+            result = doctor(
+                HERE,
+                "claude",
+                environ=environment,
+                local_inspector=lambda *_args, **_kwargs: None,
+            )
+
+            self.assertFalse(result["core_ready"])
+            self.assertIn(
+                "invalid result", result["hosts"][0]["local"]["error"]
+            )
 
     def test_window_launch_error_is_reported(self):
         with tempfile.TemporaryDirectory() as raw:

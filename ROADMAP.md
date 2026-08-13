@@ -110,19 +110,23 @@ immediate failure checkpoints best-effort on that build; Stop review still
 runs. No Codex transcript parsing was added because its format is explicitly
 not a stable hook interface.
 
-### 3. Local reviewer evaluation（本地審查模型評估） — AFTER SHARED CORE; READY TO DESIGN
+### 3. Local reviewer interface（本地審查模型接口） — ✅ SHIPPED 2026-08-13 (EXPERIMENTAL)
 
-**Goal:** Evaluate whether a local model can produce useful, evidence-backed
-findings with reliable silence and schema compliance at acceptable latency.
+**Result:** `ollama-local` provides an opt-in BYOM path shared by Claude Code
+and Codex. Users select their own installed model; Masters' Nudge makes no size,
+quality, performance, or licensing recommendation. The native Ollama adapter
+reuses the same bounded evidence, lenses, output schema, 52-character cap,
+storage, and telemetry as cloud providers.
 
-**Dependency reached:** The shared reviewer core now exposes a clean provider
-boundary. Reuse the reaction quality fixtures to compare local and cloud
-reviewers under the same evidence packets and scoring rules. The next work is a
-benchmark and promotion gate, not immediately shipping a local provider.
+Local mode is deliberately fail-closed: only loopback HTTP is accepted; client
+proxies and redirects are disabled; Ollama must report cloud features disabled;
+the selected model must have no remote metadata. Failure produces no Nudge and
+never falls back to a cloud reviewer. Setup persists only after metadata
+preflight and never installs, pulls, or chooses a model.
 
-**Current boundary:** No local provider is promised. Model size, speed, and
-quality are measurements to collect, not assumptions; selecting a lifecycle
-lens is already handled by deterministic local rules and is not the model's job.
+**Current boundary:** Interface compatibility is not a model-quality claim.
+Comparative evaluation remains optional future work and does not gate access to
+the experimental provider.
 
 ### 4. Cost control（成本控制） — SHADOW EVALUATION
 
@@ -139,16 +143,17 @@ quality eval in item 5; lower token count alone is not proof of preserved qualit
 **Current boundary:** Live gating remains off. The shadow window never extends
 or enables skipping automatically, and no model downgrade is scheduled.
 
-Concrete unshipped items below are **5. Reaction quality and impact
-confirmation** and **11. Local reviewer evaluation**. Item 5's Phase A,
+The remaining evidence work below is **5. Reaction quality and impact
+confirmation** plus the optional **11. Local reviewer quality evaluation**. Item 5's Phase A,
 Phase B V1, and task-sensitivity calibration are complete. The calibration hit
 the preregistered stop rule: synthetic micro-repositories are not discriminating
 enough for held-out V2. The current General prompt remains frozen and V2 waits
 for consented, anonymized natural traces. Repairing the contaminated clean case
 and obtaining an independent rater remain useful Phase A confirmation work.
-Item 2 now ships as an unreleased dual-host plugin prerelease. Item 11 is the
-next technically unblocked phase because the shared core is shipped. Everything else below is
-either shipped or explicitly cut from scope.
+Items 2 and 3 ship as an unreleased dual-host plugin prerelease. Item 11 is not
+scheduled and is not a shipping gate; it becomes product work only if the project
+later wants to publish model recommendations. Everything else below is either
+shipped or explicitly cut from scope.
 
 ## 1. Floating window UI — ✅ SHIPPED 2026-05-09
 
@@ -181,7 +186,7 @@ creates backups, and preserves runtime/data.
 
 Claude and Codex manifest validation, package-drift tests, migration tests, and
 Linux/macOS/Windows CI cover the distribution path. Shell and PowerShell
-installers remain compatibility options. Version `0.1.0-dev.1` is intentionally
+installers remain compatibility options. Version `0.1.0-dev.2` is intentionally
 not tagged or released yet.
 
 ## 3. Mid-work checkpoint gating — ✅ SHIPPED 2026-08-11
@@ -195,12 +200,14 @@ Checkpoint reactions return directly to the main agent through
 `additionalContext`; they are not written to the user-facing floating-window
 log. The existing asynchronous Stop path remains as supplementary review.
 
-## 4. Multi-model switching — ✅ SHIPPED (cross-vendor)
+## 4. Multi-model switching — ✅ SHIPPED (cross-vendor + local BYOM)
 
 `MASTERS_NUDGE_PROVIDER` (legacy alias `BUDDY_PROVIDER`) routes between Anthropic (`claude -p`) and OpenAI
 (`codex exec`). Host-aware defaults avoid a second login: Claude uses Anthropic
 `sonnet`, while Codex uses OpenAI `gpt-5.6-sol`. An explicit provider/model
-override still supports cross-vendor review.
+override still supports cross-vendor review. Experimental `ollama-local` uses a
+user-selected model on a validated loopback Ollama server and has no default
+model or cloud fallback.
 
 Smart routing (different models per turn type) remains cut: checkpoint reasons
 select when to review, not which model to use. The configured provider remains
@@ -334,20 +341,21 @@ insufficient. The evaluation never silently extends and never enables skipping a
 explicit approval after the evidence window; it is not a current implementation
 task merely because telemetry is present.
 
-## 11. Local reviewer evaluation — AFTER SHARED CORE; READY TO DESIGN
+## 11. Local reviewer quality evaluation — OPTIONAL; NOT A SHIPPING GATE
 
 **Why kept:** A local reviewer could avoid a second cloud egress and may reduce
 per-call cost and latency. Those benefits matter only if review quality remains
 useful.
 
-**Prerequisite reached:** The shared reviewer core and provider boundary are
-extracted. Reuse item 5's fixtures and score card. Do not add an
-Ollama-compatible or other local provider until the benchmark and promotion
-gate are frozen.
+**Interface shipped:** The experimental Ollama adapter is available as BYOM
+without prescribing model size. The shared reviewer core and provider boundary
+allow a later benchmark to reuse item 5's fixtures and score card without
+changing the runtime interface.
 
-**Promotion gate:** A candidate must meet an explicit quality floor for correct
-findings, correct silence, schema compliance, and latency. Do not promise that a
-particular parameter count or hardware setup will pass before measuring it.
+**Future evaluation:** If the project later publishes recommended models, each
+candidate should meet an explicit quality floor for correct findings, correct
+silence, schema compliance, and latency. Until then, do not claim that any
+parameter count or hardware setup provides adequate review quality.
 
 ---
 

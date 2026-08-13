@@ -33,7 +33,7 @@ The point is not to produce another answer or another code review. It is to give
 
 When the same model continues its own work, it can carry the same assumptions into the next decision.
 
-The zero-config reviewer follows the host you already authenticated: Claude Code uses Anthropic `sonnet`; Codex uses OpenAI `gpt-5.6-sol`. You can explicitly choose the other provider. The second opinion always has a separate context and role, but is not cross-vendor unless you configure it that way.
+The zero-config reviewer follows the host you already authenticated: Claude Code uses Anthropic `sonnet`; Codex uses OpenAI `gpt-5.6-sol`. You can explicitly choose the other provider or bring a user-selected, locally installed Ollama model. The second opinion always has a separate context and role, but is not cross-vendor unless you configure it that way.
 
 The second model receives only a small packet of current evidence and must ground its nudge in that material. Code, tests, and tool output may anchor the observation, but the target is how the work is being framed, sequenced, scoped, tested, or declared complete. If the evidence does not support a useful nudge, it says nothing.
 
@@ -65,15 +65,15 @@ Output is either one finding or silence. Findings are stripped of markdown and f
 
 ## Who this is for
 
-**Suitable** if you use Claude Code or Codex CLI and accept that review content (your prompt, tool output, file snippets, errors, etc.) leaves the machine for the host's external model API (Anthropic on Claude Code; OpenAI on Codex, unless overridden).
+**Suitable** if you use Claude Code or Codex CLI and either accept the host's external reviewer API or configure the experimental loopback-only Ollama provider.
 
-**Not suitable** where conversation or code must not leave the machine. Details: [Privacy](#privacy). Do not install if that is a hard constraint.
+If conversation or code must not leave the machine, configure local-only mode before relying on the hooks. Details: [Local-only Ollama reviewer](#local-only-ollama-reviewer-experimental) and [Privacy](#privacy).
 
 Cost: by default **every completed turn** calls the review model once; mid-turn calls only on error / test failure / first large change. Busy days accumulate tokens.
 
 ## Install
 
-The repository marketplace currently serves the unreleased `0.1.0-dev.1` prerelease; no release tag has been created.
+The repository marketplace currently serves the unreleased `0.1.0-dev.2` prerelease; no release tag has been created.
 
 ### Prerequisites
 
@@ -107,7 +107,7 @@ Start a new task, open `/hooks`, review the commands, and trust the plugin hooks
 
 ### Check, migrate, or open the window
 
-Ask the host to **“Check whether Masters' Nudge is ready.”** The bundled `doctor` skill checks Python, the provider CLI, writable data paths, hooks, and optional UI dependencies without calling a reviewer model.
+Ask the host to **“Check whether Masters' Nudge is ready.”** The bundled `doctor` skill checks Python, provider readiness, writable data paths, hooks, and optional UI dependencies without generating a reviewer response. For local mode it reads only Ollama status and model metadata.
 
 If you previously used the manual install, first install the plugin and then ask it to **“Migrate my legacy Masters' Nudge hooks.”** Migration shows a dry run, changes only exact known hook entries after confirmation, writes an adjacent timestamped backup, and leaves runtime and review data untouched. Modified entries are refused for manual review.
 
@@ -118,6 +118,22 @@ python -m pip install --user Pillow
 ```
 
 Closing the window does not disable hooks.
+
+### Local-only Ollama reviewer (experimental)
+
+Ask the host to **“Configure Masters' Nudge for my local Ollama model `<exact-model-name>`.”** The bundled `setup-local` skill uses your model choice; it never installs Ollama, pulls a model, signs in, or recommends a model size.
+
+[Ollama must already be running with cloud features disabled](https://docs.ollama.com/faq) using `OLLAMA_NO_CLOUD=1` or `disable_ollama_cloud`, and the selected model must already exist locally. The setup refuses remote endpoints, redirects, cloud-enabled servers, explicit cloud model names, and models whose metadata names a remote host. Older Ollama builds without the cloud-status endpoint are rejected. It writes the shared setting to `~/.masters-nudge/data/reviewer.json`, so both Claude Code and Codex use it. Calls use Ollama's native [structured-output schema](https://docs.ollama.com/capabilities/structured-outputs).
+
+Source-install users can run the same setup directly:
+
+```bash
+python masters_nudge_cli.py local configure --model <exact-model-name>
+```
+
+Use `--url http://localhost:<port>` only for another loopback port. To remove the persistent local setting, explicitly ask the host to reset it or run `python masters_nudge_cli.py local reset`; reset restores the normal cloud default unless environment variables override it.
+
+This is a BYOM compatibility interface, not a quality or licensing claim. Model size, license, latency, and usefulness are the user's decision.
 
 ### Update or uninstall
 
@@ -151,7 +167,7 @@ Clone the repository, run `bash install.sh --all` or `.\install.ps1 -HostName al
 
 - Force a failing test, or finish a turn: a checkpoint hit may add a few seconds of wait; the next prompt should receive any end-of-turn finding.
 - New logs: `~/.masters-nudge/data/<host>--<session_id>.log`; errors: `~/.masters-nudge/data/error.log`.
-- No log at all: run the bundled doctor; hooks are usually not loaded/trusted, or the provider CLI call is failing.
+- No log at all: run the bundled doctor; hooks are usually not loaded/trusted, or the selected provider is not ready.
 
 ## Filters: different stages, different workflow questions
 
@@ -226,7 +242,7 @@ What actually runs and what was actually measured; whether the chosen path remov
 
 </details>
 
-Host-aware defaults remove the need for a second login: Claude Code uses Anthropic and Codex uses OpenAI. Set `MASTERS_NUDGE_PROVIDER` when cross-vendor review is worth the extra setup. Either way, this is a separate reviewer invocation, not an accuracy claim.
+Host-aware defaults remove the need for a second login: Claude Code uses Anthropic and Codex uses OpenAI. Set `MASTERS_NUDGE_PROVIDER` when cross-vendor or local-only review is worth the extra setup. Either way, this is a separate reviewer invocation, not an accuracy claim.
 
 ## Configure
 
@@ -234,8 +250,9 @@ Host-aware defaults remove the need for a second login: Claude Code uses Anthrop
 
 | Env var | Default | Effect |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`) or `anthropic` (`claude -p`) |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol` | Model name for the chosen CLI |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`), `anthropic` (`claude -p`), or `ollama-local` |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol`; local: required | Model name for the chosen provider |
+| `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback-only Ollama base URL; used only by `ollama-local` |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | New logs, state, config, and content-free telemetry |
@@ -248,6 +265,8 @@ Host-aware defaults remove the need for a second login: Claude Code uses Anthrop
 
 Review copy lives in the managed plugin runtime. Source installs use `~/.masters-nudge/runtime/buddy-prompt.txt`; the Claude compatibility copy remains under `~/.claude/scripts/buddy/`.
 
+Environment variables override `~/.masters-nudge/data/reviewer.json`, which overrides the host-aware defaults. If the persistent reviewer file is malformed, reviews stop with a diagnostic rather than silently reverting to a cloud provider.
+
 ### Cost telemetry and shadow evaluation
 
 First review after install opens a fixed 7-day shadow window: candidate skips are labeled only; every review still runs. First review on or after day seven writes `~/.masters-nudge/data/shadow-evaluation.md` and shows one notice. Below 300 calls → `insufficient_samples`. No silent extension; no automatic skip enablement.
@@ -256,7 +275,7 @@ Each review appends content-free metadata to `~/.masters-nudge/data/review-telem
 
 ## Privacy
 
-**Conversation and tool-event data go to an external model provider.** Each end-of-turn review and each matching mid-turn review is a separate egress. A payload may include:
+With the default cloud providers, **conversation and tool-event data go to an external model provider.** With `ollama-local`, the same payload is sent only to the validated loopback Ollama server. Each end-of-turn review and each matching mid-turn review is a separate model call. A payload may include:
 
 1. Latest user prompt (≤2000 chars; long text keeps head and tail with an explicit middle cut)
 2. Mid-turn: triggering tool event (≤3000) and recent agent context (≤1200)
@@ -265,9 +284,9 @@ Each review appends content-free metadata to `~/.masters-nudge/data/review-telem
 5. Up to 3 prior short reactions in the session (reduces repetition)
 6. Review system prompt and optional persona file (instructions, not your project source as such)
 
-Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; switching provider mid-session can resend earlier reactions to the new vendor as recent context. Reactions, task anchors, and bounded tool journals are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted.
+Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; switching provider mid-session can resend earlier reactions to the new provider as recent context. `ollama-local` accepts only loopback HTTP, disables client proxies and redirects, requires Ollama to report cloud disabled before every generation, and rejects remote model metadata. Any failure produces no nudge and never falls back to Claude or Codex.
 
-If even same-vendor egress is unacceptable, do not enable. Provider retention/training terms change; check current API policy.
+Reactions, task anchors, bounded tool journals, and the selected local model name are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted. Local-only mode cannot audit the operating system or a malicious process impersonating Ollama; the user remains responsible for the local runtime and model license. Provider retention/training terms change, so check current policy when using cloud mode.
 
 ## Optional integrations
 

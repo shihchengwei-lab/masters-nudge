@@ -13,7 +13,7 @@ hosts enter the same `ReviewCore` for an actual review.
 | Host adapter | Native JSON parsing, session/turn identity, evidence capture, turn journal, checkpoint deduplication, delivery state | Persona prompt logic or provider-specific review policy |
 | Shared contracts and evidence | Normalized event/request types, bounded packet construction, evidence limits | Native delivery timing or provider invocation |
 | Shared core | Lens routing, prompt composition, provider dispatch, sanitization, recent-reaction context, reaction persistence, telemetry | Claude/Codex transcript wire formats or host delivery state |
-| Provider adapter | CLI invocation, schema parsing, usage extraction, recursion guard | Host hook semantics |
+| Provider adapter | Cloud CLI or local-only HTTP invocation, schema parsing, usage extraction, recursion guard and transport privacy checks | Host hook semantics |
 
 The host-neutral event contracts are `PromptSubmitted`, `ToolCompleted`, and
 `TurnStopped`; the Codex adapter uses all three, while the Claude compatibility
@@ -58,6 +58,7 @@ codex_cli--<session>.log
 <host>--<session>.turn.json
 <host>--<session>.delivery.json
 <host>--<session>.checkpoints/
+reviewer.json
 ```
 
 The floating window and Claude injection path can read pre-Phase-C
@@ -66,8 +67,12 @@ The floating window and Claude injection path can read pre-Phase-C
 
 ## Failure behavior
 
-Hooks fail open: malformed input, missing provider CLIs, timeouts, and reviewer
-schema errors are locally logged and never block the main coding agent.
+Hooks fail open: malformed input, missing provider CLIs or local servers,
+timeouts, and reviewer schema errors are locally logged and never block the
+main coding agent. The `ollama-local` provider additionally fails closed with
+respect to egress: an invalid config, non-loopback endpoint, enabled Ollama
+cloud mode, or remote-model metadata produces no review and never falls back to
+a cloud provider.
 Checkpoint claims are released after reviewer errors/no-finding so a later
 equivalent event can retry; delivered findings keep their dedup marker.
 

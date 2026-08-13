@@ -48,6 +48,7 @@ PROVIDER = _RUNTIME.provider
 _DEFAULT_MODELS = DEFAULT_MODELS
 MODEL = _RUNTIME.model
 TIMEOUT_SEC = _RUNTIME.timeout_sec
+OLLAMA_URL = _RUNTIME.ollama_url
 
 # Transcript shaping: fill a char budget walking backwards from the newest
 # user/assistant entry. Each entry kept in full unless it exceeds the per-
@@ -521,6 +522,7 @@ def dispatch_call_result(system_prompt: str, transcript_text: str) -> dict:
         MODEL,
         schema_path=OUTPUT_SCHEMA_FILE,
         timeout_sec=TIMEOUT_SEC,
+        ollama_url=OLLAMA_URL,
         log_error=log_error,
     )
 
@@ -747,6 +749,9 @@ def main() -> None:
             legacy_data_dir=CLAUDE_DIR / "buddy",
             error_log=ERROR_LOG,
         ),
+        ollama_url=_RUNTIME.ollama_url,
+        configuration_source=_RUNTIME.configuration_source,
+        configuration_error=_RUNTIME.configuration_error,
     )
 
     ReviewCore(settings, log_error=log_error).review(

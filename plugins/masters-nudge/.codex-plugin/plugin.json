@@ -1,6 +1,6 @@
 {
   "name": "masters-nudge",
-  "version": "0.1.0-dev.1",
+  "version": "0.1.0-dev.2+codex.20260813090814",
   "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
   "author": {
     "name": "shihchengwei-lab",
@@ -17,9 +17,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Masters’ Nudge",
+    "displayName": "Masters\u2019 Nudge",
     "shortDescription": "Quiet workflow nudges from six engineering lenses",
-    "longDescription": "Adds bounded, evidence-based workflow nudges during and after coding-agent work without replacing the main agent.",
+    "longDescription": "Adds bounded, evidence-based workflow nudges during and after coding-agent work, with cloud or loopback-only local reviewers.",
     "developerName": "shihchengwei-lab",
     "category": "Productivity",
     "capabilities": [
@@ -29,9 +29,9 @@
     "websiteURL": "https://github.com/shihchengwei-lab/masters-nudge",
     "privacyPolicyURL": "https://github.com/shihchengwei-lab/masters-nudge#privacy",
     "defaultPrompt": [
-      "Check whether Masters’ Nudge is ready.",
-      "Open the Masters’ Nudge window.",
-      "Migrate my legacy Masters’ Nudge hooks."
+      "Check whether Masters\u2019 Nudge is ready.",
+      "Configure Masters\u2019 Nudge for my local Ollama model.",
+      "Open the Masters\u2019 Nudge window."
     ],
     "brandColor": "#665B8E",
     "screenshots": [

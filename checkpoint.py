@@ -301,6 +301,9 @@ def generate_nudge(
             legacy_data_dir=buddy.CLAUDE_DIR / "buddy",
             error_log=buddy.ERROR_LOG,
         ),
+        ollama_url=buddy._RUNTIME.ollama_url,
+        configuration_source=buddy._RUNTIME.configuration_source,
+        configuration_error=buddy._RUNTIME.configuration_error,
     )
 
     outcome = ReviewCore(settings, log_error=buddy.log_error).review(

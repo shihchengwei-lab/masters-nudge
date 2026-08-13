@@ -32,7 +32,7 @@ Masters’ Nudge 會在幾個關鍵時刻，請另一個模型看一小段工作
 
 同一個模型繼續自己的工作時，容易把原來的假設一起帶進下一個決定。
 
-零設定時 reviewer 沿用已登入的 host：Claude Code 使用 Anthropic `sonnet`；Codex 使用 OpenAI `gpt-5.6-sol`。也能明確改用另一個 provider。第二意見一定有獨立上下文與角色，但只有主動設定時才會跨廠商。
+零設定時 reviewer 沿用已登入的 host：Claude Code 使用 Anthropic `sonnet`；Codex 使用 OpenAI `gpt-5.6-sol`。也能明確改用另一個 provider，或帶入自行選定且已安裝在本機 Ollama 的模型。第二意見一定有獨立上下文與角色，但只有主動設定時才會跨廠商。
 
 第二個模型只會收到一小段當下資料，也只能根據這些內容提出提醒。程式、測試與工具結果可以當證據錨點，但真正檢視的是工作如何被框定、排序、控制範圍、取得回饋、驗證與宣告完成。看不出有用提醒，就不出聲。
 
@@ -64,15 +64,15 @@ Coding agent 正常工作
 
 ## 適用對象
 
-**適用**：使用 Claude Code 或 Codex CLI，且可接受審查時帶出的內容（你的 prompt、工具輸出、檔案片段、錯誤訊息等）離開本機、送到 host 的外部模型 API（Claude Code 預設 Anthropic；Codex 預設 OpenAI，可覆寫）。
+**適用**：使用 Claude Code 或 Codex CLI，並且可以接受 host 的外部 reviewer API，或願意設定實驗性的 loopback-only Ollama provider。
 
-**不適用**：對話或程式碼不得外送的環境。細節見 [隱私](#隱私)。不符合就不要裝。
+若對話或程式碼不得離開本機，必須先設定 local-only mode 再使用 hooks。細節見 [本機 Ollama reviewer](#本機-ollama-reviewer實驗性)與[隱私](#隱私)。
 
 成本上：預設**每個回合結束都會**呼叫一次審查模型；途中僅在命中錯誤／測不過／首次大變更時再呼叫。繁忙時 token 會累積。
 
 ## 安裝
 
-Repository marketplace 目前提供尚未正式 release 的 `0.1.0-dev.1` prerelease，還沒有建立 release tag。
+Repository marketplace 目前提供尚未正式 release 的 `0.1.0-dev.2` prerelease，還沒有建立 release tag。
 
 ### 前置
 
@@ -106,7 +106,7 @@ codex plugin add masters-nudge@masters-nudge
 
 ### 檢查、遷移或開啟浮窗
 
-直接請 host **「檢查 Masters' Nudge 是否準備完成」**。內建 `doctor` skill 會檢查 Python、provider CLI、data 路徑寫入權限、hooks 與選用 UI 依賴，不會呼叫 reviewer 模型。
+直接請 host **「檢查 Masters' Nudge 是否準備完成」**。內建 `doctor` skill 會檢查 Python、provider readiness、data 路徑寫入權限、hooks 與選用 UI 依賴，不會生成 reviewer 回應；local mode 只讀 Ollama status 與模型 metadata。
 
 若曾用手動版，先安裝 plugin，再請它 **「遷移舊版 Masters' Nudge hooks」**。遷移會先顯示 dry run，經確認後只移除完全符合的已知 hook，留下相鄰的 timestamp backup，不動 runtime 與審查資料；修改過的近似項目會拒絕自動處理。
 
@@ -117,6 +117,22 @@ python -m pip install --user Pillow
 ```
 
 關閉視窗不會停用 hooks。
+
+### 本機 Ollama reviewer（實驗性）
+
+直接請 host **「用我的本機 Ollama 模型 `<精確模型名>` 設定 Masters' Nudge」**。內建 `setup-local` skill 只使用你選定的模型，不會安裝 Ollama、pull 模型、登入或推薦模型大小。
+
+[Ollama 必須已關閉 cloud 功能](https://docs.ollama.com/faq)，使用 `OLLAMA_NO_CLOUD=1` 或 `disable_ollama_cloud`，選定模型也必須已存在本機。設定會拒絕遠端 endpoint、redirect、仍開啟 cloud 的 server、明確的 cloud 模型名，以及 metadata 指向遠端 host 的模型；不支援 cloud-status endpoint 的舊版 Ollama 也會被拒絕。設定寫入 `~/.masters-nudge/data/reviewer.json`，Claude Code 與 Codex 共用；呼叫會使用 Ollama 原生的 [structured-output schema](https://docs.ollama.com/capabilities/structured-outputs)。
+
+Source 安裝可直接執行：
+
+```bash
+python masters_nudge_cli.py local configure --model <精確模型名>
+```
+
+只有另一個 loopback port 才需加上 `--url http://localhost:<port>`。若要移除持久設定，明確請 host reset，或執行 `python masters_nudge_cli.py local reset`；reset 後若無環境變數覆寫，就會恢復 host 的雲端預設。
+
+這是 BYOM 相容接口，不是品質或授權保證。模型大小、授權、延遲與效用品質由使用者判斷。
 
 ### 更新或解除安裝
 
@@ -150,7 +166,7 @@ Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName a
 
 - 觸發一次測試失敗，或完成一輪工作：命中途中審查時 agent 可能多等數秒；回合末 finding 應在下次 prompt 注入。
 - 新 log：`~/.masters-nudge/data/<host>--<session_id>.log`；錯誤：`~/.masters-nudge/data/error.log`。
-- 若完全沒有 log：先跑內建 doctor；多半是 hooks 未載入／未信任，或 provider CLI 呼叫失敗。
+- 若完全沒有 log：先跑內建 doctor；多半是 hooks 未載入／未信任，或選定的 provider 尚未準備完成。
 
 ## 濾鏡：不同階段，看工作流的不同地方
 
@@ -225,7 +241,7 @@ Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫
 
 </details>
 
-Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 OpenAI。若跨廠商審查值得額外設定，再指定 `MASTERS_NUDGE_PROVIDER`。兩者都是獨立 reviewer 呼叫，不是正確率保證。
+Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 OpenAI。若跨廠商或 local-only 審查值得額外設定，再指定 `MASTERS_NUDGE_PROVIDER`。兩者都是獨立 reviewer 呼叫，不是正確率保證。
 
 ## 設定
 
@@ -233,8 +249,9 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 
 | 環境變數 | 預設 | 作用 |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）或 `anthropic`（`claude -p`） |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol` | 傳給選定 CLI 的模型名 |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）、`anthropic`（`claude -p`）或 `ollama-local` |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol`；本機：必填 | 傳給選定 provider 的模型名 |
+| `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | 僅供 `ollama-local` 使用的 loopback Ollama base URL |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | 新 log、state、config 與無內容 telemetry |
@@ -247,6 +264,8 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 
 審查文案與規則位於受管理的 plugin runtime；source 安裝則是 `~/.masters-nudge/runtime/buddy-prompt.txt`，Claude 相容副本仍在 `~/.claude/scripts/buddy/`。
 
+環境變數優先於 `~/.masters-nudge/data/reviewer.json`，後者再優先於 host-aware 預設。持久 reviewer 設定若損壞，審查會停止並留下診斷，不會靜默退回雲端 provider。
+
 ### 成本遙測與 shadow 評估
 
 安裝後首次審查起算固定 7 天：可能省成本的略過只標註與量測，實際仍每次呼叫模型。第 7 天後的下一次審查寫入 `~/.masters-nudge/data/shadow-evaluation.md` 並顯示一次通知；不足 300 次標 `insufficient_samples`，不自動延長，也不自動啟用略過。
@@ -255,7 +274,7 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 
 ## 隱私
 
-**會把對話與工具事件送至外部模型廠商。** 每次回合末審查，以及每次命中的途中審查，各為一次外送。內容可能包含：
+使用預設雲端 provider 時，**會把對話與工具事件送至外部模型廠商。** 使用 `ollama-local` 時，同一份 payload 只送往驗證過的 loopback Ollama server。每次回合末與每次命中的途中審查，各為一次模型呼叫。內容可能包含：
 
 1. 最新使用者 prompt（上限 2000 字；長文保留頭尾，中段標截斷）
 2. 途中：觸發的工具事件（≤3000）與最近 agent 上下文（≤1200）
@@ -264,9 +283,9 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 5. 本 session 最近最多 3 則短評（避免重複）
 6. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
 
-未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；中途切換 provider 時，先前短評可能作為「最近幾則」送進新廠商。反應、任務錨點與 bounded tool journal 會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。
+未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；中途切換 provider 時，先前短評可能作為「最近幾則」送進新 provider。`ollama-local` 只接受 loopback HTTP，關閉 client proxy 與 redirect，每次生成前都要求 Ollama 回報 cloud 已停用，並拒絕 remote model metadata。任何失敗都不產生 Nudge，也不會回退 Claude 或 Codex。
 
-連同廠商外送都不能接受時，請勿啟用。廠商保留／訓練政策請查現行 API 條款。
+反應、任務錨點、bounded tool journal 與本機模型名會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。Local-only mode 無法稽核作業系統或冒充 Ollama 的惡意本機程序；本機 runtime 與模型授權仍由使用者負責。使用雲端 mode 時，廠商保留／訓練政策請查現行條款。
 
 ## 選用整合
 

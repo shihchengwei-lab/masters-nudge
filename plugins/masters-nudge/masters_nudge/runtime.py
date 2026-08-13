@@ -2,17 +2,25 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
+
+from .local_ollama import DEFAULT_OLLAMA_URL
 
 
 DEFAULT_MODELS = {
     "anthropic": "sonnet",
     "openai": "gpt-5.6-sol",
     "codex": "gpt-5.6-sol",
+    "ollama-local": "",
 }
+
+REVIEWER_CONFIG_FILE = "reviewer.json"
+REVIEWER_CONFIG_KEYS = {"provider", "model", "ollama_url"}
+INVALID_CONFIG_PROVIDER = "configuration-error"
 
 HOST_DEFAULT_PROVIDERS = {
     "claude": "anthropic",
@@ -42,6 +50,37 @@ def _positive_int(value: str, default: int) -> int:
     except (TypeError, ValueError):
         return default
     return parsed if parsed > 0 else default
+
+
+def _explicit_value(
+    environment: Mapping[str, str], primary: str, legacy: str
+) -> str | None:
+    for name in (primary, legacy):
+        value = environment.get(name)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def reviewer_config_path(data_dir: Path) -> Path:
+    return Path(data_dir) / REVIEWER_CONFIG_FILE
+
+
+def _load_reviewer_config(path: Path) -> tuple[dict[str, str], str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}, ""
+    except (OSError, ValueError) as exc:
+        return {}, f"cannot read reviewer config: {exc}"
+    if not isinstance(payload, dict) or set(payload) != REVIEWER_CONFIG_KEYS:
+        return {}, "reviewer config has an invalid shape"
+    if payload.get("provider") != "ollama-local":
+        return {}, "reviewer config contains an unsupported provider"
+    for key in ("model", "ollama_url"):
+        if not isinstance(payload.get(key), str) or not payload[key].strip():
+            return {}, f"reviewer config has an invalid {key}"
+    return {key: str(payload[key]).strip() for key in REVIEWER_CONFIG_KEYS}, ""
 
 
 @dataclass(frozen=True)
@@ -99,6 +138,9 @@ class RuntimeSettings:
     timeout_sec: int
     checkpoint_timeout_sec: int
     paths: RuntimePaths
+    ollama_url: str = DEFAULT_OLLAMA_URL
+    configuration_source: str = "host_default"
+    configuration_error: str = ""
 
     @classmethod
     def from_env(
@@ -109,20 +151,45 @@ class RuntimeSettings:
         host: str | None = None,
     ) -> "RuntimeSettings":
         environment = os.environ if environ is None else environ
+        paths = RuntimePaths.resolve(runtime_dir, environ=environment)
         default_provider = HOST_DEFAULT_PROVIDERS.get(
             str(host or "").strip().lower(), "openai"
         )
-        provider = _value(
-            environment,
-            "MASTERS_NUDGE_PROVIDER",
-            "BUDDY_PROVIDER",
-            default_provider,
-        ).lower()
-        model = _value(
-            environment,
-            "MASTERS_NUDGE_MODEL",
-            "BUDDY_MODEL",
-            DEFAULT_MODELS.get(provider, "sonnet"),
+        configured, config_error = _load_reviewer_config(
+            reviewer_config_path(paths.data_dir)
+        )
+        explicit_provider = _explicit_value(
+            environment, "MASTERS_NUDGE_PROVIDER", "BUDDY_PROVIDER"
+        )
+        explicit_model = _explicit_value(
+            environment, "MASTERS_NUDGE_MODEL", "BUDDY_MODEL"
+        )
+        explicit_url = _explicit_value(
+            environment, "MASTERS_NUDGE_OLLAMA_URL", "BUDDY_OLLAMA_URL"
+        )
+        if explicit_provider:
+            provider = explicit_provider.lower()
+            source = "environment"
+            config_error = ""
+        elif config_error:
+            provider = INVALID_CONFIG_PROVIDER
+            source = "invalid_config"
+        elif configured:
+            provider = configured["provider"]
+            source = "config"
+        else:
+            provider = default_provider
+            source = "host_default"
+        if explicit_model:
+            model = explicit_model
+        elif source == "config":
+            model = configured["model"]
+        else:
+            model = DEFAULT_MODELS.get(provider, "")
+        ollama_url = (
+            explicit_url
+            or (configured.get("ollama_url") if source == "config" else "")
+            or DEFAULT_OLLAMA_URL
         )
         timeout = _positive_int(
             _value(
@@ -144,7 +211,10 @@ class RuntimeSettings:
             model,
             timeout,
             checkpoint_timeout,
-            RuntimePaths.resolve(runtime_dir, environ=environment),
+            paths,
+            ollama_url,
+            source,
+            config_error,
         )
 
 

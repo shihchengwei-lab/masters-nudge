@@ -438,6 +438,7 @@ class SharedCoreTests(unittest.TestCase):
             self.assertEqual(calls[0][1], calls[1][1])
             self.assertEqual(calls[0][2], calls[1][2])
             self.assertEqual(calls[0][0:1] + calls[0][3:4], ("openai", "test-model"))
+            self.assertEqual(calls[0][4]["ollama_url"], settings.ollama_url)
 
     def test_telemetry_keeps_host_and_turn_without_review_content(self):
         with tempfile.TemporaryDirectory() as tmpdir:

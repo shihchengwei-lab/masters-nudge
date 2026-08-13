@@ -10,6 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable
 
+from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
 from .prompting import MAX_REACTION_CHARS
 from .runtime import reviewer_environment
 
@@ -274,6 +275,7 @@ def dispatch_call_result(
     *,
     schema_path: Path,
     timeout_sec: int,
+    ollama_url: str = DEFAULT_OLLAMA_URL,
     capture_raw: bool = False,
     log_error: Logger = _noop,
 ) -> dict:
@@ -294,6 +296,17 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
+            capture_raw=capture_raw,
+            log_error=log_error,
+        )
+    if provider == "ollama-local":
+        return call_local_ollama_result(
+            system_prompt,
+            transcript_text,
+            model,
+            schema_path=schema_path,
+            timeout_sec=timeout_sec,
+            base_url=ollama_url,
             capture_raw=capture_raw,
             log_error=log_error,
         )

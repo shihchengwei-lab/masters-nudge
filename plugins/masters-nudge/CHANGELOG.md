@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-dev.2 — Unreleased prerelease
+
+- Add an experimental BYOM `ollama-local` reviewer shared by Claude Code and Codex.
+- Require loopback HTTP, disabled proxies and redirects, Ollama cloud-disabled status, and local model metadata before every generation.
+- Persist an explicitly configured local reviewer while keeping environment variables as the highest-priority override.
+- Fail closed on missing, remote, or malformed local configuration and never fall back to a cloud reviewer.
+- Add model-free local diagnostics and a `setup-local` plugin skill without installing, pulling, or recommending models.
+
+This version is intentionally not tagged or released yet.
+
 ## 0.1.0-dev.1 — Unreleased prerelease
 
 - Add native Claude Code and Codex plugin packages and repository marketplaces.

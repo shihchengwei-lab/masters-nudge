@@ -13,5 +13,8 @@ using the configured Python executable. On Codex, run
 interpreter (`python3`, `python`, or `py -3`).
 
 Report core readiness separately from the optional floating-window status.
-Do not invoke either reviewer model as part of diagnosis. If Codex is the host,
-remind the user that plugin hooks still need review in `/hooks`.
+Do not invoke any reviewer model as part of diagnosis. For `ollama-local`,
+report the loopback endpoint, server availability, cloud-disabled state, and
+local model metadata separately; metadata checks are not a model-quality test.
+If Codex is the host, remind the user that plugin hooks still need review in
+`/hooks`.

@@ -13,9 +13,15 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Mapping
+from typing import Callable, Mapping
 
-from .runtime import RuntimeSettings
+from .local_ollama import (
+    DEFAULT_OLLAMA_URL,
+    inspect_local_ollama,
+    normalize_loopback_url,
+    validate_model_name,
+)
+from .runtime import RuntimePaths, RuntimeSettings, reviewer_config_path
 
 
 CORE_FILES = (
@@ -39,6 +45,7 @@ CORE_FILES = (
     "masters_nudge/contracts.py",
     "masters_nudge/core.py",
     "masters_nudge/evidence.py",
+    "masters_nudge/local_ollama.py",
     "masters_nudge/prompting.py",
     "masters_nudge/providers.py",
     "masters_nudge/runtime.py",
@@ -267,7 +274,8 @@ def _backup_path(path: Path) -> Path:
 
 
 def _atomic_json_write(path: Path, document: dict) -> None:
-    original_mode = stat.S_IMODE(path.stat().st_mode)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o600
     handle = tempfile.NamedTemporaryFile(
         mode="w",
         encoding="utf-8",
@@ -348,12 +356,95 @@ def migrate_legacy(
     return {"apply": apply, "unsafe": unsafe, "results": results}
 
 
+def configure_local(
+    model: str,
+    url: str = DEFAULT_OLLAMA_URL,
+    *,
+    environ: Mapping[str, str] | None = None,
+    inspector: Callable[..., dict] = inspect_local_ollama,
+) -> dict:
+    environment = dict(os.environ if environ is None else environ)
+    path = reviewer_config_path(
+        RuntimePaths.resolve(environ=environment).data_dir
+    )
+    result = {
+        "saved": False,
+        "path": str(path),
+        "provider": "ollama-local",
+        "model": str(model or "").strip(),
+        "ollama_url": str(url or "").strip(),
+        "diagnostic": {},
+        "error": "",
+    }
+    try:
+        selected_model = validate_model_name(model)
+        endpoint = normalize_loopback_url(url)
+    except ValueError as exc:
+        result["error"] = str(exc)
+        return result
+    try:
+        diagnostic = inspector(endpoint, selected_model, timeout_sec=3)
+    except Exception as exc:
+        result["error"] = f"local Ollama inspection failed: {exc}"
+        return result
+    if not isinstance(diagnostic, dict):
+        result["error"] = "local Ollama inspection returned an invalid result"
+        return result
+    result.update(model=selected_model, ollama_url=endpoint)
+    result["diagnostic"] = diagnostic
+    if not diagnostic.get("ready"):
+        result["error"] = str(
+            diagnostic.get("error") or "local Ollama is not ready"
+        )
+        return result
+    try:
+        _atomic_json_write(
+            path,
+            {
+                "provider": "ollama-local",
+                "model": selected_model,
+                "ollama_url": endpoint,
+            },
+        )
+    except OSError as exc:
+        result["error"] = f"cannot save reviewer config: {exc}"
+        return result
+    result["saved"] = True
+    return result
+
+
+def reset_local(
+    *, environ: Mapping[str, str] | None = None
+) -> dict:
+    environment = dict(os.environ if environ is None else environ)
+    path = reviewer_config_path(
+        RuntimePaths.resolve(environ=environment).data_dir
+    )
+    try:
+        existed = path.exists()
+        path.unlink(missing_ok=True)
+    except OSError as exc:
+        return {
+            "reset": False,
+            "removed": False,
+            "path": str(path),
+            "error": f"cannot remove reviewer config: {exc}",
+        }
+    return {
+        "reset": True,
+        "removed": existed,
+        "path": str(path),
+        "error": "",
+    }
+
+
 def doctor(
     plugin_root: Path,
     host: str = "auto",
     *,
     environ: Mapping[str, str] | None = None,
     hook_python_command: str | None = None,
+    local_inspector: Callable[..., dict] = inspect_local_ollama,
 ) -> dict:
     environment = dict(os.environ if environ is None else environ)
     root = Path(plugin_root).resolve()
@@ -370,6 +461,39 @@ def doctor(
             root, environ=environment, host=runtime_host
         )
         executable = _provider_cli(settings.provider, environment)
+        local = {}
+        if settings.provider == "ollama-local":
+            try:
+                local = local_inspector(
+                    settings.ollama_url,
+                    settings.model,
+                    timeout_sec=3,
+                )
+            except Exception as exc:
+                local = {
+                    "ready": False,
+                    "endpoint": settings.ollama_url,
+                    "endpoint_loopback": False,
+                    "server_ready": False,
+                    "cloud_disabled": False,
+                    "model_ready": False,
+                    "model_local": False,
+                    "error": f"local Ollama inspection failed: {exc}",
+                }
+            if not isinstance(local, dict):
+                local = {
+                    "ready": False,
+                    "endpoint": settings.ollama_url,
+                    "endpoint_loopback": False,
+                    "server_ready": False,
+                    "cloud_disabled": False,
+                    "model_ready": False,
+                    "model_local": False,
+                    "error": "local Ollama inspection returned an invalid result",
+                }
+            provider_ready = bool(local.get("ready"))
+        else:
+            provider_ready = bool(executable)
         hook_command = (
             str(
                 hook_python_command
@@ -390,8 +514,11 @@ def doctor(
                 "host": name,
                 "provider": settings.provider,
                 "model": settings.model,
+                "configuration_source": settings.configuration_source,
+                "configuration_error": settings.configuration_error,
                 "provider_cli": executable or "",
-                "provider_ready": bool(executable),
+                "provider_ready": provider_ready,
+                "local": local,
                 "hook_python_command": hook_command,
                 "hook_python": hook_python or "",
                 "hook_python_version": (

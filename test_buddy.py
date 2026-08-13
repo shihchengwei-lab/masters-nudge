@@ -198,8 +198,13 @@ class TestBranding(unittest.TestCase):
             roadmap,
         )
         self.assertIn("### 2. Generalization（通用化）", roadmap)
-        self.assertIn("### 3. Local reviewer evaluation（本地審查模型評估）", roadmap)
+        self.assertIn("### 3. Local reviewer interface（本地審查模型接口）", roadmap)
         self.assertIn("### 4. Cost control（成本控制）", roadmap)
+        self.assertIn(
+            "## 11. Local reviewer quality evaluation — OPTIONAL; "
+            "NOT A SHIPPING GATE",
+            roadmap,
+        )
         phase_a = roadmap.index("**Phase A — reaction quality:**")
         phase_b = roadmap.index("**Phase B — reaction impact:**")
         self.assertLess(phase_a, phase_b)
@@ -213,7 +218,7 @@ class TestBranding(unittest.TestCase):
         self.assertIn("one real second agent", roadmap)
         self.assertIn("installation improvement", roadmap)
         self.assertNotIn("first generalization deliverable", roadmap)
-        self.assertIn("AFTER SHARED CORE", roadmap)
+        self.assertIn("**Interface shipped:**", roadmap)
         self.assertIn("Built-in custom lens/rule management", roadmap)
         self.assertIn("quality floor", roadmap)
         self.assertIn("Live gating remains off", roadmap)

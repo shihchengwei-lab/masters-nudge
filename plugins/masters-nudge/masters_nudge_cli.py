@@ -7,7 +7,14 @@ import argparse
 import json
 from pathlib import Path
 
-from masters_nudge.management import doctor, launch_window, migrate_legacy
+from masters_nudge.local_ollama import DEFAULT_OLLAMA_URL
+from masters_nudge.management import (
+    configure_local,
+    doctor,
+    launch_window,
+    migrate_legacy,
+    reset_local,
+)
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parent
@@ -19,10 +26,23 @@ def _print_doctor(result: dict) -> None:
     if result["runtime"]["missing"]:
         print("Missing runtime: " + ", ".join(result["runtime"]["missing"]))
     for item in result["hosts"]:
-        status = "ready" if item["provider_ready"] else "missing CLI"
+        status = "ready" if item["provider_ready"] else "not ready"
         print(
             f"{item['host']}: {item['provider']} / {item['model']} ({status})"
         )
+        if item["configuration_error"]:
+            print("  reviewer config: " + item["configuration_error"])
+        local = item.get("local") or {}
+        if local:
+            print(f"  local endpoint: {local['endpoint']}")
+            print(
+                "  privacy: "
+                + (
+                    "cloud disabled; model is local"
+                    if local["ready"]
+                    else local["error"]
+                )
+            )
         if not item["hook_python_ready"]:
             detail = (
                 f"version {item['hook_python_version']} is below 3.10"
@@ -70,6 +90,29 @@ def _print_migration(result: dict) -> None:
             print(f"{item['host']}: no known legacy hooks found")
 
 
+def _print_local_configure(result: dict) -> None:
+    if result["saved"]:
+        print(
+            f"Local reviewer configured for both hosts: {result['model']} "
+            f"at {result['ollama_url']}"
+        )
+        print(f"Config: {result['path']}")
+    else:
+        print("Local reviewer not configured: " + result["error"])
+
+
+def _print_local_reset(result: dict) -> None:
+    if not result["reset"]:
+        print("Local reviewer config not reset: " + result["error"])
+    elif result["removed"]:
+        print(
+            "Local reviewer config removed; environment overrides now win, "
+            "otherwise host cloud defaults are active again."
+        )
+    else:
+        print("No persistent local reviewer config was present.")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="masters-nudge")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -91,6 +134,17 @@ def main() -> int:
     window_parser = subparsers.add_parser("window")
     window_parser.add_argument("--json", action="store_true")
 
+    local_parser = subparsers.add_parser("local")
+    local_subparsers = local_parser.add_subparsers(
+        dest="local_command", required=True
+    )
+    local_configure_parser = local_subparsers.add_parser("configure")
+    local_configure_parser.add_argument("--model", required=True)
+    local_configure_parser.add_argument("--url", default=DEFAULT_OLLAMA_URL)
+    local_configure_parser.add_argument("--json", action="store_true")
+    local_reset_parser = local_subparsers.add_parser("reset")
+    local_reset_parser.add_argument("--json", action="store_true")
+
     args = parser.parse_args()
     if args.command == "doctor":
         result = doctor(
@@ -110,6 +164,20 @@ def main() -> int:
         else:
             _print_migration(result)
         return 2 if result["unsafe"] else 0
+    if args.command == "local":
+        if args.local_command == "configure":
+            result = configure_local(args.model, args.url)
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False))
+            else:
+                _print_local_configure(result)
+            return 0 if result["saved"] else 1
+        result = reset_local()
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        else:
+            _print_local_reset(result)
+        return 0 if result["reset"] else 1
 
     result = launch_window(PLUGIN_ROOT)
     if args.json:
