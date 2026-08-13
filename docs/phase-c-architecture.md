@@ -1,22 +1,27 @@
 # Phase C: shared reviewer architecture
 
 Phase C separates *where an event came from* from *how Masters’ Nudge reviews
-it*. Claude Code and Codex CLI now normalize their native hook payloads before
-the reviewer sees them.
+it*. Codex CLI normalizes native hook payloads into stable events. The Claude
+compatibility path maps checkpoint payloads to `ToolCompleted`; its prompt and
+Stop entry points update turn state or construct `ReviewRequest` directly. Both
+hosts enter the same `ReviewCore` for an actual review.
 
 ## Boundary
 
 | Layer | Owns | Must not own |
 |---|---|---|
-| Host adapter | Native JSON parsing, session/turn identity, evidence capture, delivery timing | Persona prompt logic or provider-specific review policy |
-| Shared core | Evidence packet, lens routing, prompt composition, provider dispatch, sanitization, storage, telemetry | Claude/Codex transcript wire formats |
+| Host adapter | Native JSON parsing, session/turn identity, evidence capture, turn journal, checkpoint deduplication, delivery state | Persona prompt logic or provider-specific review policy |
+| Shared contracts and evidence | Normalized event/request types, bounded packet construction, evidence limits | Native delivery timing or provider invocation |
+| Shared core | Lens routing, prompt composition, provider dispatch, sanitization, recent-reaction context, reaction persistence, telemetry | Claude/Codex transcript wire formats or host delivery state |
 | Provider adapter | CLI invocation, schema parsing, usage extraction, recursion guard | Host hook semantics |
 
-The stable internal events are `PromptSubmitted`, `ToolCompleted`, and
-`TurnStopped`. A `ReviewRequest` carries the host/session/turn identity, bounded
-evidence, review reason, fingerprint, and shadow labels. Both hosts use the same
-`ReviewCore`, prompt/lenses, 42-character completion target, 52-character hard
-cap, and `reaction-schema.json` contract.
+The host-neutral event contracts are `PromptSubmitted`, `ToolCompleted`, and
+`TurnStopped`; the Codex adapter uses all three, while the Claude compatibility
+path currently uses `ToolCompleted` for checkpoint classification. A
+`ReviewRequest` carries host/session/turn identity, bounded evidence, review
+reason, fingerprint, and shadow labels. Both hosts use the same `ReviewCore`,
+prompt/lenses, 42-character completion target, 52-character hard cap, and
+`reaction-schema.json` contract.
 
 Legacy callers may still import prompt and output helpers from `buddy.py`, but
 those names are compatibility delegates to `masters_nudge.prompting` and

@@ -260,7 +260,19 @@ Shipped prompt language is Traditional Chinese. For another language, update `bu
 
 ## Implementation notes
 
-Host adapters normalize hook payloads into prompt, tool-completed, and turn-stopped events. The shared core owns routing, prompt composition, provider dispatch, the 42-character completion target / 52-character hard cap, structured output, storage, and telemetry. Hooks build a small labeled evidence packet rather than resending a full transcript. Contract: `reaction-schema.json`.
+Codex normalizes hook payloads into prompt-submitted, tool-completed, and
+turn-stopped events. The Claude compatibility hooks translate checkpoint tool
+events and otherwise update turn state or construct the same `ReviewRequest`
+contract directly. Both review paths enter `ReviewCore` without host-specific
+pass-through callbacks.
+
+The shared core owns lens routing, prompt composition, provider dispatch, the
+42-character completion target / 52-character hard cap, structured-output
+handling, recent-reaction context, reaction persistence, and telemetry. Host
+adapters own native event parsing, evidence capture, turn journals, checkpoint
+deduplication, and delivery state. Shared evidence helpers build a small labeled
+packet rather than resending a full transcript. Output contract:
+`reaction-schema.json`.
 
 New runtime and data paths are host-neutral. Script paths still use `buddy.py`, `BUDDY_*`, and `~/.claude/buddy/` as a compatibility layer for existing installations; old data is read in place and never migrated or removed automatically. Product name is Masters’ Nudge.
 

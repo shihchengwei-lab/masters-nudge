@@ -256,7 +256,16 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 
 ## 實作摘要
 
-Host adapter 先把 hook payload 正規化成 prompt、tool-completed、turn-stopped 事件；共用 core 負責路由、prompt 組合、provider 呼叫、42 字回答閉環目標／52 字硬上限、結構化輸出、storage 與 telemetry。審查使用小型、有標籤的證據封包，而不是固定重送整段對話。契約見 `reaction-schema.json`。
+Codex 會把 hook payload 正規化成 prompt-submitted、tool-completed、
+turn-stopped 事件。Claude 相容 hooks 會轉換 checkpoint 工具事件；其餘路徑
+則直接更新 turn state，或建立同一份 `ReviewRequest` 契約。兩種 host 的實際
+審查都直接進入 `ReviewCore`，不再經過 host 專用的轉交 callback。
+
+共用 core 負責 lens 路由、prompt 組合、provider 呼叫、42 字回答閉環目標／
+52 字硬上限、結構化輸出處理、最近短評上下文、反應保存與 telemetry。Host
+adapter 負責原生事件解析、證據擷取、turn journal、checkpoint 去重與 delivery
+state；共用 evidence helper 建立小型、有標籤的證據封包，而不是固定重送整段
+對話。輸出契約見 `reaction-schema.json`。
 
 新 runtime 與 data 路徑已與 host 解耦。`buddy.py`、`BUDDY_*`、`~/.claude/buddy/` 仍作為既有安裝 compatibility layer；舊資料原地讀取，不會自動搬移或刪除。產品名稱為 Masters’ Nudge。
 

@@ -466,6 +466,27 @@ class SharedCoreTests(unittest.TestCase):
 
 
 class PackagingTests(unittest.TestCase):
+    def test_docs_describe_the_actual_host_core_boundary(self):
+        readme = " ".join((HERE / "README.md").read_text(encoding="utf-8").split())
+        readme_zh = " ".join(
+            (HERE / "README.zh-TW.md").read_text(encoding="utf-8").split()
+        )
+        architecture = " ".join(
+            (HERE / "docs" / "phase-c-architecture.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+
+        self.assertIn("Codex normalizes hook payloads", readme)
+        self.assertIn("Host adapters own native event parsing", readme)
+        self.assertIn("Codex 會把 hook payload 正規化", readme_zh)
+        self.assertIn("Host adapter 負責原生事件解析", readme_zh)
+        self.assertIn("the Codex adapter uses all three", architecture)
+        self.assertIn("reaction persistence, telemetry", architecture)
+        self.assertNotIn(
+            "Host adapters normalize hook payloads into prompt", readme
+        )
+
     def test_codex_snippet_registers_three_supported_events(self):
         snippet = json.loads((HERE / "codex-hooks-snippet.json").read_text(encoding="utf-8"))
         hooks = snippet["hooks"]
