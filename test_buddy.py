@@ -248,7 +248,10 @@ class TestBranding(unittest.TestCase):
 
         self.assertIn("~/.claude/scripts/buddy", installer)
         self.assertIn("~/.claude/scripts/buddy", settings)
-        self.assertIn("BUDDY_PROVIDER", (HERE / "buddy.py").read_text(encoding="utf-8"))
+        self.assertIn(
+            "BUDDY_PROVIDER",
+            (HERE / "masters_nudge" / "runtime.py").read_text(encoding="utf-8"),
+        )
 
     def test_default_sprite_is_transparent_and_detectable(self):
         from PIL import Image

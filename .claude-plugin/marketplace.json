@@ -1,0 +1,17 @@
+{
+  "name": "masters-nudge",
+  "owner": {
+    "name": "shihchengwei-lab"
+  },
+  "metadata": {
+    "description": "Masters’ Nudge prerelease marketplace"
+  },
+  "plugins": [
+    {
+      "name": "masters-nudge",
+      "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
+      "version": "0.1.0-dev.1",
+      "source": "./plugins/masters-nudge"
+    }
+  ]
+}

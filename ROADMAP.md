@@ -139,15 +139,15 @@ quality eval in item 5; lower token count alone is not proof of preserved qualit
 **Current boundary:** Live gating remains off. The shadow window never extends
 or enables skipping automatically, and no model downgrade is scheduled.
 
-Concrete unshipped items below are **2. Plugin format packaging**, **5. Reaction
-quality and impact confirmation**, and **11. Local reviewer evaluation**. Item 5's Phase A,
+Concrete unshipped items below are **5. Reaction quality and impact
+confirmation** and **11. Local reviewer evaluation**. Item 5's Phase A,
 Phase B V1, and task-sensitivity calibration are complete. The calibration hit
 the preregistered stop rule: synthetic micro-repositories are not discriminating
 enough for held-out V2. The current General prompt remains frozen and V2 waits
 for consented, anonymized natural traces. Repairing the contaminated clean case
 and obtaining an independent rater remain useful Phase A confirmation work.
-Item 2 waits for a real sharing need. Item 11 is now the next technically
-unblocked phase because the shared core is shipped. Everything else below is
+Item 2 now ships as an unreleased dual-host plugin prerelease. Item 11 is the
+next technically unblocked phase because the shared core is shipped. Everything else below is
 either shipped or explicitly cut from scope.
 
 ## 1. Floating window UI — ✅ SHIPPED 2026-05-09
@@ -164,17 +164,25 @@ system-reminders don't render in the user's terminal. The floating window
 is the user's only direct visibility channel. Runtime lens selection and
 beginner-friendly focus labels were added later under item 9.
 
-## 2. Plugin format packaging (`plugin.json`) — installation improvement
+## 2. Plugin format packaging (`plugin.json`) — ✅ SHIPPED 2026-08-13 (PRERELEASE)
 
-**Why kept:** Currently installed via shell script + manual `settings.json` edit.
-Fine for personal use, awkward to share. Wrapping in Claude Code's plugin
-manifest format would make `bash install.sh` → "click install in Claude Code"
-possible.
+**Result:** Claude Code and Codex now install from native repository
+marketplaces in two commands. The managed package owns its hooks, skills, core,
+prompts, personas, UI assets, and platform launchers, so new users no longer
+clone the repository or merge JSON by hand. A deterministic build check keeps
+the packaged runtime aligned with canonical source files. This installation improvement
+covers both supported hosts.
 
-**Trigger to do:** When sharing with at least one other person.
+The default reviewer follows the already-authenticated host (Claude → Anthropic
+`sonnet`; Codex → OpenAI `gpt-5.6-sol`) unless explicitly overridden. Bundled
+skills provide model-free diagnostics, optional UI launch, and a conservative
+legacy-hook migration that dry-runs first, removes exact known entries only,
+creates backups, and preserves runtime/data.
 
-This improves Claude Code installation only. It does not extract the shared
-reviewer core, add another host, or add another model provider.
+Claude and Codex manifest validation, package-drift tests, migration tests, and
+Linux/macOS/Windows CI cover the distribution path. Shell and PowerShell
+installers remain compatibility options. Version `0.1.0-dev.1` is intentionally
+not tagged or released yet.
 
 ## 3. Mid-work checkpoint gating — ✅ SHIPPED 2026-08-11
 
@@ -190,8 +198,9 @@ log. The existing asynchronous Stop path remains as supplementary review.
 ## 4. Multi-model switching — ✅ SHIPPED (cross-vendor)
 
 `MASTERS_NUDGE_PROVIDER` (legacy alias `BUDDY_PROVIDER`) routes between Anthropic (`claude -p`) and OpenAI
-(`codex exec`). Default is `openai` with `gpt-5.6-sol` so the side-review view is
-independent from the main agent's Anthropic Sonnet — different blind spots.
+(`codex exec`). Host-aware defaults avoid a second login: Claude uses Anthropic
+`sonnet`, while Codex uses OpenAI `gpt-5.6-sol`. An explicit provider/model
+override still supports cross-vendor review.
 
 Smart routing (different models per turn type) remains cut: checkpoint reasons
 select when to review, not which model to use. The configured provider remains

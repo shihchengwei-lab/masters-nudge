@@ -32,7 +32,7 @@ Masters’ Nudge 會在幾個關鍵時刻，請另一個模型看一小段工作
 
 同一個模型繼續自己的工作時，容易把原來的假設一起帶進下一個決定。
 
-Reviewer 預設使用 OpenAI `gpt-5.6-sol`，也可改用 Anthropic `claude -p`。主 agent 是 Anthropic 時，這同時跨了模型廠商；主 agent 是 Codex 時，請自行決定 reviewer provider，此時分離的是上下文與角色，不保證跨模型家族。
+零設定時 reviewer 沿用已登入的 host：Claude Code 使用 Anthropic `sonnet`；Codex 使用 OpenAI `gpt-5.6-sol`。也能明確改用另一個 provider。第二意見一定有獨立上下文與角色，但只有主動設定時才會跨廠商。
 
 第二個模型只會收到一小段當下資料，也只能根據這些內容提出提醒。程式、測試與工具結果可以當證據錨點，但真正檢視的是工作如何被框定、排序、控制範圍、取得回饋、驗證與宣告完成。看不出有用提醒，就不出聲。
 
@@ -64,7 +64,7 @@ Coding agent 正常工作
 
 ## 適用對象
 
-**適用**：使用 Claude Code 或 Codex CLI，且可接受審查時帶出的內容（你的 prompt、工具輸出、檔案片段、錯誤訊息等）離開本機、送到外部模型 API（**預設 OpenAI**；可改 Anthropic）。
+**適用**：使用 Claude Code 或 Codex CLI，且可接受審查時帶出的內容（你的 prompt、工具輸出、檔案片段、錯誤訊息等）離開本機、送到 host 的外部模型 API（Claude Code 預設 Anthropic；Codex 預設 OpenAI，可覆寫）。
 
 **不適用**：對話或程式碼不得外送的環境。細節見 [隱私](#隱私)。不符合就不要裝。
 
@@ -72,59 +72,85 @@ Coding agent 正常工作
 
 ## 安裝
 
+Repository marketplace 目前提供尚未正式 release 的 `0.1.0-dev.1` prerelease，還沒有建立 release tag。
+
 ### 前置
 
-- Claude Code、Codex CLI 0.147+，或兩者
-- 可呼叫的 reviewer CLI：預設為 [Codex CLI](https://github.com/openai/codex)，或設 `MASTERS_NUDGE_PROVIDER=anthropic` 使用 `claude -p`
+- 支援 plugin 的 Claude Code（實測 2.1.215）、Codex CLI 0.147+，或兩者
+- 已登入，且可從 terminal 呼叫的 host CLI
 - Python 3.10+
-- Git
 
-### 步驟
-
-1. Clone 此 repository 並進入目錄：
+### Claude Code
 
 ```bash
-git clone https://github.com/shihchengwei-lab/masters-nudge.git
-cd masters-nudge
+claude plugin marketplace add shihchengwei-lab/masters-nudge
+claude plugin install masters-nudge@masters-nudge --config python_command=python
 ```
 
-2. 安裝共用 runtime 與 adapter；兩種 installer 都不會修改 host 設定：
+開一個新的 Claude Code session。核心 Nudge 不需 clone、不需手動合併 hooks，也不需 UI 套件。
+
+若 Python 3.10+ 使用其他 executable 名稱或路徑，請替換設定值（值不可含參數）：
 
 ```bash
-bash install.sh --all
+claude plugin install masters-nudge@masters-nudge --config python_command=python3
 ```
 
-Windows PowerShell：
-
-```powershell
-.\install.ps1 -HostName all
-```
-
-只裝單一 host 可用 `--claude` / `--codex`，或 `-HostName claude` / `codex`。共用 runtime 在 `~/.masters-nudge/runtime/`；為了既有安裝相容，Claude 仍保留 `~/.claude/scripts/buddy/` target。
-
-3. 依使用的 host 啟用 hooks：
-
-   - **Claude Code：**把 [`settings-snippet.json`](settings-snippet.json) 的 `hooks` 合併進 `~/.claude/settings.json`。
-   - **Codex CLI 0.147+：**把 [`codex-hooks-snippet.json`](codex-hooks-snippet.json) 的 `hooks` 合併進 `~/.codex/hooks.json`，保留既有 hooks，再以 `/hooks` 檢查並信任。自動化環境也有 `--dangerously-bypass-hook-trust`，只能在先看過命令後使用。詳見 [官方 hooks 文件](https://learn.chatgpt.com/docs/hooks)。
-
-兩者都不要整檔覆蓋。
-
-4. （可選）開浮動視窗，否則你在 UI 上幾乎看不到回合末短評：
+### Codex
 
 ```bash
-pip install Pillow
+codex plugin marketplace add shihchengwei-lab/masters-nudge
+codex plugin add masters-nudge@masters-nudge
 ```
 
-- **Windows：** 雙擊 `~/.claude/scripts/buddy/start_buddy_window.bat`
-- **macOS / Linux：** `python3 ~/.claude/scripts/buddy/buddy_window.py &`
+開一個新 task，進入 `/hooks`，檢查命令後信任 plugin hooks。新的 hook 命令或命令 hash 出現時，Codex 會刻意再次要求批准；詳見 [官方 hooks 文件](https://learn.chatgpt.com/docs/hooks)。
+
+### 檢查、遷移或開啟浮窗
+
+直接請 host **「檢查 Masters' Nudge 是否準備完成」**。內建 `doctor` skill 會檢查 Python、provider CLI、data 路徑寫入權限、hooks 與選用 UI 依賴，不會呼叫 reviewer 模型。
+
+若曾用手動版，先安裝 plugin，再請它 **「遷移舊版 Masters' Nudge hooks」**。遷移會先顯示 dry run，經確認後只移除完全符合的已知 hook，留下相鄰的 timestamp backup，不動 runtime 與審查資料；修改過的近似項目會拒絕自動處理。
+
+浮動視窗是選用功能。先裝 Pillow，再請 host **「開啟 Masters' Nudge 浮動視窗」**；該 Python build 也需包含 Tkinter。
+
+```bash
+python -m pip install --user Pillow
+```
 
 關閉視窗不會停用 hooks。
+
+### 更新或解除安裝
+
+```bash
+# Claude Code
+claude plugin marketplace update masters-nudge
+claude plugin update masters-nudge@masters-nudge
+
+# Codex
+codex plugin marketplace upgrade masters-nudge
+codex plugin add masters-nudge@masters-nudge
+```
+
+更新後重啟 host；若 hook 命令 hash 改變，Codex 需再次檢查並信任。
+
+```bash
+claude plugin uninstall masters-nudge@masters-nudge
+codex plugin remove masters-nudge@masters-nudge
+```
+
+解除安裝不會刪除 `~/.masters-nudge/data/`。
+
+<details>
+<summary>Source／舊版安裝</summary>
+
+Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName all`，再合併對應的 [`settings-snippet.json`](settings-snippet.json) 或 [`codex-hooks-snippet.json`](codex-hooks-snippet.json)，不可覆蓋整份設定檔。單一 host 可用 `--claude` / `--codex`，或 `-HostName claude` / `codex`。此路徑僅保留給相容性與開發；新使用者應優先用 plugin。
+
+</details>
 
 ### 如何確認有在跑
 
 - 觸發一次測試失敗，或完成一輪工作：命中途中審查時 agent 可能多等數秒；回合末 finding 應在下次 prompt 注入。
 - 新 log：`~/.masters-nudge/data/<host>--<session_id>.log`；錯誤：`~/.masters-nudge/data/error.log`。
-- 若完全沒有 log：多半是 hooks 未合併／未信任，或 reviewer CLI／provider 呼叫失敗。
+- 若完全沒有 log：先跑內建 doctor；多半是 hooks 未載入／未信任，或 provider CLI 呼叫失敗。
 
 ## 濾鏡：不同階段，看工作流的不同地方
 
@@ -199,7 +225,7 @@ Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫
 
 </details>
 
-預設走 OpenAI，可讓 Anthropic 主 agent 與 reviewer 錯開模型家族；若主 agent 本身是 Codex，則仍是獨立 reviewer 呼叫，但不是跨廠商檢查。這是設計取捨，非正確率保證。
+Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 OpenAI。若跨廠商審查值得額外設定，再指定 `MASTERS_NUDGE_PROVIDER`。兩者都是獨立 reviewer 呼叫，不是正確率保證。
 
 ## 設定
 
@@ -207,19 +233,19 @@ Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫
 
 | 環境變數 | 預設 | 作用 |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | `openai` | `openai`（`codex exec`）或 `anthropic`（`claude -p`） |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | `gpt-5.6-sol` / `sonnet` | 傳給選定 CLI 的模型名 |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）或 `anthropic`（`claude -p`） |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol` | 傳給選定 CLI 的模型名 |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | 新 log、state、config 與無內容 telemetry |
-| `MASTERS_NUDGE_RUNTIME_DIR` | `~/.masters-nudge/runtime` | 共用安裝 runtime |
+| `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root；舊版：`~/.masters-nudge/runtime` | 覆寫 prompt／schema／persona runtime 目錄 |
 | `MASTERS_NUDGE_PERSONA` / `BUDDY_PERSONA` | 未設定 | 強制 `jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack`；優先於浮動視窗與專科路由 |
 | `MASTERS_NUDGE_SPRITE_PATH` / `BUDDY_SPRITE_PATH` | 內建 spritesheet | 自訂透明背景 spritesheet |
 | `MASTERS_NUDGE_SHADOW_EVALUATION_DAYS` / `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | 成本策略 shadow 評估天數 |
 | `MASTERS_NUDGE_SHADOW_TARGET_CALLS` / `BUDDY_SHADOW_TARGET_CALLS` | `300` | 評估用目標審查次數 |
 | `BUDDY_CLAUDE_DIR` | 未設定 | 舊路徑相容 override；明確設定時保留原 Claude data 路徑 |
 
-審查文案與規則：`~/.masters-nudge/runtime/buddy-prompt.txt`；Claude 相容副本仍在 `~/.claude/scripts/buddy/`。
+審查文案與規則位於受管理的 plugin runtime；source 安裝則是 `~/.masters-nudge/runtime/buddy-prompt.txt`，Claude 相容副本仍在 `~/.claude/scripts/buddy/`。
 
 ### 成本遙測與 shadow 評估
 
@@ -238,7 +264,7 @@ Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫
 5. 本 session 最近最多 3 則短評（避免重複）
 6. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
 
-預設 `MASTERS_NUDGE_PROVIDER=openai` 不論 host 都會把證據封包送往 OpenAI。中途切換 provider 時，先前短評可能作為「最近幾則」送進新廠商。反應、任務錨點與 bounded tool journal 會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。
+未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；中途切換 provider 時，先前短評可能作為「最近幾則」送進新廠商。反應、任務錨點與 bounded tool journal 會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。
 
 連同廠商外送都不能接受時，請勿啟用。廠商保留／訓練政策請查現行 API 條款。
 
@@ -279,8 +305,9 @@ state；共用 evidence helper 建立小型、有標籤的證據封包，而不�
 
 | 元件 | 路徑 |
 |---|---|
-| 安裝 | `install.sh` 或 `install.ps1` → `~/.masters-nudge/runtime/` |
-| Hooks 片段 | Claude `settings-snippet.json`；Codex `codex-hooks-snippet.json` |
+| 安裝 | 原生 plugin marketplace；source installer 保留供相容使用 |
+| Plugin package | `plugins/masters-nudge/`；`tools/build_plugin.py` 檢查生成 runtime |
+| 舊版 hooks 片段 | Claude `settings-snippet.json`；Codex `codex-hooks-snippet.json` |
 | 共用 core | `masters_nudge/core.py`、`contracts.py`、`providers.py` |
 | 架構說明 | `docs/phase-c-architecture.md` |
 | Codex adapter | `hook_entry.py`、`masters_nudge/codex_adapter.py` |

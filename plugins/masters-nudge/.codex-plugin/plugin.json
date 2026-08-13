@@ -1,0 +1,41 @@
+{
+  "name": "masters-nudge",
+  "version": "0.1.0-dev.1",
+  "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
+  "author": {
+    "name": "shihchengwei-lab",
+    "url": "https://github.com/shihchengwei-lab"
+  },
+  "homepage": "https://github.com/shihchengwei-lab/masters-nudge#readme",
+  "repository": "https://github.com/shihchengwei-lab/masters-nudge",
+  "license": "MIT",
+  "keywords": [
+    "workflow-review",
+    "second-opinion",
+    "coding-agent",
+    "hooks"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Masters’ Nudge",
+    "shortDescription": "Quiet workflow nudges from six engineering lenses",
+    "longDescription": "Adds bounded, evidence-based workflow nudges during and after coding-agent work without replacing the main agent.",
+    "developerName": "shihchengwei-lab",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/shihchengwei-lab/masters-nudge",
+    "privacyPolicyURL": "https://github.com/shihchengwei-lab/masters-nudge#privacy",
+    "defaultPrompt": [
+      "Check whether Masters’ Nudge is ready.",
+      "Open the Masters’ Nudge window.",
+      "Migrate my legacy Masters’ Nudge hooks."
+    ],
+    "brandColor": "#665B8E",
+    "screenshots": [
+      "./assets/masters-nudge-six-lenses-hero.png"
+    ]
+  }
+}

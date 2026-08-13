@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.14"]
     steps:
       - uses: actions/checkout@v7
@@ -29,15 +29,21 @@ jobs:
         run: >-
           python -m compileall -q
           buddy.py buddy_window.py checkpoint.py hook_entry.py inject.py
-          lens_router.py persona_config.py review_telemetry.py source_context.py
-          masters_nudge evaluation
+          lens_router.py masters_nudge_cli.py persona_config.py
+          review_telemetry.py source_context.py masters_nudge evaluation
+          tools/build_plugin.py
+      - name: Verify generated plugin runtime
+        run: python tools/build_plugin.py --check
       - name: Run full test suite
         run: python -m unittest discover -v
       - name: Check shell scripts and smoke-test installer
-        if: runner.os == 'Linux'
+        if: runner.os != 'Windows'
         shell: bash
         run: |
-          bash -n install.sh buddy.sh checkpoint.sh inject.sh
+          bash -n install.sh buddy.sh checkpoint.sh inject.sh \
+            plugins/masters-nudge/hooks/run_python.sh
+          sh plugins/masters-nudge/hooks/run_python.sh \
+            plugins/masters-nudge/masters_nudge_cli.py --help
           root="$(mktemp -d)"
           MASTERS_NUDGE_RUNTIME_DIR="$root/runtime" \
             BUDDY_TARGET_DIR="$root/claude" \
@@ -62,3 +68,5 @@ jobs:
               throw "Installer did not create $_"
             }
           }
+          & ./plugins/masters-nudge/hooks/run_python.cmd `
+            ./plugins/masters-nudge/masters_nudge_cli.py --help

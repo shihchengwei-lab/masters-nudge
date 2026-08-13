@@ -33,7 +33,7 @@ The point is not to produce another answer or another code review. It is to give
 
 When the same model continues its own work, it can carry the same assumptions into the next decision.
 
-The reviewer defaults to OpenAI `gpt-5.6-sol`; Anthropic `claude -p` is optional. With an Anthropic main agent this also changes vendor family. With Codex as the main agent, choose the reviewer provider deliberately—the separation is a second context and role, not necessarily a different model family.
+The zero-config reviewer follows the host you already authenticated: Claude Code uses Anthropic `sonnet`; Codex uses OpenAI `gpt-5.6-sol`. You can explicitly choose the other provider. The second opinion always has a separate context and role, but is not cross-vendor unless you configure it that way.
 
 The second model receives only a small packet of current evidence and must ground its nudge in that material. Code, tests, and tool output may anchor the observation, but the target is how the work is being framed, sequenced, scoped, tested, or declared complete. If the evidence does not support a useful nudge, it says nothing.
 
@@ -65,7 +65,7 @@ Output is either one finding or silence. Findings are stripped of markdown and f
 
 ## Who this is for
 
-**Suitable** if you use Claude Code or Codex CLI and accept that review content (your prompt, tool output, file snippets, errors, etc.) leaves the machine for an external model API (**OpenAI by default**; Anthropic optional).
+**Suitable** if you use Claude Code or Codex CLI and accept that review content (your prompt, tool output, file snippets, errors, etc.) leaves the machine for the host's external model API (Anthropic on Claude Code; OpenAI on Codex, unless overridden).
 
 **Not suitable** where conversation or code must not leave the machine. Details: [Privacy](#privacy). Do not install if that is a hard constraint.
 
@@ -73,59 +73,85 @@ Cost: by default **every completed turn** calls the review model once; mid-turn 
 
 ## Install
 
+The repository marketplace currently serves the unreleased `0.1.0-dev.1` prerelease; no release tag has been created.
+
 ### Prerequisites
 
-- Claude Code, Codex CLI 0.147+, or both
-- A working reviewer CLI: [Codex CLI](https://github.com/openai/codex) by default, or `MASTERS_NUDGE_PROVIDER=anthropic` with `claude -p`
+- Claude Code with plugin support (tested on 2.1.215), Codex CLI 0.147+, or both
+- The chosen host CLI signed in and callable from the terminal
 - Python 3.10+
-- Git
 
-### Steps
-
-1. Clone the repository and enter its directory:
+### Claude Code
 
 ```bash
-git clone https://github.com/shihchengwei-lab/masters-nudge.git
-cd masters-nudge
+claude plugin marketplace add shihchengwei-lab/masters-nudge
+claude plugin install masters-nudge@masters-nudge --config python_command=python
 ```
 
-2. Install the shared runtime and adapters. Neither installer edits host settings:
+Start a new Claude Code session. No clone, manual hook merge, or UI package is required for the core Nudge.
+
+If Python 3.10+ has another executable name or path, replace the configuration value (it must not contain arguments):
 
 ```bash
-bash install.sh --all
+claude plugin install masters-nudge@masters-nudge --config python_command=python3
 ```
 
-On Windows PowerShell:
-
-```powershell
-.\install.ps1 -HostName all
-```
-
-Use `--claude` / `--codex` (or `-HostName claude` / `codex`) for one host. Shared runtime: `~/.masters-nudge/runtime/`; the legacy Claude compatibility target remains `~/.claude/scripts/buddy/` for existing installations.
-
-3. Enable hooks for each host you use:
-
-   - **Claude Code:** merge the `hooks` from [`settings-snippet.json`](settings-snippet.json) into `~/.claude/settings.json`.
-   - **Codex CLI 0.147+:** merge the `hooks` from [`codex-hooks-snippet.json`](codex-hooks-snippet.json) into `~/.codex/hooks.json`, preserve existing hooks, then inspect and trust them through `/hooks`. For automation, Codex also exposes `--dangerously-bypass-hook-trust`; use it only after reviewing the commands. See the [official hooks documentation](https://learn.chatgpt.com/docs/hooks).
-
-Do not replace either whole settings file.
-
-4. (Optional) Floating window — otherwise you almost never see end-of-turn lines in the UI:
+### Codex
 
 ```bash
-pip install Pillow
+codex plugin marketplace add shihchengwei-lab/masters-nudge
+codex plugin add masters-nudge@masters-nudge
 ```
 
-- **Windows:** double-click `~/.claude/scripts/buddy/start_buddy_window.bat`
-- **macOS / Linux:** `python3 ~/.claude/scripts/buddy/buddy_window.py &`
+Start a new task, open `/hooks`, review the commands, and trust the plugin hooks. Codex intentionally asks for approval when a new hook command or command hash appears; see the [official hooks documentation](https://learn.chatgpt.com/docs/hooks).
+
+### Check, migrate, or open the window
+
+Ask the host to **“Check whether Masters' Nudge is ready.”** The bundled `doctor` skill checks Python, the provider CLI, writable data paths, hooks, and optional UI dependencies without calling a reviewer model.
+
+If you previously used the manual install, first install the plugin and then ask it to **“Migrate my legacy Masters' Nudge hooks.”** Migration shows a dry run, changes only exact known hook entries after confirmation, writes an adjacent timestamped backup, and leaves runtime and review data untouched. Modified entries are refused for manual review.
+
+The floating window is optional. Install Pillow, then ask the host to **“Open the Masters' Nudge window.”** Tkinter must also be present in the Python build.
+
+```bash
+python -m pip install --user Pillow
+```
 
 Closing the window does not disable hooks.
+
+### Update or uninstall
+
+```bash
+# Claude Code
+claude plugin marketplace update masters-nudge
+claude plugin update masters-nudge@masters-nudge
+
+# Codex
+codex plugin marketplace upgrade masters-nudge
+codex plugin add masters-nudge@masters-nudge
+```
+
+Restart the host after an update; review Codex hooks again if their command hash changed.
+
+```bash
+claude plugin uninstall masters-nudge@masters-nudge
+codex plugin remove masters-nudge@masters-nudge
+```
+
+Uninstalling does not remove `~/.masters-nudge/data/`.
+
+<details>
+<summary>Source / legacy installation</summary>
+
+Clone the repository, run `bash install.sh --all` or `.\install.ps1 -HostName all`, then merge the appropriate [`settings-snippet.json`](settings-snippet.json) or [`codex-hooks-snippet.json`](codex-hooks-snippet.json) without replacing the whole settings file. Use `--claude` / `--codex` (or `-HostName claude` / `codex`) for one host. This path is retained for compatibility and development; new users should prefer the plugin.
+
+</details>
 
 ### Verify
 
 - Force a failing test, or finish a turn: a checkpoint hit may add a few seconds of wait; the next prompt should receive any end-of-turn finding.
 - New logs: `~/.masters-nudge/data/<host>--<session_id>.log`; errors: `~/.masters-nudge/data/error.log`.
-- No log at all: hooks are usually not merged/trusted, or the reviewer CLI / provider call is failing.
+- No log at all: run the bundled doctor; hooks are usually not loaded/trusted, or the provider CLI call is failing.
 
 ## Filters: different stages, different workflow questions
 
@@ -200,7 +226,7 @@ What actually runs and what was actually measured; whether the chosen path remov
 
 </details>
 
-Default OpenAI is intentional and gives an Anthropic main agent a different vendor family. With a Codex main agent it remains a separate reviewer invocation, not a cross-vendor check. This is a design choice, not an accuracy claim.
+Host-aware defaults remove the need for a second login: Claude Code uses Anthropic and Codex uses OpenAI. Set `MASTERS_NUDGE_PROVIDER` when cross-vendor review is worth the extra setup. Either way, this is a separate reviewer invocation, not an accuracy claim.
 
 ## Configure
 
@@ -208,19 +234,19 @@ Default OpenAI is intentional and gives an Anthropic main agent a different vend
 
 | Env var | Default | Effect |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | `openai` | `openai` (`codex exec`) or `anthropic` (`claude -p`) |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | `gpt-5.6-sol` / `sonnet` | Model name for the chosen CLI |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`) or `anthropic` (`claude -p`) |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol` | Model name for the chosen CLI |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | New logs, state, config, and content-free telemetry |
-| `MASTERS_NUDGE_RUNTIME_DIR` | `~/.masters-nudge/runtime` | Shared installed runtime |
+| `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root; legacy: `~/.masters-nudge/runtime` | Override the prompt/schema/persona runtime directory |
 | `MASTERS_NUDGE_PERSONA` / `BUDDY_PERSONA` | unset | Force `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack`; wins over the window and specialist routing |
 | `MASTERS_NUDGE_SPRITE_PATH` / `BUDDY_SPRITE_PATH` | shipped spritesheet | Custom transparent spritesheet |
 | `MASTERS_NUDGE_SHADOW_EVALUATION_DAYS` / `BUDDY_SHADOW_EVALUATION_DAYS` | `7` | Shadow cost-policy evaluation length |
 | `MASTERS_NUDGE_SHADOW_TARGET_CALLS` / `BUDDY_SHADOW_TARGET_CALLS` | `300` | Sample-size target for that evaluation |
 | `BUDDY_CLAUDE_DIR` | unset | Legacy compatibility override; when explicitly set, preserves old Claude data paths |
 
-Review copy: `~/.masters-nudge/runtime/buddy-prompt.txt` (the Claude compatibility copy remains under `~/.claude/scripts/buddy/`).
+Review copy lives in the managed plugin runtime. Source installs use `~/.masters-nudge/runtime/buddy-prompt.txt`; the Claude compatibility copy remains under `~/.claude/scripts/buddy/`.
 
 ### Cost telemetry and shadow evaluation
 
@@ -239,7 +265,7 @@ Each review appends content-free metadata to `~/.masters-nudge/data/review-telem
 5. Up to 3 prior short reactions in the session (reduces repetition)
 6. Review system prompt and optional persona file (instructions, not your project source as such)
 
-Default `MASTERS_NUDGE_PROVIDER=openai` forwards the evidence packet to OpenAI regardless of host. Switching provider mid-session can resend earlier reactions to the new vendor as recent context. Reactions, task anchors, and bounded tool journals are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted.
+Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; switching provider mid-session can resend earlier reactions to the new vendor as recent context. Reactions, task anchors, and bounded tool journals are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted.
 
 If even same-vendor egress is unacceptable, do not enable. Provider retention/training terms change; check current API policy.
 
@@ -286,8 +312,9 @@ New runtime and data paths are host-neutral. Script paths still use `buddy.py`, 
 
 | Component | Path |
 |---|---|
-| Install | `install.sh` or `install.ps1` → `~/.masters-nudge/runtime/` |
-| Hook snippets | Claude `settings-snippet.json`; Codex `codex-hooks-snippet.json` |
+| Install | Native plugin marketplaces; source installers remain for compatibility |
+| Plugin package | `plugins/masters-nudge/`; generated runtime checked by `tools/build_plugin.py` |
+| Legacy hook snippets | Claude `settings-snippet.json`; Codex `codex-hooks-snippet.json` |
 | Shared core | `masters_nudge/core.py`, `contracts.py`, `providers.py` |
 | Architecture | `docs/phase-c-architecture.md` |
 | Codex adapter | `hook_entry.py`, `masters_nudge/codex_adapter.py` |

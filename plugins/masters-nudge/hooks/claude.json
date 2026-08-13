@@ -1,0 +1,56 @@
+{
+  "description": "Masters’ Nudge lifecycle hooks for Claude Code.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.python_command}",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/checkpoint.py"],
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.python_command}",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/checkpoint.py"],
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.python_command}",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/buddy.py"],
+            "timeout": 90,
+            "async": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${user_config.python_command}",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/inject.py"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

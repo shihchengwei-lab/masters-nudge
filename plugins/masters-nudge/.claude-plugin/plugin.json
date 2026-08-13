@@ -1,0 +1,29 @@
+{
+  "name": "masters-nudge",
+  "displayName": "Masters’ Nudge",
+  "version": "0.1.0-dev.1",
+  "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
+  "author": {
+    "name": "shihchengwei-lab",
+    "url": "https://github.com/shihchengwei-lab"
+  },
+  "homepage": "https://github.com/shihchengwei-lab/masters-nudge#readme",
+  "repository": "https://github.com/shihchengwei-lab/masters-nudge",
+  "license": "MIT",
+  "keywords": [
+    "workflow-review",
+    "second-opinion",
+    "coding-agent",
+    "hooks"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/claude.json",
+  "userConfig": {
+    "python_command": {
+      "type": "string",
+      "title": "Python executable",
+      "description": "Executable name or absolute path for Python 3.10+ (no arguments).",
+      "default": "python"
+    }
+  }
+}

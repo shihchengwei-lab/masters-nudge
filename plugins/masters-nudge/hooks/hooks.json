@@ -1,0 +1,44 @@
+{
+  "description": "Masters’ Nudge lifecycle hooks for Codex.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
+            "commandWindows": "\"%PLUGIN_ROOT%\\hooks\\run_python.cmd\" \"%PLUGIN_ROOT%\\hook_entry.py\" --host codex_cli",
+            "timeout": 5,
+            "additionalContextLimit": 256
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
+            "commandWindows": "\"%PLUGIN_ROOT%\\hooks\\run_python.cmd\" \"%PLUGIN_ROOT%\\hook_entry.py\" --host codex_cli",
+            "timeout": 20,
+            "additionalContextLimit": 256
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli --detach-stop",
+            "commandWindows": "\"%PLUGIN_ROOT%\\hooks\\run_python.cmd\" \"%PLUGIN_ROOT%\\hook_entry.py\" --host codex_cli --detach-stop",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
