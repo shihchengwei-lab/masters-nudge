@@ -1,6 +1,6 @@
 {
   "name": "masters-nudge",
-  "version": "0.1.0-dev.2+codex.20260813103917",
+  "version": "0.1.0-dev.2+codex.20260813144949",
   "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
   "author": {
     "name": "shihchengwei-lab",

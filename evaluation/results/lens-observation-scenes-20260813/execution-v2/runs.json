@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "job_id": "jeff-1",
+      "lens": "jeff",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "端到端尚未驗證，就先鋪三個未用 backend；這些層在解 pilot，還是在替擴充假設還債？",
+      "characters": 47,
+      "raw_schema_valid": true,
+      "latency_ms": 10596,
+      "usage": {
+        "input_tokens": 15858,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 267,
+        "reasoning_output_tokens": 210
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"端到端尚未驗證，就先鋪三個未用 backend；這些層在解 pilot，還是在替擴充假設還債？\"}"
+    },
+    {
+      "job_id": "jeff-2",
+      "lens": "jeff",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，就先鋪三個 backend；這個邊界是在解 pilot，還是在替擴",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 13600,
+      "usage": {
+        "input_tokens": 15858,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 202,
+        "reasoning_output_tokens": 150
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，就先鋪三個 backend；這個邊界是在解 pilot，還是在替擴\"\n}"
+    },
+    {
+      "job_id": "jeff-3",
+      "lens": "jeff",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端跑通，就先鋪三個 backend；擴充邊界是否早於 pilot 證據？",
+      "characters": 51,
+      "raw_schema_valid": true,
+      "latency_ms": 8439,
+      "usage": {
+        "input_tokens": 15858,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 153,
+        "reasoning_output_tokens": 101
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端跑通，就先鋪三個 backend；擴充邊界是否早於 pilot 證據？\"}"
+    },
+    {
+      "job_id": "beck-1",
+      "lens": "beck",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端試跑，就先擴充 cloud；這一步會驗證哪個 pilot 假設？",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 10159,
+      "usage": {
+        "input_tokens": 15860,
+        "cached_input_tokens": 15104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 137,
+        "reasoning_output_tokens": 89
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端試跑，就先擴充 cloud；這一步會驗證哪個 pilot 假設？\"}"
+    },
+    {
+      "job_id": "beck-2",
+      "lens": "beck",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 端到端尚未試跑，就先鋪三個 backend 並準備 cloud，擴充已跑在回饋前。",
+      "characters": 52,
+      "raw_schema_valid": true,
+      "latency_ms": 9792,
+      "usage": {
+        "input_tokens": 15860,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 205,
+        "reasoning_output_tokens": 151
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 端到端尚未試跑，就先鋪三個 backend 並準備 cloud，擴充已跑在回饋前。\"}"
+    },
+    {
+      "job_id": "beck-3",
+      "lens": "beck",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未端到端驗證，下一步卻先擴充 cloud，回饋路徑反而更遠。",
+      "characters": 42,
+      "raw_schema_valid": true,
+      "latency_ms": 8034,
+      "usage": {
+        "input_tokens": 15860,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 135,
+        "reasoning_output_tokens": 84
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未端到端驗證，下一步卻先擴充 cloud，回饋路徑反而更遠。\"}"
+    },
+    {
+      "job_id": "fowler-1",
+      "lens": "fowler",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "大小寫、filter、extension 規則散落三處，增量需求正暴露每次變更都得同步多點。",
+      "characters": 46,
+      "raw_schema_valid": true,
+      "latency_ms": 9128,
+      "usage": {
+        "input_tokens": 15900,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 141,
+        "reasoning_output_tokens": 91
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"大小寫、filter、extension 規則散落三處，增量需求正暴露每次變更都得同步多點。\"}"
+    },
+    {
+      "job_id": "fowler-2",
+      "lens": "fowler",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "大小寫、filter、extension 規則散在三處；下次變更仍得同步走遍它們嗎？",
+      "characters": 42,
+      "raw_schema_valid": true,
+      "latency_ms": 11347,
+      "usage": {
+        "input_tokens": 15900,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 131,
+        "reasoning_output_tokens": 84
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"大小寫、filter、extension 規則散在三處；下次變更仍得同步走遍它們嗎？\"}"
+    },
+    {
+      "job_id": "fowler-3",
+      "lens": "fowler",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "大小寫、篩選與副檔名規則散在三處，下一個增量需求仍得同步三份。",
+      "characters": 31,
+      "raw_schema_valid": true,
+      "latency_ms": 13370,
+      "usage": {
+        "input_tokens": 15900,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 213,
+        "reasoning_output_tokens": 164
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"大小寫、篩選與副檔名規則散在三處，下一個增量需求仍得同步三份。\"}"
+    },
+    {
+      "job_id": "linus-1",
+      "lens": "linus",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 尚未走通，就先鋪三層與 cloud；這些機制增加了什麼不可替代行為？",
+      "characters": 45,
+      "raw_schema_valid": true,
+      "latency_ms": 8825,
+      "usage": {
+        "input_tokens": 15856,
+        "cached_input_tokens": 15104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 148,
+        "reasoning_output_tokens": 98
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 尚未走通，就先鋪三層與 cloud；這些機制增加了什麼不可替代行為？\"}"
+    },
+    {
+      "job_id": "linus-2",
+      "lens": "linus",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 端到端尚未跑，就先鋪三層轉交與未用 stub；每層多了什麼不可替代行為？",
+      "characters": 47,
+      "raw_schema_valid": true,
+      "latency_ms": 8189,
+      "usage": {
+        "input_tokens": 15648,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 145,
+        "reasoning_output_tokens": 89
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 端到端尚未跑，就先鋪三層轉交與未用 stub；每層多了什麼不可替代行為？\"}"
+    },
+    {
+      "job_id": "linus-3",
+      "lens": "linus",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "三層轉交與未用 stub 已先落地，local-json 端到端卻未跑；各層多了什麼不可替代行為？",
+      "characters": 49,
+      "raw_schema_valid": true,
+      "latency_ms": 8210,
+      "usage": {
+        "input_tokens": 15856,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 151,
+        "reasoning_output_tokens": 93
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"三層轉交與未用 stub 已先落地，local-json 端到端卻未跑；各層多了什麼不可替代行為？\"}"
+    },
+    {
+      "job_id": "lamport-1",
+      "lens": "lamport",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "索引先更新、version 後寫；若中間逾時重試，「一次更新」仍成立嗎？",
+      "characters": 36,
+      "raw_schema_valid": true,
+      "latency_ms": 8091,
+      "usage": {
+        "input_tokens": 15850,
+        "cached_input_tokens": 15104,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 148,
+        "reasoning_output_tokens": 102
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"索引先更新、version 後寫；若中間逾時重試，「一次更新」仍成立嗎？\"}"
+    },
+    {
+      "job_id": "lamport-2",
+      "lens": "lamport",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "timeout 若落在索引更新與 version 寫入之間，retry 後哪個不變條件仍能保證？",
+      "characters": 48,
+      "raw_schema_valid": true,
+      "latency_ms": 13060,
+      "usage": {
+        "input_tokens": 15850,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 271,
+        "reasoning_output_tokens": 222
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"timeout 若落在索引更新與 version 寫入之間，retry 後哪個不變條件仍能保證？\"}"
+    },
+    {
+      "job_id": "lamport-3",
+      "lens": "lamport",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "local-json 先更新索引再寫版本，若其間逾時重試，「每版只套用一次」還成立嗎？",
+      "characters": 43,
+      "raw_schema_valid": true,
+      "latency_ms": 7565,
+      "usage": {
+        "input_tokens": 15850,
+        "cached_input_tokens": 12032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 130,
+        "reasoning_output_tokens": 79
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"local-json 先更新索引再寫版本，若其間逾時重試，「每版只套用一次」還成立嗎？\"}"
+    },
+    {
+      "job_id": "carmack-1",
+      "lens": "carmack",
+      "repeat": 1,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "還沒有 cold CLI 基準與端到端量測，就先擴 cloud；下一步依據的真實成本是什麼？",
+      "characters": 46,
+      "raw_schema_valid": true,
+      "latency_ms": 9575,
+      "usage": {
+        "input_tokens": 15835,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 133,
+        "reasoning_output_tokens": 83
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"還沒有 cold CLI 基準與端到端量測，就先擴 cloud；下一步依據的真實成本是什麼？\"}"
+    },
+    {
+      "job_id": "carmack-2",
+      "lens": "carmack",
+      "repeat": 2,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "benchmark 只量同程序熱路徑最佳值，還不能代表公開 CLI 的實際增量成本。",
+      "characters": 42,
+      "raw_schema_valid": true,
+      "latency_ms": 11599,
+      "usage": {
+        "input_tokens": 15835,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 282,
+        "reasoning_output_tokens": 237
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"benchmark 只量同程序熱路徑最佳值，還不能代表公開 CLI 的實際增量成本。\"}"
+    },
+    {
+      "job_id": "carmack-3",
+      "lens": "carmack",
+      "repeat": 3,
+      "packet_sha256": "557e5e0c798d8c097b7a4cf33d797ca3b29334db1c716dc94bed10ab65234e4f",
+      "status": "finding",
+      "finding": "第一次端到端試跑尚未做，熱快取最佳值也無法支撐先擴充 cloud 的成本判斷。",
+      "characters": 39,
+      "raw_schema_valid": true,
+      "latency_ms": 8606,
+      "usage": {
+        "input_tokens": 15835,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 138,
+        "reasoning_output_tokens": 86
+      },
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"第一次端到端試跑尚未做，熱快取最佳值也無法支撐先擴充 cloud 的成本判斷。\"}"
+    }
+  ]
+}

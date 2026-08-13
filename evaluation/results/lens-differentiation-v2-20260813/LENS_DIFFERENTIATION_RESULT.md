@@ -65,7 +65,7 @@ recorded model result. Six real `BuddyWindow` instances read ordinary JSONL log
 entries through the production `_read_new` path; the hero is a direct Windows
 desktop capture, not an AI-generated mockup.
 
-- Hero: `docs/images/masters-nudge-six-lenses-hero.png`
+- Archived original hero: `execution-v1/masters-nudge-six-lenses-hero.png`
 - Six individual captures: `execution-v1/screenshots/`
 - Formal selection: `execution-v1/hero-selection.json`
 - Editorial selection: `execution-v1/hero-selection-editorial.json`

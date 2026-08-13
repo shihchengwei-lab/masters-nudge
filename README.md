@@ -186,12 +186,15 @@ Different parts of a project make different problems easy to miss.
 
 During design, data, state, and ownership matter most. During implementation, scope can quietly grow. As the code evolves, today's structure can make tomorrow's change harder. Before delivery, it is worth asking which layers never needed to exist.
 
+Each lens gives the reviewer a private observation scene: a distinct operation for arranging visible evidence, such as tracing causality, shortening a feedback loop, following change propagation, removing transfer layers, reordering events, or counting an execution path. These scenes guide attention; they are not biographical claims, output styles, or evidence.
+
 ![Six Masters' Nudge lenses showing different workflow observations from the same checkpoint](docs/images/masters-nudge-six-lenses-hero.png)
 
-*Same evidence and model; only the lens changes. These are unedited reviewer
-outputs rendered by six real Tk windows. Representatives were selected for
-completeness and lens alignment; the controlled run found stable differentiation
-for five of six lenses. [See the evaluation and selection details.](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
+*Same evidence and model; only the lens changes. These are actual delivered
+findings rendered by six real Tk windows. In the fresh 18-call run, all six
+lenses aligned in 3/3 repeats and all 18 delivered findings were complete and
+punctuated. Three capped raw outputs were closed locally without rejection or
+retry. [See the evaluation and selection details.](evaluation/results/lens-observation-scenes-20260813/ROUND_4_RESULT.md)*
 
 | Stage | Viewpoint | First question |
 |---|---|---|
@@ -338,12 +341,16 @@ contract directly. Both review paths enter `ReviewCore` without host-specific
 pass-through callbacks.
 
 The shared core owns lens routing, prompt composition, provider dispatch, the
-42-character completion target / 52-character hard cap, structured-output
+36–42-character completion target / 52-character hard cap, structured-output
 handling, recent-reaction context, reaction persistence, and telemetry. Host
 adapters own native event parsing, evidence capture, turn journals, checkpoint
 deduplication, and delivery state. Shared evidence helpers build a small labeled
 packet rather than resending a full transcript. Output contract:
 `reaction-schema.json`.
+
+If a finding reaches the hard cap without terminal punctuation, the shared
+sanitizer closes it at the preceding complete clause. The paid result is still
+delivered; this fallback neither rejects it nor makes another reviewer call.
 
 New runtime and data paths are host-neutral. Script paths still use `buddy.py`, `BUDDY_*`, and `~/.claude/buddy/` as a compatibility layer for existing installations; old data is read in place and never migrated or removed automatically. Product name is Masters’ Nudge.
 

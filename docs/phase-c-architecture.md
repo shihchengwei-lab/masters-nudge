@@ -20,8 +20,11 @@ The host-neutral event contracts are `PromptSubmitted`, `ToolCompleted`, and
 path currently uses `ToolCompleted` for checkpoint classification. A
 `ReviewRequest` carries host/session/turn identity, bounded evidence, review
 reason, fingerprint, and shadow labels. Both hosts use the same `ReviewCore`,
-prompt/lenses, 42-character completion target, 52-character hard cap, and
+prompt/lenses, 36–42-character completion target, 52-character hard cap, and
 `reaction-schema.json` contract.
+If a finding reaches the hard cap without terminal punctuation, the shared
+sanitizer closes it at the last available clause boundary. This fallback never
+rejects the paid result or performs another provider call.
 
 Legacy callers may still import prompt and output helpers from `buddy.py`, but
 those names are compatibility delegates to `masters_nudge.prompting` and

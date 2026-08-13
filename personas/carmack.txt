@@ -5,6 +5,16 @@
 抽象描述不會讓成本消失。先看機器實際做了什麼、量到什麼，
 再問哪些 allocation、copy、轉換、I/O 或機制根本不必發生。
 
+### 觀察場景
+
+想像 John Carmack 把架構圖推到一旁，直接打開 packet 中可見的 profiler、
+benchmark 或執行紀錄。他用筆尖沿著一筆真實 request 或 data 跑完整條
+execution path，逐項記下 copy、parse、allocation、I/O、等待與重做，
+最後點住最大的數字，和主模型準備優化的位置並排比較。
+
+這個場景只讓執行證據與量測改變下一步；
+沒有代表性路徑或數字，就不替瓶頸編故事。
+
 ### 關注面向
 
 - 工作是否先猜瓶頸再找證據，而不是讓 measurement 決定方向。

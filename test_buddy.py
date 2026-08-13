@@ -70,6 +70,8 @@ class TestBranding(unittest.TestCase):
         self.assertIn("## 濾鏡", readme_zh)
         self.assertNotIn("### Engineering persona lenses", readme)
         self.assertNotIn("### 工程 persona 鏡頭", readme_zh)
+        self.assertIn("private observation scene", readme)
+        self.assertIn("不對外輸出的觀察場景", readme_zh)
         for document in (readme, readme_zh):
             self.assertIn("BUDDY_*", document)
             for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack"):
@@ -354,7 +356,12 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.assertIn("你是 Masters’ Nudge", result)
                 self.assertIn("# 工作流觀察鏡頭", result)
                 self.assertIn(display_name, result)
-                self.assertIn("核心概念與關注面向", result)
+                self.assertIn("核心概念、觀察方法與關注面向", result)
+                self.assertIn("小動作只用來啟動思考", result)
+                self.assertIn("不能補足 packet 缺少的證據", result)
+                self.assertIn("觀察場景不是裝飾", result)
+                self.assertIn("不要改談相鄰鏡頭", result)
+                self.assertIn("不要因此增加 Nudge 字數", result)
                 self.assertIn("不是扮演或模仿人物", result)
                 self.assertIn("不是增加一份 code review", result)
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
@@ -371,6 +378,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 )
                 for heading in (
                     "### 核心概念",
+                    "### 觀察場景",
                     "### 關注面向",
                     "### 內部追問",
                     "### 形成 Nudge",
@@ -397,6 +405,14 @@ class TestPersonaPromptSelection(unittest.TestCase):
             "lamport": "所有可能發生的事件順序",
             "carmack": "抽象描述不會讓成本消失",
         }
+        scene_anchors = {
+            "jeff": "換一支顏色的筆",
+            "beck": "未來工作全部翻到背面",
+            "fowler": "頁邊貼上一張小標籤",
+            "linus": "用粗筆寫下「多了什麼？」",
+            "lamport": "卡的邊緣仔細對齊",
+            "carmack": "把架構圖推到一旁",
+        }
 
         for persona, concept_anchor in concept_anchors.items():
             with self.subTest(persona=persona):
@@ -404,8 +420,12 @@ class TestPersonaPromptSelection(unittest.TestCase):
                     encoding="utf-8"
                 )
                 self.assertIn(concept_anchor, overlay)
+                self.assertIn(scene_anchors[persona], overlay)
                 self.assertIn("packet 必須", overlay)
                 self.assertIn("提醒要", overlay)
+                if persona == "fowler":
+                    self.assertIn("優先完成這條變更擴散", overlay)
+                    self.assertIn("回饋時機、範圍或系統邊界", overlay)
 
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
@@ -500,8 +520,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn("不設最低字數", base_prompt)
-        self.assertIn("優先在 42 字內完成回答閉環", base_prompt)
-        self.assertIn("保留約 20% 緩衝", base_prompt)
+        self.assertIn("優先在 36–42 字內完成回答閉環", base_prompt)
+        self.assertIn("目標區間，不是最低字數", base_prompt)
+        self.assertIn("必須以「。」「？」「！」或對應的英文終止標點收句", base_prompt)
+        self.assertIn("標點計入 52 字", base_prompt)
         self.assertIn("硬上限 52 字", base_prompt)
         self.assertNotIn("目標 48–52 字", base_prompt)
         self.assertIn("客套話", base_prompt)
@@ -1373,6 +1395,36 @@ class TestSanitizer(unittest.TestCase):
         self.assertEqual(buddy.MAX_REACTION_CHARS, 52)
         self.assertEqual(len(result), 52)
         self.assertLessEqual(len(result), buddy.MAX_REACTION_CHARS)
+        self.assertTrue(result.endswith("。"))
+
+    def test_adds_terminal_punctuation_when_there_is_room(self):
+        self.assertEqual(self.sanitize("停止條件在哪裡"), "停止條件在哪裡？")
+        self.assertEqual(self.sanitize("回饋仍未出現"), "回饋仍未出現。")
+
+    def test_closes_exact_cap_findings_at_the_last_clause_boundary(self):
+        cases = {
+            "local-json 尚未端到端驗證，範圍已擴到三個未使用 backend；pilot 的停止條件在哪裡":
+                "local-json 尚未端到端驗證，範圍已擴到三個未使用 backend。",
+            "local-json 尚未端到端試跑，範圍已擴到三個未用 stub 與 cloud，關鍵假設仍沒得到回饋":
+                "local-json 尚未端到端試跑，範圍已擴到三個未用 stub 與 cloud。",
+            "search index 已更新但 version state 未寫入就 timeout，retry 時":
+                "search index 已更新但 version state 未寫入就 timeout。",
+            "benchmark只量同一程序的熱路徑，尚無冷啟動CLI基線，擴充cloud前仍不知道pilot的真實瓶":
+                "benchmark只量同一程序的熱路徑，尚無冷啟動CLI基線。",
+            "local-json 尚未端到端實跑，也沒有 cold CLI 基準，擴充 cloud 的決定仍缺少所需":
+                "local-json 尚未端到端實跑，也沒有 cold CLI 基準。",
+        }
+
+        for raw, expected in cases.items():
+            with self.subTest(raw=raw):
+                self.assertEqual(len(raw), 52)
+                self.assertEqual(self.sanitize(raw), expected)
+
+    def test_capped_fallback_without_a_clause_boundary_still_delivers(self):
+        result = self.sanitize("字" * 52)
+
+        self.assertEqual(len(result), 52)
+        self.assertEqual(result[-1], "。")
 
     def test_removes_leading_and_trailing_boilerplate_before_truncation(self):
         raw = (

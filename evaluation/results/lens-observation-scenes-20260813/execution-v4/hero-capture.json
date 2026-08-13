@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "capture_type": "real Windows Tk ImageGrab",
+  "capture_script": "evaluation/lens_differentiation/tk_capture_v2.py",
+  "selection": "execution-v4/hero-selection.json",
+  "selection_sha256": "a9f14b0b2816479a17f7f244337689421b120db2445fa94f3814e8e73e2c6b76",
+  "hero": "docs/images/masters-nudge-six-lenses-hero.png",
+  "hero_sha256": "118b275bfc20549ea673473250afe14eb605d9d1e9757073816cc08f63fba74b",
+  "screenshots": {
+    "jeff": "ab6f0193bc6204aa9b7016d5e0f6047295951104020459b14a7de253a97a40ea",
+    "beck": "98861b5717a3e9e25a753e69dcf4bbb7f15fab776c67a0efa6efae8a376e6b73",
+    "fowler": "8d64286d6758f16aad1fa5cf20cdbdf5ea20826962a6200841c23c543471b80f",
+    "linus": "c13bff35c18523f2f58e5c570f8456dc5bd4a947f6d3905f5680177aa1498196",
+    "lamport": "d3b17e23e8a695a707e7294d1ca82bbf05010bd19fefacd0d2864532a0536bca",
+    "carmack": "99546a1571d0a25895db1c5a74e1fa6fbcfc18318f03ea301a29702e92e3f50f"
+  },
+  "finding_source": "production-delivered finding after shared sanitizer",
+  "selection_rule": "lowest repeat with a valid finding; no editorial rewriting"
+}

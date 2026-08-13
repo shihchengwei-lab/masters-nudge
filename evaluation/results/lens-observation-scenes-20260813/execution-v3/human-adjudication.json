@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "rater": "single non-blind author audit",
+  "rubric": "visible grounding, workflow-level framing, complete thought, declared lens alignment, semantic distinction, and terminal punctuation",
+  "by_lens": {
+    "jeff": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [1, 2, 3],
+      "terminal_punctuation_repeats": [1, 2, 3],
+      "primary_attention": "the multi-backend boundary precedes evidence from the local pilot",
+      "stable": true
+    },
+    "beck": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [1, 2, 3],
+      "terminal_punctuation_repeats": [1],
+      "primary_attention": "future scope delays the first local end-to-end feedback loop",
+      "stable": true,
+      "note": "Repeats 2 and 3 form complete thoughts but hit 52 characters before terminal punctuation."
+    },
+    "fowler": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [1, 2, 3],
+      "terminal_punctuation_repeats": [1, 2, 3],
+      "primary_attention": "normalization/filter knowledge is duplicated across three entry paths",
+      "stable": true
+    },
+    "linus": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [1, 2, 3],
+      "terminal_punctuation_repeats": [1, 2, 3],
+      "primary_attention": "three transfer layers and unused stubs lack demonstrated necessary behavior",
+      "stable": true
+    },
+    "lamport": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [1, 2],
+      "terminal_punctuation_repeats": [1, 2],
+      "primary_attention": "index-before-version state can break the retry invariant",
+      "stable": true,
+      "note": "Repeat 3 was cut off at 'retry 時' at the 52-character cap."
+    },
+    "carmack": {
+      "aligned_repeats": [1, 2, 3],
+      "complete_repeats": [3],
+      "terminal_punctuation_repeats": [3],
+      "primary_attention": "warm best-of measurements do not represent the real cold CLI path",
+      "stable": true,
+      "note": "Repeats 1 and 2 were cut off at the 52-character cap."
+    }
+  },
+  "complete_thoughts": 15,
+  "terminally_punctuated_findings": 13,
+  "total_findings": 18,
+  "target_range_hits": 1,
+  "shorter_complete_findings": 2,
+  "over_target_findings": 15,
+  "exact_cap_hits": 5,
+  "stable_lenses": 6,
+  "total_lenses": 6,
+  "all_gates_passed": false,
+  "reason": "All six lenses remained semantically stable at 3/3 and every paid call delivered a finding, but the prompt-only length and punctuation constraint regressed completion and cap-hit rates."
+}

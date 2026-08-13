@@ -2,6 +2,11 @@
 
 ## 0.1.0-dev.2 — Unreleased prerelease
 
+- Add six distinct, evidence-bounded workflow observation scenes that guide lens-specific candidate selection without leaking persona role-play into Nudge text.
+- Improve fixed-packet semantic lens differentiation from 5/6 to 6/6 in the scene follow-up; retain the holdout requirement before making a general reliability claim.
+- Target a complete 36–42-character Nudge ending in terminal punctuation while retaining the 52-character hard cap and accepting shorter complete answers.
+- Close an unpunctuated hard-cap finding locally at its last complete clause, preserving delivery without another reviewer call.
+- Replace the original 5/6 README hero with six real Tk captures from the 6/6-aligned, 18/18-complete local-closure run.
 - Add an experimental BYOM `ollama-local` reviewer shared by Claude Code and Codex.
 - Require loopback HTTP, disabled proxies and redirects, Ollama cloud-disabled status, and local model metadata before every generation.
 - Persist an explicitly configured local reviewer while keeping environment variables as the highest-priority override.

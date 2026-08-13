@@ -186,11 +186,14 @@ Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName a
 
 設計時，要留意資料、狀態與責任放在哪裡；實作時，要留意是否越做越多；程式開始成長後，要留意下一次修改會不會變難；準備交付時，則重新看看哪些複雜度其實不需要存在。
 
+每個 lens 都會給 reviewer 一個不對外輸出的觀察場景，分別用因果回追、縮短回饋、追蹤變更擴散、移除轉交層、重排事件或計數執行路徑來整理可見證據。場景只引導注意力，不是人物事實、輸出語氣或證據。
+
 ![同一個 checkpoint 經六種 Masters’ Nudge 工作流視角呈現的實際浮窗](docs/images/masters-nudge-six-lenses-hero.png)
 
-*同一份證據、同一個模型，只更換 lens。圖中是未改字的 reviewer 輸出，
-由六個真實 Tk 浮窗呈現；代表句依完整性與 lens 對齊挑選。控制測試中，
-六個 lens 有五個能穩定分流。[查看評估與選圖細節。](evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md)*
+*同一份證據、同一個模型，只更換 lens。圖中是實際交付的 finding，
+由六個真實 Tk 浮窗呈現。新一輪 18 次呼叫中，六個 lens 都在 3/3 次對齊，
+18/18 交付結果完整收句；三個撞線的 raw output 由本地收句器處理，沒有拒絕或
+重試。[查看評估與選圖細節。](evaluation/results/lens-observation-scenes-20260813/ROUND_4_RESULT.md)*
 
 | 階段 | 視角 | 它會先問 |
 |---|---|---|
@@ -332,11 +335,14 @@ turn-stopped 事件。Claude 相容 hooks 會轉換 checkpoint 工具事件；�
 則直接更新 turn state，或建立同一份 `ReviewRequest` 契約。兩種 host 的實際
 審查都直接進入 `ReviewCore`，不再經過 host 專用的轉交 callback。
 
-共用 core 負責 lens 路由、prompt 組合、provider 呼叫、42 字回答閉環目標／
+共用 core 負責 lens 路由、prompt 組合、provider 呼叫、36–42 字回答閉環目標／
 52 字硬上限、結構化輸出處理、最近短評上下文、反應保存與 telemetry。Host
 adapter 負責原生事件解析、證據擷取、turn journal、checkpoint 去重與 delivery
 state；共用 evidence helper 建立小型、有標籤的證據封包，而不是固定重送整段
 對話。輸出契約見 `reaction-schema.json`。
+
+若 finding 撞上硬上限且沒有終止標點，共用 sanitizer 會退回前一個完整分句收尾。
+付費取得的結果仍會交付；這個 fallback 不會拒絕輸出，也不會再次呼叫 reviewer。
 
 新 runtime 與 data 路徑已與 host 解耦。`buddy.py`、`BUDDY_*`、`~/.claude/buddy/` 仍作為既有安裝 compatibility layer；舊資料原地讀取，不會自動搬移或刪除。產品名稱為 Masters’ Nudge。
 

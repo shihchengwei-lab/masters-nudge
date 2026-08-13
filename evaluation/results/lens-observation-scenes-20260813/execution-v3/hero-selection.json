@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "fixture_id": "incremental-index-in-progress-checkpoint",
+  "selection_rule": "lowest repeat with a valid finding; no wording edits",
+  "selections": [
+    {
+      "lens": "jeff",
+      "repeat": 1,
+      "finding": "端到端驗證前就鋪三個 stub、準備 cloud，pilot 正在替未證實的擴充需求付成本嗎？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "beck",
+      "repeat": 1,
+      "finding": "本機端到端尚未試跑，就先鋪三個後端並轉向雲端，pilot 的擴充門檻是什麼？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "fowler",
+      "repeat": 1,
+      "finding": "大小寫、filter、extension 規則已散落三處，擴充 backend 前，變更成本仍未收斂。",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "linus",
+      "repeat": 1,
+      "finding": "local-json 尚未端到端跑通，三層轉交與 cloud stub 的必要性要靠什麼證明？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "lamport",
+      "repeat": 1,
+      "finding": "local-json 先更新索引再寫版本，若其間逾時觸發重試，「每次變更只套用一次」仍成立嗎？",
+      "selection_rule": "lowest repeat with a valid finding"
+    },
+    {
+      "lens": "carmack",
+      "repeat": 1,
+      "finding": "benchmark只量同一程序的熱路徑，尚無冷啟動CLI基線，擴充cloud前仍不知道pilot的真實瓶",
+      "selection_rule": "lowest repeat with a valid finding"
+    }
+  ]
+}

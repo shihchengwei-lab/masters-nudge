@@ -90,7 +90,7 @@ requiring the core to understand one host's hook JSON.
 
 **Result:** The Claude Code adapter and Codex CLI 0.147+ adapter now feed a
 shared reviewer core through a normalized review event. The core owns evidence
-packets, routing, prompts/lenses, provider calls, the 42-character completion
+packets, routing, prompts/lenses, provider calls, the 36–42-character completion
 target and 52-character hard cap, structured output, storage, and telemetry.
 Host adapters own only payload interpretation and delivery timing.
 
@@ -236,11 +236,41 @@ Phase B pilot. Do not tune the current prompt against the pilot again.
 all 18 production reviewer calls were valid and yielded distinct wording. Jeff,
 Beck, Linus, Lamport, and Carmack stayed on their declared attention area in 3/3
 repeats; Fowler did so in 1/3 and otherwise overlapped Jeff's responsibility-
-boundary concern. Six unedited distinct representatives exist and are shown by
-real Tk windows in the README hero, but the preregistered reliability claim
-remains 5/6 rather than 6/6. Four lines hit 52 characters and three were
-incomplete. See
+boundary concern. Six unedited distinct representatives remain preserved in the
+archived original Tk hero, but the preregistered reliability claim remains 5/6
+rather than 6/6. Four lines hit 52 characters and three were incomplete. See
 `evaluation/results/lens-differentiation-v2-20260813/LENS_DIFFERENTIATION_RESULT.md`.
+
+**Observation-scene follow-up:** Six distinct, evidence-bounded workflow scenes
+were added as private candidate-selection procedures. An imagery-only first run
+remained at 5/6 stable lenses and regressed to 11/18 complete findings. After
+the shared header required a directly supported scene operation to control
+selection, the same fixed packet reached 6/6 semantic stability and passed all
+automated differentiation gates; Fowler improved from 1/3 to 3/3, with 17/18
+complete findings. Because round 2 was refined after seeing round 1 on this
+fixture, this is evidence of improved fixed-packet separation, not general
+reliability. Its 17/18 completion result was not sufficient for the current
+hero. See
+`evaluation/results/lens-observation-scenes-20260813/ROUND_2_RESULT.md`.
+
+**Length follow-up:** A prompt-only 36–42-character target plus required
+terminal punctuation did not solve hard-cap truncation on the same packet.
+All 18 calls still returned findings and all six lenses stayed aligned at 3/3,
+but exact 52-character hits rose from 2 to 5 and complete thoughts fell from
+17/18 to 15/18; only 13/18 ended in terminal punctuation. The raw structured
+outputs already stopped at the schema cap, so this needs a delivery-preserving
+fallback rather than stronger wording alone. See
+`evaluation/results/lens-observation-scenes-20260813/ROUND_3_RESULT.md`.
+
+**Delivery-preserving closure follow-up:** A local fallback now closes capped,
+unpunctuated output at its last complete clause without rejection or another
+provider call. Replay tests cover all five round-3 cap cases. In a fresh 18-call
+run, four raw findings hit 52 characters; three incomplete tails were closed
+locally and one already-complete 52-character finding passed through unchanged.
+The delivered result was 18/18 complete and punctuated, with all six lenses
+remaining semantically aligned at 3/3. Six real Tk windows displaying the
+formally selected delivered findings now replace the original README hero. See
+`evaluation/results/lens-observation-scenes-20260813/ROUND_4_RESULT.md`.
 
 **Phase A — quality:** Use fixed, labeled evidence packets with known workflow
 blind spots or verified no-Nudge cases. Cover framing, assumptions, order, scope,

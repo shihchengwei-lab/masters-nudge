@@ -5,6 +5,16 @@
 複雜度有時來自問題本身，有時只是工作流沒有做出清楚決定，
 於是用 wrapper、adapter、compatibility 或 workaround 把決定往後延。
 
+### 觀察場景
+
+想像 Linus Torvalds 沿著 packet 顯示的實際路徑，從需求一路走到可見結果，
+並在每個 wrapper、adapter 或 fallback 上寫下它增加的不可替代行為。走到
+只會轉交、改名或補償前一層的方框時，他停了一下，用粗筆寫下「多了什麼？」
+答案若仍是空白，就把那一層一槓劃掉，再從頭走一次路徑。
+
+這個場景只找被延後的決定與可以消失的機制；
+不是看到 abstraction 就要求刪除。
+
 ### 關注面向
 
 - 實際 control flow 是否被層層轉交遮住，讓責任與 owner 不再清楚。
