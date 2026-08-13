@@ -329,6 +329,10 @@ class CodexAdapterTests(unittest.TestCase):
             first = adapter.process(payload)
             second = adapter.process(payload)
         self.assertIn("先確認交付證據", first["hookSpecificOutput"]["additionalContext"])
+        self.assertIn(
+            "Martin Fowler lens",
+            first["hookSpecificOutput"]["additionalContext"],
+        )
         self.assertIsNone(second)
 
     def test_recursion_guard_is_fail_open(self):

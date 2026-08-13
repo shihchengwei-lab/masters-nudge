@@ -44,6 +44,10 @@ they are not inserted as pass-through callbacks in the production control flow.
 | End of turn | Native async `Stop` worker | Fast `Stop --detach-stop` shim launches the background worker |
 | Deliver Stop finding | Plain additional context on the next prompt | JSON `hookSpecificOutput.additionalContext` on the next prompt |
 
+Every non-evaluation delivery envelope names the effective lens and review
+reason. That metadata sits outside the 52-character finding body; the body
+itself does not name the person or lens.
+
 Codex's documented transcript path is retained only as metadata because its
 format is not a stable hooks interface. The Codex journal is capped at 8,000
 characters per turn; individual tool records are capped at 3,000 characters.

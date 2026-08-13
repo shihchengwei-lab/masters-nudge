@@ -72,7 +72,7 @@ Mid-turn checks call the model only for the first three cases and may pause the 
 
 The main agent receives an end-of-turn nudge when you send your next message. The floating window reads both hosts' namespaced logs and is the direct user-visible channel.
 
-Output is either one finding or silence. Findings are stripped of markdown and filler, with a hard limit of 52 characters.
+Output is either one finding or silence. Findings are stripped of markdown and filler, with a hard limit of 52 characters. The hook envelope identifies the effective lens and review reason outside that limit; the finding itself never spends its 52 characters naming a person or lens.
 
 ## Who this is for
 
@@ -327,7 +327,7 @@ the saved lifecycle stage. Rook itself remains graphite black.
 
 ### Localization
 
-Shipped prompt language is Traditional Chinese. For another language, update `buddy-prompt.txt`, the hard-coded wrapper in `inject.py` (search for `第三方第二意見`), and optionally Chinese fixtures in `test_buddy.py`. Plumbing is language-neutral.
+Shipped prompt language is Traditional Chinese. For another language, update `buddy-prompt.txt`, the hook wrappers in `checkpoint.py`, `inject.py`, and `masters_nudge/codex_adapter.py` (search for `第三方觀察`), and optionally Chinese fixtures in `test_buddy.py`. Plumbing is language-neutral.
 
 ## Implementation notes
 

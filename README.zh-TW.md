@@ -72,7 +72,7 @@ Coding agent 正常工作
 
 回合末短評會在你下次送出訊息時交給主 agent。浮動視窗會讀取兩種 host 的 namespaced log，是使用者直接看短評的管道。
 
-輸出要嘛一則 finding，要嘛靜默；finding 去除 markdown 與套話後，硬上限為 52 字。
+輸出要嘛一則 finding，要嘛靜默；finding 去除 markdown 與套話後，硬上限為 52 字。Hook 外層 metadata 會在額度外標示 effective lens 與審查原因；finding 正文本身不會拿 52 字去寫人物或鏡頭名稱。
 
 ## 適用對象
 
@@ -323,7 +323,7 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 
 ### 語系
 
-預設提示為繁體中文。換語系需同步：`buddy-prompt.txt`、`inject.py` 內包裝字串（搜尋 `第三方第二意見`），可選更新 `test_buddy.py` 的中文 fixture。管線本身與語言無關。
+預設提示為繁體中文。換語系需同步：`buddy-prompt.txt`，以及 `checkpoint.py`、`inject.py`、`masters_nudge/codex_adapter.py` 內的 hook 包裝字串（搜尋 `第三方觀察`）；可選更新 `test_buddy.py` 的中文 fixture。管線本身與語言無關。
 
 ## 實作摘要
 

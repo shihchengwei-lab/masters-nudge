@@ -491,6 +491,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn("工作上的張力與必要的證據錨點", base_prompt)
+        self.assertIn("輸出談工作本身，不提人物、鏡頭", base_prompt)
         self.assertIn("如果草稿太長就重寫", base_prompt)
         self.assertIn("不能停在助詞、連接詞、半個片語", base_prompt)
         self.assertNotIn("優先保留問題與位置", base_prompt)
@@ -2226,6 +2227,36 @@ class TestInjectState(unittest.TestCase):
 
         pending = self.inject.read_pending("sess2", "")
         self.assertEqual(len(pending), 2)
+
+    def test_context_metadata_names_lens_outside_bounded_reaction(self):
+        reaction = "自動測試通過，仍沒走過一次乾淨安裝流程。"
+        context = self.inject.build_context_text(
+            {
+                "ts": "2026-08-13T12:00:00",
+                "kind": "review",
+                "reason": "stop",
+                "effective_lens": "fowler",
+            },
+            reaction,
+        )
+
+        metadata, body, closing = context.splitlines()
+        self.assertIn("Martin Fowler lens", metadata)
+        self.assertEqual(body, reaction)
+        self.assertNotIn("Martin Fowler", body)
+        self.assertEqual(closing, "[end Masters’ Nudge]")
+
+    def test_context_metadata_uses_legacy_persona_field(self):
+        context = self.inject.build_context_text(
+            {
+                "ts": "2026-08-13T12:00:00",
+                "kind": "review",
+                "persona": "linus",
+            },
+            "完成宣告仍缺少乾淨安裝證據。",
+        )
+
+        self.assertIn("Linus Torvalds lens", context.splitlines()[0])
 
     def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
         transcript = Path(self.tmpdir) / "session.jsonl"

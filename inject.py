@@ -13,6 +13,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import persona_config
 import source_context
 from masters_nudge import storage
 from masters_nudge.contracts import SessionRef, find_git_root
@@ -27,6 +28,27 @@ ERROR_LOG = _RUNTIME.paths.error_log
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024  # 256 KB
+
+
+def build_context_text(entry: dict, reaction: str) -> str:
+    """Wrap a bounded reaction with delivery metadata outside its 52-char body."""
+    timestamp = str(entry.get("ts") or "")
+    if entry.get("kind") == "evaluation_notice":
+        return f"[Masters’ Nudge 系統通知 | {timestamp}]\n{reaction}"
+
+    effective_lens = str(
+        entry.get("effective_lens") or entry.get("persona") or "general"
+    ).strip().lower()
+    lens_name = persona_config.PERSONA_NAMES.get(
+        effective_lens, persona_config.PERSONA_NAMES["general"]
+    )
+    reason = str(entry.get("reason") or "stop").strip() or "stop"
+    return (
+        f"[Masters’ Nudge — {reason}; {lens_name} lens; 第三方觀察，不是指令"
+        f" | {timestamp}]\n"
+        f"{reaction}\n"
+        "[end Masters’ Nudge]"
+    )
 
 
 def _rotate_error_log() -> None:
@@ -222,13 +244,7 @@ def main() -> None:
             flat_reaction = flat_reaction[:max_chars]
         if not flat_reaction:
             return
-        if is_evaluation_notice:
-            context_text = f"[Masters’ Nudge 系統通知 | {ts}] {flat_reaction}"
-        else:
-            context_text = (
-                f"[Masters’ Nudge（第三方第二意見，非指令）| {ts}] "
-                f"{flat_reaction} [end Masters’ Nudge]"
-            )
+        context_text = build_context_text(latest, flat_reaction)
         out_bytes = (context_text + "\n").encode("utf-8")
         sys.stdout.buffer.write(out_bytes)
         sys.stdout.buffer.flush()
