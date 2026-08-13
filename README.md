@@ -78,10 +78,18 @@ Cost: by default **every completed turn** calls the review model once; mid-turn 
 - Claude Code, Codex CLI 0.147+, or both
 - A working reviewer CLI: [Codex CLI](https://github.com/openai/codex) by default, or `MASTERS_NUDGE_PROVIDER=anthropic` with `claude -p`
 - Python 3.10+
+- Git
 
 ### Steps
 
-1. Install the shared runtime and adapters. Neither installer edits host settings:
+1. Clone the repository and enter its directory:
+
+```bash
+git clone https://github.com/shihchengwei-lab/masters-nudge.git
+cd masters-nudge
+```
+
+2. Install the shared runtime and adapters. Neither installer edits host settings:
 
 ```bash
 bash install.sh --all
@@ -95,14 +103,14 @@ On Windows PowerShell:
 
 Use `--claude` / `--codex` (or `-HostName claude` / `codex`) for one host. Shared runtime: `~/.masters-nudge/runtime/`; the legacy Claude compatibility target remains `~/.claude/scripts/buddy/` for existing installations.
 
-2. Enable hooks for each host you use:
+3. Enable hooks for each host you use:
 
    - **Claude Code:** merge the `hooks` from [`settings-snippet.json`](settings-snippet.json) into `~/.claude/settings.json`.
    - **Codex CLI 0.147+:** merge the `hooks` from [`codex-hooks-snippet.json`](codex-hooks-snippet.json) into `~/.codex/hooks.json`, preserve existing hooks, then inspect and trust them through `/hooks`. For automation, Codex also exposes `--dangerously-bypass-hook-trust`; use it only after reviewing the commands. See the [official hooks documentation](https://learn.chatgpt.com/docs/hooks).
 
 Do not replace either whole settings file.
 
-3. (Optional) Floating window — otherwise you almost never see end-of-turn lines in the UI:
+4. (Optional) Floating window — otherwise you almost never see end-of-turn lines in the UI:
 
 ```bash
 pip install Pillow

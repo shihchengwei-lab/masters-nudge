@@ -5,17 +5,60 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
         run: python -m pip install Pillow
-      - name: Compile entry-point scripts
-        run: python -m py_compile buddy.py checkpoint.py source_context.py inject.py buddy_window.py
-      - name: Run smoke tests
-        run: python -m unittest test_buddy -v
+      - name: Compile Python sources
+        run: >-
+          python -m compileall -q
+          buddy.py buddy_window.py checkpoint.py hook_entry.py inject.py
+          lens_router.py persona_config.py review_telemetry.py source_context.py
+          masters_nudge evaluation
+      - name: Run full test suite
+        run: python -m unittest discover -v
+      - name: Check shell scripts and smoke-test installer
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          bash -n install.sh buddy.sh checkpoint.sh inject.sh
+          root="$(mktemp -d)"
+          MASTERS_NUDGE_RUNTIME_DIR="$root/runtime" \
+            BUDDY_TARGET_DIR="$root/claude" \
+            bash install.sh --all
+          test -f "$root/runtime/hook_entry.py"
+          test -f "$root/runtime/masters_nudge/core.py"
+          test -f "$root/claude/buddy.py"
+      - name: Smoke-test PowerShell installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          $runtime = Join-Path $root "runtime"
+          $claude = Join-Path $root "claude"
+          ./install.ps1 -HostName all -RuntimeDir $runtime -ClaudeTargetDir $claude
+          @(
+            (Join-Path $runtime "hook_entry.py"),
+            (Join-Path $runtime "masters_nudge/core.py"),
+            (Join-Path $claude "buddy.py")
+          ) | ForEach-Object {
+            if (-not (Test-Path -LiteralPath $_)) {
+              throw "Installer did not create $_"
+            }
+          }
