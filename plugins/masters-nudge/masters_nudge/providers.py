@@ -22,6 +22,13 @@ def _noop(_message: str) -> None:
     return None
 
 
+def _reviewer_process_kwargs() -> dict[str, int]:
+    """Keep reviewer CLIs from opening a transient console on Windows."""
+    if os.name != "nt":
+        return {}
+    return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+
+
 def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str:
     try:
         schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
@@ -162,6 +169,7 @@ def call_claude_result(
             encoding="utf-8",
             env=reviewer_environment(),
             timeout=timeout_sec,
+            **_reviewer_process_kwargs(),
         )
         if result.returncode != 0:
             log_error(f"claude CLI exit {result.returncode}: {result.stderr[:500]}")
@@ -303,6 +311,7 @@ def call_grok_result(
             encoding="utf-8",
             env=reviewer_environment(),
             timeout=timeout_sec,
+            **_reviewer_process_kwargs(),
         )
         if result.returncode != 0:
             log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
@@ -386,6 +395,7 @@ def call_codex_result(
             env=reviewer_environment(),
             timeout=timeout_sec,
             shell=use_shell,
+            **_reviewer_process_kwargs(),
         )
         if result.returncode != 0:
             log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")

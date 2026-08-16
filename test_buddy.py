@@ -1994,6 +1994,11 @@ class TestCallClaude(unittest.TestCase):
         mock_run.assert_called_once()
         args = mock_run.call_args
         cmd = args[0][0]
+        import subprocess
+        expected_flags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+        )
+        self.assertEqual(args.kwargs.get("creationflags", 0), expected_flags)
         self.assertIn("claude", cmd[0])
         self.assertIn("--model", cmd)
         self.assertIn("--system-prompt-file", cmd)
@@ -2069,6 +2074,13 @@ class TestCallCodex(unittest.TestCase):
         result = self.buddy.call_codex("sp", "tx", "gpt-5.5")
         self.assertEqual(result, "危險，別推")
         cmd = mock_run.call_args.args[0]
+        import subprocess
+        expected_flags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+        )
+        self.assertEqual(
+            mock_run.call_args.kwargs.get("creationflags", 0), expected_flags
+        )
         schema_index = cmd.index("--output-schema")
         self.assertEqual(Path(cmd[schema_index + 1]), HERE / "reaction-schema.json")
 

@@ -1,5 +1,7 @@
 # Changelog
 
+- Reviewer provider CLIs now run without opening transient console windows on Windows.
+
 ## 0.1.0-dev.2 — Unreleased prerelease
 
 - Archive the complete domain-specialization experiment under `experiment/riemann-domain/`; keep the shipped runtime focused on software-engineering workflows.

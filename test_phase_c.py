@@ -732,6 +732,11 @@ class GrokProviderTests(unittest.TestCase):
             )
         self.assertEqual(result["finding"], "先確認停止條件。")
         command = run.call_args.args[0]
+        import subprocess
+        expected_flags = (
+            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+        )
+        self.assertEqual(run.call_args.kwargs.get("creationflags", 0), expected_flags)
         self.assertIn("--disable-web-search", command)
         self.assertEqual(command[command.index("--tools") + 1], "")
         self.assertIn("--no-memory", command)
