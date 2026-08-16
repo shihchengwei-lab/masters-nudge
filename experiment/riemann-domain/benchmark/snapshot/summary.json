@@ -1,0 +1,39 @@
+{
+  "confirmed_injections": 17,
+  "delivery_receipts": 17,
+  "finding_by_lens": {
+    "erdos": 3,
+    "polya": 1,
+    "riemann": 4,
+    "selberg": 78,
+    "tao": 16
+  },
+  "finding_by_reason": {
+    "goal-transition": 1,
+    "large-diff": 3,
+    "stop": 83,
+    "strategy-review": 13,
+    "test-fail": 2
+  },
+  "finding_by_trigger": {
+    "": 5,
+    "analytic-estimate-evidence": 78,
+    "proof-closure-evidence": 16,
+    "specialist-cooldown": 2,
+    "stalled-search-evidence": 1
+  },
+  "findings": 102,
+  "first_event": "2026-08-14T08:34:13.859520",
+  "generated_with_receipt_tracking": 19,
+  "last_event": "2026-08-16T11:17:36.002969",
+  "records": 142,
+  "review_statuses": 23,
+  "runs": 3,
+  "schema_version": 1,
+  "scope": "observational Riemann-domain experiment; no control arm",
+  "status_messages": {
+    "Reviewer 呼叫失敗；本輪沒有 Nudge。": 6,
+    "Reviewer 逾時（180 秒）；本輪沒有 Nudge。": 6,
+    "Reviewer 逾時（60 秒）；本輪沒有 Nudge。": 11
+  }
+}
