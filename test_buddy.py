@@ -1584,9 +1584,13 @@ class TestLensRouter(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def route(self, evidence="", environ=None):
+    def route(self, evidence="", environ=None, *, checkpoint=True, session="test"):
         return self.router.resolve_review_route(
-            self.tmpdir, evidence, environ={} if environ is None else environ
+            self.tmpdir,
+            evidence,
+            environ={} if environ is None else environ,
+            checkpoint=checkpoint,
+            session_key=session,
         )
 
     def test_lifecycle_stages_map_to_primary_lenses(self):
@@ -1667,6 +1671,47 @@ class TestLensRouter(unittest.TestCase):
         self.assertEqual(locked.override_lens, "")
         self.assertEqual(locked.source, "environment")
         self.assertEqual(unknown.effective_lens, "unknown")
+
+    def test_stop_always_uses_primary_even_with_override_evidence(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "build")
+        route = self.route(
+            "retry caused duplicate delivery",
+            checkpoint=False,
+        )
+        self.assertEqual(route.primary_lens, "beck")
+        self.assertEqual(route.effective_lens, "beck")
+        self.assertEqual(route.override_lens, "")
+
+    def test_five_checkpoint_overrides_force_three_primary_reviews(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "build")
+        evidence = "retry caused duplicate delivery"
+        first = [self.route(evidence, session="budget") for _ in range(5)]
+        cooldown = [self.route(evidence, session="budget") for _ in range(3)]
+        resumed = self.route(evidence, session="budget")
+
+        self.assertEqual([route.effective_lens for route in first], ["lamport"] * 5)
+        self.assertEqual([route.effective_lens for route in cooldown], ["beck"] * 3)
+        self.assertTrue(
+            all(route.suppression_reason == "dynamic-override-cooldown" for route in cooldown)
+        )
+        self.assertTrue(all(route.candidate_lens == "lamport" for route in cooldown))
+        self.assertEqual(resumed.effective_lens, "lamport")
+
+    def test_quiet_checkpoint_does_not_consume_override_cooldown(self):
+        import persona_config
+
+        persona_config.save_stage(self.tmpdir, "build")
+        evidence = "retry caused duplicate delivery"
+        for _ in range(5):
+            self.route(evidence, session="quiet")
+        self.assertEqual(self.route("ordinary edit", session="quiet").effective_lens, "beck")
+        suppressed = self.route(evidence, session="quiet")
+        self.assertEqual(suppressed.effective_lens, "beck")
+        self.assertEqual(suppressed.suppression_reason, "dynamic-override-cooldown")
 
 
 class TestFloatingWindowLayout(unittest.TestCase):

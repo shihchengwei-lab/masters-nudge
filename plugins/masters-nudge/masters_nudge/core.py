@@ -80,8 +80,21 @@ class ReviewCore:
         provider = self.settings.provider
         model = self.settings.model
         configuration_source = self.settings.configuration_source
+        checkpoint_routing = request.kind != "stop"
+        routing_evidence = "\n".join(
+            part
+            for part in (
+                request.trigger,
+                request.reason,
+                request.evidence.checkpoint_event,
+            )
+            if part
+        ) if checkpoint_routing else ""
         route = lens_router.resolve_review_route(
-            self._route_dir(), request.source_packet
+            self._route_dir(),
+            routing_evidence,
+            checkpoint=checkpoint_routing,
+            session_key=f"{request.session.host}--{request.session.session_id}",
         )
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,

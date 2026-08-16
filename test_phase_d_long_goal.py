@@ -233,6 +233,8 @@ class LongGoalReplayTests(unittest.TestCase):
                     root,
                     evidence,
                     environ={},
+                    checkpoint=True,
+                    session_key="phase-d",
                 )
                 self.assertEqual(route.effective_lens, expected)
 

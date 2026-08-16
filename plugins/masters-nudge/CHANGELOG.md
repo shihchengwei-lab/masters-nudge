@@ -8,6 +8,8 @@
 - Add delivery receipts with event sequence, injection channel, and queued/injected/expired/failed states; the Tk window now distinguishes reviewer generation from actual context injection.
 - Add recurring detached long-goal strategy checkpoints for repeated command/failure families, eight meaningful events, and each additional ~80 changed lines, plus immediate `complete`/`blocked` Goal transition review.
 - Route workflow-drift evidence across the existing six software lenses and add deterministic Phase D long-goal replay tests; no manual “review now” control is added.
+- Keep Stop on the selected primary lens; allow event-scoped checkpoint switches across all six lenses, then force three eligible checkpoints back to primary after every five switches.
+- Raise the default checkpoint reviewer timeout from 15 to 90 seconds so a slow paid response is more likely to reach the queued/injected delivery path.
 - Make Codex hook responses code-page-safe, commit delivery only after stdout succeeds, and inject detached Stop findings through the next PostToolUse event so persistent Goals receive reviewer feedback without a new user prompt.
 - Isolate Anthropic reviewer calls from Claude Code's default tools, plugins, settings, and project prompt to reduce unrelated context and Opus input cost.
 - Use PowerShell-native plugin paths for Codex hooks on Windows, mirror checkpoint findings into the Tk window without redelivering them, and keep launchers fail-open; retain synchronous PostToolUse delivery for Codex CLI 0.147 compatibility.

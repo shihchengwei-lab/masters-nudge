@@ -36,7 +36,7 @@ from masters_nudge.runtime import RuntimePaths, RuntimeSettings, active_guard
 LARGE_DIFF_THRESHOLD = 80
 CHECKPOINT_TIMEOUT_SEC = int(
     os.environ.get("MASTERS_NUDGE_CHECKPOINT_TIMEOUT")
-    or os.environ.get("BUDDY_CHECKPOINT_TIMEOUT", "15")
+    or os.environ.get("BUDDY_CHECKPOINT_TIMEOUT", "90")
 )
 CHECKPOINT_STATE_DIR = buddy.BUDDY_DIR
 MUTATING_TOOLS = {"Edit", "Write", "Bash", "PowerShell"}

@@ -43,6 +43,8 @@ class HostDefaultTests(unittest.TestCase):
             (codex.provider, codex.model), ("openai", "gpt-5.6-sol")
         )
         self.assertEqual(legacy.provider, "openai")
+        self.assertEqual(claude.checkpoint_timeout_sec, 90)
+        self.assertEqual(codex.checkpoint_timeout_sec, 90)
 
     def test_grok_can_be_selected_without_changing_host_defaults(self):
         environment = {

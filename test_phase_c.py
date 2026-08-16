@@ -15,6 +15,7 @@ from unittest import mock
 import review_telemetry
 import buddy
 import hook_entry
+import persona_config
 from masters_nudge import prompting, providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, normalize_event
 from masters_nudge.contracts import (
@@ -490,6 +491,63 @@ class HookOutputTests(unittest.TestCase):
 
 
 class SharedCoreTests(unittest.TestCase):
+    def test_stop_is_primary_and_checkpoint_routing_uses_only_new_event(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            settings = settings_for(root)
+            persona_config.save_stage(settings.paths.data_dir, "build")
+            prompts: list[str] = []
+
+            def dispatch(_provider, system_prompt, _review_input, _model, **_kwargs):
+                prompts.append(system_prompt)
+                return {"status": "no_finding", "finding": "", "usage": {}}
+
+            core = ReviewCore(settings, dispatch=dispatch)
+            session = SessionRef("codex_cli", "routing")
+            core.review(
+                ReviewRequest(
+                    1,
+                    "stop",
+                    "stop",
+                    session,
+                    EvidenceBundle(tool_evidence="retry caused duplicate delivery"),
+                    "retry caused duplicate delivery",
+                    "stop",
+                ),
+                persist_reaction=False,
+            )
+            core.review(
+                ReviewRequest(
+                    1,
+                    "checkpoint",
+                    "tool",
+                    session,
+                    EvidenceBundle(
+                        task_anchor="retry caused duplicate delivery",
+                        checkpoint_event="ordinary file edit",
+                    ),
+                    "retry caused duplicate delivery\nordinary file edit",
+                    "quiet",
+                ),
+                persist_reaction=False,
+            )
+            core.review(
+                ReviewRequest(
+                    1,
+                    "checkpoint",
+                    "tool",
+                    session,
+                    EvidenceBundle(checkpoint_event="retry caused duplicate delivery"),
+                    "retry caused duplicate delivery",
+                    "new-event",
+                ),
+                persist_reaction=False,
+            )
+
+            self.assertIn("Kent Beck", prompts[0])
+            self.assertIn("Kent Beck", prompts[1])
+            self.assertIn("Leslie Lamport", prompts[2])
+
     def test_checkpoint_reaction_is_visible_but_not_redelivered_next_turn(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

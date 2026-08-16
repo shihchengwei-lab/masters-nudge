@@ -90,7 +90,7 @@ Coding agent works normally
 | Goal declares `complete` or `blocked` | Distinguish objective completion, a sub-result, and path exhaustion | Main agent and floating window |
 | End of turn | Check whether the work is actually complete | Main agent and the floating window |
 
-Tool/test failures and the first large diff remain immediate checks and may pause the main agent for up to about 15 seconds. Codex long-goal strategy checks run in the background and inject on the next hook event; `complete`/`blocked` Goal transitions are checked immediately. Each reaction records its source event sequence and a `queued`, `injected`, `expired`, or `failed` delivery state, so the floating window does not confuse reviewer output with context the main model actually received. End-of-turn checks also run in the background. Claude Code reports failures through `PostToolUseFailure`; the Codex adapter can infer structured non-zero exits and failure status when Codex delivers them in `PostToolUse`. The tested Windows 0.147.0 build did not emit that event for a non-zero Bash result, so immediate failure checks are best-effort there and Stop remains the fallback.
+Tool/test failures and the first large diff remain immediate checks and may pause the main agent for up to about 90 seconds. Codex long-goal strategy checks run in the background and inject on the next hook event; `complete`/`blocked` Goal transitions are checked immediately. Each reaction records its source event sequence and a `queued`, `injected`, `expired`, or `failed` delivery state, so the floating window does not confuse reviewer output with context the main model actually received. End-of-turn checks also run in the background. Claude Code reports failures through `PostToolUseFailure`; the Codex adapter can infer structured non-zero exits and failure status when Codex delivers them in `PostToolUse`. The tested Windows 0.147.0 build did not emit that event for a non-zero Bash result, so immediate failure checks are best-effort there and Stop remains the fallback.
 
 The main agent receives an end-of-turn nudge when you send your next message. The floating window reads both hosts' namespaced logs and is the direct user-visible channel.
 
@@ -231,22 +231,33 @@ retry. [See the evaluation and selection details.](evaluation/results/lens-obser
 | Evolve | Martin Fowler (`fowler`) | Will this structure make the next change harder? |
 | Review | Linus Torvalds (`linus`) | Which extra layers do not need to exist? |
 
-Two more viewpoints join for one review when there is a clear signal:
+End-of-turn Stop review always uses the selected stage lens. A checkpoint may
+borrow any other lens for that one review when its new event contains a strong,
+specific signal—for example, retry/order evidence may select Lamport, measured
+hot-path evidence may select Carmack, or a completion boundary may select
+Linus. The switch never changes the dropdown and never persists into the next
+review decision.
 
-- Retry, idempotency, races, duplicate handling, event order, or partial failure bring in Leslie Lamport (`lamport`).
-- A profiler, benchmark, or measured latency, throughput, allocation, copying, I/O, or hot-path cost brings in John Carmack (`carmack`).
+Dynamic checkpoint lenses have a session-local budget. After five switches,
+the next three checkpoints that would have switched are forced back to the
+primary lens, then the budget resets. Quiet primary checkpoints and Stop do not
+consume this cooldown. Routing examines the new checkpoint event rather than
+old keywords accumulated in the full context packet. A timeout or silent
+review still counts as a switch because it displaced a primary-lens call.
 
-If both match, Lamport goes first because correctness comes before speed. A lone word such as `async`, `cache`, `performance`, or `latency` is not enough to switch viewpoints.
+If Lamport and Carmack both match the same new event, Lamport goes first because
+correctness comes before speed. A lone word such as `async`, `cache`,
+`performance`, or `latency` is not enough to switch viewpoints.
 
 Each name stands for a conceptual lens and a set of attention areas. The nudge does not imitate that person's voice and does not add another code review; it uses visible technical facts only as anchors for reconsidering the workflow.
 
 Whatever the stage, explicit destructive action, security or authorization risk, drift from the user's request, and completion claims contradicted by visible evidence still stop the line first.
 
-The floating-window dropdown stores the stage in `~/.masters-nudge/data/config.json`. Your choice applies from the next review; Build is the default. The dropdown shows your chosen stage; the colored badge shows the viewpoint used for the latest nudge. A temporary Lamport or Carmack review changes the badge, not the dropdown. A pre-existing `~/.claude/buddy/config.json` remains readable until a new neutral config is saved.
+The floating-window dropdown stores the stage in `~/.masters-nudge/data/config.json`. Your choice applies from the next review; Build is the default. The dropdown shows your chosen stage; the colored badge shows the viewpoint used for the latest nudge. A temporary checkpoint lens changes the badge, not the dropdown. A pre-existing `~/.claude/buddy/config.json` remains readable until a new neutral config is saved.
 
 New configuration files use `{"stage":"build"}`. Valid stages are `design`, `build`, `evolve`, and `review`. General workflow evidence and stop-the-line checks are the shared base for every stage, not a selectable filter.
 
-`MASTERS_NUDGE_PERSONA` (or legacy `BUDDY_PERSONA`) set before the host starts remains a force override and disables specialist switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, old General settings fall back to the default Build stage, and old Lamport/Carmack choices stay locked until a stage is selected in the window.
+`MASTERS_NUDGE_PERSONA` (or legacy `BUDDY_PERSONA`) set before the host starts remains a force override and disables checkpoint lens switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, old General settings fall back to the default Build stage, and old Lamport/Carmack choices stay locked until a stage is selected in the window.
 
 A lens changes which part of the workflow gets reconsidered first. It does not change the evidence rules, model-call count, single-Nudge limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. All six viewpoints share one model call; they are not six agents speaking at once.
 
@@ -303,7 +314,7 @@ Host-aware defaults remove the need for a second login: Claude Code uses Anthrop
 | `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol`; Grok: CLI default; local: required | Model name for the chosen provider |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback-only Ollama base URL; used only by `ollama-local` |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
+| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `90` | Max wait for a mid-turn review (seconds) |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | New logs, state, config, and content-free telemetry |
 | `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root; legacy: `~/.masters-nudge/runtime` | Override the prompt/schema/persona runtime directory |
 | `MASTERS_NUDGE_PERSONA` / `BUDDY_PERSONA` | unset | Force `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack`; wins over the window and specialist routing |
@@ -408,6 +419,7 @@ Runtime:
 | `~/.masters-nudge/data/<host>--<session_id>.log` | Reaction JSONL |
 | `~/.masters-nudge/data/<host>--<session_id>.turn.json` | Task anchor and bounded tool journal |
 | `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | Inject read pointer |
+| `~/.masters-nudge/data/<host>--<session_id>.lens-route.json` | Checkpoint override count and cooldown |
 | `~/.masters-nudge/data/config.json` | Lifecycle stage saved by the window |
 | `~/.masters-nudge/data/<host>--<session_id>.checkpoints/` | Mid-turn dedup |
 | `~/.masters-nudge/data/error.log` | Error log |
@@ -415,7 +427,7 @@ Runtime:
 
 ## Known limitations
 
-- Matching mid-turn review may pause the agent up to `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` (default 15s).
+- Matching mid-turn review may pause the agent up to `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` (default 90s).
 - Test-failure heuristics can miss unusual runners; large-diff uses Git plus untracked text files, binaries excluded, once per session after ~80 lines.
 - A terse follow-up such as “continue” replaces an earlier detailed prompt as the task anchor.
 - Claude current-turn evidence can still depend on transcript write timing. Codex avoids that dependency by journaling each PostToolUse payload, bounded to 8,000 characters per turn.

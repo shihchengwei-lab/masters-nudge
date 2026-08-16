@@ -167,4 +167,7 @@ def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
         "override_lens": route.override_lens,
         "trigger": route.trigger,
         "route_source": route.source,
+        "candidate_lens": route.candidate_lens,
+        "candidate_trigger": route.candidate_trigger,
+        "suppression_reason": route.suppression_reason,
     }

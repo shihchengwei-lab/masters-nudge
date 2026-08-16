@@ -86,7 +86,7 @@ Coding agent 正常工作
 | Goal 宣告 complete／blocked | 分清達成 objective、子成果與路徑耗盡 | 主 agent、浮動視窗 |
 | 一輪工作結束 | 確認結果是否真的完成 | 主 agent、浮動視窗 |
 
-工具／測試失敗與首次大 diff 仍即時檢查，可能讓主 agent 多等最多約 15 秒。Codex 的長任務策略檢查在背景執行，於下一個 hook 事件注入；Goal complete／blocked 則在狀態轉換當下檢查。每則 log 都記錄來源事件序號與 `queued`、`injected`、`expired` 或 `failed` 投遞狀態，浮動視窗不再把 reviewer 已產生誤寫成主模型已收到。回合末檢查也在背景執行。Claude Code 以 `PostToolUseFailure` 回報失敗；Codex adapter 會在收到 `PostToolUse` 時辨識結構化的非零 exit code 與 failure status。但實測 Windows 0.147.0 不會為非零 Bash 結果發出該事件，因此該版的即時失敗檢查是 best-effort，並以 Stop review 兜底。
+工具／測試失敗與首次大 diff 仍即時檢查，可能讓主 agent 多等最多約 90 秒。Codex 的長任務策略檢查在背景執行，於下一個 hook 事件注入；Goal complete／blocked 則在狀態轉換當下檢查。每則 log 都記錄來源事件序號與 `queued`、`injected`、`expired` 或 `failed` 投遞狀態，浮動視窗不再把 reviewer 已產生誤寫成主模型已收到。回合末檢查也在背景執行。Claude Code 以 `PostToolUseFailure` 回報失敗；Codex adapter 會在收到 `PostToolUse` 時辨識結構化的非零 exit code 與 failure status。但實測 Windows 0.147.0 不會為非零 Bash 結果發出該事件，因此該版的即時失敗檢查是 best-effort，並以 Stop review 兜底。
 
 回合末短評會在你下次送出訊息時交給主 agent。浮動視窗會讀取兩種 host 的 namespaced log，是使用者直接看短評的管道。
 
@@ -226,22 +226,29 @@ Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName a
 | Evolve | Martin Fowler（`fowler`） | 這個結構會不會讓下次修改更困難？ |
 | Review | Linus Torvalds（`linus`） | 哪些多餘層次其實不需要存在？ |
 
-另外兩個視角會在出現明確訊號時，暫時加入一次：
+回合末 Stop review 永遠使用下拉選單中的主要 stage lens。Checkpoint 的新事件若有
+明確、具體的訊號，則可只在當次借用任何其他 lens；例如 retry／順序問題可切到
+Lamport、已量測的 hot path 可切到 Carmack、完成邊界可切到 Linus。切換不改變
+dropdown，也不延續到下一次 review 決策。
 
-- 遇到重試、冪等、競態、重複處理、先後順序或部分失敗時，改從 Leslie Lamport（`lamport`）的角度檢查。
-- 遇到 profiler、benchmark，或連到延遲、吞吐、配置、複製、I/O、hot path 的實測數字時，改從 John Carmack（`carmack`）的角度檢查。
+動態 checkpoint lens 有 session-local 額度：累計切換五次後，接下來三個原本會
+切換的 checkpoint 強制回到 Primary lens，然後重新計數。原本就沒有切換候選的
+Primary checkpoint 與 Stop 不消耗 cooldown。Routing 只檢查當次 checkpoint 的新事件，
+不以完整 context 裡累積的舊關鍵字重複觸發。Timeout 或靜默也算一次切換，因為它確實
+取代了一次 Primary review。
 
-兩者同時符合時，先看正確性風險較高的 Lamport 視角。只出現 `async`、`cache`、`performance` 或 `latency` 其中一個詞，不足以切換。
+Lamport 與 Carmack 同時命中同一個新事件時，先選 Lamport，因為正確性先於速度。
+只有 `async`、`cache`、`performance` 或 `latency` 一個詞，不足以切換鏡頭。
 
 每個名字代表一組核心概念與關注面向。短評不會模仿本人，也不是增加一份 code review；技術細節只用來錨定值得重看的工作方式。
 
 不論目前是哪個階段，只要眼前有破壞性操作、安全或授權風險、做偏需求，或完成宣告與可見證據明確矛盾，Masters’ Nudge 都會先踩煞車。
 
-浮動視窗下拉會把階段寫入 `~/.masters-nudge/data/config.json`，下次審查生效；預設為 Build。下拉顯示選定的階段，彩色 badge 顯示上一則短評實際使用的視角。Lamport 或 Carmack 暫時加入時，badge 會改變，但下拉選擇不變。既有 `~/.claude/buddy/config.json` 會繼續讀取，直到新設定寫進 neutral data 目錄。
+浮動視窗下拉會把階段寫入 `~/.masters-nudge/data/config.json`，下次審查生效；預設為 Build。下拉顯示選定的階段，彩色 badge 顯示上一則短評實際使用的視角。Checkpoint 暫時借用其他 lens 時，badge 會改變，但下拉選擇不變。既有 `~/.claude/buddy/config.json` 會繼續讀取，直到新設定寫進 neutral data 目錄。
 
 新設定檔格式為 `{"stage":"build"}`；合法階段是 `design`、`build`、`evolve`、`review`。General 是所有階段共用的工作流證據與踩煞車底座，不是可選濾鏡。
 
-啟動 host 前設定 `MASTERS_NUDGE_PERSONA`（或舊 `BUDDY_PERSONA`）仍可強制指定 lens，且會停用專科切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 General 設定回到預設 Build；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
+啟動 host 前設定 `MASTERS_NUDGE_PERSONA`（或舊 `BUDDY_PERSONA`）仍可強制指定 lens，且會停用 checkpoint lens 切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 General 設定回到預設 Build；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
 
 Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫次數、單則 Nudge 或字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。六個視角共用同一次模型呼叫，不是六個 agent 同時發言。
 
@@ -298,7 +305,7 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 | `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol`；Grok：CLI 預設；本機：必填 | 傳給選定 provider 的模型名 |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | 僅供 `ollama-local` 使用的 loopback Ollama base URL |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
+| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `90` | 途中審查同步等待上限（秒） |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | 新 log、state、config 與無內容 telemetry |
 | `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root；舊版：`~/.masters-nudge/runtime` | 覆寫 prompt／schema／persona runtime 目錄 |
 | `MASTERS_NUDGE_PERSONA` / `BUDDY_PERSONA` | 未設定 | 強制 `jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack`；優先於浮動視窗與專科路由 |
@@ -396,6 +403,7 @@ Runtime：
 | `~/.masters-nudge/data/<host>--<session_id>.log` | 反應 JSONL |
 | `~/.masters-nudge/data/<host>--<session_id>.turn.json` | 任務錨點與 bounded tool journal |
 | `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | 注入讀取指標 |
+| `~/.masters-nudge/data/<host>--<session_id>.lens-route.json` | Checkpoint 切換次數與 cooldown |
 | `~/.masters-nudge/data/config.json` | 視窗保存的生命週期階段 |
 | `~/.masters-nudge/data/<host>--<session_id>.checkpoints/` | 途中審查去重 |
 | `~/.masters-nudge/data/error.log` | 錯誤 log |
@@ -403,7 +411,7 @@ Runtime：
 
 ## 已知限制
 
-- 命中途中審查可能讓 agent 暫停最多 `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT`（預設 15 秒）。
+- 命中途中審查可能讓 agent 暫停最多 `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT`（預設 90 秒）。
 - 測試失敗啟發式可能漏判少見 runner；大變更依 Git 與未追蹤文字檔，binary 不計，session 內約超過 80 行後觸發一次。
 - 簡短 follow-up（如「繼續」）會取代先前詳細 prompt 作為任務錨點。
 - Claude 當輪工具證據仍可能受 transcript 寫入時機影響；Codex 改在每次 PostToolUse 累積 journal，每輪上限 8,000 字，不依賴 transcript 格式。

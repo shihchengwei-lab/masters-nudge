@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import json
+import os
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -65,6 +68,10 @@ FOWLER_GROWTH_RE = re.compile(
     re.IGNORECASE,
 )
 
+DYNAMIC_OVERRIDE_LIMIT = 5
+DYNAMIC_COOLDOWN_REVIEWS = 3
+ROUTE_STATE_SUFFIX = ".lens-route.json"
+
 
 @dataclass(frozen=True)
 class ReviewRoute:
@@ -74,6 +81,61 @@ class ReviewRoute:
     override_lens: str
     trigger: str
     source: str
+    candidate_lens: str = ""
+    candidate_trigger: str = ""
+    suppression_reason: str = ""
+
+
+def _route_state_path(base_dir: Path, session_key: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(session_key or "unknown"))[:200]
+    return Path(base_dir) / f"{safe or 'unknown'}{ROUTE_STATE_SUFFIX}"
+
+
+def _load_route_state(path: Path) -> dict[str, int]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError):
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    def nonnegative_int(value: object) -> int:
+        try:
+            return max(0, int(value or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    return {
+        "override_count": nonnegative_int(payload.get("override_count")),
+        "cooldown_remaining": nonnegative_int(payload.get("cooldown_remaining")),
+    }
+
+
+def _save_route_state(path: Path, state: dict[str, int]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".tmp",
+        prefix="lens-route-",
+        dir=path.parent,
+        delete=False,
+        encoding="utf-8",
+    )
+    temp_path = Path(handle.name)
+    try:
+        json.dump({"schema_version": 1, **state}, handle, ensure_ascii=False)
+        handle.write("\n")
+        handle.close()
+        os.replace(temp_path, path)
+    finally:
+        try:
+            handle.close()
+        except Exception:
+            pass
+        try:
+            temp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _specialist_trigger(evidence: str) -> tuple[str, str]:
@@ -104,6 +166,8 @@ def resolve_review_route(
     evidence: str = "",
     *,
     environ: Mapping[str, str] | None = None,
+    checkpoint: bool = False,
+    session_key: str = "",
 ) -> ReviewRoute:
     selection = persona_config.resolve_stage(base_dir, environ=environ)
     primary = selection.persona
@@ -112,17 +176,47 @@ def resolve_review_route(
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
-    if selection.locked or primary == "general":
+    if selection.locked or primary == "general" or not checkpoint:
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
 
     override, trigger = _specialist_trigger(evidence)
+    if not override or override == primary:
+        return ReviewRoute(
+            selection.stage, primary, primary, "", "", selection.source
+        )
+
+    state_path = _route_state_path(base_dir, session_key)
+    state = _load_route_state(state_path)
+    if state["cooldown_remaining"] > 0:
+        state["cooldown_remaining"] -= 1
+        if state["cooldown_remaining"] == 0:
+            state["override_count"] = 0
+        _save_route_state(state_path, state)
+        return ReviewRoute(
+            selection.stage,
+            primary,
+            primary,
+            "",
+            "checkpoint-cooldown",
+            selection.source,
+            candidate_lens=override,
+            candidate_trigger=trigger,
+            suppression_reason="dynamic-override-cooldown",
+        )
+
+    state["override_count"] += 1
+    if state["override_count"] >= DYNAMIC_OVERRIDE_LIMIT:
+        state["cooldown_remaining"] = DYNAMIC_COOLDOWN_REVIEWS
+    _save_route_state(state_path, state)
     return ReviewRoute(
         selection.stage,
         primary,
-        override or primary,
+        override,
         override,
         trigger,
         selection.source,
+        candidate_lens=override,
+        candidate_trigger=trigger,
     )

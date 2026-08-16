@@ -208,9 +208,9 @@ class RuntimeSettings:
                 environment,
                 "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
                 "BUDDY_CHECKPOINT_TIMEOUT",
-                "15",
+                "90",
             ),
-            15,
+            90,
         )
         return cls(
             provider,
