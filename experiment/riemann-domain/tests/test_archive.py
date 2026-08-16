@@ -37,7 +37,11 @@ class RiemannArchiveTests(unittest.TestCase):
         }
         runtime = {path.name for path in (ROOT / "runtime-snapshot").glob("*.py")}
         self.assertEqual(runtime, expected_runtime)
-        self.assertTrue((ROOT / "research" / "staging" / "research_log.md").is_file())
+        staging = ROOT / "research" / "staging"
+        self.assertTrue((staging / "research_log.md").is_file())
+        self.assertTrue((staging / "HANDOFF.md").is_file())
+        self.assertTrue((staging / "COMPLETION_AUDIT_2026-08-16.md").is_file())
+        self.assertTrue((staging / "strategy_audit.md").is_file())
         self.assertTrue((ROOT / "research" / "output" / "verification_report.json").is_file())
         self.assertTrue((ROOT / "skill" / "SKILL.md").is_file())
 

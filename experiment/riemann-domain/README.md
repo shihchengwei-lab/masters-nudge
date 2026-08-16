@@ -1,8 +1,9 @@
 # Riemann domain experiment
 
-This directory preserves the complete local domain-specialization experiment as
-it stood when the production runtime returned to a software-engineering-only
-scope on 2026-08-16.
+This directory preserves the complete local domain-specialization experiment,
+plus the research session's final continuation and stage handoff from
+2026-08-16, after the production runtime returned to a
+software-engineering-only scope.
 
 It is a fork reference, not shipped plugin code and not a claim of progress on
 the Riemann hypothesis.
@@ -40,6 +41,12 @@ results and limitations. Then inspect the **[complete 17-interaction
 table](benchmark/interactions.md)** or the **[four reproducible route-closure
 packages](benchmark/closures/README.md)**.
 
+For the latest mathematical state, start with
+**[`research/staging/HANDOFF.md`](research/staging/HANDOFF.md)**, then read
+**[`COMPLETION_AUDIT_2026-08-16.md`](research/staging/COMPLETION_AUDIT_2026-08-16.md)**
+and **[`strategy_audit.md`](research/staging/strategy_audit.md)**. These files
+record a stage closure and unresolved obligations, not a proof of RH.
+
 ## Contents
 
 - `domain/riemann/`: the domain base prompt and six mathematical personas.
@@ -48,7 +55,8 @@ packages](benchmark/closures/README.md)**.
   runtime, including core, storage, prompting, workspace profile, CLI, and Tk UI.
 - `plugin-snapshot/`: domain files and router removed from the generated plugin.
 - `skill/SKILL.md`: the Codex setup skill used by the local experiment.
-- `research/staging/`: working notes, candidate lemmas, experiments, and results.
+- `research/staging/`: working notes, candidate lemmas, route audits, the final
+  stage handoff, experiments, and results.
 - `research/output/`: the consolidated write-up and numerical verifier.
 - `tests/riemann_domain_integration_snapshot.py`: the original integration test
   suite retained as executable design documentation.
