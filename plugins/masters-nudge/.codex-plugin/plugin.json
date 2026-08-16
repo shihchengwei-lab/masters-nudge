@@ -1,7 +1,7 @@
 {
   "name": "masters-nudge",
   "version": "0.1.0-dev.2+codex.20260816003519",
-  "description": "A quiet second-opinion workflow and research lens for Claude Code and Codex.",
+  "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
   "author": {
     "name": "shihchengwei-lab",
     "url": "https://github.com/shihchengwei-lab"
@@ -14,13 +14,13 @@
     "second-opinion",
     "coding-agent",
     "hooks",
-    "mathematical-research"
+    "long-running-agents"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Masters\u2019 Nudge",
-    "shortDescription": "Quiet workflow and research nudges",
-    "longDescription": "Adds bounded, evidence-based nudges during and after agent work, with six engineering lenses and an experimental Riemann-research domain.",
+    "shortDescription": "Quiet workflow nudges",
+    "longDescription": "Adds bounded, evidence-based nudges during and after agent work, with six software-engineering lenses and long-task checkpoints.",
     "developerName": "shihchengwei-lab",
     "category": "Productivity",
     "capabilities": [
