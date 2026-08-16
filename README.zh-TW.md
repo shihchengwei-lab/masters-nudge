@@ -32,6 +32,22 @@ Masters’ Nudge 會在幾個關鍵時刻，擷取一小份當下證據，請另
 
 目前支援 Claude Code 與 Codex CLI 0.147+。
 
+## 一個可觀察的長任務實驗
+
+軟體工程版的效益很難直接做 benchmark：工作流影響會和 coding agent
+本身的推理混在一起，短任務也可能在 Nudge 產生可見後果前就結束。為了取得
+更長、可逐步檢查的紀錄，我們在本機做了一個數學特化版，讓它陪伴一項長時間
+的黎曼猜想研究任務。
+
+這個數學 profile 是封存實驗，不是正式提供的產品功能，也不代表取得數學進展。
+三個 session 共產生 102 次 Nudge finding；只有最後一段具備投遞 receipt，該段
+產生 19 次 finding，其中 17 次確認進入主模型 context，13/17 可觀察到直接、
+重構後或延遲的回應。由於沒有對照組，這些是互動觀察，不是因果效應估計。
+
+陌生讀者應先看 **[benchmark 結果與限制](experiment/riemann-domain/benchmark/README.md)**，
+接著閱讀 **[完整 17 筆可追蹤互動](experiment/riemann-domain/benchmark/interactions.md)**；
+若要檢查研究產出，再進入 **[四項可重現的路線關閉證書](experiment/riemann-domain/benchmark/closures/README.md)**。
+
 ## 為什麼只說一句？
 
 每次提醒最多 52 個字，只指出一個具體的工作流張力或問題。

@@ -32,6 +32,26 @@ At a few key moments, Masters’ Nudge captures a small evidence packet and asks
 
 Claude Code and Codex CLI 0.147+ are supported.
 
+## An observable long-task experiment
+
+The software-engineering version is difficult to benchmark directly: workflow
+effects are mixed with the coding agent's own reasoning, and a short task may
+finish before a Nudge has a visible consequence. To obtain a longer,
+inspectable trace, we made a local mathematical specialization and ran it on an
+extended Riemann-hypothesis research task.
+
+That math profile is an archived experiment, not a shipped feature and not a
+claim of mathematical progress. Across three sessions it produced 102 Nudge
+findings. Delivery receipts were available only in the final segment: 19
+findings were generated there, 17 were confirmed in the main model's context,
+and 13 of those 17 had a direct, reframed, or delayed visible response. With no
+control arm, these are observational interactions rather than a causal effect
+estimate.
+
+Start with the **[benchmark result and limitations](experiment/riemann-domain/benchmark/README.md)**,
+then read the **[complete 17 traceable interactions](experiment/riemann-domain/benchmark/interactions.md)**
+and, if useful, the **[four reproducible route-closure packages](experiment/riemann-domain/benchmark/closures/README.md)**.
+
 ## Why only one line?
 
 Each nudge is at most 52 characters and points to one concrete workflow tension or question.
