@@ -10,6 +10,7 @@ from pathlib import Path
 from masters_nudge.local_ollama import DEFAULT_OLLAMA_URL
 from masters_nudge.management import (
     configure_local,
+    configure_grok,
     doctor,
     launch_window,
     migrate_legacy,
@@ -145,6 +146,16 @@ def main() -> int:
     local_reset_parser = local_subparsers.add_parser("reset")
     local_reset_parser.add_argument("--json", action="store_true")
 
+    grok_parser = subparsers.add_parser("grok")
+    grok_subparsers = grok_parser.add_subparsers(
+        dest="grok_command", required=True
+    )
+    grok_configure_parser = grok_subparsers.add_parser("configure")
+    grok_configure_parser.add_argument("--model", default="")
+    grok_configure_parser.add_argument("--json", action="store_true")
+    grok_reset_parser = grok_subparsers.add_parser("reset")
+    grok_reset_parser.add_argument("--json", action="store_true")
+
     args = parser.parse_args()
     if args.command == "doctor":
         result = doctor(
@@ -178,7 +189,26 @@ def main() -> int:
         else:
             _print_local_reset(result)
         return 0 if result["reset"] else 1
-
+    if args.command == "grok":
+        if args.grok_command == "configure":
+            result = configure_grok(args.model)
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False))
+            elif result["saved"]:
+                selected = result["model"] or "Grok CLI default model"
+                print(f"Grok reviewer configured for both hosts: {selected}")
+                print(f"Config: {result['path']}")
+            else:
+                print("Grok reviewer not configured: " + result["error"])
+            return 0 if result["saved"] else 1
+        result = reset_local()
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        elif result["removed"]:
+            print("Persistent reviewer config removed; host defaults are active again.")
+        else:
+            print("No persistent reviewer config was present.")
+        return 0 if result["reset"] else 1
     result = launch_window(PLUGIN_ROOT)
     if args.json:
         print(json.dumps(result, ensure_ascii=False))

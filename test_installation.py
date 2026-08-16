@@ -12,6 +12,7 @@ import buddy
 import checkpoint
 import masters_nudge_cli
 from masters_nudge.management import (
+    configure_grok,
     configure_local,
     doctor,
     inspect_legacy_config,
@@ -42,6 +43,34 @@ class HostDefaultTests(unittest.TestCase):
             (codex.provider, codex.model), ("openai", "gpt-5.6-sol")
         )
         self.assertEqual(legacy.provider, "openai")
+
+    def test_grok_can_be_selected_without_changing_host_defaults(self):
+        environment = {
+            "HOME": "/tmp/masters-nudge-test",
+            "MASTERS_NUDGE_PROVIDER": "grok",
+        }
+        settings = RuntimeSettings.from_env(
+            environ=environment, host="codex_cli"
+        )
+        self.assertEqual((settings.provider, settings.model), ("grok", ""))
+
+
+class RuntimeConfigurationTests(unittest.TestCase):
+    def test_configure_grok_persists_cli_default_model(self):
+        with tempfile.TemporaryDirectory() as raw, patch(
+            "masters_nudge.management._provider_cli", return_value="grok"
+        ):
+            environment = {
+                "HOME": raw,
+                "USERPROFILE": raw,
+                "MASTERS_NUDGE_DATA_DIR": str(Path(raw) / "data"),
+            }
+            result = configure_grok(environ=environment)
+            settings = RuntimeSettings.from_env(
+                environ=environment, host="codex_cli"
+            )
+        self.assertTrue(result["saved"])
+        self.assertEqual((settings.provider, settings.model), ("grok", ""))
 
     def test_explicit_provider_and_model_override_host_default(self):
         environment = {
@@ -405,11 +434,28 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse", "Stop"})
         self.assertIn("PostToolUseFailure", claude)
         self.assertIn("${PLUGIN_ROOT}", codex_text)
-        self.assertIn("%PLUGIN_ROOT%", codex_text)
+        self.assertIn("$env:PLUGIN_ROOT", codex_text)
         self.assertIn("${CLAUDE_PLUGIN_ROOT}", claude_text)
         self.assertIn("${user_config.python_command}", claude_text)
         self.assertIn('"args"', claude_text)
         self.assertNotIn('"command": "bash ', claude_text)
+        post_tool_hook = codex["PostToolUse"][0]["hooks"][0]
+        self.assertNotIn("async", post_tool_hook)
+        self.assertGreaterEqual(post_tool_hook["timeout"], 90)
+
+    def test_codex_launchers_are_fail_open(self):
+        windows = (PLUGIN_ROOT / "hooks" / "run_python.cmd").read_text(
+            encoding="utf-8"
+        )
+        posix = (PLUGIN_ROOT / "hooks" / "run_python.sh").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("exit /b %errorlevel%", windows)
+        self.assertIn("PYTHONIOENCODING=utf-8", windows)
+        self.assertGreaterEqual(windows.count("exit /b 0"), 4)
+        self.assertIn("PYTHONIOENCODING=utf-8", posix)
+        self.assertNotIn('exec "$candidate" "$@"', posix)
 
     def test_readmes_lead_with_native_plugin_install(self):
         for name in ("README.md", "README.zh-TW.md"):

@@ -122,6 +122,8 @@ def _provider_cli(provider: str, environment: Mapping[str, str]) -> str | None:
         executable = "claude"
     elif provider in {"openai", "codex"}:
         executable = "codex"
+    elif provider == "grok":
+        executable = "grok"
     else:
         return None
     return shutil.which(executable, path=environment.get("PATH"))
@@ -404,6 +406,43 @@ def configure_local(
                 "provider": "ollama-local",
                 "model": selected_model,
                 "ollama_url": endpoint,
+            },
+        )
+    except OSError as exc:
+        result["error"] = f"cannot save reviewer config: {exc}"
+        return result
+    result["saved"] = True
+    return result
+
+
+def configure_grok(
+    model: str = "",
+    *,
+    environ: Mapping[str, str] | None = None,
+) -> dict:
+    environment = dict(os.environ if environ is None else environ)
+    path = reviewer_config_path(
+        RuntimePaths.resolve(environ=environment).data_dir
+    )
+    executable = _provider_cli("grok", environment)
+    result = {
+        "saved": False,
+        "path": str(path),
+        "provider": "grok",
+        "model": str(model or "").strip(),
+        "provider_cli": executable or "",
+        "error": "",
+    }
+    if not executable:
+        result["error"] = "grok CLI not found in PATH"
+        return result
+    try:
+        _atomic_json_write(
+            path,
+            {
+                "provider": "grok",
+                "model": result["model"],
+                "ollama_url": "",
             },
         )
     except OSError as exc:

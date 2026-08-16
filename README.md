@@ -66,9 +66,11 @@ Coding agent works normally
 | Tool failure | The fix may address only the surface symptom | Main agent |
 | Test failure | The repair may be taking a longer route around the problem | Main agent |
 | First change over ~80 lines | The task may be growing beyond its original scope | Main agent |
+| Repeated command/failure family, 8 meaningful events, or another ~80 changed lines | Local progress may not shorten the original acceptance criteria | Main agent and floating window |
+| Goal declares `complete` or `blocked` | Distinguish objective completion, a sub-result, and path exhaustion | Main agent and floating window |
 | End of turn | Check whether the work is actually complete | Main agent and the floating window |
 
-Mid-turn checks call the model only for the first three cases and may pause the main agent for up to about 15 seconds. End-of-turn checks run in the background and do not block the completed turn. Claude Code reports failures through `PostToolUseFailure`; the Codex adapter can infer structured non-zero exits and failure status when Codex delivers them in `PostToolUse`. The tested Windows 0.147.0 build did not emit that event for a non-zero Bash result, so immediate failure checks are best-effort there and Stop remains the fallback.
+Tool/test failures and the first large diff remain immediate checks and may pause the main agent for up to about 15 seconds. Codex long-goal strategy checks run in the background and inject on the next hook event; `complete`/`blocked` Goal transitions are checked immediately. Each reaction records its source event sequence and a `queued`, `injected`, `expired`, or `failed` delivery state, so the floating window does not confuse reviewer output with context the main model actually received. End-of-turn checks also run in the background. Claude Code reports failures through `PostToolUseFailure`; the Codex adapter can infer structured non-zero exits and failure status when Codex delivers them in `PostToolUse`. The tested Windows 0.147.0 build did not emit that event for a non-zero Bash result, so immediate failure checks are best-effort there and Stop remains the fallback.
 
 The main agent receives an end-of-turn nudge when you send your next message. The floating window reads both hosts' namespaced logs and is the direct user-visible channel.
 
@@ -135,6 +137,12 @@ Closing the window does not disable hooks.
 Ask the host to **“Configure Masters' Nudge for my local Ollama model `<exact-model-name>`.”** The bundled `setup-local` skill uses your model choice; it never installs Ollama, pulls a model, signs in, or recommends a model size.
 
 [Ollama must already be running with cloud features disabled](https://docs.ollama.com/faq) using `OLLAMA_NO_CLOUD=1` or `disable_ollama_cloud`, and the selected model must already exist locally. The setup refuses remote endpoints, redirects, cloud-enabled servers, explicit cloud model names, and models whose metadata names a remote host. Older Ollama builds without the cloud-status endpoint are rejected. It writes the shared setting to `~/.masters-nudge/data/reviewer.json`, so both Claude Code and Codex use it. Calls use Ollama's native [structured-output schema](https://docs.ollama.com/capabilities/structured-outputs).
+
+### Grok subscription reviewer
+
+If Grok CLI is installed and signed in, run `python masters_nudge_cli.py grok configure` to use its default model for both Claude Code and Codex, or add `--model <model-id>`. Every review is a single structured-output turn with web search, tools, memory, and subagents disabled. Bounded evidence still goes to xAI cloud; this is not local-only mode. Run `python masters_nudge_cli.py grok reset` to restore host defaults.
+
+Providers, models, and CLI harnesses have different token overhead, subscription limits, pricing, and rate limits. Masters’ Nudge does not decide which option is economical and does not assume a subscription means zero marginal cost. In one very short smoke on 2026-08-14, Grok CLI 1.0.3 using `grok-4.6-build` reported 12,717 input tokens, 774 output tokens, and `total_cost_usd: 0.030142`; most of that input was clearly not the tiny evidence packet and may belong to the Grok Build harness. This is one CLI-reported observation—not an invoice, fixed price, or future promise. Users should judge from their provider plan, trigger frequency, and observed usage.
 
 Source-install users can run the same setup directly:
 
@@ -271,8 +279,8 @@ Host-aware defaults remove the need for a second login: Claude Code uses Anthrop
 
 | Env var | Default | Effect |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`), `anthropic` (`claude -p`), or `ollama-local` |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol`; local: required | Model name for the chosen provider |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`), `anthropic` (`claude -p`), `grok`, or `ollama-local` |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol`; Grok: CLI default; local: required | Model name for the chosen provider |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback-only Ollama base URL; used only by `ollama-local` |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | Max wait for a mid-turn review (seconds) |
@@ -292,6 +300,8 @@ Environment variables override `~/.masters-nudge/data/reviewer.json`, which over
 
 First review after install opens a fixed 7-day shadow window: candidate skips are labeled only; every review still runs. First review on or after day seven writes `~/.masters-nudge/data/shadow-evaluation.md` and shows one notice. Below 300 calls → `insufficient_samples`. No silent extension; no automatic skip enablement.
 
+Telemetry stores only usage fields the selected provider actually reports and Masters’ Nudge can parse. CLIs may define cache, reasoning tokens, and estimated cost differently, so these records are not a normalized cross-provider price comparison.
+
 Each review appends content-free metadata to `~/.masters-nudge/data/review-telemetry.jsonl`, including host, turn, stage, primary lens, effective lens, specialist trigger, and route source. Reaction log entries keep `persona` as the effective lens and carry the same route metadata. Delete `shadow-evaluation.json`, `shadow-evaluation.md`, and `review-telemetry.jsonl` to start a fresh evaluation window.
 
 ## Privacy
@@ -305,7 +315,7 @@ With the default cloud providers, **conversation and tool-event data go to an ex
 5. Up to 3 prior short reactions in the session (reduces repetition)
 6. Review system prompt and optional persona file (instructions, not your project source as such)
 
-Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; switching provider mid-session can resend earlier reactions to the new provider as recent context. `ollama-local` accepts only loopback HTTP, disables client proxies and redirects, requires Ollama to report cloud disabled before every generation, and rejects remote model metadata. Any failure produces no nudge and never falls back to Claude or Codex.
+Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; `grok` uses the signed-in Grok CLI with web search and agent tools explicitly disabled, but still sends the payload to xAI. Switching provider mid-session can resend earlier reactions to the new provider as recent context. `ollama-local` accepts only loopback HTTP, disables client proxies and redirects, requires Ollama to report cloud disabled before every generation, and rejects remote model metadata. Any failure produces no nudge and never falls back to another provider.
 
 Reactions, task anchors, bounded tool journals, and the selected local model name are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted. Local-only mode cannot audit the operating system or a malicious process impersonating Ollama; the user remains responsible for the local runtime and model license. Provider retention/training terms change, so check current policy when using cloud mode.
 

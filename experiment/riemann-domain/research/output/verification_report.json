@@ -1,0 +1,76 @@
+{
+  "status": "pass",
+  "scope_warning": "Finite floating-point checks validate formulas only; they do not prove the Riemann hypothesis or exclude zeros outside the sampled points.",
+  "checks": [
+    {
+      "name": "theta modular identity",
+      "value": 4.440892098500626e-16,
+      "tolerance": 2e-13,
+      "passed": true
+    },
+    {
+      "name": "sampled K(u) positivity on 0 <= u <= 2",
+      "value": 2.040800535609828e-69,
+      "tolerance": 0.0,
+      "passed": true
+    },
+    {
+      "name": "theta/kernel Xi agreement",
+      "value": 6.270560613962238e-13,
+      "tolerance": 2e-10,
+      "passed": true
+    },
+    {
+      "name": "five finite zero residuals relative to t +/- 0.05",
+      "value": 7.665835873644905e-09,
+      "tolerance": 1e-08,
+      "passed": true
+    },
+    {
+      "name": "Xi(0) reference value",
+      "value": 5.551115123125783e-17,
+      "tolerance": 2e-12,
+      "passed": true
+    },
+    {
+      "name": "off-line polynomial functional symmetry",
+      "value": 1.2809491335957507e-14,
+      "tolerance": 2e-13,
+      "passed": true
+    },
+    {
+      "name": "off-line polynomial conjugation symmetry",
+      "value": 3.552713678800501e-15,
+      "tolerance": 2e-13,
+      "passed": true
+    },
+    {
+      "name": "sampled Xi(ib) positivity",
+      "value": 0.4972356502559241,
+      "tolerance": 0.0,
+      "passed": true
+    }
+  ],
+  "zero_residuals": {
+    "14.134725141734693": {
+      "absolute": 2.0970879354030735e-18,
+      "relative_to_neighbors": 2.94688253140991e-14
+    },
+    "21.022039638771556": {
+      "absolute": 4.996003610813205e-18,
+      "relative_to_neighbors": 5.421762179318461e-12
+    },
+    "25.010857580145689": {
+      "absolute": 1.5728159515523052e-18,
+      "relative_to_neighbors": 2.4149933091402377e-11
+    },
+    "30.424876125859512": {
+      "absolute": 8.943463253924874e-19,
+      "relative_to_neighbors": 7.073167177354554e-10
+    },
+    "32.935061587739192": {
+      "absolute": 1.6036554800141151e-18,
+      "relative_to_neighbors": 7.665835873644905e-09
+    }
+  }
+}

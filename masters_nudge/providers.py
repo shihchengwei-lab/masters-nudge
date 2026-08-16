@@ -72,15 +72,26 @@ def parse_usage(stdout: str) -> dict[str, int]:
         "total_tokens",
     }
     best: dict[str, int] = {}
+    aliases = {
+        "inputTokens": "input_tokens",
+        "outputTokens": "output_tokens",
+        "totalTokens": "total_tokens",
+        "cacheReadInputTokens": "cached_input_tokens",
+        "cacheCreationInputTokens": "cache_write_input_tokens",
+        "cache_read_input_tokens": "cached_input_tokens",
+        "cache_creation_input_tokens": "cache_write_input_tokens",
+        "reasoningTokens": "reasoning_output_tokens",
+        "reasoning_tokens": "reasoning_output_tokens",
+    }
 
     def visit(value) -> None:
         nonlocal best
         if isinstance(value, dict):
-            candidate = {
-                key: int(item)
-                for key, item in value.items()
-                if key in usage_fields and isinstance(item, (int, float))
-            }
+            candidate = {}
+            for key, item in value.items():
+                canonical = aliases.get(key, key)
+                if canonical in usage_fields and isinstance(item, (int, float)):
+                    candidate[canonical] = int(item)
             if len(candidate) > len(best):
                 best = candidate
             for item in value.values():
@@ -89,7 +100,12 @@ def parse_usage(stdout: str) -> dict[str, int]:
             for item in value:
                 visit(item)
 
-    for line in str(stdout or "").splitlines():
+    raw = str(stdout or "")
+    try:
+        visit(json.loads(raw))
+    except (TypeError, ValueError):
+        pass
+    for line in raw.splitlines():
         try:
             visit(json.loads(line))
         except (TypeError, ValueError):
@@ -129,8 +145,12 @@ def call_claude_result(
                 user_prompt,
                 "--model",
                 model,
-                "--append-system-prompt-file",
+                "--system-prompt-file",
                 handle.name,
+                "--tools",
+                "",
+                "--setting-sources",
+                "",
                 "--output-format",
                 "json",
                 "--json-schema",
@@ -153,10 +173,10 @@ def call_claude_result(
         return parsed
     except subprocess.TimeoutExpired:
         log_error("claude CLI timeout")
-        return call_result()
+        return call_result(error_kind="timeout")
     except FileNotFoundError:
         log_error("claude CLI not found in PATH")
-        return call_result()
+        return call_result(error_kind="not_found")
     finally:
         try:
             os.unlink(handle.name)
@@ -177,6 +197,132 @@ def resolve_codex_bin() -> str | None:
         "/usr/bin/codex",
     ]
     return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
+
+
+def resolve_grok_bin() -> str | None:
+    direct = shutil.which("grok")
+    if direct and os.path.exists(direct):
+        return direct
+    candidates = [
+        os.path.expanduser(r"~\.grok\bin\grok.exe"),
+        os.path.expanduser(r"~\.grok\bin\grok"),
+        "/usr/local/bin/grok",
+        "/usr/bin/grok",
+    ]
+    return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
+
+
+def parse_grok_reaction_result(stdout: str) -> dict:
+    """Extract schema output from direct or Grok headless JSON envelopes."""
+    direct = parse_reaction_result(stdout)
+    if direct.get("status") != "error":
+        return direct
+    try:
+        outer = json.loads(str(stdout or ""))
+    except (TypeError, ValueError):
+        return call_result()
+    candidates = []
+    if isinstance(outer, dict):
+        for key in (
+            "structured_output",
+            "structuredOutput",
+            "result",
+            "output",
+            "response",
+            "text",
+        ):
+            if key in outer:
+                candidates.append(outer[key])
+    for value in candidates:
+        if isinstance(value, str):
+            parsed = parse_reaction_result(value)
+        else:
+            try:
+                parsed = parse_reaction_result(json.dumps(value, ensure_ascii=False))
+            except (TypeError, ValueError):
+                continue
+        if parsed.get("status") != "error":
+            return parsed
+    return call_result()
+
+
+def call_grok_result(
+    system_prompt: str,
+    transcript_text: str,
+    model: str,
+    *,
+    schema_path: Path,
+    timeout_sec: int,
+    capture_raw: bool = False,
+    log_error: Logger = _noop,
+    grok_bin_resolver: Callable[[], str | None] = resolve_grok_bin,
+) -> dict:
+    grok_bin = grok_bin_resolver()
+    if not grok_bin:
+        log_error("grok CLI not found (checked PATH + ~/.grok/bin)")
+        return call_result(error_kind="not_found")
+    schema_json = load_output_schema_json(schema_path, log_error)
+    if not schema_json:
+        return call_result()
+    prompt = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".txt", delete=False, encoding="utf-8"
+    )
+    prompt.write(
+        "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。\n\n"
+        f"[transcript]\n{transcript_text}\n[end transcript]\n"
+    )
+    prompt.close()
+    try:
+        command = [
+            grok_bin,
+            "--prompt-file",
+            prompt.name,
+            "--system-prompt-override",
+            system_prompt,
+            "--json-schema",
+            schema_json,
+            "--output-format",
+            "json",
+            "--disable-web-search",
+            "--tools",
+            "",
+            "--no-memory",
+            "--no-subagents",
+            "--max-turns",
+            "1",
+            "--permission-mode",
+            "dontAsk",
+            "--verbatim",
+        ]
+        if str(model or "").strip():
+            command.extend(["--model", str(model).strip()])
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=reviewer_environment(),
+            timeout=timeout_sec,
+        )
+        if result.returncode != 0:
+            log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
+            return call_result(usage=parse_usage(result.stdout))
+        parsed = parse_grok_reaction_result(result.stdout)
+        parsed["usage"] = parse_usage(result.stdout)
+        if capture_raw:
+            parsed["raw_output"] = result.stdout
+        return parsed
+    except subprocess.TimeoutExpired:
+        log_error("grok CLI timeout")
+        return call_result(error_kind="timeout")
+    except FileNotFoundError:
+        log_error(f"grok CLI not executable: {grok_bin}")
+        return call_result(error_kind="not_found")
+    finally:
+        try:
+            os.unlink(prompt.name)
+        except OSError:
+            pass
 
 
 def call_codex_result(
@@ -291,6 +437,16 @@ def dispatch_call_result(
         )
     if provider == "anthropic":
         return call_claude_result(
+            system_prompt,
+            transcript_text,
+            model,
+            schema_path=schema_path,
+            timeout_sec=timeout_sec,
+            capture_raw=capture_raw,
+            log_error=log_error,
+        )
+    if provider == "grok":
+        return call_grok_result(
             system_prompt,
             transcript_text,
             model,

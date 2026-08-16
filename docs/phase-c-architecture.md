@@ -68,6 +68,12 @@ codex_cli--<session>.log
 reviewer.json
 ```
 
+Codex delivery state is a receipt ledger, not only a last-seen cursor. Reactions
+are generated as `queued`; successful hook stdout records `injected` with the
+receiving event sequence and native event name. Failed writes remain retryable,
+while stale reactions become `expired` and stay visible as history without being
+inserted into a much later context.
+
 The floating window and Claude injection path can read pre-Phase-C
 `~/.claude/buddy/` logs/config. They do not move, rewrite, or delete them.
 `BUDDY_*` variables remain aliases; `MASTERS_NUDGE_*` is preferred.

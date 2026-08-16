@@ -44,6 +44,26 @@ MEASUREMENT_RE = re.compile(
     r"rps|qps|ops/s|req/s)\b)|(?:快|慢|降低|提升|增加|減少)\s*\d+(?:\.\d+)?\s*%",
     re.IGNORECASE,
 )
+BECK_WORKFLOW_RE = re.compile(
+    r"repeated-command-family|repeated-failure-family|feedback loop|"
+    r"重複(?:測試|驗證|命令)|沒有新回饋|回饋迴路",
+    re.IGNORECASE,
+)
+JEFF_GOAL_RE = re.compile(
+    r"local proxy|acceptance criteria|goal alignment|局部(?:代理|指標|成果)|"
+    r"驗收條件|使用者結果|目標對齊",
+    re.IGNORECASE,
+)
+LINUS_COMPLETION_RE = re.compile(
+    r"goal-(?:complete|blocked)|goal-transition|completion boundary|"
+    r"交付邊界|完成依據|路徑已耗盡",
+    re.IGNORECASE,
+)
+FOWLER_GROWTH_RE = re.compile(
+    r"diff-growth|compensation spread|knowledge boundary|變動擴散|"
+    r"補償邏輯|知識邊界",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -68,6 +88,14 @@ def _specialist_trigger(evidence: str) -> tuple[str, str]:
         return "lamport", "state-ordering-evidence"
     if carmack:
         return "carmack", "measured-performance-evidence"
+    if LINUS_COMPLETION_RE.search(text):
+        return "linus", "completion-boundary-evidence"
+    if JEFF_GOAL_RE.search(text):
+        return "jeff", "goal-alignment-evidence"
+    if FOWLER_GROWTH_RE.search(text):
+        return "fowler", "knowledge-boundary-evidence"
+    if BECK_WORKFLOW_RE.search(text):
+        return "beck", "feedback-loop-evidence"
     return "", ""
 
 

@@ -26,6 +26,21 @@ CHECKPOINT_PROMPT = """
 不要寫成批准、阻擋或完成判定。
 """
 
+STRATEGY_PROMPT = """
+
+# 長流程策略 checkpoint
+
+檢視近期 workflow 是否實際縮短任務驗收條件，而非只讓局部 proxy 更漂亮。
+若有漂移，只指出一個最值得改變後續工作方向的觀察；證據不足時不反應。
+"""
+
+GOAL_TRANSITION_PROMPT = """
+
+# Goal 轉場 checkpoint
+
+檢查 Goal 的狀態變更究竟代表：原始 objective 已達成、僅完成子成果、
+路徑已耗盡，或完成依據不清。只在狀態與證據不一致時給一句 nudge。
+"""
 
 ProviderDispatch = Callable[..., dict]
 
@@ -59,8 +74,12 @@ class ReviewCore:
         request: ReviewRequest,
         *,
         persist_reaction: bool,
+        mark_delivered: bool = False,
         timeout_sec: int | None = None,
     ) -> ReviewOutcome:
+        provider = self.settings.provider
+        model = self.settings.model
+        configuration_source = self.settings.configuration_source
         route = lens_router.resolve_review_route(
             self._route_dir(), request.source_packet
         )
@@ -75,11 +94,15 @@ class ReviewCore:
             return ReviewOutcome(
                 "error",
                 effective_lens=route.effective_lens,
-                provider=self.settings.provider,
-                model=self.settings.model,
+                provider=provider,
+                model=model,
             )
         if request.kind == "checkpoint":
             system_prompt += CHECKPOINT_PROMPT
+        elif request.kind == "strategy":
+            system_prompt += STRATEGY_PROMPT
+        elif request.kind == "goal_transition":
+            system_prompt += GOAL_TRANSITION_PROMPT
 
         recent = storage.read_recent_reactions_compatible(
             self.settings.paths.data_dir,
@@ -94,14 +117,15 @@ class ReviewCore:
         parts.append(request.source_packet)
         review_input = "\n\n".join(parts)
 
+        effective_timeout = timeout_sec or self.settings.timeout_sec
         started = time.perf_counter()
         result = self.dispatch(
-            self.settings.provider,
+            provider,
             system_prompt,
             review_input,
-            self.settings.model,
+            model,
             schema_path=self.schema_path,
-            timeout_sec=timeout_sec or self.settings.timeout_sec,
+            timeout_sec=effective_timeout,
             ollama_url=self.settings.ollama_url,
             log_error=self.log_error,
         )
@@ -114,15 +138,55 @@ class ReviewCore:
             status = "error"
         if status == "finding" and not finding:
             status = "error"
+        reaction_ts = ""
         if persist_reaction and status == "finding":
+            entry = storage.append_reaction(
+                self.settings.paths.data_dir,
+                request.session,
+                provider=provider,
+                model=model,
+                reaction=finding,
+                route_metadata={
+                    **route_metadata(route),
+                    "review_trigger": request.trigger or request.reason,
+                    **(
+                        {
+                            "completion_basis": "unclear"
+                        }
+                        if request.trigger in {"goal-complete", "goal-blocked"}
+                        else {}
+                    ),
+                },
+                reason=request.reason,
+                source_event_seq=request.source_event_seq,
+            )
+            reaction_ts = str((entry or {}).get("ts") or "")
+            if mark_delivered and entry:
+                storage.mark_delivered(
+                    self.settings.paths.data_dir,
+                    request.session,
+                    str(entry.get("ts") or ""),
+                )
+        elif persist_reaction and status == "error":
+            error_kind = str(result.get("error_kind") or "error")
+            status_text = (
+                f"Reviewer 逾時（{effective_timeout} 秒）；本輪沒有 Nudge。"
+                if error_kind == "timeout"
+                else "Reviewer 呼叫失敗；本輪沒有 Nudge。"
+            )
             storage.append_reaction(
                 self.settings.paths.data_dir,
                 request.session,
-                provider=self.settings.provider,
-                model=self.settings.model,
-                reaction=finding,
-                route_metadata=route_metadata(route),
+                provider=provider,
+                model=model,
+                reaction=status_text,
+                route_metadata={
+                    **route_metadata(route),
+                    "review_trigger": request.trigger or request.reason,
+                },
+                kind="review_status",
                 reason=request.reason,
+                source_event_seq=request.source_event_seq,
             )
 
         try:
@@ -133,8 +197,9 @@ class ReviewCore:
                 "session_id": request.session.session_id,
                 "kind": request.kind,
                 "reason": request.reason,
-                "provider": self.settings.provider,
-                "model": self.settings.model,
+                "provider": provider,
+                "model": model,
+                "configuration_source": configuration_source,
                 "persona": route.effective_lens,
                 **route_metadata(route),
                 "status": status,
@@ -158,8 +223,9 @@ class ReviewCore:
             status,  # type: ignore[arg-type]
             finding=finding if status == "finding" else "",
             effective_lens=route.effective_lens,
-            provider=self.settings.provider,
-            model=self.settings.model,
+            provider=provider,
+            model=model,
             latency_ms=latency_ms,
             usage=(result.get("usage") or {}) if isinstance(result, dict) else {},
+            reaction_ts=reaction_ts,
         )

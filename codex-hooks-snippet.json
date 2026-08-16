@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "python3 ~/.masters-nudge/runtime/hook_entry.py --host codex_cli",
-            "commandWindows": "py -3 \"%USERPROFILE%\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli",
+            "commandWindows": "py -3 \"$env:USERPROFILE\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli",
             "timeout": 5,
             "additionalContextLimit": 256
           }
@@ -21,8 +21,8 @@
           {
             "type": "command",
             "command": "python3 ~/.masters-nudge/runtime/hook_entry.py --host codex_cli",
-            "commandWindows": "py -3 \"%USERPROFILE%\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli",
-            "timeout": 20,
+            "commandWindows": "py -3 \"$env:USERPROFILE\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli",
+            "timeout": 90,
             "additionalContextLimit": 256
           }
         ]
@@ -34,7 +34,7 @@
           {
             "type": "command",
             "command": "python3 ~/.masters-nudge/runtime/hook_entry.py --host codex_cli --detach-stop",
-            "commandWindows": "py -3 \"%USERPROFILE%\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli --detach-stop",
+            "commandWindows": "py -3 \"$env:USERPROFILE\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli --detach-stop",
             "timeout": 5
           }
         ]

@@ -29,6 +29,7 @@ from tkinter import ttk
 from pathlib import Path
 
 import persona_config
+from masters_nudge.contracts import find_git_root
 from masters_nudge.runtime import RuntimeSettings
 
 try:
@@ -104,8 +105,6 @@ SELECTOR_STAGES = {
     persona_config.stage_label(key): key
     for key in persona_config.STAGE_LENSES
 }
-
-
 def stage_selection_label(selection: persona_config.StageSelection) -> str:
     """Describe lifecycle, forced specialist, and legacy selections accurately."""
     if selection.stage in persona_config.STAGE_LENSES:
@@ -201,6 +200,35 @@ def lens_background(persona: str | None) -> str:
     return LENS_BACKGROUNDS.get(key, BG)
 
 
+def reaction_log_workspace(path: Path) -> str:
+    """Return the workspace declared by a reaction log's newest valid entry."""
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    for line in reversed(lines):
+        try:
+            entry = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(entry, dict):
+            workspace = normalize_workspace(str(entry.get("workspace") or ""))
+            if workspace:
+                return workspace
+    return ""
+
+
+def normalize_workspace(workspace: str | Path) -> str:
+    raw = str(workspace or "").strip()
+    if not raw:
+        return ""
+    try:
+        resolved = str(Path(raw).expanduser().resolve())
+    except OSError:
+        resolved = str(Path(raw).expanduser().absolute())
+    return os.path.normcase(resolved)
+
+
 class BuddyWindow:
     def __init__(self, root: tk.Tk):
         self.root = root
@@ -228,11 +256,15 @@ class BuddyWindow:
         self.current_log: Path | None = None
         self.last_offset = 0
         self.last_reaction = ""
+        self.last_reaction_ts = ""
         config_dir = BUDDY_DIR
         if not persona_config.config_path(config_dir).exists() and persona_config.config_path(
             LEGACY_BUDDY_DIR
         ).exists():
             config_dir = LEGACY_BUDDY_DIR
+        cwd = str(Path.cwd())
+        repo_root = find_git_root(cwd)
+        self.workspace = normalize_workspace(repo_root or cwd)
         self.stage_selection = persona_config.resolve_stage(config_dir)
 
         # Load sprite
@@ -444,11 +476,10 @@ class BuddyWindow:
             active = self._find_active_log()
             if active and active != self.current_log:
                 self.current_log = active
-                # Jump to end so we only show NEW reactions
-                try:
-                    self.last_offset = active.stat().st_size
-                except Exception:
-                    self.last_offset = 0
+                # A new session log is often created with its first reaction
+                # already written. Read it from the start instead of skipping
+                # the very finding that caused this log to become active.
+                self.last_offset = 0
 
             if self.current_log:
                 self._read_new()
@@ -466,6 +497,7 @@ class BuddyWindow:
             if directory.exists()
             for path in directory.glob("*.log")
             if path.name not in {"error.log", "buddy-error.log"}
+            and reaction_log_workspace(path) == self.workspace
         ]
         if not logs:
             return None
@@ -490,6 +522,20 @@ class BuddyWindow:
                 continue
             try:
                 entry = json.loads(line)
+                if entry.get("kind") == "delivery_receipt":
+                    if str(entry.get("reaction_ts") or "") == self.last_reaction_ts:
+                        status = str(entry.get("delivery_status") or "")
+                        labels = {
+                            "injected": "已注入",
+                            "expired": "已過期（未注入）",
+                            "failed": "注入失敗，等待重試",
+                        }
+                        ts = str(entry.get("delivered_at") or entry.get("ts") or "")
+                        short_ts = ts[11:19] if len(ts) > 19 else ts
+                        self.ts_label.config(
+                            text=f"{short_ts} · {labels.get(status, status)}"
+                        )
+                    continue
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
                 persona = (
@@ -499,6 +545,7 @@ class BuddyWindow:
                 )
                 if reaction:
                     self.last_reaction = reaction
+                    self.last_reaction_ts = str(ts or "")
                     self._set_lens_badge(persona)
                     self.frame_idx = -1
                     self.review_frames_remaining = len(self.review_frames)
@@ -506,7 +553,9 @@ class BuddyWindow:
                     self._resize_for_reaction(reaction)
                     if ts:
                         short_ts = ts[11:19] if len(ts) > 19 else ts
-                        self.ts_label.config(text=short_ts)
+                        delivery = str(entry.get("delivery_status") or "")
+                        suffix = " · 待注入" if delivery == "queued" else ""
+                        self.ts_label.config(text=f"{short_ts}{suffix}")
             except Exception:
                 continue
 

@@ -66,9 +66,11 @@ Coding agent 正常工作
 | 工具失敗 | 可能只處理了表面症狀 | 主 agent |
 | 測試失敗 | 修法可能開始繞遠路 | 主 agent |
 | 變更首次超過約 80 行 | 工作範圍可能正在變大 | 主 agent |
+| 長任務重複同類命令／失敗，累積 8 個有效事件，或再增加約 80 行 | 局部成果可能沒有縮短原始驗收條件 | 主 agent、浮動視窗 |
+| Goal 宣告 complete／blocked | 分清達成 objective、子成果與路徑耗盡 | 主 agent、浮動視窗 |
 | 一輪工作結束 | 確認結果是否真的完成 | 主 agent、浮動視窗 |
 
-途中檢查只在命中前三種情況時呼叫模型，可能讓主 agent 多等最多約 15 秒。回合末檢查在背景執行，不會擋住剛完成的工作。Claude Code 以 `PostToolUseFailure` 回報失敗；Codex adapter 會在收到 `PostToolUse` 時辨識結構化的非零 exit code 與 failure status。但實測 Windows 0.147.0 不會為非零 Bash 結果發出該事件，因此該版的即時失敗檢查是 best-effort，並以 Stop review 兜底。
+工具／測試失敗與首次大 diff 仍即時檢查，可能讓主 agent 多等最多約 15 秒。Codex 的長任務策略檢查在背景執行，於下一個 hook 事件注入；Goal complete／blocked 則在狀態轉換當下檢查。每則 log 都記錄來源事件序號與 `queued`、`injected`、`expired` 或 `failed` 投遞狀態，浮動視窗不再把 reviewer 已產生誤寫成主模型已收到。回合末檢查也在背景執行。Claude Code 以 `PostToolUseFailure` 回報失敗；Codex adapter 會在收到 `PostToolUse` 時辨識結構化的非零 exit code 與 failure status。但實測 Windows 0.147.0 不會為非零 Bash 結果發出該事件，因此該版的即時失敗檢查是 best-effort，並以 Stop review 兜底。
 
 回合末短評會在你下次送出訊息時交給主 agent。浮動視窗會讀取兩種 host 的 namespaced log，是使用者直接看短評的管道。
 
@@ -135,6 +137,12 @@ python -m pip install --user Pillow
 直接請 host **「用我的本機 Ollama 模型 `<精確模型名>` 設定 Masters' Nudge」**。內建 `setup-local` skill 只使用你選定的模型，不會安裝 Ollama、pull 模型、登入或推薦模型大小。
 
 [Ollama 必須已關閉 cloud 功能](https://docs.ollama.com/faq)，使用 `OLLAMA_NO_CLOUD=1` 或 `disable_ollama_cloud`，選定模型也必須已存在本機。設定會拒絕遠端 endpoint、redirect、仍開啟 cloud 的 server、明確的 cloud 模型名，以及 metadata 指向遠端 host 的模型；不支援 cloud-status endpoint 的舊版 Ollama 也會被拒絕。設定寫入 `~/.masters-nudge/data/reviewer.json`，Claude Code 與 Codex 共用；呼叫會使用 Ollama 原生的 [structured-output schema](https://docs.ollama.com/capabilities/structured-outputs)。
+
+### Grok 訂閱 reviewer
+
+若已安裝並登入 Grok CLI，可執行 `python masters_nudge_cli.py grok configure`，讓 Claude Code 與 Codex 共用 Grok CLI 的預設模型；也可加上 `--model <模型名>`。Grok 每次只執行一輪 structured-output 呼叫，停用 web search、tools、memory 與 subagents。這會將 bounded evidence 傳到 xAI 雲端，不是 local-only mode。用 `python masters_nudge_cli.py grok reset` 回到各 host 的預設 reviewer。
+
+不同 provider、模型與 CLI harness 的 token overhead、訂閱限制、計價方式和速率限制都不同，Masters’ Nudge 不替使用者判定哪個方案划算，也不保證訂閱等於零邊際成本。2026-08-14 的一次極短 smoke 中，Grok CLI 1.0.3 使用 `grok-4.6-build` 回報 12,717 input tokens、774 output tokens，以及 `total_cost_usd: 0.030142`；大部分 input 顯然不是短 evidence 本身，可能來自 Grok Build harness。這只是 CLI 回報的單次觀察值，不是實際帳單、固定價格或未來承諾。請依自己的 provider 方案、觸發頻率與 usage 記錄判斷。
 
 Source 安裝可直接執行：
 
@@ -270,8 +278,8 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 
 | 環境變數 | 預設 | 作用 |
 |---|---|---|
-| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）、`anthropic`（`claude -p`）或 `ollama-local` |
-| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol`；本機：必填 | 傳給選定 provider 的模型名 |
+| `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）、`anthropic`（`claude -p`）、`grok` 或 `ollama-local` |
+| `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol`；Grok：CLI 預設；本機：必填 | 傳給選定 provider 的模型名 |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | 僅供 `ollama-local` 使用的 loopback Ollama base URL |
 | `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `15` | 途中審查同步等待上限（秒） |
@@ -291,6 +299,8 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 
 安裝後首次審查起算固定 7 天：可能省成本的略過只標註與量測，實際仍每次呼叫模型。第 7 天後的下一次審查寫入 `~/.masters-nudge/data/shadow-evaluation.md` 並顯示一次通知；不足 300 次標 `insufficient_samples`，不自動延長，也不自動啟用略過。
 
+Telemetry 只保存 provider 實際回報且能解析的 token usage；不同 CLI 對 cache、reasoning token 與估計成本的定義可能不同，不能直接跨 provider 當成同口徑價格比較。
+
 每次審查會把不含對話內容的 metadata 追加到 `~/.masters-nudge/data/review-telemetry.jsonl`，包括 host、turn、階段、primary lens、effective lens、專科 trigger 與路由來源。反應 log 的 `persona` 代表 effective lens，並帶有同一套路由 metadata。若要重開評估，刪除 `shadow-evaluation.json`、`shadow-evaluation.md`、`review-telemetry.jsonl`。
 
 ## 隱私
@@ -304,7 +314,7 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 5. 本 session 最近最多 3 則短評（避免重複）
 6. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
 
-未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；中途切換 provider 時，先前短評可能作為「最近幾則」送進新 provider。`ollama-local` 只接受 loopback HTTP，關閉 client proxy 與 redirect，每次生成前都要求 Ollama 回報 cloud 已停用，並拒絕 remote model metadata。任何失敗都不產生 Nudge，也不會回退 Claude 或 Codex。
+未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；`grok` 使用已登入的 Grok CLI 並明確停用其 web search 與 agent tools，但 payload 仍送往 xAI。中途切換 provider 時，先前短評可能作為「最近幾則」送進新 provider。`ollama-local` 只接受 loopback HTTP，關閉 client proxy 與 redirect，每次生成前都要求 Ollama 回報 cloud 已停用，並拒絕 remote model metadata。任何失敗都不產生 Nudge，也不會回退其他 provider。
 
 反應、任務錨點、bounded tool journal 與本機模型名會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。Local-only mode 無法稽核作業系統或冒充 Ollama 的惡意本機程序；本機 runtime 與模型授權仍由使用者負責。使用雲端 mode 時，廠商保留／訓練政策請查現行條款。
 

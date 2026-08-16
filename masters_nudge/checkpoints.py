@@ -36,6 +36,10 @@ TEST_COMMAND_RE = re.compile(
     r")(?:\s|$)",
     re.IGNORECASE,
 )
+GOAL_TOOLS = {"create_goal", "update_goal"}
+MEANINGFUL_TOOL_RE = re.compile(
+    r"(?:apply_patch|write|edit|test|verify|benchmark|build|plan|goal)", re.IGNORECASE
+)
 
 
 def compact_json(value: Any) -> str:
@@ -129,6 +133,92 @@ def _command(event: ToolCompleted) -> str:
     if isinstance(value, dict):
         return str(value.get("command") or value.get("cmd") or "")
     return str(value or "")
+
+
+def command_family(event: ToolCompleted) -> str:
+    """Return a stable, low-cardinality family for repetition detection."""
+    command = _command(event).strip()
+    if not command:
+        return event.tool_name.lower() if MEANINGFUL_TOOL_RE.search(event.tool_name) else ""
+    words = re.findall(r"[A-Za-z0-9_.-]+", command.lower())
+    if not words:
+        return event.tool_name.lower()
+    launchers = {"python", "python3", "py", "node", "npx", "npm", "pnpm", "yarn"}
+    width = 3 if words[0] in launchers else 2
+    return " ".join(words[:width])
+
+
+def goal_transition(event: ToolCompleted) -> tuple[str, str]:
+    tool = event.tool_name.lower().split("__")[-1]
+    if tool not in GOAL_TOOLS or not isinstance(event.tool_input, dict):
+        return "", ""
+    if tool == "create_goal":
+        return "created", str(event.tool_input.get("objective") or "")
+    status = str(event.tool_input.get("status") or "").lower()
+    return (status if status in {"complete", "blocked"} else ""), ""
+
+
+def classify_strategy(
+    progress: dict[str, Any],
+    *,
+    changed_line_count: int | None,
+) -> dict[str, str] | None:
+    recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
+    event_seq = int(progress.get("event_seq") or 0)
+    last_seq = int(progress.get("last_strategy_event_seq") or 0)
+    since = [item for item in recent if int(item.get("event_seq") or 0) > last_seq]
+    if not since:
+        return None
+    latest_transition = str(since[-1].get("goal_transition") or "")
+    if latest_transition in {"complete", "blocked"}:
+        reason = "goal-transition"
+        trigger = f"goal-{latest_transition}"
+    else:
+        families = [str(item.get("command_family") or "") for item in since]
+        repeated = next(
+            (family for family in reversed(families) if family and families.count(family) >= 3),
+            "",
+        )
+        failures = [item for item in since if item.get("failed")]
+        baseline = int(progress.get("changed_lines_at_strategy") or 0)
+        diff_growth = (
+            changed_line_count is not None
+            and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
+        )
+        meaningful = sum(bool(item.get("meaningful")) for item in since)
+        if repeated:
+            reason, trigger = "strategy-review", "repeated-command-family"
+        elif len(failures) >= 2:
+            reason, trigger = "strategy-review", "repeated-failure-family"
+        elif diff_growth:
+            reason, trigger = "strategy-review", "diff-growth"
+        elif meaningful >= 8:
+            reason, trigger = "strategy-review", "meaningful-event-budget"
+        else:
+            return None
+    lines = [
+        f"reason: {reason}",
+        f"trigger: {trigger}",
+        f"event_seq: {event_seq}",
+    ]
+    objective = str(progress.get("goal_objective") or "")
+    if objective:
+        lines.append(f"goal objective: {objective}")
+    lines.append("recent workflow:")
+    for item in since[-8:]:
+        summary = str(item.get("command_family") or item.get("tool") or "tool")
+        flags = []
+        if item.get("failed"):
+            flags.append("failed")
+        if item.get("goal_transition"):
+            flags.append(f"goal={item['goal_transition']}")
+        lines.append(f"- #{item.get('event_seq')} {summary} {' '.join(flags)}".rstrip())
+    return {
+        "reason": reason,
+        "trigger": trigger,
+        "context": "\n".join(lines),
+        "fingerprint": f"{reason}-{trigger}-{event_seq}",
+    }
 
 
 def classify_tool(

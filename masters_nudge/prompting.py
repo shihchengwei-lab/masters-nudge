@@ -29,11 +29,12 @@ def build_system_prompt(
         return ""
 
     route = route or lens_router.resolve_review_route(data_dir)
+    personas = persona_config.LENS_PERSONAS
     persona = route.effective_lens
     if persona == "general":
         return base_prompt
-    if persona not in persona_config.LENS_PERSONAS:
-        supported = ", ".join(persona_config.LENS_PERSONAS)
+    if persona not in personas:
+        supported = ", ".join(personas)
         logger(f"unknown persona: {persona!r}; supported: {supported}")
         return ""
 
@@ -44,21 +45,26 @@ def build_system_prompt(
         logger(f"persona prompt read failed ({persona}): {exc}")
         return ""
 
-    persona_header = (
-        "# 工作流觀察鏡頭\n\n"
-        f"這一輪借用 {persona_config.LENS_PERSONAS[persona]} 的核心概念、"
+    heading = "工作流觀察鏡頭"
+    first_paragraph = (
+        f"這一輪借用 {personas[persona]} 的核心概念、"
         "觀察方法與關注面向，決定如何整理證據、從哪裡看這段工作流。\n"
+    )
+    final_line = "不是扮演或模仿人物，也不是增加一份 code review。\n"
+    persona_header = "".join((
+        f"# {heading}\n\n",
+        first_paragraph,
         "下方場景中的小動作只用來啟動思考，不表示人物真的如此行動，"
-        "也不能補足 packet 缺少的證據。輸出仍只談工作，不提人物或場景。\n"
+        "也不能補足 packet 缺少的證據。輸出仍只談工作，不提人物或場景。\n",
         "觀察場景不是裝飾：先完整執行它指定的證據操作。若 packet 直接支持"
         "該場景的專屬張力，優先由它形成 Nudge，不要改談相鄰鏡頭也能提出的"
-        "泛用問題；只有共同的踩煞車規則可以優先。\n"
+        "泛用問題；只有共同的踩煞車規則可以優先。\n",
         "場景只決定選哪一件事，不提供輸出素材；不要重述人物、動作或推理過程，"
-        "也不要因此增加 Nudge 字數。\n"
-        "不是扮演或模仿人物，也不是增加一份 code review。\n"
+        "也不要因此增加 Nudge 字數。\n",
+        final_line,
         "共同的證據邊界、可靠沉默、單一 Nudge 與字數規則仍然優先；"
-        "其餘由下方鏡頭決定。"
-    )
+        "其餘由下方鏡頭決定。",
+    ))
     return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
 
 
@@ -135,7 +141,10 @@ def _close_reaction(text: str, max_chars: int) -> str:
     return f"{compacted}{_terminal_punctuation(compacted)}"
 
 
-def sanitize_reaction(raw: str, max_chars: int = MAX_REACTION_CHARS) -> str:
+def sanitize_reaction(
+    raw: str,
+    max_chars: int = MAX_REACTION_CHARS,
+) -> str:
     text = str(raw or "").strip()
     if not text:
         return ""
@@ -151,6 +160,7 @@ def sanitize_reaction(raw: str, max_chars: int = MAX_REACTION_CHARS) -> str:
 
 def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
     return {
+        "domain": "software",
         "stage": route.stage,
         "primary_lens": route.primary_lens,
         "effective_lens": route.effective_lens,

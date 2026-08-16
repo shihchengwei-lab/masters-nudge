@@ -17,6 +17,8 @@ from .contracts import SessionRef, safe_identifier
 
 TURN_JOURNAL_MAX_CHARS = 8000
 TOOL_RECORD_MAX_CHARS = 3000
+PROGRESS_EVENT_LIMIT = 12
+PENDING_MAX_EVENT_AGE = 6
 
 
 def session_stem(session: SessionRef) -> str:
@@ -147,17 +149,19 @@ def append_reaction(
     route_metadata: dict[str, str],
     kind: str = "review",
     reason: str = "stop",
+    source_event_seq: int = 0,
 ) -> dict[str, Any]:
     if not reaction.strip():
         return {}
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
     entry: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "ts": datetime.now().isoformat(),
         "host": session.host,
         "session_id": session.session_id,
         "turn_id": session.turn_id,
+        "workspace": _normalized_workspace(session.repo_root or session.cwd),
         "kind": kind,
         "reason": reason,
         "provider": provider,
@@ -165,10 +169,22 @@ def append_reaction(
         "persona": route_metadata.get("effective_lens", "general"),
         **route_metadata,
         "reaction": reaction,
+        "source_event_seq": int(source_event_seq or 0),
+        "generated_at": datetime.now().isoformat(),
+        "delivery_status": "queued",
+        "delivered_at": "",
+        "delivered_via": "",
     }
     with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
     return entry
+
+
+def _normalized_workspace(value: str) -> str:
+    try:
+        return os.path.normcase(str(Path(value).expanduser().resolve())) if value else ""
+    except OSError:
+        return os.path.normcase(str(Path(value).expanduser().absolute())) if value else ""
 
 
 def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str, Any]]:
@@ -183,7 +199,7 @@ def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str,
                     value = json.loads(line)
                 except (TypeError, ValueError):
                     continue
-                if isinstance(value, dict):
+                if isinstance(value, dict) and value.get("kind") != "delivery_receipt":
                     entries.append(value)
     except OSError:
         return []
@@ -248,26 +264,173 @@ def read_recent_reactions_compatible(
     return [value[:max_chars] for value in reactions if value][-max_count:]
 
 
-def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, str]:
-    state = _read_json(state_path(data_dir, session, "delivery"), {"last_ts": ""})
-    return {"last_ts": str(state.get("last_ts") or "")}
+def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
+    state = _read_json(
+        state_path(data_dir, session, "delivery"),
+        {"last_ts": "", "receipts": {}},
+    )
+    receipts = state.get("receipts")
+    return {
+        "last_ts": str(state.get("last_ts") or ""),
+        "receipts": receipts if isinstance(receipts, dict) else {},
+    }
 
 
-def latest_pending(data_dir: Path, session: SessionRef) -> dict[str, Any] | None:
-    last_ts = load_delivery_state(data_dir, session)["last_ts"]
+def latest_pending(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    current_event_seq: int = 0,
+) -> dict[str, Any] | None:
+    delivery = load_delivery_state(data_dir, session)
+    last_ts = delivery["last_ts"]
     pending = [
         entry
         for entry in read_reaction_entries(data_dir, session)
+        if entry.get("kind", "review") not in {"review_status", "delivery_receipt"}
         if str(entry.get("ts") or "") > last_ts
     ]
-    return pending[-1] if pending else None
+    if not pending:
+        return None
+    candidate = pending[-1]
+    source_seq = int(candidate.get("source_event_seq") or 0)
+    if current_event_seq and source_seq and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE:
+        mark_delivery(
+            data_dir,
+            session,
+            str(candidate.get("ts") or ""),
+            status="expired",
+            event_seq=current_event_seq,
+            delivered_via="",
+        )
+        return None
+    return candidate
 
 
-def mark_delivered(data_dir: Path, session: SessionRef, timestamp: str) -> None:
-    _atomic_write(
-        state_path(data_dir, session, "delivery"),
-        {"schema_version": 1, "last_ts": str(timestamp or "")},
+def mark_delivery(
+    data_dir: Path,
+    session: SessionRef,
+    timestamp: str,
+    *,
+    status: str,
+    event_seq: int = 0,
+    delivered_via: str = "",
+) -> None:
+    if not timestamp:
+        return
+    state = load_delivery_state(data_dir, session)
+    receipt = {
+        "status": status,
+        "event_seq": int(event_seq or 0),
+        "delivered_at": datetime.now().isoformat(),
+        "delivered_via": delivered_via,
+    }
+    state["schema_version"] = 2
+    if status in {"injected", "expired"}:
+        state["last_ts"] = timestamp
+    state["receipts"][timestamp] = receipt
+    _atomic_write(state_path(data_dir, session, "delivery"), state)
+    entry = {
+        "schema_version": 2,
+        "ts": receipt["delivered_at"],
+        "host": session.host,
+        "session_id": session.session_id,
+        "turn_id": session.turn_id,
+        "workspace": _normalized_workspace(session.repo_root or session.cwd),
+        "kind": "delivery_receipt",
+        "reaction_ts": timestamp,
+        "delivery_status": status,
+        "delivery_event_seq": receipt["event_seq"],
+        "delivered_at": receipt["delivered_at"],
+        "delivered_via": delivered_via,
+    }
+    with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
+def mark_delivered(
+    data_dir: Path,
+    session: SessionRef,
+    timestamp: str,
+    *,
+    event_seq: int = 0,
+    delivered_via: str = "",
+) -> None:
+    mark_delivery(
+        data_dir,
+        session,
+        timestamp,
+        status="injected",
+        event_seq=event_seq,
+        delivered_via=delivered_via,
     )
+
+
+def record_tool_progress(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    tool_name: str,
+    command_family: str,
+    failed: bool,
+    mutating: bool,
+    changed_lines: int | None = None,
+    goal_transition: str = "",
+    goal_objective: str = "",
+) -> dict[str, Any]:
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(
+        path,
+        {
+            "schema_version": 1,
+            "event_seq": 0,
+            "last_strategy_event_seq": 0,
+            "changed_lines_at_strategy": 0,
+            "recent": [],
+            "goal_objective": "",
+        },
+    )
+    event_seq = int(state.get("event_seq") or 0) + 1
+    recent = state.get("recent") if isinstance(state.get("recent"), list) else []
+    meaningful = bool(mutating or command_family or goal_transition)
+    recent.append(
+        {
+            "event_seq": event_seq,
+            "tool": tool_name,
+            "command_family": command_family,
+            "failed": bool(failed),
+            "mutating": bool(mutating),
+            "meaningful": meaningful,
+            "changed_lines": changed_lines,
+            "goal_transition": goal_transition,
+        }
+    )
+    state.update(
+        {
+            "schema_version": 1,
+            "event_seq": event_seq,
+            "recent": recent[-PROGRESS_EVENT_LIMIT:],
+        }
+    )
+    if goal_objective:
+        state["goal_objective"] = source_context.head_tail(goal_objective, 1000)
+    _atomic_write(path, state)
+    return state
+
+
+def mark_strategy_reviewed(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    event_seq: int,
+    changed_lines: int | None,
+) -> None:
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(path, {})
+    state["last_strategy_event_seq"] = int(event_seq or 0)
+    if changed_lines is not None:
+        state["changed_lines_at_strategy"] = int(changed_lines)
+    _atomic_write(path, state)
 
 
 def _checkpoint_path(data_dir: Path, session: SessionRef, fingerprint: str) -> Path:

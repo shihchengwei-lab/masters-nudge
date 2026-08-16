@@ -1671,6 +1671,68 @@ class TestLensRouter(unittest.TestCase):
 
 class TestFloatingWindowLayout(unittest.TestCase):
 
+    def test_reaction_log_workspace_uses_newest_scoped_entry(self):
+        import buddy_window
+
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "session.log"
+            path.write_text(
+                json.dumps({"reaction": "old"}) + "\n"
+                + json.dumps({"workspace": raw, "reaction": "new"}) + "\n",
+                encoding="utf-8",
+            )
+
+            self.assertEqual(
+                buddy_window.reaction_log_workspace(path),
+                buddy_window.normalize_workspace(raw),
+            )
+
+    def test_window_ignores_logs_from_other_workspaces(self):
+        import buddy_window
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            own = root / "own"
+            other = root / "other"
+            own.mkdir()
+            other.mkdir()
+            own_log = root / "own.log"
+            other_log = root / "other.log"
+            own_log.write_text(
+                json.dumps({"workspace": str(own), "reaction": "own"}) + "\n",
+                encoding="utf-8",
+            )
+            other_log.write_text(
+                json.dumps({"workspace": str(other), "reaction": "other"}) + "\n",
+                encoding="utf-8",
+            )
+            os.utime(other_log, (other_log.stat().st_atime, own_log.stat().st_mtime + 5))
+            window = object.__new__(buddy_window.BuddyWindow)
+            window.workspace = buddy_window.normalize_workspace(own)
+
+            with mock.patch.object(buddy_window, "BUDDY_DIR", root), mock.patch.object(
+                buddy_window, "LEGACY_BUDDY_DIR", root
+            ):
+                active = buddy_window.BuddyWindow._find_active_log(window)
+
+            self.assertEqual(active, own_log)
+
+    def test_switching_to_new_session_log_reads_its_first_reaction(self):
+        import buddy_window
+
+        window = object.__new__(buddy_window.BuddyWindow)
+        window.current_log = Path("old.log")
+        window.last_offset = 999
+        window._find_active_log = mock.Mock(return_value=Path("new.log"))
+        window._read_new = mock.Mock()
+        window.root = mock.Mock()
+
+        buddy_window.BuddyWindow._poll(window)
+
+        self.assertEqual(window.current_log, Path("new.log"))
+        self.assertEqual(window.last_offset, 0)
+        window._read_new.assert_called_once_with()
+
     def test_selector_offers_only_four_lifecycle_stages(self):
         import buddy_window
 
@@ -1889,6 +1951,10 @@ class TestCallClaude(unittest.TestCase):
         cmd = args[0][0]
         self.assertIn("claude", cmd[0])
         self.assertIn("--model", cmd)
+        self.assertIn("--system-prompt-file", cmd)
+        self.assertNotIn("--append-system-prompt-file", cmd)
+        self.assertEqual(cmd[cmd.index("--tools") + 1], "")
+        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")
         output_format_index = cmd.index("--output-format")
         self.assertEqual(cmd[output_format_index + 1], "json")
         schema_index = cmd.index("--json-schema")
@@ -1914,8 +1980,9 @@ class TestCallClaude(unittest.TestCase):
     def test_call_claude_timeout(self, mock_run):
         import subprocess
         mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=60)
-        result = self.buddy.call_claude("sp", "tx", "sonnet")
-        self.assertEqual(result, "")
+        result = self.buddy.call_claude_result("sp", "tx", "sonnet")
+        self.assertEqual(result["finding"], "")
+        self.assertEqual(result["error_kind"], "timeout")
 
     @mock.patch("subprocess.run")
     def test_call_claude_not_found(self, mock_run):

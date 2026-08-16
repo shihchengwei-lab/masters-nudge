@@ -387,6 +387,24 @@ candidate should meet an explicit quality floor for correct findings, correct
 silence, schema compliance, and latency. Until then, do not claim that any
 parameter count or hardware setup provides adequate review quality.
 
+### 12. Domain-specialization experiment — ✅ ARCHIVED 2026-08-16
+
+The complete specialization experiment is preserved under
+`experiment/riemann-domain/` as a fork reference. Domain-specific routing,
+personas, workspace profiles, and research artifacts are intentionally excluded
+from the shipped software-engineering runtime.
+
+### 13. Long-goal workflow integrity — ✅ SHIPPED 2026-08-14
+
+Codex reactions now carry an event-sequenced delivery lifecycle so a generated
+review cannot be mistaken for an injected Nudge. Long-running work gets recurring,
+detached strategy checkpoints after repeated command/failure families, eight
+meaningful events, or each additional ~80 changed lines. Goal `complete` and
+`blocked` transitions receive immediate boundary review. Strategy evidence routes
+through the existing six lenses; Phase D event replays cover delay, repetition,
+drift, Goal ambiguity, and healthy progress. A manual “review now” control remains
+outside product scope: users can already redirect the agent when they choose.
+
 ---
 
 ## Cut from scope (recorded so they don't come back accidentally)

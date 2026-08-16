@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+import io
 import json
 import os
 import tempfile
@@ -54,6 +55,7 @@ class FakeCore:
         request: ReviewRequest,
         *,
         persist_reaction: bool,
+        mark_delivered: bool = False,
         timeout_sec: int | None = None,
     ) -> ReviewOutcome:
         self.calls.append((request, persist_reaction, timeout_sec))
@@ -96,6 +98,21 @@ class NamespacedStorageTests(unittest.TestCase):
                 storage.reaction_log_path(root, claude),
                 storage.reaction_log_path(root, codex),
             )
+
+    def test_reaction_metadata_carries_normalized_workspace_identity(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            session = SessionRef("codex_cli", "s", cwd=tmpdir)
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="openai",
+                model="m",
+                reaction="提醒",
+                route_metadata={"effective_lens": "general"},
+            )
+
+            self.assertEqual(entry["workspace"], os.path.normcase(str(root.resolve())))
 
     def test_legacy_log_is_read_but_new_reaction_is_namespaced(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -303,8 +320,36 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIn("失敗已證明", output["hookSpecificOutput"]["additionalContext"])
         request, persist, timeout = core.calls[0]
         self.assertEqual(request.reason, "test-fail")
-        self.assertFalse(persist)
+        self.assertTrue(persist)
         self.assertEqual(timeout, 15)
+
+    def test_checkpoint_is_marked_delivered_only_after_stdout_succeeds(self):
+        core = ReviewCore(
+            self.settings,
+            dispatch=lambda *_args, **_kwargs: {
+                "status": "finding",
+                "finding": "B_N² 的界尚未閉合。",
+                "usage": {},
+            },
+        )
+        adapter = CodexAdapter(core)
+        payload = {
+            "hook_event_name": "PostToolUse",
+            "session_id": "s",
+            "turn_id": "t",
+            "cwd": str(self.root),
+            "tool_name": "shell_command",
+            "tool_input": {"command": "pytest"},
+            "tool_response": {"exit_code": 1, "output": "1 failed"},
+        }
+        with mock.patch.dict(os.environ, {}, clear=True):
+            output = adapter.process(payload)
+        session = SessionRef("codex_cli", "s", "t", str(self.root))
+        self.assertIsNotNone(
+            storage.latest_pending(self.settings.paths.data_dir, session)
+        )
+        hook_entry._emit_output(output, self.settings, io.StringIO())
+        self.assertIsNone(storage.latest_pending(self.settings.paths.data_dir, session))
 
     def test_stop_finding_is_delivered_once_on_next_prompt(self):
         session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
@@ -327,6 +372,7 @@ class CodexAdapterTests(unittest.TestCase):
         }
         with mock.patch.dict(os.environ, {}, clear=True):
             first = adapter.process(payload)
+            hook_entry._emit_output(first, self.settings, io.StringIO())
             second = adapter.process(payload)
         self.assertIn("先確認交付證據", first["hookSpecificOutput"]["additionalContext"])
         self.assertIn(
@@ -334,6 +380,45 @@ class CodexAdapterTests(unittest.TestCase):
             first["hookSpecificOutput"]["additionalContext"],
         )
         self.assertIsNone(second)
+
+    def test_stop_finding_is_delivered_on_next_tool_without_new_prompt(self):
+        session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
+        storage.append_reaction(
+            self.settings.paths.data_dir,
+            session,
+            provider="anthropic",
+            model="m",
+            reaction="先檢查均方估計是否偷渡逐點控制。",
+            route_metadata={"effective_lens": "lamport"},
+            reason="stop",
+        )
+        adapter = CodexAdapter(
+            FakeCore(self.settings, ReviewOutcome("no_finding"))
+        )
+        payload = {
+            "hook_event_name": "PostToolUse",
+            "session_id": "s",
+            "turn_id": "next-turn",
+            "cwd": str(self.root),
+            "tool_name": "Read",
+            "tool_input": {"file_path": "proof.md"},
+            "tool_response": {"content": "draft"},
+        }
+        with mock.patch.dict(os.environ, {}, clear=True):
+            output = adapter.process(payload)
+        self.assertIn(
+            "先檢查均方估計",
+            output["hookSpecificOutput"]["additionalContext"],
+        )
+        self.assertIn(
+            "Leslie Lamport lens",
+            output["hookSpecificOutput"]["additionalContext"],
+        )
+        self.assertIsNotNone(
+            storage.latest_pending(self.settings.paths.data_dir, session)
+        )
+        hook_entry._emit_output(output, self.settings, io.StringIO())
+        self.assertIsNone(storage.latest_pending(self.settings.paths.data_dir, session))
 
     def test_recursion_guard_is_fail_open(self):
         core = FakeCore(self.settings, ReviewOutcome("finding", "不應執行"))
@@ -346,7 +431,100 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertEqual(core.calls, [])
 
 
+class HookOutputTests(unittest.TestCase):
+    def test_cp950_stream_can_emit_unicode_nudge_as_ascii_safe_json(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = settings_for(Path(tmpdir))
+            session = SessionRef("codex_cli", "s")
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": "PostToolUse",
+                    "additionalContext": "B_N² 與 κ₃ 都要保留。",
+                },
+                "_masters_nudge_delivery": (
+                    session,
+                    "2026-08-14T09:00:00",
+                ),
+            }
+            raw = io.BytesIO()
+            stream = io.TextIOWrapper(raw, encoding="cp950", newline="")
+            hook_entry._emit_output(output, settings, stream)
+            stream.flush()
+            payload = json.loads(raw.getvalue().decode("ascii"))
+            self.assertIn(
+                "B_N²", payload["hookSpecificOutput"]["additionalContext"]
+            )
+            self.assertEqual(
+                storage.load_delivery_state(
+                    settings.paths.data_dir, session
+                )["last_ts"],
+                "2026-08-14T09:00:00",
+            )
+
+    def test_failed_stdout_does_not_mark_pending_finding_delivered(self):
+        class BrokenStream:
+            def write(self, _text):
+                raise OSError("closed pipe")
+
+            def flush(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = settings_for(Path(tmpdir))
+            session = SessionRef("codex_cli", "s")
+            output = {
+                "hookSpecificOutput": {"hookEventName": "PostToolUse"},
+                "_masters_nudge_delivery": (
+                    session,
+                    "2026-08-14T09:00:00",
+                ),
+            }
+            with self.assertRaises(OSError):
+                hook_entry._emit_output(output, settings, BrokenStream())
+            self.assertEqual(
+                storage.load_delivery_state(
+                    settings.paths.data_dir, session
+                )["last_ts"],
+                "",
+            )
+
+
 class SharedCoreTests(unittest.TestCase):
+    def test_checkpoint_reaction_is_visible_but_not_redelivered_next_turn(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            settings = settings_for(root)
+            session = SessionRef("codex_cli", "s", "t", str(root))
+            request = ReviewRequest(
+                schema_version=1,
+                kind="checkpoint",
+                reason="test-fail",
+                session=session,
+                evidence=EvidenceBundle(checkpoint_event="pytest: 1 failed"),
+                source_packet="pytest: 1 failed",
+                source_fingerprint="failure-1",
+            )
+            core = ReviewCore(
+                settings,
+                dispatch=lambda *_args, **_kwargs: {
+                    "status": "finding",
+                    "finding": "先確認失敗是否推翻目前使用的前提。",
+                    "usage": {},
+                },
+            )
+
+            core.review(
+                request,
+                persist_reaction=True,
+                mark_delivered=True,
+            )
+
+            entries = storage.read_reaction_entries(
+                settings.paths.data_dir, session
+            )
+            self.assertEqual(entries[-1]["reaction"], "先確認失敗是否推翻目前使用的前提。")
+            self.assertIsNone(storage.latest_pending(settings.paths.data_dir, session))
+
     def test_review_core_has_no_host_compatibility_callback_slots(self):
         parameters = inspect.signature(ReviewCore).parameters
         self.assertNotIn("prompt_builder", parameters)
@@ -467,7 +645,88 @@ class SharedCoreTests(unittest.TestCase):
                 (root / review_telemetry.TELEMETRY_FILE).read_text(encoding="utf-8")
             )
             self.assertEqual((record["host"], record["turn_id"]), ("codex_cli", "t"))
-            self.assertNotIn("source_packet", record)
+        self.assertNotIn("source_packet", record)
+
+
+class GrokProviderTests(unittest.TestCase):
+    def test_grok_runs_one_tool_free_schema_constrained_turn(self):
+        payload = json.dumps(
+            {"result": {"status": "finding", "finding": "先確認停止條件。"}},
+            ensure_ascii=False,
+            indent=2,
+        )
+        completed = mock.Mock(returncode=0, stdout=payload, stderr="")
+        with tempfile.TemporaryDirectory() as raw, mock.patch(
+            "masters_nudge.providers.subprocess.run", return_value=completed
+        ) as run:
+            schema = Path(raw) / "schema.json"
+            schema.write_text(
+                (HERE / "reaction-schema.json").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            result = providers.call_grok_result(
+                "system",
+                "evidence",
+                "grok-test",
+                schema_path=schema,
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+            )
+        self.assertEqual(result["finding"], "先確認停止條件。")
+        command = run.call_args.args[0]
+        self.assertIn("--disable-web-search", command)
+        self.assertEqual(command[command.index("--tools") + 1], "")
+        self.assertIn("--no-memory", command)
+        self.assertIn("--no-subagents", command)
+        self.assertEqual(command[command.index("--max-turns") + 1], "1")
+        self.assertEqual(command[command.index("--model") + 1], "grok-test")
+
+    def test_grok_uses_cli_default_model_when_model_is_empty(self):
+        completed = mock.Mock(
+            returncode=0,
+            stdout=json.dumps({"status": "no_finding", "finding": ""}),
+            stderr="",
+        )
+        with mock.patch(
+            "masters_nudge.providers.subprocess.run", return_value=completed
+        ) as run:
+            providers.call_grok_result(
+                "system",
+                "evidence",
+                "",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+            )
+        self.assertNotIn("--model", run.call_args.args[0])
+
+    def test_grok_parses_real_cli_camel_case_envelope_and_usage(self):
+        raw = json.dumps(
+            {
+                "text": json.dumps(
+                    {"status": "finding", "finding": "先重現原始失敗。"},
+                    ensure_ascii=False,
+                ),
+                "structuredOutput": {
+                    "status": "finding",
+                    "finding": "先重現原始失敗。",
+                },
+                "usage": {
+                    "input_tokens": 10,
+                    "cache_read_input_tokens": 2,
+                    "output_tokens": 3,
+                    "reasoning_tokens": 1,
+                    "total_tokens": 13,
+                },
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        result = providers.parse_grok_reaction_result(raw)
+        usage = providers.parse_usage(raw)
+        self.assertEqual(result["finding"], "先重現原始失敗。")
+        self.assertEqual(usage["cached_input_tokens"], 2)
+        self.assertEqual(usage["reasoning_output_tokens"], 1)
 
 
 class PackagingTests(unittest.TestCase):

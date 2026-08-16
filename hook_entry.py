@@ -12,7 +12,8 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from masters_nudge.codex_adapter import CodexAdapter
+from masters_nudge import storage
+from masters_nudge.codex_adapter import CodexAdapter, DELIVERY_MARKER_KEY
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import RuntimeSettings, active_guard
 
@@ -59,6 +60,85 @@ def _read_payload(payload_file: str = "") -> dict:
     if not isinstance(value, dict):
         raise ValueError("hook input must be a JSON object")
     return value
+
+
+def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
+    """Write one code-page-safe hook response, then commit delivery state."""
+    public_output = dict(output)
+    delivery = public_output.pop(DELIVERY_MARKER_KEY, None)
+    target = stream or sys.stdout
+    try:
+        target.write(json.dumps(public_output, ensure_ascii=True) + "\n")
+        target.flush()
+    except Exception:
+        if isinstance(delivery, dict):
+            storage.mark_delivery(
+                settings.paths.data_dir,
+                delivery["session"],
+                delivery["timestamp"],
+                status="failed",
+                event_seq=int(delivery.get("event_seq") or 0),
+                delivered_via=str(delivery.get("event_name") or "hook"),
+            )
+        raise
+    if delivery:
+        if isinstance(delivery, dict):
+            storage.mark_delivered(
+                settings.paths.data_dir,
+                delivery["session"],
+                delivery["timestamp"],
+                event_seq=int(delivery.get("event_seq") or 0),
+                delivered_via=str(delivery.get("event_name") or "hook"),
+            )
+        else:  # compatibility with pre-receipt tests and cached runtimes
+            session, timestamp = delivery
+            storage.mark_delivered(settings.paths.data_dir, session, timestamp)
+
+
+def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> bool:
+    spool_dir = settings.paths.data_dir / "spool"
+    spool_dir.mkdir(parents=True, exist_ok=True)
+    handle = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", prefix="codex-strategy-",
+        dir=spool_dir, delete=False, encoding="utf-8",
+    )
+    spool_path = Path(handle.name)
+    try:
+        json.dump(payload, handle, ensure_ascii=False)
+        handle.write("\n")
+        handle.close()
+        command = [
+            sys.executable, str(Path(__file__).resolve()),
+            "--host", "codex_cli", "--strategy-payload-file", str(spool_path),
+        ]
+        kwargs = {
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "close_fds": True,
+            "env": dict(os.environ),
+        }
+        if os.name == "nt":
+            kwargs["creationflags"] = (
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                | getattr(subprocess, "DETACHED_PROCESS", 0)
+                | getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            )
+        else:
+            kwargs["start_new_session"] = True
+        subprocess.Popen(command, **kwargs)
+        return True
+    except Exception as exc:
+        log_error(f"detached strategy launch failed: {exc}")
+        try:
+            handle.close()
+        except Exception:
+            pass
+        try:
+            spool_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return False
 
 
 def _detach_stop(
@@ -127,6 +207,7 @@ def main() -> int:
     parser.add_argument("--host", default="codex_cli")
     parser.add_argument("--detach-stop", action="store_true")
     parser.add_argument("--payload-file", default="")
+    parser.add_argument("--strategy-payload-file", default="")
     args, _unknown = parser.parse_known_args()
     settings = _settings(args.host)
     log_error = lambda message: _log_error(settings, message)
@@ -134,17 +215,28 @@ def main() -> int:
         log_error(f"unsupported hook host: {args.host}")
         return 0
     try:
+        if args.strategy_payload_file:
+            strategy_payload = _read_payload(args.strategy_payload_file)
+            CodexAdapter(
+                ReviewCore(settings, log_error=log_error)
+            )._run_strategy_payload(strategy_payload)
+            return 0
         payload = _read_payload(args.payload_file)
         if args.detach_stop:
             if active_guard():
                 return 0
             _detach_stop(settings, payload, log_error)
             return 0
-        output = CodexAdapter(
-            ReviewCore(settings, log_error=log_error)
-        ).process(payload)
+        core = ReviewCore(settings, log_error=log_error)
+        adapter = CodexAdapter(
+            core,
+            schedule_strategy=lambda work: _schedule_strategy(
+                settings, work, log_error
+            ),
+        )
+        output = adapter.process(payload)
         if output is not None:
-            print(json.dumps(output, ensure_ascii=False))
+            _emit_output(output, settings)
     except Exception as exc:
         log_error(f"hook processing failed: {exc}")
     return 0

@@ -15,6 +15,7 @@ DEFAULT_MODELS = {
     "anthropic": "sonnet",
     "openai": "gpt-5.6-sol",
     "codex": "gpt-5.6-sol",
+    "grok": "",
     "ollama-local": "",
 }
 
@@ -75,11 +76,16 @@ def _load_reviewer_config(path: Path) -> tuple[dict[str, str], str]:
         return {}, f"cannot read reviewer config: {exc}"
     if not isinstance(payload, dict) or set(payload) != REVIEWER_CONFIG_KEYS:
         return {}, "reviewer config has an invalid shape"
-    if payload.get("provider") != "ollama-local":
+    provider = str(payload.get("provider") or "").strip().lower()
+    if provider not in {"ollama-local", "grok"}:
         return {}, "reviewer config contains an unsupported provider"
     for key in ("model", "ollama_url"):
-        if not isinstance(payload.get(key), str) or not payload[key].strip():
+        if not isinstance(payload.get(key), str):
             return {}, f"reviewer config has an invalid {key}"
+    if provider == "ollama-local" and (
+        not payload["model"].strip() or not payload["ollama_url"].strip()
+    ):
+        return {}, "reviewer config has an invalid local model or ollama_url"
     return {key: str(payload[key]).strip() for key in REVIEWER_CONFIG_KEYS}, ""
 
 

@@ -30,6 +30,8 @@ _RECORD_FIELDS = {
     "reason",
     "provider",
     "model",
+    "configuration_source",
+    "domain",
     "persona",
     "stage",
     "primary_lens",
