@@ -81,6 +81,11 @@ def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha256_text_file(path: Path) -> str:
+    canonical_text = path.read_text(encoding="utf-8")
+    return hashlib.sha256(canonical_text.encode("utf-8")).hexdigest()
+
+
 def load_fixture(path: Path = DEFAULT_FIXTURE) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if payload.get("schema_version") != 1:
