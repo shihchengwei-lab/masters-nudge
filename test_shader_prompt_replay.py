@@ -1,11 +1,25 @@
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from evaluation.shader_prompt_replay import replay
 
 
 class ShaderPromptReplayTests(unittest.TestCase):
+    def test_text_sha256_is_stable_across_platform_line_endings(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            lf_path = Path(temp_dir) / "lf.json"
+            crlf_path = Path(temp_dir) / "crlf.json"
+            lf_path.write_bytes(b'{"value": 1}\n')
+            crlf_path.write_bytes(b'{"value": 1}\r\n')
+
+            self.assertEqual(
+                replay.sha256_text_file(lf_path),
+                replay.sha256_text_file(crlf_path),
+            )
+
     def test_fixture_builds_one_checkpoint_packet_with_six_expectations(self):
         fixture = replay.load_fixture()
         packet = replay.build_packet(fixture)
@@ -278,7 +292,10 @@ class ShaderPromptReplayTests(unittest.TestCase):
             (result_dir / "latency-analysis.json").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(replay.sha256_file(runs_path), artifact["source_sha256"])
+        self.assertEqual(
+            replay.sha256_text_file(runs_path),
+            artifact["source_sha256"],
+        )
         self.assertEqual(replay.latency_summary(rows), {
             "method": artifact["method"],
             "attempts": artifact["overall"]["attempts"],
