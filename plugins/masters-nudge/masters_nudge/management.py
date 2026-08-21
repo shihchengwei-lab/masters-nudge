@@ -35,6 +35,16 @@ CORE_FILES = (
     "reaction-schema.json",
     "review_telemetry.py",
     "source_context.py",
+    "shader_progress.py",
+    "shader_router.py",
+    "domains/shader/base-prompt.txt",
+    "domains/shader/goal-template.txt",
+    "domains/shader/personas/akenine_moller.txt",
+    "domains/shader/personas/carmack.txt",
+    "domains/shader/personas/karis.txt",
+    "domains/shader/personas/lottes.txt",
+    "domains/shader/personas/quilez.txt",
+    "domains/shader/personas/tatarchuk.txt",
     "personas/beck.txt",
     "personas/carmack.txt",
     "personas/fowler.txt",
@@ -48,6 +58,7 @@ CORE_FILES = (
     "masters_nudge/local_ollama.py",
     "masters_nudge/prompting.py",
     "masters_nudge/providers.py",
+    "masters_nudge/profiles.py",
     "masters_nudge/runtime.py",
     "masters_nudge/storage.py",
 )
@@ -452,6 +463,42 @@ def configure_grok(
     return result
 
 
+def inspect_grok_cli(
+    executable: str,
+    *,
+    environ: Mapping[str, str] | None = None,
+    timeout_sec: int = 5,
+) -> dict:
+    """Check that Grok Build has an authenticated subscription session."""
+    environment = dict(os.environ if environ is None else environ)
+    environment.pop("XAI_API_KEY", None)
+    environment["MASTERS_NUDGE_ACTIVE"] = "1"
+    environment["BUDDY_ACTIVE"] = "1"
+    try:
+        completed = subprocess.run(
+            [executable, "models"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=environment,
+            timeout=timeout_sec,
+            **(
+                {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+                if os.name == "nt"
+                else {}
+            ),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ready": False, "authenticated": False, "error": str(exc)}
+    output = f"{completed.stdout}\n{completed.stderr}".strip()
+    unauthenticated = "not authenticated" in output.lower()
+    ready = completed.returncode == 0 and not unauthenticated
+    error = "" if ready else (
+        "grok CLI is not authenticated" if unauthenticated else f"grok CLI exit {completed.returncode}"
+    )
+    return {"ready": ready, "authenticated": ready, "error": error}
+
+
 def reset_local(
     *, environ: Mapping[str, str] | None = None
 ) -> dict:
@@ -484,6 +531,7 @@ def doctor(
     environ: Mapping[str, str] | None = None,
     hook_python_command: str | None = None,
     local_inspector: Callable[..., dict] = inspect_local_ollama,
+    grok_inspector: Callable[..., dict] = inspect_grok_cli,
 ) -> dict:
     environment = dict(os.environ if environ is None else environ)
     root = Path(plugin_root).resolve()
@@ -501,6 +549,7 @@ def doctor(
         )
         executable = _provider_cli(settings.provider, environment)
         local = {}
+        grok = {}
         if settings.provider == "ollama-local":
             try:
                 local = local_inspector(
@@ -531,6 +580,25 @@ def doctor(
                     "error": "local Ollama inspection returned an invalid result",
                 }
             provider_ready = bool(local.get("ready"))
+        elif settings.provider == "grok":
+            if executable:
+                try:
+                    grok = grok_inspector(
+                        executable, environ=environment, timeout_sec=5
+                    )
+                except Exception as exc:
+                    grok = {
+                        "ready": False,
+                        "authenticated": False,
+                        "error": f"grok CLI inspection failed: {exc}",
+                    }
+            else:
+                grok = {
+                    "ready": False,
+                    "authenticated": False,
+                    "error": "grok CLI not found",
+                }
+            provider_ready = bool(grok.get("ready"))
         else:
             provider_ready = bool(executable)
         hook_command = (
@@ -558,6 +626,7 @@ def doctor(
                 "provider_cli": executable or "",
                 "provider_ready": provider_ready,
                 "local": local,
+                "grok": grok,
                 "hook_python_command": hook_command,
                 "hook_python": hook_python or "",
                 "hook_python_version": (
@@ -604,8 +673,24 @@ def doctor(
     }
 
 
-def launch_window(plugin_root: Path) -> dict:
+def launch_window(
+    plugin_root: Path, *, workspace: str | Path = ""
+) -> dict:
     root = Path(plugin_root).resolve()
+    try:
+        workspace_path = Path(workspace or Path.cwd()).expanduser().resolve()
+    except OSError as exc:
+        return {
+            "launched": False,
+            "missing": [f"workspace directory: {exc}"],
+            "workspace": str(workspace or ""),
+        }
+    if not workspace_path.is_dir():
+        return {
+            "launched": False,
+            "missing": [f"workspace directory: {workspace_path}"],
+            "workspace": str(workspace_path),
+        }
     pillow_ready = importlib.util.find_spec("PIL") is not None
     tkinter_ready = importlib.util.find_spec("tkinter") is not None
     missing = []
@@ -617,14 +702,24 @@ def launch_window(plugin_root: Path) -> dict:
     if not script.exists():
         missing.append(f"runtime file: {script}")
     if missing:
-        return {"launched": False, "missing": missing}
+        return {
+            "launched": False,
+            "missing": missing,
+            "workspace": str(workspace_path),
+        }
 
     command = [sys.executable, str(script)]
+    child_environment = {
+        **os.environ,
+        "MASTERS_NUDGE_WORKSPACE": str(workspace_path),
+    }
     kwargs = {
         "stdin": subprocess.DEVNULL,
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "close_fds": True,
+        "cwd": str(workspace_path),
+        "env": child_environment,
     }
     if os.name == "nt":
         pythonw = Path(sys.executable).with_name("pythonw.exe")
@@ -640,5 +735,14 @@ def launch_window(plugin_root: Path) -> dict:
     try:
         process = subprocess.Popen(command, **kwargs)
     except OSError as exc:
-        return {"launched": False, "missing": [f"could not launch window: {exc}"]}
-    return {"launched": True, "pid": process.pid, "missing": []}
+        return {
+            "launched": False,
+            "missing": [f"could not launch window: {exc}"],
+            "workspace": str(workspace_path),
+        }
+    return {
+        "launched": True,
+        "pid": process.pid,
+        "missing": [],
+        "workspace": str(workspace_path),
+    }

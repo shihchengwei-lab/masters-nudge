@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "rubric": {
+    "observation_not_instruction": "true or false",
+    "complete_finding": "true or false",
+    "blind_spot_strength": "0, 1, or 2",
+    "persona_aligned": "true or false"
+  },
+  "reviews": [
+    {
+      "job_id": "karis-1",
+      "lens": "karis",
+      "repeat": 1,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-2",
+      "lens": "karis",
+      "repeat": 2,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-3",
+      "lens": "karis",
+      "repeat": 3,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-1",
+      "lens": "quilez",
+      "repeat": 1,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-2",
+      "lens": "quilez",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "兩次查找讓公式變短，十二層重疊卻把工作量藏進頻寬與暫存器。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-3",
+      "lens": "quilez",
+      "repeat": 3,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    }
+  ]
+}

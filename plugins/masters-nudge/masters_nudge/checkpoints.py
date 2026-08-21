@@ -40,6 +40,11 @@ GOAL_TOOLS = {"create_goal", "update_goal"}
 MEANINGFUL_TOOL_RE = re.compile(
     r"(?:apply_patch|write|edit|test|verify|benchmark|build|plan|goal)", re.IGNORECASE
 )
+SEMANTIC_MUTATION_RE = re.compile(r"(?:apply_patch|write|edit)", re.IGNORECASE)
+SEMANTIC_VALIDATION_RE = re.compile(
+    r"(?:test|verify|benchmark|build|pytest|unittest|vitest|jest|cargo|dotnet)",
+    re.IGNORECASE,
+)
 
 
 def compact_json(value: Any) -> str:
@@ -185,15 +190,33 @@ def classify_strategy(
             changed_line_count is not None
             and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
         )
-        meaningful = sum(bool(item.get("meaningful")) for item in since)
+        mutation_indexes = [
+            index
+            for index, item in enumerate(since)
+            if SEMANTIC_MUTATION_RE.search(
+                f"{item.get('tool') or ''} {item.get('command_family') or ''}"
+            )
+        ]
+        validation_indexes = [
+            index
+            for index, item in enumerate(since)
+            if SEMANTIC_VALIDATION_RE.search(
+                f"{item.get('tool') or ''} {item.get('command_family') or ''}"
+            )
+        ]
+        evidence_cycle = any(
+            mutation_index < validation_index
+            for mutation_index in mutation_indexes
+            for validation_index in validation_indexes
+        )
         if repeated:
             reason, trigger = "strategy-review", "repeated-command-family"
         elif len(failures) >= 2:
             reason, trigger = "strategy-review", "repeated-failure-family"
         elif diff_growth:
             reason, trigger = "strategy-review", "diff-growth"
-        elif meaningful >= 8:
-            reason, trigger = "strategy-review", "meaningful-event-budget"
+        elif evidence_cycle:
+            reason, trigger = "strategy-review", "evidence-cycle-change"
         else:
             return None
     lines = [

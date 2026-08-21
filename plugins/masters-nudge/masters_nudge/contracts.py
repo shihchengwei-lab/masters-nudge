@@ -76,6 +76,11 @@ class ReviewRequest:
     shadow_candidates: tuple[str, ...] = ()
     source_event_seq: int = 0
     trigger: str = ""
+    route_signals: tuple[str, ...] = ()
+    route_basis: str = ""
+    gap_key: str = ""
+    gap_evidence_fingerprint: str = ""
+    material_completeness: float = 0.0
 
 
 @dataclass(frozen=True)

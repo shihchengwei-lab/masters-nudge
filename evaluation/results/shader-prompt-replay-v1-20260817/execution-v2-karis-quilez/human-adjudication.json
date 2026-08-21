@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "fixture_id": "lean-impact-shield-c17-checkpoint",
+  "reviewed_evidence": "raw_finding",
+  "summary": {
+    "scored_findings": 1,
+    "observation_not_instruction": 1,
+    "complete_finding": 1,
+    "blind_spot_strength_2": 1,
+    "persona_aligned": 1,
+    "coverage_complete": false,
+    "unscored_lenses": ["karis"]
+  },
+  "reviews": [
+    {
+      "job_id": "quilez-2",
+      "raw_finding": "兩次查找讓公式變短，十二層重疊卻把工作量藏進頻寬與暫存器。",
+      "observation_not_instruction": true,
+      "complete_finding": true,
+      "blind_spot_strength": 2,
+      "persona_aligned": true
+    }
+  ],
+  "claim_boundary": "Karis produced no finding and Quilez produced only one, so neither persona meets the two-aligned-findings threshold. The rerun does not establish that removing the persona-local word 必須 caused the Quilez finding."
+}

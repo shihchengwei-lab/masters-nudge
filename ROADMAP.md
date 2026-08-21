@@ -53,9 +53,9 @@ Full result: `evaluation/results/phase-b-calibration-v1-20260813/CALIBRATION_RES
 **Phase A — reaction quality:** Build labeled evidence packets covering the
 internal no-overlay baseline, the four lifecycle stages, both specialist
 takeovers, and cases that should stay silent. Cover problem framing, assumptions,
-sequence, scope, feedback, verification, reversibility, and stopping conditions;
-retain explicit safety and completion-claim contradictions as stop-the-line
-cases. Prefer packets with an objective oracle, but do not reduce the benchmark
+sequence, scope, feedback, verification, reversibility, and stopping conditions.
+Keep system safety and authorization outside the Nudge quality benchmark; prefer
+packets with an objective oracle, but do not reduce the benchmark
 to seeded code defects. Check schema compliance, evidence grounding, workflow
 target identification, and correct silence automatically. Blind rubric-based
 human adjudication asks whether the Nudge exposes a decision-relevant workflow
@@ -274,8 +274,8 @@ formally selected delivered findings now replace the original README hero. See
 
 **Phase A — quality:** Use fixed, labeled evidence packets with known workflow
 blind spots or verified no-Nudge cases. Cover framing, assumptions, order, scope,
-feedback, verification, reversibility, and stopping conditions, with explicit
-safety and evidence contradictions retained as objective stop-the-line cases.
+feedback, verification, reversibility, and stopping conditions. System safety
+and authorization remain outside the Nudge output contract.
 Automatically check schema compliance, grounding, target match, and correct
 silence; do not let seeded code defects stand in for workflow-review quality.
 Compare the internal no-overlay baseline with the intended lens while keeping
@@ -342,8 +342,8 @@ graphite black. Legacy `BUDDY_SPRITE_PATH` overrides remain compatible.
 
 The floating window offers Design, Build, Evolve, and Review stages. These map
 to Jeff Dean, Kent Beck, Martin Fowler, and Linus Torvalds. Build is the default;
-General remains the shared workflow-evidence and stop-the-line base rather than a
-selectable stage. Stop and checkpoint reviews use the same local, deterministic
+General remains the workflow-evidence compatibility base rather than a selectable
+stage. Stop and checkpoint reviews use the same local, deterministic
 router without an extra model call.
 
 High-confidence state/ordering evidence temporarily selects Leslie Lamport;
@@ -398,8 +398,8 @@ from the shipped software-engineering runtime.
 
 Codex reactions now carry an event-sequenced delivery lifecycle so a generated
 review cannot be mistaken for an injected Nudge. Long-running work gets recurring,
-detached strategy checkpoints after repeated command/failure families, eight
-meaningful events, or each additional ~80 changed lines. Goal `complete` and
+detached strategy checkpoints after repeated command/failure families, an edit
+followed by new validation evidence, or each additional ~80 changed lines. Goal `complete` and
 `blocked` transitions receive immediate boundary review. Strategy evidence routes
 through the existing six lenses; Phase D event replays cover delay, repetition,
 drift, Goal ambiguity, and healthy progress. A manual “review now” control remains

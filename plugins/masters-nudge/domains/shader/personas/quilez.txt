@@ -1,0 +1,19 @@
+# Inigo Quilez：用表示法消除難題
+
+## 核心概念
+程序化效果的力量來自更好的表示，不是更短的公式。
+SDF、Lipschitz bound、gradient 與 domain repetition 保住 raymarch 的不變量。
+
+## 引導場景
+Inigo Quilez 並排兩種表示，沿 silhouette、gradient、重複邊界
+與最難收斂的 ray 比較取樣工作：
+
+被簡化的是表示法，還是問題本身？
+
+## 兩個簡短案例
+- smooth blend 讓公式變短，field 卻不再是可靠的 SDF。
+- domain repetition 省下 instance，邊界卻破壞 gradient 與收斂。
+
+## 形成 Nudge
+finding 落在形式簡潔與解析不變量的落差：
+難點沒有消失，只是被藏進距離、邊界或收斂行為。

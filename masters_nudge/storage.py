@@ -6,6 +6,7 @@ import json
 import hashlib
 import os
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,8 @@ TURN_JOURNAL_MAX_CHARS = 8000
 TOOL_RECORD_MAX_CHARS = 3000
 PROGRESS_EVENT_LIMIT = 12
 PENDING_MAX_EVENT_AGE = 6
+ATOMIC_REPLACE_ATTEMPTS = 5
+STRATEGY_RUN_STALE_SEC = 300
 
 
 def session_stem(session: SessionRef) -> str:
@@ -31,6 +34,14 @@ def reaction_log_path(data_dir: Path, session: SessionRef) -> Path:
 
 def state_path(data_dir: Path, session: SessionRef, suffix: str) -> Path:
     return Path(data_dir) / f"{session_stem(session)}.{suffix}.json"
+
+
+def _reaction_timestamp() -> str:
+    """Return a sortable identifier even when the Windows wall clock is coarse."""
+    return (
+        f"{datetime.now().isoformat()}-"
+        f"{time.perf_counter_ns():020d}-{os.getpid():06d}"
+    )
 
 
 def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
@@ -56,7 +67,14 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
         json.dump(payload, handle, ensure_ascii=False)
         handle.write("\n")
         handle.close()
-        os.replace(temp_path, path)
+        for attempt in range(ATOMIC_REPLACE_ATTEMPTS):
+            try:
+                os.replace(temp_path, path)
+                break
+            except PermissionError:
+                if attempt + 1 >= ATOMIC_REPLACE_ATTEMPTS:
+                    raise
+                time.sleep(0.02 * (attempt + 1))
     finally:
         try:
             handle.close()
@@ -150,14 +168,21 @@ def append_reaction(
     kind: str = "review",
     reason: str = "stop",
     source_event_seq: int = 0,
+    source_fingerprint: str = "",
+    finding_scope: str = "candidate",
 ) -> dict[str, Any]:
     if not reaction.strip():
         return {}
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
+    normalized_scope = (
+        finding_scope
+        if finding_scope in {"local", "candidate", "trajectory"}
+        else "local"
+    )
     entry: dict[str, Any] = {
         "schema_version": 2,
-        "ts": datetime.now().isoformat(),
+        "ts": _reaction_timestamp(),
         "host": session.host,
         "session_id": session.session_id,
         "turn_id": session.turn_id,
@@ -170,8 +195,10 @@ def append_reaction(
         **route_metadata,
         "reaction": reaction,
         "source_event_seq": int(source_event_seq or 0),
+        "source_fingerprint": str(source_fingerprint or ""),
+        "finding_scope": normalized_scope,
         "generated_at": datetime.now().isoformat(),
-        "delivery_status": "queued",
+        "delivery_status": "" if kind == "review_status" else "queued",
         "delivered_at": "",
         "delivered_via": "",
     }
@@ -276,11 +303,39 @@ def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     }
 
 
+def read_recent_injected_personas(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    limit: int = 2,
+) -> tuple[str, ...]:
+    """Return personas for the latest successfully injected reviews."""
+    if limit <= 0:
+        return ()
+    personas_by_ts = {
+        str(entry.get("ts") or ""): str(entry.get("persona") or "").strip()
+        for entry in read_reaction_entries(data_dir, session)
+        if entry.get("kind", "review") == "review"
+    }
+    injected: list[tuple[str, int, str]] = []
+    receipts = load_delivery_state(data_dir, session)["receipts"]
+    for order, (reaction_ts, receipt) in enumerate(receipts.items()):
+        if not isinstance(receipt, dict) or receipt.get("status") != "injected":
+            continue
+        persona = personas_by_ts.get(str(reaction_ts), "")
+        if not persona:
+            continue
+        injected.append((str(receipt.get("delivered_at") or ""), order, persona))
+    injected.sort(key=lambda item: (item[0], item[1]))
+    return tuple(persona for _delivered_at, _order, persona in injected[-limit:])
+
+
 def latest_pending(
     data_dir: Path,
     session: SessionRef,
     *,
     current_event_seq: int = 0,
+    current_source_fingerprint: str = "",
 ) -> dict[str, Any] | None:
     delivery = load_delivery_state(data_dir, session)
     last_ts = delivery["last_ts"]
@@ -293,6 +348,21 @@ def latest_pending(
     if not pending:
         return None
     candidate = pending[-1]
+    candidate_source = str(candidate.get("source_fingerprint") or "")
+    if candidate_source and current_source_fingerprint:
+        if candidate_source != current_source_fingerprint:
+            if candidate.get("finding_scope") == "trajectory":
+                return candidate
+            mark_delivery(
+                data_dir,
+                session,
+                str(candidate.get("ts") or ""),
+                status="superseded",
+                event_seq=current_event_seq,
+                delivered_via="source-state-changed",
+            )
+            return None
+        return candidate
     source_seq = int(candidate.get("source_event_seq") or 0)
     if current_event_seq and source_seq and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE:
         mark_delivery(
@@ -319,33 +389,51 @@ def mark_delivery(
     if not timestamp:
         return
     state = load_delivery_state(data_dir, session)
+    now = datetime.now().isoformat()
     receipt = {
         "status": status,
         "event_seq": int(event_seq or 0),
-        "delivered_at": datetime.now().isoformat(),
+        "delivered_at": now,
         "delivered_via": delivered_via,
     }
+    superseded: list[tuple[str, dict[str, Any]]] = []
+    if status in {"injected", "expired", "superseded"}:
+        for entry in read_reaction_entries(data_dir, session):
+            entry_ts = str(entry.get("ts") or "")
+            if not entry_ts or not (state["last_ts"] < entry_ts < timestamp):
+                continue
+            if entry_ts in state["receipts"]:
+                continue
+            older_receipt = {
+                "status": "superseded",
+                "event_seq": int(event_seq or 0),
+                "delivered_at": now,
+                "delivered_via": "newer-nudge-selected",
+            }
+            state["receipts"][entry_ts] = older_receipt
+            superseded.append((entry_ts, older_receipt))
     state["schema_version"] = 2
-    if status in {"injected", "expired"}:
+    if status in {"injected", "expired", "superseded"}:
         state["last_ts"] = timestamp
     state["receipts"][timestamp] = receipt
     _atomic_write(state_path(data_dir, session, "delivery"), state)
-    entry = {
-        "schema_version": 2,
-        "ts": receipt["delivered_at"],
-        "host": session.host,
-        "session_id": session.session_id,
-        "turn_id": session.turn_id,
-        "workspace": _normalized_workspace(session.repo_root or session.cwd),
-        "kind": "delivery_receipt",
-        "reaction_ts": timestamp,
-        "delivery_status": status,
-        "delivery_event_seq": receipt["event_seq"],
-        "delivered_at": receipt["delivered_at"],
-        "delivered_via": delivered_via,
-    }
     with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        for reaction_ts, value in [*superseded, (timestamp, receipt)]:
+            entry = {
+                "schema_version": 2,
+                "ts": value["delivered_at"],
+                "host": session.host,
+                "session_id": session.session_id,
+                "turn_id": session.turn_id,
+                "workspace": _normalized_workspace(session.repo_root or session.cwd),
+                "kind": "delivery_receipt",
+                "reaction_ts": reaction_ts,
+                "delivery_status": value["status"],
+                "delivery_event_seq": value["event_seq"],
+                "delivered_at": value["delivered_at"],
+                "delivered_via": value["delivered_via"],
+            }
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
 def mark_delivered(
@@ -431,6 +519,143 @@ def mark_strategy_reviewed(
     if changed_lines is not None:
         state["changed_lines_at_strategy"] = int(changed_lines)
     _atomic_write(path, state)
+
+
+def mark_shader_research_reviewed(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    fingerprint: str,
+    projection_state: dict[str, Any],
+) -> None:
+    """Cache only a rebuildable source fingerprint and its compact projection."""
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(path, {})
+    state["shader_research_fingerprint"] = str(fingerprint or "")
+    state["shader_research_state"] = projection_state
+    _atomic_write(path, state)
+
+
+def shader_research_gap_is_unchanged(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    gap_key: str,
+    evidence_fingerprint: str,
+) -> bool:
+    if not gap_key or not evidence_fingerprint:
+        return False
+    state = _read_json(state_path(data_dir, session, "progress"), {})
+    gaps = state.get("shader_research_gaps")
+    if not isinstance(gaps, dict):
+        return False
+    entry = gaps.get(gap_key)
+    return bool(
+        isinstance(entry, dict)
+        and str(entry.get("evidence_fingerprint") or "") == evidence_fingerprint
+    )
+
+
+def mark_shader_research_gap_reviewed(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    gap_key: str,
+    evidence_fingerprint: str,
+    source_fingerprint: str,
+) -> None:
+    if not gap_key or not evidence_fingerprint:
+        return
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(path, {})
+    gaps = state.get("shader_research_gaps")
+    if not isinstance(gaps, dict):
+        gaps = {}
+    gaps[str(gap_key)] = {
+        "evidence_fingerprint": str(evidence_fingerprint),
+        "source_fingerprint": str(source_fingerprint or ""),
+        "reviewed_at": datetime.now().isoformat(),
+    }
+    if len(gaps) > 32:
+        ordered = sorted(
+            gaps.items(), key=lambda item: str(item[1].get("reviewed_at") or "")
+        )
+        gaps = dict(ordered[-32:])
+    state["shader_research_gaps"] = gaps
+    _atomic_write(path, state)
+
+
+def mark_shader_research_gap_suppressed(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    gap_key: str,
+    evidence_fingerprint: str,
+    source_fingerprint: str,
+) -> None:
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(path, {})
+    raw = state.get("shader_research_suppressions")
+    suppressions = raw if isinstance(raw, list) else []
+    suppressions.append({
+        "gap_key": str(gap_key or ""),
+        "evidence_fingerprint": str(evidence_fingerprint or ""),
+        "source_fingerprint": str(source_fingerprint or ""),
+        "reason": "unchanged-evidence-gap",
+        "suppressed_at": datetime.now().isoformat(),
+    })
+    state["shader_research_suppressions"] = suppressions[-24:]
+    _atomic_write(path, state)
+
+
+def _strategy_run_path(data_dir: Path, session: SessionRef) -> Path:
+    return state_path(data_dir, session, "strategy-run")
+
+
+def claim_strategy_run(
+    data_dir: Path, session: SessionRef, fingerprint: str
+) -> bool:
+    """Allow at most one detached strategy provider call per session."""
+    path = _strategy_run_path(data_dir, session)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        existing = _read_json(path, {})
+        started_at = float(existing.get("started_at") or 0.0)
+    except (TypeError, ValueError):
+        started_at = 0.0
+    if started_at and time.time() - started_at > STRATEGY_RUN_STALE_SEC:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            return False
+    payload = {
+        "schema_version": 1,
+        "fingerprint": str(fingerprint or ""),
+        "started_at": time.time(),
+    }
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False)
+            handle.write("\n")
+        return True
+    except FileExistsError:
+        return False
+    except OSError:
+        return False
+
+
+def release_strategy_run(
+    data_dir: Path, session: SessionRef, fingerprint: str = ""
+) -> None:
+    path = _strategy_run_path(data_dir, session)
+    if fingerprint:
+        current = _read_json(path, {})
+        if str(current.get("fingerprint") or "") != str(fingerprint):
+            return
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def _checkpoint_path(data_dir: Path, session: SessionRef, fingerprint: str) -> Path:

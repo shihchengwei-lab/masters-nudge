@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import buddy
 import checkpoint
@@ -43,6 +43,8 @@ class HostDefaultTests(unittest.TestCase):
             (codex.provider, codex.model), ("openai", "gpt-5.6-sol")
         )
         self.assertEqual(legacy.provider, "openai")
+        self.assertEqual(claude.timeout_sec, 120)
+        self.assertEqual(codex.timeout_sec, 120)
         self.assertEqual(claude.checkpoint_timeout_sec, 90)
         self.assertEqual(codex.checkpoint_timeout_sec, 90)
 
@@ -689,6 +691,33 @@ class LegacyMigrationTests(unittest.TestCase):
 
 
 class DoctorTests(unittest.TestCase):
+    def test_doctor_reports_unauthenticated_grok_as_not_ready(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                "HOME": raw,
+                "USERPROFILE": raw,
+                "PATH": "",
+                "MASTERS_NUDGE_PROVIDER": "grok",
+                "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
+            }
+            with patch(
+                "masters_nudge.management._provider_cli", return_value="grok"
+            ):
+                result = doctor(
+                    PLUGIN_ROOT,
+                    "claude",
+                    environ=environment,
+                    grok_inspector=lambda *_args, **_kwargs: {
+                        "ready": False,
+                        "authenticated": False,
+                        "error": "grok CLI is not authenticated",
+                    },
+                )
+
+        self.assertFalse(result["core_ready"])
+        self.assertFalse(result["hosts"][0]["provider_ready"])
+        self.assertFalse(result["hosts"][0]["grok"]["authenticated"])
+
     def test_doctor_reports_host_default_and_keeps_ui_optional(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = {
@@ -798,6 +827,95 @@ class DoctorTests(unittest.TestCase):
 
             self.assertFalse(result["launched"])
             self.assertIn("launch blocked", result["missing"][0])
+
+    def test_window_launch_passes_explicit_workspace_to_child(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "plugin"
+            workspace = Path(raw) / "shader-workspace"
+            root.mkdir()
+            workspace.mkdir()
+            (root / "buddy_window.py").write_text("pass\n", encoding="utf-8")
+            process = Mock(pid=123)
+            with patch(
+                "masters_nudge.management.importlib.util.find_spec",
+                return_value=object(),
+            ), patch(
+                "masters_nudge.management.subprocess.Popen",
+                return_value=process,
+            ) as popen:
+                result = launch_window(root, workspace=workspace)
+
+        self.assertTrue(result["launched"])
+        self.assertEqual(result["workspace"], str(workspace.resolve()))
+        self.assertEqual(
+            popen.call_args.kwargs["env"]["MASTERS_NUDGE_WORKSPACE"],
+            str(workspace.resolve()),
+        )
+        self.assertEqual(popen.call_args.kwargs["cwd"], str(workspace.resolve()))
+
+    def test_window_cli_forwards_explicit_workspace(self):
+        workspace = r"E:\projects\shader-nudge-lab"
+        with patch.object(
+            sys,
+            "argv",
+            ["masters-nudge", "window", "--workspace", workspace, "--json"],
+        ), patch.object(
+            masters_nudge_cli,
+            "launch_window",
+            return_value={
+                "launched": True,
+                "pid": 123,
+                "missing": [],
+                "workspace": workspace,
+            },
+        ) as launch, redirect_stdout(io.StringIO()):
+            result = masters_nudge_cli.main()
+
+        self.assertEqual(result, 0)
+        launch.assert_called_once_with(
+            masters_nudge_cli.PLUGIN_ROOT,
+            workspace=workspace,
+        )
+
+    def test_shader_recommended_cli_saves_v12_profile_for_workspace(self):
+        workspace = r"E:\projects\shader-recommended"
+        settings = Mock()
+        settings.paths.data_dir = Path("data")
+        saved = {
+            "saved": True,
+            "path": "profile.json",
+            "domain": "shader",
+            "stage": "explore",
+            "provider": "anthropic",
+            "model": "opus",
+            "review_mode": "all",
+            "primary_lens": "",
+        }
+        with patch.object(
+            sys,
+            "argv",
+            [
+                "masters-nudge",
+                "shader",
+                "configure-recommended",
+                "--workspace",
+                workspace,
+                "--json",
+            ],
+        ), patch.object(
+            masters_nudge_cli.RuntimeSettings,
+            "from_env",
+            return_value=settings,
+        ), patch.object(
+            masters_nudge_cli.profiles,
+            "configure_recommended_shader_profile",
+            return_value=saved,
+        ) as configure, redirect_stdout(io.StringIO()) as output:
+            result = masters_nudge_cli.main()
+
+        self.assertEqual(result, 0)
+        configure.assert_called_once_with(Path("data"), workspace)
+        self.assertEqual(json.loads(output.getvalue()), saved)
 
 
 if __name__ == "__main__":

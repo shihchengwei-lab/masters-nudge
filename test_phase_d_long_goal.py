@@ -39,6 +39,45 @@ class FakeCore:
 
 
 class DeliveryLifecycleTests(unittest.TestCase):
+    def test_back_to_back_reactions_have_distinct_sortable_ids(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            first = storage.append_reaction(
+                root,
+                session,
+                provider="openai",
+                model="m",
+                reaction="第一則。",
+                route_metadata={"effective_lens": "beck"},
+            )
+            second = storage.append_reaction(
+                root,
+                session,
+                provider="openai",
+                model="m",
+                reaction="第二則。",
+                route_metadata={"effective_lens": "beck"},
+            )
+
+            self.assertLess(first["ts"], second["ts"])
+
+    def test_review_status_is_visible_but_not_queued_for_injection(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s", "t", str(root))
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="grok",
+                model="",
+                reaction="Reviewer 逾時（120 秒）；本輪沒有 Nudge。",
+                route_metadata={"effective_lens": "karis"},
+                kind="review_status",
+            )
+
+        self.assertEqual(entry["delivery_status"], "")
+
     def test_receipt_records_generation_and_actual_injection_event(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -87,6 +126,187 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
             receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
             self.assertEqual(receipt["status"], "expired")
+
+    def test_delivering_newer_nudge_marks_older_pending_as_superseded(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            older = storage.append_reaction(
+                root,
+                session,
+                provider="openai",
+                model="m",
+                reaction="較舊觀察。",
+                route_metadata={"effective_lens": "beck"},
+            )
+            newer = storage.append_reaction(
+                root,
+                session,
+                provider="openai",
+                model="m",
+                reaction="較新觀察。",
+                route_metadata={"effective_lens": "beck"},
+            )
+
+            storage.mark_delivered(root, session, newer["ts"], event_seq=4)
+
+            receipts = storage.load_delivery_state(root, session)["receipts"]
+            self.assertEqual(receipts[older["ts"]]["status"], "superseded")
+            self.assertEqual(receipts[newer["ts"]]["status"], "injected")
+
+    def test_recent_injected_personas_ignore_non_delivered_reviews(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            injected = storage.append_reaction(
+                root,
+                session,
+                provider="anthropic",
+                model="opus",
+                reaction="第一個盲點。",
+                route_metadata={"effective_lens": "carmack"},
+            )
+            expired = storage.append_reaction(
+                root,
+                session,
+                provider="anthropic",
+                model="opus",
+                reaction="第二個盲點。",
+                route_metadata={"effective_lens": "karis"},
+            )
+            storage.mark_delivered(root, session, injected["ts"])
+            storage.mark_delivery(
+                root,
+                session,
+                expired["ts"],
+                status="expired",
+            )
+
+            recent = storage.read_recent_injected_personas(root, session, limit=2)
+
+        self.assertEqual(("carmack",), recent)
+
+    def test_recent_injected_personas_preserve_injection_order_and_limit(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            for persona in ("carmack", "karis", "quilez"):
+                entry = storage.append_reaction(
+                    root,
+                    session,
+                    provider="anthropic",
+                    model="opus",
+                    reaction=f"{persona} 的盲點。",
+                    route_metadata={"effective_lens": persona},
+                )
+                storage.mark_delivered(root, session, entry["ts"])
+
+            recent = storage.read_recent_injected_personas(root, session, limit=2)
+
+        self.assertEqual(("karis", "quilez"), recent)
+
+    def test_strategy_single_flight_is_session_scoped_and_releasable(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            other = SessionRef("codex_cli", "other")
+
+            self.assertTrue(storage.claim_strategy_run(root, session, "first"))
+            self.assertFalse(storage.claim_strategy_run(root, session, "second"))
+            self.assertTrue(storage.claim_strategy_run(root, other, "other"))
+            storage.release_strategy_run(root, session)
+            self.assertTrue(storage.claim_strategy_run(root, session, "third"))
+
+    def test_shader_pending_uses_source_freshness_instead_of_event_age(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="grok",
+                model="",
+                reaction="新證據仍指向同一個成本轉移。",
+                route_metadata={"effective_lens": "carmack"},
+                reason="shader-research-change",
+                source_event_seq=1,
+                source_fingerprint="research-a",
+            )
+
+            pending = storage.latest_pending(
+                root,
+                session,
+                current_event_seq=20,
+                current_source_fingerprint="research-a",
+            )
+
+            self.assertEqual(pending["ts"], entry["ts"])
+
+    def test_shader_trajectory_finding_survives_research_source_change(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="grok",
+                model="",
+                reaction="候選仍只消除抵達 sample 後的片元工作。",
+                route_metadata={"effective_lens": "akenine_moller"},
+                reason="shader-research-change",
+                source_fingerprint="research-old",
+                finding_scope="trajectory",
+            )
+
+            pending = storage.latest_pending(
+                root,
+                session,
+                current_event_seq=20,
+                current_source_fingerprint="research-new",
+            )
+
+            self.assertEqual(pending["ts"], entry["ts"])
+            self.assertEqual(pending["finding_scope"], "trajectory")
+            receipts = storage.load_delivery_state(root, session)["receipts"]
+            self.assertNotIn(entry["ts"], receipts)
+
+            storage.mark_delivered(
+                root,
+                session,
+                pending["ts"],
+                event_seq=21,
+                delivered_via="PostToolUse",
+            )
+
+            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
+            self.assertEqual(receipt["status"], "injected")
+            self.assertEqual(receipt["delivered_via"], "PostToolUse")
+
+    def test_shader_pending_is_superseded_when_research_source_changed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="grok",
+                model="",
+                reaction="舊分支觀察。",
+                route_metadata={"effective_lens": "carmack"},
+                reason="shader-research-change",
+                source_fingerprint="research-old",
+            )
+
+            pending = storage.latest_pending(
+                root,
+                session,
+                current_event_seq=2,
+                current_source_fingerprint="research-new",
+            )
+
+            self.assertIsNone(pending)
+            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
+            self.assertEqual(receipt["status"], "superseded")
 
 
 class LongGoalReplayTests(unittest.TestCase):
@@ -191,7 +411,7 @@ class LongGoalReplayTests(unittest.TestCase):
                 "舊策略提醒", output["hookSpecificOutput"]["additionalContext"]
             )
 
-    def test_eight_healthy_events_schedule_only_one_review_not_eight_nudges(self):
+    def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -211,10 +431,7 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"success": True},
                     }
                 )
-            self.assertEqual(len(scheduled), 1)
-            self.assertEqual(
-                scheduled[0]["checkpoint"]["trigger"], "meaningful-event-budget"
-            )
+            self.assertEqual(scheduled, [])
 
     def test_strategy_signals_route_to_distinct_existing_lenses(self):
         cases = {

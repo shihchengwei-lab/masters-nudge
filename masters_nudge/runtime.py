@@ -104,7 +104,9 @@ class RuntimePaths:
         environ: Mapping[str, str] | None = None,
     ) -> "RuntimePaths":
         environment = os.environ if environ is None else environ
-        user_home = Path(environment.get("USERPROFILE") or Path.home()).expanduser()
+        user_home = Path(
+            environment.get("USERPROFILE") or environment.get("HOME") or Path.home()
+        ).expanduser()
         legacy_claude_dir = Path(
             environment.get("BUDDY_CLAUDE_DIR") or user_home / ".claude"
         ).expanduser()
@@ -199,9 +201,9 @@ class RuntimeSettings:
         )
         timeout = _positive_int(
             _value(
-                environment, "MASTERS_NUDGE_TIMEOUT", "BUDDY_TIMEOUT", "60"
+                environment, "MASTERS_NUDGE_TIMEOUT", "BUDDY_TIMEOUT", "120"
             ),
-            60,
+            120,
         )
         checkpoint_timeout = _positive_int(
             _value(

@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "run_id": "shader-long-tail-v1",
+  "status": "draft",
+  "protocol": "evaluation/shader_long_tail/PROTOCOL_V1.md",
+  "workspace": {
+    "path": "E:\\projects\\shader-long-tail-v1",
+    "branch": "codex/shader-long-tail-v1",
+    "start_commit": "cacae3e08cbcc293698b68fb76141ad63cfacea1",
+    "baseline_commit": "745848dbb9663bc69ff78eb5e5dede77ae6b83e2",
+    "harness_commit": null,
+    "clean_status_verified": true
+  },
+  "main_agent": {
+    "host": "codex-cli",
+    "cli_version": "0.147.0",
+    "model": "gpt-5.6-sol",
+    "reasoning_effort": "high"
+  },
+  "reviewer": {
+    "provider": "grok-subscription-cli",
+    "cli_version": "1.0.4",
+    "model": "subscription-default",
+    "reasoning_effort": "medium",
+    "checkpoint_timeout_seconds": 90,
+    "stop_timeout_seconds": 120,
+    "review_mode": "all",
+    "primary_lens": "",
+    "routing": "automatic-evidence-strength"
+  },
+  "unity": {
+    "editor": "6000.0.80f1",
+    "executable": "E:\\Unity\\Hub\\Editor\\6000.0.80f1\\Editor\\Unity.exe",
+    "urp": "17.0.4",
+    "graphics_api": "Direct3D 11",
+    "acceptance_gpu": "Intel(R) UHD Graphics",
+    "driver": "32.0.101.7088",
+    "resolution": "1920x1080",
+    "preflight_status": "passed",
+    "preflight_log": "C:\\Users\\kk789\\AppData\\Local\\Temp\\shader-long-tail-v1-unity-preflight-20260818-141148.log"
+  },
+  "measurement": {
+    "scene": "shield-gallery-v1",
+    "warmup_frames": 300,
+    "sample_frames": 1200,
+    "repetitions": 5,
+    "raw_samples_required": true
+  },
+  "search": {
+    "distinct_cell_limit": 50,
+    "refinement_limit_per_cell": 2,
+    "wall_time_policy": "no-short-wall-time-stop; formal-saturation-or-50-cells-or-genuine-block",
+    "minimum_mechanism_families_for_saturation": 8,
+    "late_productive_rate_floor": 0.3,
+    "retention_diagnostic": 0.6
+  },
+  "research_sources": [
+    "benchmark/architecture-contract.json",
+    "benchmark/architecture-experiments.json",
+    "benchmark/architecture-result.json"
+  ],
+  "preflight": {
+    "python_contract_tests": {
+      "status": "passed",
+      "tests": 9
+    },
+    "grok_smoke": {
+      "status": "passed",
+      "attempts": 3,
+      "timeouts": 0,
+      "latency_ms": [68163, 50274, 67329]
+    }
+  },
+  "frozen_at": null
+}

@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "rubric": {
+    "observation_not_instruction": "true or false",
+    "complete_finding": "true or false",
+    "blind_spot_strength": "0, 1, or 2",
+    "persona_aligned": "true or false"
+  },
+  "reviews": [
+    {
+      "job_id": "karis-1",
+      "lens": "karis",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "C17只在Forward靜態鏡頭成立，陰影與運動中是否仍是同一護盾尚未對過。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-2",
+      "lens": "karis",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "C17只對過Forward靜態SSIM；DepthOnly與陰影是否仍描述同一護盾尚未比較。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-3",
+      "lens": "karis",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "LUT與貼圖格式微調，是在對同一材質調，還是只在對Forward那張靜態圖調？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-1",
+      "lens": "quilez",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "兩次貼圖查表讓公式變短，暫存器卻升到四十；成本可能轉到佔用率與濾波，而非難題消失。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-2",
+      "lens": "quilez",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "中央十二層重疊的 1.2ms 平均降幅，無法代表 DepthOnly、陰影與移動鏡頭的成本轉移。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-3",
+      "lens": "quilez",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "兩次貼圖取樣讓公式變短，活躍暫存器卻從二十八升到四十，重疊透明的工作量只是換了位置。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    }
+  ]
+}

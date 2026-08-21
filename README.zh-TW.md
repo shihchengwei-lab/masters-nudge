@@ -2,9 +2,9 @@
 
 繁體中文 | [English](README.md)
 
-**在 coding agent 決定下一步前，加入一句不同角度的提醒。**
+**在 coding agent 決定下一步前，加入一個不同角度的短問句。**
 
-Masters’ Nudge 會在少數關鍵時刻，請另一個模型根據目前進度生成一句短提醒，再把它放進主 agent 的 context。它不接手任務，也不逐行審 code；這句提醒只會讓模型更可能注意到原本忽略的方向。
+Masters’ Nudge 會在少數關鍵時刻，請另一個模型根據目前進度生成一個開放問句，再把問句放進主 agent 的 context。Masters’ Nudge 不接手任務，也不逐行審 code；問句只會讓模型更可能重新思考原本忽略的方向。
 
 用 LLM 的語言來說：它先用動態框架引導 reviewer 生成 Nudge，再將 Nudge 注入主 agent 的 context，間接改變後續 token 的條件機率分布。
 
@@ -16,7 +16,7 @@ Masters’ Nudge 會在少數關鍵時刻，請另一個模型根據目前進度
 
 **Nudge**
 
-> 自動測試通過，仍沒走過一次乾淨安裝流程。
+> 什麼證據能確認乾淨安裝真的可用？
 
 **重新選擇**
 
@@ -48,9 +48,9 @@ Masters’ Nudge 會在幾個關鍵時刻，擷取一小份當下證據，請另
 接著閱讀 **[完整 17 筆可追蹤互動](experiment/riemann-domain/benchmark/interactions.md)**；
 若要檢查研究產出，再進入 **[四項可重現的路線關閉證書](experiment/riemann-domain/benchmark/closures/README.md)**。
 
-## 為什麼只說一句？
+## 為什麼只問一句？
 
-每次提醒最多 52 個字，只指出一個具體的工作流張力或問題。
+每次 Nudge 都是最多 52 個字的開放問句，只聚焦一個具體的工作流張力或問題。
 
 可能是某個假設從未被重看、回饋停得太早、範圍越做越大、事件順序不穩，或完成宣告已經跑在證據前面。
 
@@ -231,24 +231,56 @@ Clone repository，執行 `bash install.sh --all` 或 `.\install.ps1 -HostName a
 Lamport、已量測的 hot path 可切到 Carmack、完成邊界可切到 Linus。切換不改變
 dropdown，也不延續到下一次 review 決策。
 
-動態 checkpoint lens 有 session-local 額度：累計切換五次後，接下來三個原本會
-切換的 checkpoint 強制回到 Primary lens，然後重新計數。原本就沒有切換候選的
-Primary checkpoint 與 Stop 不消耗 cooldown。Routing 只檢查當次 checkpoint 的新事件，
-不以完整 context 裡累積的舊關鍵字重複觸發。Timeout 或靜默也算一次切換，因為它確實
-取代了一次 Primary review。
+Checkpoint 會排除最近兩個成功注入的 lens，再依當下證據順序選第一個合適視角。
+只有 `delivery_status=injected` 會推進 cooldown；timeout、error、`no_finding`、expired
+與 superseded 都不算。Routing 只檢查當下有限狀態，不把舊 Nudge 或 Persona 歷史送進
+Provider。Stop 仍固定使用下拉選單的 Primary lens。
 
 Lamport 與 Carmack 同時命中同一個新事件時，先選 Lamport，因為正確性先於速度。
 只有 `async`、`cache`、`performance` 或 `latency` 一個詞，不足以切換鏡頭。
 
 每個名字代表一組核心概念與關注面向。短評不會模仿本人，也不是增加一份 code review；技術細節只用來錨定值得重看的工作方式。
 
-不論目前是哪個階段，只要眼前有破壞性操作、安全或授權風險、做偏需求，或完成宣告與可見證據明確矛盾，Masters’ Nudge 都會先踩煞車。
-
 浮動視窗下拉會把階段寫入 `~/.masters-nudge/data/config.json`，下次審查生效；預設為 Build。下拉顯示選定的階段，彩色 badge 顯示上一則短評實際使用的視角。Checkpoint 暫時借用其他 lens 時，badge 會改變，但下拉選擇不變。既有 `~/.claude/buddy/config.json` 會繼續讀取，直到新設定寫進 neutral data 目錄。
 
-新設定檔格式為 `{"stage":"build"}`；合法階段是 `design`、`build`、`evolve`、`review`。General 是所有階段共用的工作流證據與踩煞車底座，不是可選濾鏡。
+若目前 workspace 設為 `domain: "shader"`，同一個浮動視窗會改顯示六位 Shader
+大師。選擇會存成該 workspace 的 `primary_lens`：Stop 一定使用選定濾鏡；Checkpoint
+則可在當輪事件出現對應證據時暫時換成其他專科濾鏡。Checkpoint 的暫時切換只改變
+badge，不改下拉選單。
 
-啟動 host 前設定 `MASTERS_NUDGE_PERSONA`（或舊 `BUDDY_PERSONA`）仍可強制指定 lens，且會停用 checkpoint lens 切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 General 設定回到預設 Build；舊 Lamport／Carmack 選擇會維持鎖定，直到使用者在視窗改選階段。
+### Shader 推薦環境
+
+Shader 推薦 profile 固定採用 V12 的實驗環境，不會跟著 host 預設 reviewer 改變：
+
+```powershell
+python masters_nudge_cli.py shader configure-recommended --workspace "E:\path\to\shader-workspace"
+```
+
+這會為指定 workspace 儲存 `shader / explore / anthropic / opus / review all`，並將
+`primary_lens` 留空，讓 Checkpoint 繼續自動選擇 Persona。Shader review 只使用有限長度
+的當下研究封包；輸出最多一個 52 字內、以「？」結尾的開放問句；注入內容只有問句
+本身，不顯示產品、觸發原因或 Persona 標籤。Finding 成功注入後，該 Persona 會暫停
+兩次 Checkpoint；timeout、error、`no_finding`、expired 與 superseded 都不推進
+cooldown。Stop 仍使用該階段的 primary。
+
+這是可重現的推薦 preset，不代表 `opus` 在所有情況下必然是最佳 Provider。固定 50
+候選的實驗系列中，V12 的正式中位數改善為 20.3132%；後續實驗也顯示不同 run 與
+Provider 間仍有明顯波動，因此不能把這個結果當成因果保證。
+
+若 Shader workspace 同時提供 `benchmark/architecture-contract.json`、
+`benchmark/architecture-experiments.json` 與 `benchmark/architecture-result.json`，
+長流程 review 只在這三份權威來源的 JSON 內容改變時觸發。送給 reviewer 的內容是
+即時計算的精簡差分與目前狀態；runtime 只快取可刪除重建的來源指紋，不建立第二份
+研究真相。軟體工程版同樣不再使用「每八個工具事件」的定時觸發；修改後出現新的
+測試、建置或驗證結果，才形成可審查的 evidence cycle。
+同一 session 同時只會執行一個 strategy provider 呼叫；尚未注入的舊 finding 若已被
+新的研究來源取代，receipt 會標為 `superseded`。新的 outcome-only Goal 範本在
+[`domains/shader/goal-template.txt`](domains/shader/goal-template.txt)，停止條件仍由
+workspace contract 保存。
+
+新設定檔格式為 `{"stage":"build"}`；合法階段是 `design`、`build`、`evolve`、`review`。General 是相容舊設定的工作流證據底座，不是可選濾鏡。
+
+啟動 host 前設定 `MASTERS_NUDGE_PERSONA`（或舊 `BUDDY_PERSONA`）會指定 Stop 的 Primary lens；Checkpoint 仍可依證據與成功注入 cooldown 暫時切換。舊 persona 格式的設定仍可讀取：四個生命週期 lens 映射到對應階段；舊 General 設定回到預設 Build。
 
 Lens 只改先重看工作流的哪個面向，不改證據門檻、模型呼叫次數、單則 Nudge 或字數上限。對應檔案在 `personas/`，附加於 `buddy-prompt.txt` 之後。六個視角共用同一次模型呼叫，不是六個 agent 同時發言。
 
@@ -304,7 +336,7 @@ Host-aware 預設不需第二次登入：Claude Code 走 Anthropic，Codex 走 O
 | `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude：`anthropic`；Codex：`openai` | `openai`（`codex exec`）、`anthropic`（`claude -p`）、`grok` 或 `ollama-local` |
 | `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude：`sonnet`；Codex：`gpt-5.6-sol`；Grok：CLI 預設；本機：必填 | 傳給選定 provider 的模型名 |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | 僅供 `ollama-local` 使用的 loopback Ollama base URL |
-| `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | 回合末模型呼叫逾時（秒） |
+| `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `120` | 回合末模型呼叫逾時（秒） |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `90` | 途中審查同步等待上限（秒） |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | 新 log、state、config 與無內容 telemetry |
 | `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root；舊版：`~/.masters-nudge/runtime` | 覆寫 prompt／schema／persona runtime 目錄 |
@@ -331,13 +363,12 @@ Telemetry 只保存 provider 實際回報且能解析的 token usage；不同 CL
 使用預設雲端 provider 時，**會把對話與工具事件送至外部模型廠商。** 使用 `ollama-local` 時，同一份 payload 只送往驗證過的 loopback Ollama server。每次回合末與每次命中的途中審查，各為一次模型呼叫。內容可能包含：
 
 1. 最新使用者 prompt（上限 2000 字；長文保留頭尾，中段標截斷）
-2. 途中：觸發的工具事件（≤3000）與最近 agent 上下文（≤1200）
-3. 回合末：最後宣告（≤2500）與當輪工具結果（≤2000；可能含讀檔內容、指令輸出、錯誤、diff）。Claude 缺證據時可退回 bounded transcript；Codex 不解析 transcript，而使用 PostToolUse 時累積的 bounded journal
+2. 途中：有限長度的研究狀態封包，包含目前分類出的瓶頸、host 有提供時的最近 agent 解釋、結構化 workflow 重複資訊（≤1800）、最近一段 Codex 工具 journal（≤3500），以及仍未閉合的目標／證據張力（≤2200）。Workflow 重複只代表行為證據，不代表 agent 已明說相同理由
+3. 回合末：最後宣告（≤2500）與當輪工具結果（≤2000；可能含讀檔內容、指令輸出、錯誤、diff）。Claude 缺證據時可退回 bounded transcript；Codex 不解析 transcript，而使用 PostToolUse 時累積的 bounded journal。Stop 封包與途中的研究狀態封包彼此獨立
 4. 可選的 agentcam 摘錄（合計 ≤2000）
-5. 本 session 最近最多 3 則短評（避免重複）
-6. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
+5. 審查用 system prompt 與選定濾鏡檔（規則，非你的專案原文）
 
-未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；`grok` 使用已登入的 Grok CLI 並明確停用其 web search 與 agent tools，但 payload 仍送往 xAI。中途切換 provider 時，先前短評可能作為「最近幾則」送進新 provider。`ollama-local` 只接受 loopback HTTP，關閉 client proxy 與 redirect，每次生成前都要求 Ollama 回報 cloud 已停用，並拒絕 remote model metadata。任何失敗都不產生 Nudge，也不會回退其他 provider。
+未覆寫時，Claude Code 把證據封包送往 Anthropic，Codex 則送往 OpenAI。設定 `MASTERS_NUDGE_PROVIDER` 可切換任一 host；`grok` 使用已登入的 Grok CLI 並明確停用其 web search 與 agent tools，但 payload 仍送往 xAI。每次 Provider review 只收到當下有限狀態，不會收到舊 Nudge 或 Persona 歷史。`ollama-local` 只接受 loopback HTTP，關閉 client proxy 與 redirect，每次生成前都要求 Ollama 回報 cloud 已停用，並拒絕 remote model metadata。任何失敗都不產生 Nudge，也不會回退其他 provider。
 
 反應、任務錨點、bounded tool journal 與本機模型名會以明文存在 `~/.masters-nudge/data/`。舊 `~/.claude/buddy/` log 與 config 仍可讀，但不會自動移動或刪除。Local-only mode 無法稽核作業系統或冒充 Ollama 的惡意本機程序；本機 runtime 與模型授權仍由使用者負責。使用雲端 mode 時，廠商保留／訓練政策請查現行條款。
 
@@ -359,7 +390,7 @@ export BUDDY_SPRITE_PATH=/path/to/spritesheet.png
 
 ### 語系
 
-預設提示為繁體中文。換語系需同步：`buddy-prompt.txt`，以及 `checkpoint.py`、`inject.py`、`masters_nudge/codex_adapter.py` 內的 hook 包裝字串（搜尋 `第三方觀察`）；可選更新 `test_buddy.py` 的中文 fixture。管線本身與語言無關。
+預設提示為繁體中文。換語系需同步 `buddy-prompt.txt` 與相關中文測試 fixture；注入內容本身沒有產品、原因或 Persona 標籤。管線本身與語言無關。
 
 ## 實作摘要
 
@@ -369,7 +400,7 @@ turn-stopped 事件。Claude 相容 hooks 會轉換 checkpoint 工具事件；�
 審查都直接進入 `ReviewCore`，不再經過 host 專用的轉交 callback。
 
 共用 core 負責 lens 路由、prompt 組合、provider 呼叫、36–42 字回答閉環目標／
-52 字硬上限、結構化輸出處理、最近短評上下文、反應保存與 telemetry。Host
+52 字硬上限、結構化輸出處理、冷啟動當下封包、反應保存與 telemetry。Host
 adapter 負責原生事件解析、證據擷取、turn journal、checkpoint 去重與 delivery
 state；共用 evidence helper 建立小型、有標籤的證據封包，而不是固定重送整段
 對話。輸出契約見 `reaction-schema.json`。
@@ -402,8 +433,7 @@ Runtime：
 |---|---|
 | `~/.masters-nudge/data/<host>--<session_id>.log` | 反應 JSONL |
 | `~/.masters-nudge/data/<host>--<session_id>.turn.json` | 任務錨點與 bounded tool journal |
-| `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | 注入讀取指標 |
-| `~/.masters-nudge/data/<host>--<session_id>.lens-route.json` | Checkpoint 切換次數與 cooldown |
+| `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | 注入狀態與成功注入 Persona cooldown 的依據 |
 | `~/.masters-nudge/data/config.json` | 視窗保存的生命週期階段 |
 | `~/.masters-nudge/data/<host>--<session_id>.checkpoints/` | 途中審查去重 |
 | `~/.masters-nudge/data/error.log` | 錯誤 log |

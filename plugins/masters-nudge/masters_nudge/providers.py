@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import shutil
 import subprocess
 import tempfile
@@ -17,6 +18,27 @@ from .runtime import reviewer_environment
 
 Logger = Callable[[str], None]
 
+GROK_REVIEWER_DENIED_TOOLS = (
+    "run_terminal_cmd",
+    "grep",
+    "read_file",
+    "search_replace",
+    "list_dir",
+    "web_search",
+    "web_fetch",
+    "todo_write",
+    "task",
+    "Agent",
+)
+GROK_COMPATIBILITY_SOURCES = (
+    "SKILLS",
+    "RULES",
+    "AGENTS",
+    "MCPS",
+    "HOOKS",
+    "SESSIONS",
+)
+
 
 def _noop(_message: str) -> None:
     return None
@@ -27,6 +49,85 @@ def _reviewer_process_kwargs() -> dict[str, int]:
     if os.name != "nt":
         return {}
     return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+
+
+def _terminate_process_tree(
+    process: subprocess.Popen,
+    *,
+    log_error: Logger = _noop,
+) -> None:
+    """Terminate a timed-out reviewer and every descendant it started."""
+    if process.poll() is not None:
+        return
+    try:
+        if os.name == "nt":
+            subprocess.run(
+                ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=10,
+                **_reviewer_process_kwargs(),
+            )
+        else:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+    except (OSError, subprocess.SubprocessError) as exc:
+        log_error(f"reviewer process-tree cleanup failed: {exc}")
+        try:
+            process.kill()
+        except OSError:
+            pass
+    try:
+        process.communicate(timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        try:
+            process.kill()
+        except OSError:
+            pass
+
+
+def _run_grok_process(
+    command: list[str],
+    *,
+    cwd: str,
+    environment: dict[str, str],
+    timeout_sec: int,
+    log_error: Logger = _noop,
+) -> subprocess.CompletedProcess:
+    kwargs = _reviewer_process_kwargs()
+    if os.name != "nt":
+        kwargs["start_new_session"] = True
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        env=environment,
+        cwd=cwd,
+        **kwargs,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_sec)
+    except subprocess.TimeoutExpired:
+        _terminate_process_tree(process, log_error=log_error)
+        raise
+    return subprocess.CompletedProcess(
+        command,
+        process.returncode,
+        stdout,
+        stderr,
+    )
+
+
+def grok_subscription_environment() -> dict[str, str]:
+    """Use Grok Build's signed-in subscription session, not API-key billing."""
+    environment = reviewer_environment()
+    environment.pop("XAI_API_KEY", None)
+    for vendor in ("CLAUDE", "CURSOR"):
+        for source in GROK_COMPATIBILITY_SOURCES:
+            environment[f"GROK_{vendor}_{source}_ENABLED"] = "false"
+    return environment
 
 
 def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str:
@@ -261,6 +362,7 @@ def call_grok_result(
     *,
     schema_path: Path,
     timeout_sec: int,
+    reasoning_effort: str = "",
     capture_raw: bool = False,
     log_error: Logger = _noop,
     grok_bin_resolver: Callable[[], str | None] = resolve_grok_bin,
@@ -280,7 +382,9 @@ def call_grok_result(
         f"[transcript]\n{transcript_text}\n[end transcript]\n"
     )
     prompt.close()
+    isolated_workspace = tempfile.TemporaryDirectory(prefix="masters-nudge-grok-")
     try:
+        isolated_cwd = isolated_workspace.name
         command = [
             grok_bin,
             "--prompt-file",
@@ -292,8 +396,10 @@ def call_grok_result(
             "--output-format",
             "json",
             "--disable-web-search",
-            "--tools",
-            "",
+            "--disallowed-tools",
+            ",".join(GROK_REVIEWER_DENIED_TOOLS),
+            "--cwd",
+            isolated_cwd,
             "--no-memory",
             "--no-subagents",
             "--max-turns",
@@ -304,22 +410,26 @@ def call_grok_result(
         ]
         if str(model or "").strip():
             command.extend(["--model", str(model).strip()])
-        result = subprocess.run(
+        if str(reasoning_effort or "").strip():
+            command.extend(
+                ["--reasoning-effort", str(reasoning_effort).strip()]
+            )
+        result = _run_grok_process(
             command,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=reviewer_environment(),
-            timeout=timeout_sec,
-            **_reviewer_process_kwargs(),
+            cwd=isolated_cwd,
+            environment=grok_subscription_environment(),
+            timeout_sec=timeout_sec,
+            log_error=log_error,
         )
-        if result.returncode != 0:
-            log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(usage=parse_usage(result.stdout))
         parsed = parse_grok_reaction_result(result.stdout)
         parsed["usage"] = parse_usage(result.stdout)
         if capture_raw:
             parsed["raw_output"] = result.stdout
+        if parsed.get("status") != "error":
+            return parsed
+        if result.returncode != 0:
+            log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
+            return call_result(usage=parsed["usage"])
         return parsed
     except subprocess.TimeoutExpired:
         log_error("grok CLI timeout")
@@ -328,6 +438,7 @@ def call_grok_result(
         log_error(f"grok CLI not executable: {grok_bin}")
         return call_result(error_kind="not_found")
     finally:
+        isolated_workspace.cleanup()
         try:
             os.unlink(prompt.name)
         except OSError:
@@ -432,6 +543,7 @@ def dispatch_call_result(
     schema_path: Path,
     timeout_sec: int,
     ollama_url: str = DEFAULT_OLLAMA_URL,
+    reasoning_effort: str = "",
     capture_raw: bool = False,
     log_error: Logger = _noop,
 ) -> dict:
@@ -462,6 +574,7 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
+            reasoning_effort=reasoning_effort,
             capture_raw=capture_raw,
             log_error=log_error,
         )

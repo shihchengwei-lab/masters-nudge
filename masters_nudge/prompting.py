@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
 
 import lens_router
 import persona_config
@@ -19,6 +19,8 @@ def build_system_prompt(
     persona_dir: Path,
     data_dir: Path,
     route: lens_router.ReviewRoute | None = None,
+    persona_names: Mapping[str, str] | None = None,
+    domain: str = "software",
     log_error: Callable[[str], None] | None = None,
 ) -> str:
     logger = log_error or (lambda _message: None)
@@ -29,7 +31,7 @@ def build_system_prompt(
         return ""
 
     route = route or lens_router.resolve_review_route(data_dir)
-    personas = persona_config.LENS_PERSONAS
+    personas = persona_config.LENS_PERSONAS if persona_names is None else persona_names
     persona = route.effective_lens
     if persona == "general":
         return base_prompt
@@ -45,10 +47,13 @@ def build_system_prompt(
         logger(f"persona prompt read failed ({persona}): {exc}")
         return ""
 
+    if domain == "shader":
+        return f"{base_prompt.rstrip()}\n\n{overlay}\n"
+
     heading = "工作流觀察鏡頭"
     first_paragraph = (
         f"這一輪借用 {personas[persona]} 的核心概念、"
-        "觀察方法與關注面向，決定如何整理證據、從哪裡看這段工作流。\n"
+        "觀察方法與關注面向，決定如何整理證據、從哪裡看這段工作。\n"
     )
     final_line = "不是扮演或模仿人物，也不是增加一份 code review。\n"
     persona_header = "".join((
@@ -58,7 +63,7 @@ def build_system_prompt(
         "也不能補足 packet 缺少的證據。輸出仍只談工作，不提人物或場景。\n",
         "觀察場景不是裝飾：先完整執行它指定的證據操作。若 packet 直接支持"
         "該場景的專屬張力，優先由它形成 Nudge，不要改談相鄰鏡頭也能提出的"
-        "泛用問題；只有共同的踩煞車規則可以優先。\n",
+        "泛用問題。\n",
         "場景只決定選哪一件事，不提供輸出素材；不要重述人物、動作或推理過程，"
         "也不要因此增加 Nudge 字數。\n",
         final_line,
@@ -158,16 +163,18 @@ def sanitize_reaction(
     return _close_reaction(text, max_chars)
 
 
-def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
+def route_metadata(
+    route: lens_router.ReviewRoute, *, domain: str = "software"
+) -> dict[str, str]:
     return {
-        "domain": "software",
+        "domain": domain,
         "stage": route.stage,
         "primary_lens": route.primary_lens,
         "effective_lens": route.effective_lens,
         "override_lens": route.override_lens,
         "trigger": route.trigger,
         "route_source": route.source,
-        "candidate_lens": route.candidate_lens,
-        "candidate_trigger": route.candidate_trigger,
-        "suppression_reason": route.suppression_reason,
+        "candidate_lens": getattr(route, "candidate_lens", ""),
+        "candidate_trigger": getattr(route, "candidate_trigger", ""),
+        "suppression_reason": getattr(route, "suppression_reason", ""),
     }

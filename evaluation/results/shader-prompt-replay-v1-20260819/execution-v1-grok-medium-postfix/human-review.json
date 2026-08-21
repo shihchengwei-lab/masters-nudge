@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "rubric": {
+    "observation_not_instruction": "true or false",
+    "complete_finding": "true or false",
+    "blind_spot_strength": "0, 1, or 2",
+    "persona_aligned": "true or false"
+  },
+  "reviews": [
+    {
+      "job_id": "akenine_moller-1",
+      "lens": "akenine_moller",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "幀時間下降的是片段運算變便宜，還是十二層透明重疊仍全數執行的覆蓋工作？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "akenine_moller-2",
+      "lens": "akenine_moller",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "C17省下的1.2毫秒，是每個片段變便宜，還是抵達取樣的十二層透明工作變少？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "akenine_moller-3",
+      "lens": "akenine_moller",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "C17的毫秒下降把每片變便宜，與十二層透明重疊仍送達取樣的工作混成同一勝利。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "carmack-1",
+      "lens": "carmack",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "指令變少與1.2ms下降，仍和兩次貼圖取樣、暫存器40綁成同一勝利，尚未分開工作消失與成本換位。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "carmack-2",
+      "lens": "carmack",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "C17把六層程序雜訊換成兩次貼圖與頂點參數，指令變少但暫存器升壓，工作消失與移位尚未分開。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "carmack-3",
+      "lens": "carmack",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "幀時6.9ms與指令下降，仍把活躍暫存器升至40、兩次貼圖與頂點插值混成工作已消失。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-1",
+      "lens": "karis",
+      "repeat": 1,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-2",
+      "lens": "karis",
+      "repeat": 2,
+      "status": "error",
+      "raw_finding": "",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-3",
+      "lens": "karis",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "固定鏡頭的幀時間把指令減少，與暫存器升至四十、改吃兩次貼圖，收成同一種較省的表示。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "lottes-1",
+      "lens": "lottes",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "兩張定鏡截圖的SSIM，仍把外觀維持與移動時LUT、half量化的時間累積當成同一勝出。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "lottes-2",
+      "lens": "lottes",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "六層程序改兩次貼圖並上移頂點後，固定鏡頭的 SSIM 仍把片段頻率與插值頻率收成同一外觀。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "lottes-3",
+      "lens": "lottes",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "兩張靜態截圖的 0.982，仍把六層噪聲被 lookup 平均掉，與維持外觀看成同一結果。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-1",
+      "lens": "quilez",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "定鏡加速與指令下降，比較的是表示變輕，還是把六層噪聲的工作藏進暫存器與貼圖查找？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-2",
+      "lens": "quilez",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "兩次查表讓公式變短，六層噪聲的場不變量可能只被靜態SSIM與LUT邊界一起蓋住。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-3",
+      "lens": "quilez",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "六層程序噪聲收成兩次查找後，少掉的是場的計算，還是只把工作搬進貼圖與暫存器？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "tatarchuk-1",
+      "lens": "tatarchuk",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "程序噪聲改兩次貼圖在4070變快，仍未分開工作變少，或ALU成本轉成這台機器未量的頻寬。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "tatarchuk-2",
+      "lens": "tatarchuk",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "C17 的 6.9ms 仍混著單一 RTX 與固定鏡頭，尚未能代表可上架的 GPU 工作量。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "tatarchuk-3",
+      "lens": "tatarchuk",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "C17的6.9ms是工作量下降，還是4070上六層噪聲改兩次取樣後的成本位移？",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+# Timothy Lottes：看見影格之間的失真
+
+## 核心概念
+畫面是 sampling、reconstruction 與 history 組成的 spatiotemporal signal。
+Nyquist、fwidth、jitter 與 precision 決定移動時是否仍然穩定。
+
+## 引導場景
+Timothy Lottes 把連續影格攤成時間帶，沿鏡頭移動追蹤頻率、
+pixel footprint 與 history：
+
+單幀看不見的誤差，正在時間裡累積成什麼？
+
+## 兩個簡短案例
+- 靜態畫面相同，次像素細節卻在移動時閃爍。
+- half precision 單幀誤差很小，累積後卻留下 ghost trail。
+
+## 形成 Nudge
+finding 落在單幀品質與時空穩定性的落差：
+被平均值掩蓋的頻率、歷史或精度狀態正在改變畫面。

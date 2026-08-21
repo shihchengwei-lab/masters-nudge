@@ -7,6 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
+from masters_nudge import profiles
 from masters_nudge.local_ollama import DEFAULT_OLLAMA_URL
 from masters_nudge.management import (
     configure_local,
@@ -16,6 +17,7 @@ from masters_nudge.management import (
     migrate_legacy,
     reset_local,
 )
+from masters_nudge.runtime import RuntimeSettings
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parent
@@ -133,6 +135,7 @@ def main() -> int:
     migrate_parser.add_argument("--json", action="store_true")
 
     window_parser = subparsers.add_parser("window")
+    window_parser.add_argument("--workspace", default=str(Path.cwd()))
     window_parser.add_argument("--json", action="store_true")
 
     local_parser = subparsers.add_parser("local")
@@ -155,6 +158,18 @@ def main() -> int:
     grok_configure_parser.add_argument("--json", action="store_true")
     grok_reset_parser = grok_subparsers.add_parser("reset")
     grok_reset_parser.add_argument("--json", action="store_true")
+
+    shader_parser = subparsers.add_parser("shader")
+    shader_subparsers = shader_parser.add_subparsers(
+        dest="shader_command", required=True
+    )
+    shader_configure_parser = shader_subparsers.add_parser(
+        "configure-recommended"
+    )
+    shader_configure_parser.add_argument(
+        "--workspace", default=str(Path.cwd())
+    )
+    shader_configure_parser.add_argument("--json", action="store_true")
 
     args = parser.parse_args()
     if args.command == "doctor":
@@ -209,7 +224,21 @@ def main() -> int:
         else:
             print("No persistent reviewer config was present.")
         return 0 if result["reset"] else 1
-    result = launch_window(PLUGIN_ROOT)
+    if args.command == "shader":
+        settings = RuntimeSettings.from_env(PLUGIN_ROOT)
+        result = profiles.configure_recommended_shader_profile(
+            settings.paths.data_dir, args.workspace
+        )
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False))
+        elif result["saved"]:
+            print("Recommended Shader reviewer configured for this workspace:")
+            print("  Anthropic opus · explore · review all · automatic Persona routing")
+            print(f"Config: {result['path']}")
+        else:
+            print("Recommended Shader reviewer not configured: " + result["error"])
+        return 0 if result["saved"] else 1
+    result = launch_window(PLUGIN_ROOT, workspace=args.workspace)
     if args.json:
         print(json.dumps(result, ensure_ascii=False))
     elif result["launched"]:

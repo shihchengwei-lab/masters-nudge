@@ -6,12 +6,21 @@ from __future__ import annotations
 import json
 import os
 import re
+from collections import Counter
 from pathlib import Path
+from typing import Any
 
 
 TASK_ANCHOR_MAX_CHARS = 2000
 CHECKPOINT_EVENT_MAX_CHARS = 3000
 CHECKPOINT_AGENT_CONTEXT_MAX_CHARS = 1200
+CHECKPOINT_BOTTLENECK_MAX_CHARS = 4300
+CHECKPOINT_WORKFLOW_MAX_CHARS = 1800
+CHECKPOINT_MECHANISM_MAX_CHARS = 3500
+CHECKPOINT_TENSION_MAX_CHARS = 2200
+SHADER_TASK_ANCHOR_MAX_CHARS = 1000
+SHADER_DECISION_MATERIAL_MAX_CHARS = 4200
+SHADER_DIRECT_EVIDENCE_MAX_CHARS = 2600
 STOP_ASSISTANT_MAX_CHARS = 2500
 TOOL_EVIDENCE_MAX_CHARS = 2000
 AGENTCAM_EVIDENCE_MAX_CHARS = 2000
@@ -108,19 +117,127 @@ def build_checkpoint_packet(
     task_anchor: str,
     event_context: str,
     assistant_context: str = "",
+    workflow_context: str = "",
+    tool_evidence: str = "",
 ) -> str:
+    bounded_event = head_tail(event_context, CHECKPOINT_EVENT_MAX_CHARS)
+    bounded_agent = head_tail(
+        assistant_context, CHECKPOINT_AGENT_CONTEXT_MAX_CHARS
+    )
+    bottleneck_parts = []
+    if bounded_agent:
+        bottleneck_parts.append(f"visible agent explanation:\n{bounded_agent}")
+    if bounded_event:
+        bottleneck_parts.append(f"latest classified bottleneck:\n{bounded_event}")
+    tension_parts = []
+    if task_anchor:
+        tension_parts.append(f"target still in force:\n{task_anchor}")
+    if bounded_event:
+        tension_parts.append(
+            f"latest evidence not yet reconciled:\n{bounded_event}"
+        )
     parts = [
         _section("task anchor", task_anchor, TASK_ANCHOR_MAX_CHARS),
         _section(
-            "checkpoint evidence", event_context, CHECKPOINT_EVENT_MAX_CHARS
+            "current bottleneck model",
+            "\n\n".join(bottleneck_parts),
+            CHECKPOINT_BOTTLENECK_MAX_CHARS,
         ),
         _section(
-            "recent agent context",
-            assistant_context,
-            CHECKPOINT_AGENT_CONTEXT_MAX_CHARS,
+            "repeated explanation and workflow evidence",
+            workflow_context,
+            CHECKPOINT_WORKFLOW_MAX_CHARS,
+        ),
+        _section(
+            "failed or no-change mechanisms",
+            tool_evidence,
+            CHECKPOINT_MECHANISM_MAX_CHARS,
+        ),
+        _section(
+            "unresolved contradiction",
+            "\n\n".join(tension_parts),
+            CHECKPOINT_TENSION_MAX_CHARS,
         ),
     ]
     return "\n\n".join(part for part in parts if part)
+
+
+def build_shader_research_packet(
+    change: str,
+    projection: str,
+    *,
+    task_anchor: str = "",
+    tool_evidence: str = "",
+) -> str:
+    """Present bounded decision material, not an undifferentiated tool journal."""
+    parts = [
+        _section("research target", task_anchor, SHADER_TASK_ANCHOR_MAX_CHARS),
+        _section("new research-state delta", change, 1600),
+        _section(
+            "candidate decision material",
+            projection,
+            SHADER_DECISION_MATERIAL_MAX_CHARS,
+        ),
+        _section(
+            "latest direct evidence",
+            tool_evidence,
+            SHADER_DIRECT_EVIDENCE_MAX_CHARS,
+        ),
+    ]
+    return "\n\n".join(part for part in parts if part)
+
+
+def summarize_checkpoint_progress(progress: dict[str, Any]) -> str:
+    """Render bounded, factual workflow recurrence without inferring intent."""
+    raw_recent = progress.get("recent")
+    recent = raw_recent[-8:] if isinstance(raw_recent, list) else []
+    recent = [item for item in recent if isinstance(item, dict)]
+    if not recent:
+        return ""
+
+    families = [
+        str(item.get("command_family") or item.get("tool") or "tool")
+        for item in recent
+    ]
+    counts = Counter(families)
+    repeated = [(family, count) for family, count in counts.items() if count >= 2]
+    failed = [item for item in recent if item.get("failed")]
+
+    stable_counts: list[tuple[dict[str, Any], int]] = []
+    previous_changed_lines: int | None = None
+    for item in recent:
+        value = item.get("changed_lines")
+        if not item.get("mutating") or not isinstance(value, int):
+            continue
+        if previous_changed_lines == value:
+            stable_counts.append((item, value))
+        previous_changed_lines = value
+
+    lines: list[str] = []
+    if repeated:
+        lines.append("repeated workflow families:")
+        lines.extend(f"- {family} ×{count}" for family, count in repeated)
+    if failed:
+        lines.append("failed events:")
+        for item in failed:
+            family = str(item.get("command_family") or item.get("tool") or "tool")
+            lines.append(f"- #{item.get('event_seq')} {family} (failed)")
+    if stable_counts:
+        lines.append("no changed-line movement (aggregate count only):")
+        for item, value in stable_counts:
+            family = str(item.get("command_family") or item.get("tool") or "tool")
+            lines.append(f"- #{item.get('event_seq')} {family}: {value} lines")
+    lines.append("recent workflow:")
+    for item, family in zip(recent, families):
+        flags = []
+        if item.get("failed"):
+            flags.append("failed")
+        if item.get("goal_transition"):
+            flags.append(f"goal={item['goal_transition']}")
+        lines.append(
+            f"- #{item.get('event_seq')} {family} {' '.join(flags)}".rstrip()
+        )
+    return head_tail("\n".join(lines), CHECKPOINT_WORKFLOW_MAX_CHARS)
 
 
 def build_stop_packet(

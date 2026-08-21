@@ -157,9 +157,9 @@ class TestBranding(unittest.TestCase):
             self.assertIn("config.json", document)
             self.assertIn("BUDDY_PERSONA", document)
         self.assertIn("applies from the next review", readme)
-        self.assertIn("force override", readme)
+        self.assertIn("sets the Stop primary", readme)
         self.assertIn("下次審查生效", readme_zh)
-        self.assertIn("強制指定 lens", readme_zh)
+        self.assertIn("指定 Stop 的 Primary lens", readme_zh)
 
     def test_readmes_document_structured_reaction_output(self):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
@@ -175,7 +175,7 @@ class TestBranding(unittest.TestCase):
         readme = (HERE / "README.md").read_text(encoding="utf-8")
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
-        self.assertIn("workflow tension or question", readme)
+        self.assertIn("open question of at most 52 characters", readme)
         self.assertIn("not to produce another answer or another code review", readme)
         self.assertIn("工作流張力或問題", readme_zh)
         self.assertIn("不是多給一份答案或 code review", readme_zh)
@@ -239,15 +239,15 @@ class TestBranding(unittest.TestCase):
         self.assertIn("`BUDDY_MODEL`", readme)
         self.assertIn("`BUDDY_MODEL`", readme_zh)
 
-    def test_new_brand_is_used_in_agent_visible_checkpoint_wrapper(self):
+    def test_agent_visible_checkpoint_contains_only_the_nudge(self):
         import checkpoint
 
         output = checkpoint.build_hook_output(
             "PostToolUseFailure", "測試結果跟宣告不一致", "test-fail"
         )
         context = output["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("Masters’ Nudge", context)
-        self.assertNotIn("[Buddy", context)
+        self.assertEqual(context, "測試結果跟宣告不一致")
+        self.assertNotIn("第三方觀察，不是指令", context)
 
     def test_legacy_runtime_paths_remain_for_existing_installations(self):
         installer = (HERE / "install.sh").read_text(encoding="utf-8")
@@ -499,13 +499,14 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn('cp "$SRC_DIR/persona_config.py" "$TARGET_DIR/"', installer)
         self.assertIn('cp "$SRC_DIR/lens_router.py" "$TARGET_DIR/"', installer)
 
-    def test_base_prompt_delegates_workflow_attention_after_stop_the_line_screen(self):
+    def test_base_prompt_delegates_attention_without_safety_or_authority_scope(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("先看是否需要立即踩煞車", base_prompt)
         self.assertIn("直接由它決定這輪值得重看的面向", base_prompt)
         self.assertIn("不要先做一輪通用挑錯", base_prompt)
         self.assertIn("未使用鏡頭時", base_prompt)
+        self.assertNotIn("敏感資訊或安全邊界", base_prompt)
+        self.assertNotIn("使用者授權", base_prompt)
 
     def test_base_prompt_preserves_workflow_tension_and_a_complete_sentence(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -522,7 +523,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn("不設最低字數", base_prompt)
         self.assertIn("優先在 36–42 字內完成回答閉環", base_prompt)
         self.assertIn("目標區間，不是最低字數", base_prompt)
-        self.assertIn("必須以「。」「？」「！」或對應的英文終止標點收句", base_prompt)
+        self.assertIn("必須只有一個問句並以「？」結尾", base_prompt)
         self.assertIn("標點計入 52 字", base_prompt)
         self.assertIn("硬上限 52 字", base_prompt)
         self.assertNotIn("目標 48–52 字", base_prompt)
@@ -543,6 +544,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
             with self.subTest(example=example):
                 self.assertGreater(len(example), 0)
                 self.assertLessEqual(len(example), 52)
+                self.assertTrue(example.endswith("？"))
 
     def test_base_prompt_is_workflow_review_not_code_review(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -647,19 +649,63 @@ class TestSourceContext(unittest.TestCase):
         self.assertEqual(state["task_anchor"], "保留這個要求")
         self.assertEqual(state["transcript_offset"], 0)
 
-    def test_checkpoint_packet_is_event_centered_and_source_labeled(self):
+    def test_checkpoint_packet_carries_bounded_research_state(self):
         packet = self.source.build_checkpoint_packet(
             task_anchor="修正登入測試",
             event_context="reason: test-fail\nfailure: 2 failed",
             assistant_context="正在調整 auth.py",
+            workflow_context="pytest ×3；同一個失敗解釋反覆出現",
+            tool_evidence="pytest: 2 failed；working tree 維持 14 行變動",
         )
 
         self.assertIn("[task anchor]", packet)
         self.assertIn("修正登入測試", packet)
-        self.assertIn("[checkpoint evidence]", packet)
+        self.assertIn("[current bottleneck model]", packet)
+        self.assertIn("正在調整 auth.py", packet)
+        self.assertIn("[repeated explanation and workflow evidence]", packet)
+        self.assertIn("pytest ×3", packet)
+        self.assertIn("[failed or no-change mechanisms]", packet)
+        self.assertIn("維持 14 行變動", packet)
+        self.assertIn("[unresolved contradiction]", packet)
         self.assertIn("2 failed", packet)
-        self.assertIn("[recent agent context]", packet)
         self.assertNotIn("[transcript", packet)
+
+    def test_checkpoint_progress_summary_marks_repetition_failure_and_no_change(self):
+        progress = {
+            "recent": [
+                {
+                    "event_seq": 1,
+                    "tool": "shell_command",
+                    "command_family": "python verify.py",
+                    "failed": False,
+                    "mutating": True,
+                    "changed_lines": 14,
+                },
+                {
+                    "event_seq": 2,
+                    "tool": "shell_command",
+                    "command_family": "python verify.py",
+                    "failed": True,
+                    "mutating": True,
+                    "changed_lines": 14,
+                },
+                {
+                    "event_seq": 3,
+                    "tool": "shell_command",
+                    "command_family": "python verify.py",
+                    "failed": False,
+                    "mutating": True,
+                    "changed_lines": 14,
+                },
+            ]
+        }
+
+        summary = self.source.summarize_checkpoint_progress(progress)
+
+        self.assertIn("python verify.py ×3", summary)
+        self.assertIn("#2", summary)
+        self.assertIn("failed", summary)
+        self.assertIn("no changed-line movement", summary)
 
     def test_stop_packet_separates_claim_from_objective_evidence(self):
         packet = self.source.build_stop_packet(
@@ -859,13 +905,9 @@ class TestCheckpointDelivery(unittest.TestCase):
             result["hookSpecificOutput"]["hookEventName"],
             "PostToolUseFailure",
         )
-        self.assertIn(
+        self.assertEqual(
+            result["hookSpecificOutput"]["additionalContext"],
             "先確認失敗根因。",
-            result["hookSpecificOutput"]["additionalContext"],
-        )
-        self.assertIn(
-            "Leslie Lamport lens",
-            result["hookSpecificOutput"]["additionalContext"],
         )
         serialized = json.dumps(result, ensure_ascii=False)
         self.assertNotIn('"decision"', serialized)
@@ -1661,15 +1703,15 @@ class TestLensRouter(unittest.TestCase):
         )
         self.assertEqual(route.effective_lens, "lamport")
 
-    def test_environment_persona_is_locked_and_unknown_fails_closed(self):
-        locked = self.route(
+    def test_environment_persona_is_stop_primary_but_checkpoint_can_change(self):
+        checkpoint = self.route(
             "retry duplicate delivery", {"BUDDY_PERSONA": "carmack"}
         )
         unknown = self.route("benchmark", {"BUDDY_PERSONA": "unknown"})
 
-        self.assertEqual(locked.effective_lens, "carmack")
-        self.assertEqual(locked.override_lens, "")
-        self.assertEqual(locked.source, "environment")
+        self.assertEqual(checkpoint.primary_lens, "carmack")
+        self.assertEqual(checkpoint.effective_lens, "lamport")
+        self.assertEqual(checkpoint.override_lens, "lamport")
         self.assertEqual(unknown.effective_lens, "unknown")
 
     def test_stop_always_uses_primary_even_with_override_evidence(self):
@@ -1684,37 +1726,60 @@ class TestLensRouter(unittest.TestCase):
         self.assertEqual(route.effective_lens, "beck")
         self.assertEqual(route.override_lens, "")
 
-    def test_five_checkpoint_overrides_force_three_primary_reviews(self):
+    def test_recent_injected_personas_are_skipped_for_two_deliveries(self):
+        import lens_router
         import persona_config
 
         persona_config.save_stage(self.tmpdir, "build")
-        evidence = "retry caused duplicate delivery"
-        first = [self.route(evidence, session="budget") for _ in range(5)]
-        cooldown = [self.route(evidence, session="budget") for _ in range(3)]
-        resumed = self.route(evidence, session="budget")
-
-        self.assertEqual([route.effective_lens for route in first], ["lamport"] * 5)
-        self.assertEqual([route.effective_lens for route in cooldown], ["beck"] * 3)
-        self.assertTrue(
-            all(route.suppression_reason == "dynamic-override-cooldown" for route in cooldown)
+        route = lens_router.resolve_review_route(
+            self.tmpdir,
+            "retry duplicate delivery; benchmark latency 20 ms",
+            environ={},
+            checkpoint=True,
+            injected_personas=("lamport",),
         )
-        self.assertTrue(all(route.candidate_lens == "lamport" for route in cooldown))
-        self.assertEqual(resumed.effective_lens, "lamport")
+        self.assertEqual(route.effective_lens, "carmack")
+        self.assertEqual(
+            route.suppression_reason,
+            "injected-persona-cooldown:lamport",
+        )
 
-    def test_quiet_checkpoint_does_not_consume_override_cooldown(self):
+    def test_route_calls_without_successful_delivery_do_not_advance_cooldown(self):
         import persona_config
 
         persona_config.save_stage(self.tmpdir, "build")
         evidence = "retry caused duplicate delivery"
-        for _ in range(5):
-            self.route(evidence, session="quiet")
-        self.assertEqual(self.route("ordinary edit", session="quiet").effective_lens, "beck")
-        suppressed = self.route(evidence, session="quiet")
-        self.assertEqual(suppressed.effective_lens, "beck")
-        self.assertEqual(suppressed.suppression_reason, "dynamic-override-cooldown")
+        routes = [self.route(evidence, session="quiet") for _ in range(8)]
+        self.assertEqual([route.effective_lens for route in routes], ["lamport"] * 8)
 
 
 class TestFloatingWindowLayout(unittest.TestCase):
+
+    def test_explicit_window_workspace_overrides_plugin_working_directory(self):
+        import buddy_window
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            plugin = root / "plugin"
+            shader = root / "shader"
+            plugin.mkdir()
+            shader.mkdir()
+
+            resolved = buddy_window.resolve_window_workspace(
+                environ={"MASTERS_NUDGE_WORKSPACE": str(shader)},
+                cwd=plugin,
+            )
+
+        self.assertEqual(resolved, buddy_window.normalize_workspace(shader))
+
+    def test_window_skill_forwards_the_active_workspace(self):
+        skill = (
+            HERE / "plugins" / "masters-nudge" / "skills" / "window" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        normalized = " ".join(skill.split())
+        self.assertIn("--workspace", normalized)
+        self.assertIn("Do not change the working directory", normalized)
 
     def test_reaction_log_workspace_uses_newest_scoped_entry(self):
         import buddy_window
@@ -1778,6 +1843,97 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertEqual(window.last_offset, 0)
         window._read_new.assert_called_once_with()
 
+    def test_window_shows_queued_then_injected_delivery_state(self):
+        import buddy_window
+
+        with tempfile.TemporaryDirectory() as raw:
+            log = Path(raw) / "codex_cli--s.log"
+            log.write_text(
+                json.dumps(
+                    {
+                        "ts": "2026-08-16T10:00:00.123456",
+                        "kind": "review",
+                        "reaction": "先量測透明 overdraw。",
+                        "persona": "akenine_moller",
+                        "delivery_status": "queued",
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            window = object.__new__(buddy_window.BuddyWindow)
+            window.current_log = log
+            window.last_offset = 0
+            window.last_reaction = ""
+            window.last_reaction_ts = ""
+            window.frame_idx = 0
+            window.review_frames = []
+            window.bubble_label = mock.Mock()
+            window.ts_label = mock.Mock()
+            window._set_lens_badge = mock.Mock()
+            window._resize_for_reaction = mock.Mock()
+
+            buddy_window.BuddyWindow._read_new(window)
+            self.assertEqual(window.last_reaction_ts, "2026-08-16T10:00:00.123456")
+            window.ts_label.config.assert_called_with(text="10:00:00 · 待注入")
+
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "ts": "2026-08-16T10:00:05.123456",
+                            "kind": "delivery_receipt",
+                            "reaction_ts": "2026-08-16T10:00:00.123456",
+                            "delivery_status": "injected",
+                            "delivered_at": "2026-08-16T10:00:05.123456",
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+
+            buddy_window.BuddyWindow._read_new(window)
+
+        window.ts_label.config.assert_called_with(text="10:00:05 · 已注入")
+
+    def test_window_shows_timeout_message_without_pending_suffix(self):
+        import buddy_window
+
+        with tempfile.TemporaryDirectory() as raw:
+            log = Path(raw) / "codex_cli--s.log"
+            timeout_message = "Reviewer 逾時（120 秒）；本輪沒有 Nudge。"
+            log.write_text(
+                json.dumps(
+                    {
+                        "ts": "2026-08-16T10:01:00.123456",
+                        "kind": "review_status",
+                        "reaction": timeout_message,
+                        "persona": "karis",
+                        "delivery_status": "queued",
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            window = object.__new__(buddy_window.BuddyWindow)
+            window.current_log = log
+            window.last_offset = 0
+            window.last_reaction = ""
+            window.last_reaction_ts = ""
+            window.frame_idx = 0
+            window.review_frames = []
+            window.bubble_label = mock.Mock()
+            window.ts_label = mock.Mock()
+            window._set_lens_badge = mock.Mock()
+            window._resize_for_reaction = mock.Mock()
+
+            buddy_window.BuddyWindow._read_new(window)
+
+        window.bubble_label.config.assert_called_with(text=timeout_message)
+        window.ts_label.config.assert_called_with(text="10:01:00")
+
     def test_selector_offers_only_four_lifecycle_stages(self):
         import buddy_window
 
@@ -1796,6 +1952,80 @@ class TestFloatingWindowLayout(unittest.TestCase):
             ("design", "build", "evolve", "review"),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
+
+    def test_shader_selector_offers_six_master_lenses(self):
+        import buddy_window
+
+        options = buddy_window.selector_options(domain="shader")
+        self.assertEqual(
+            options,
+            [
+                "Tomas Akenine-Moller（幾何、可見性與 overdraw）",
+                "John Carmack（GPU 執行路徑與效能）",
+                "Brian Karis（URP 材質與渲染契約）",
+                "Timothy Lottes（畫質穩定與精度）",
+                "Inigo Quilez（程序化數學與 SDF）",
+                "Natalya Tatarchuk（跨硬體與上架驗證）",
+            ],
+        )
+        for label, lens in zip(
+            options,
+            (
+                "akenine_moller",
+                "carmack",
+                "karis",
+                "lottes",
+                "quilez",
+                "tatarchuk",
+            ),
+        ):
+            self.assertEqual(
+                buddy_window.selector_value_for_label(label, domain="shader"),
+                lens,
+            )
+
+    def test_shader_selector_saves_stop_primary_for_current_workspace(self):
+        import buddy_window
+        from masters_nudge import profiles
+        from masters_nudge.contracts import SessionRef
+
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw) / "data"
+            workspace = Path(raw) / "shader-workspace"
+            profiles.configure_workspace_profile(
+                data_dir,
+                workspace,
+                domain="shader",
+                stage="frame",
+                provider="grok",
+                model="",
+                review_mode="all",
+            )
+            window = object.__new__(buddy_window.BuddyWindow)
+            window.domain = "shader"
+            window.workspace = profiles.normalize_workspace(workspace)
+            window.stage_var = mock.Mock(
+                get=mock.Mock(
+                    return_value="Timothy Lottes（畫質穩定與精度）"
+                )
+            )
+            window.bubble_label = mock.Mock()
+            window._set_lens_badge = mock.Mock()
+            window._resize_for_reaction = mock.Mock()
+
+            with mock.patch.object(buddy_window, "BUDDY_DIR", data_dir):
+                buddy_window.BuddyWindow._on_stage_selected(window)
+
+            profile, error = profiles.load_workspace_profile(
+                data_dir,
+                SessionRef("codex_cli", "session", cwd=str(workspace)),
+            )
+
+        self.assertEqual(error, "")
+        self.assertEqual(profile.primary_lens, "lottes")
+        window._set_lens_badge.assert_called_once_with("lottes")
+        self.assertIn("下一次 Stop 起使用", window.last_reaction)
+        self.assertIn("Checkpoint 仍可依證據暫時換濾鏡", window.last_reaction)
 
     def test_window_contains_persistent_lens_selector(self):
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
@@ -2404,8 +2634,8 @@ class TestInjectState(unittest.TestCase):
         pending = self.inject.read_pending("sess2", "")
         self.assertEqual(len(pending), 2)
 
-    def test_context_metadata_names_lens_outside_bounded_reaction(self):
-        reaction = "自動測試通過，仍沒走過一次乾淨安裝流程。"
+    def test_software_context_is_the_unlabeled_question_only(self):
+        reaction = "自動測試通過後，哪項證據仍缺少乾淨安裝驗證？"
         context = self.inject.build_context_text(
             {
                 "ts": "2026-08-13T12:00:00",
@@ -2416,23 +2646,41 @@ class TestInjectState(unittest.TestCase):
             reaction,
         )
 
-        metadata, body, closing = context.splitlines()
-        self.assertIn("Martin Fowler lens", metadata)
-        self.assertEqual(body, reaction)
-        self.assertNotIn("Martin Fowler", body)
-        self.assertEqual(closing, "[end Masters’ Nudge]")
+        self.assertEqual(context, reaction)
+        self.assertNotIn("Martin Fowler", context)
+        self.assertNotIn("Masters", context)
 
-    def test_context_metadata_uses_legacy_persona_field(self):
+    def test_legacy_persona_field_is_not_exposed_in_context(self):
         context = self.inject.build_context_text(
             {
                 "ts": "2026-08-13T12:00:00",
                 "kind": "review",
                 "persona": "linus",
             },
-            "完成宣告仍缺少乾淨安裝證據。",
+            "完成判斷目前依據哪一項乾淨安裝證據？",
         )
 
-        self.assertIn("Linus Torvalds lens", context.splitlines()[0])
+        self.assertEqual("完成判斷目前依據哪一項乾淨安裝證據？", context)
+        self.assertNotIn("Linus", context)
+
+    def test_shader_context_is_the_unlabeled_finding_only(self):
+        reaction = "中位數改善與尾端變慢，分別對應哪一層工作轉移？"
+
+        context = self.inject.build_context_text(
+            {
+                "ts": "2026-08-20T05:00:00",
+                "kind": "review",
+                "domain": "shader",
+                "reason": "shader-research-change",
+                "effective_lens": "carmack",
+            },
+            reaction,
+        )
+
+        self.assertEqual(context, reaction)
+        self.assertNotIn("Masters", context)
+        self.assertNotIn("Carmack", context)
+        self.assertNotIn("第三方", context)
 
     def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
         transcript = Path(self.tmpdir) / "session.jsonl"

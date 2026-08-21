@@ -7,6 +7,7 @@ import inspect
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,7 +18,7 @@ import buddy
 import hook_entry
 import persona_config
 from masters_nudge import prompting, providers, storage
-from masters_nudge.codex_adapter import CodexAdapter, normalize_event
+from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
     EvidenceBundle,
     PromptSubmitted,
@@ -90,6 +91,28 @@ class RuntimeCompatibilityTests(unittest.TestCase):
 
 
 class NamespacedStorageTests(unittest.TestCase):
+    def test_atomic_state_write_retries_transient_windows_access_denial(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "state.json"
+            real_replace = os.replace
+            attempts = 0
+
+            def transient_replace(source, destination):
+                nonlocal attempts
+                attempts += 1
+                if attempts < 3:
+                    raise PermissionError(13, "file is temporarily busy", destination)
+                return real_replace(source, destination)
+
+            with mock.patch(
+                "masters_nudge.storage.os.replace", side_effect=transient_replace
+            ), mock.patch("masters_nudge.storage.time.sleep") as sleep:
+                storage._atomic_write(path, {"status": "queued"})
+
+            self.assertEqual(attempts, 3)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"status": "queued"})
+            self.assertEqual(sleep.call_count, 2)
+
     def test_same_native_session_id_cannot_collide_between_hosts(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -218,6 +241,19 @@ class CodexAdapterTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_normal_nudge_additional_context_has_no_visible_wrapper(self):
+        output = build_hook_output(
+            "PostToolUse",
+            "目前省下的工作，是否只是轉移到另一個 pass？",
+            reason="shader-research-change",
+            effective_lens="carmack",
+        )
+
+        self.assertEqual(
+            output["hookSpecificOutput"]["additionalContext"],
+            "目前省下的工作，是否只是轉移到另一個 pass？",
+        )
+
     def test_normalizes_documented_prompt_and_tool_fields(self):
         prompt = normalize_event(
             {
@@ -324,6 +360,51 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertTrue(persist)
         self.assertEqual(timeout, 15)
 
+    def test_checkpoint_packet_includes_accumulated_research_state(self):
+        core = FakeCore(self.settings, ReviewOutcome("no_finding"))
+        adapter = CodexAdapter(core)  # type: ignore[arg-type]
+        with mock.patch.dict(os.environ, {}, clear=True):
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "research-state",
+                    "turn_id": "t",
+                    "cwd": str(self.root),
+                    "prompt": "讓登入流程通過完整驗收",
+                }
+            )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "research-state",
+                    "turn_id": "t",
+                    "cwd": str(self.root),
+                    "tool_name": "Read",
+                    "tool_input": {"file_path": "auth.py"},
+                    "tool_response": {"content": "token check"},
+                }
+            )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "research-state",
+                    "turn_id": "t",
+                    "cwd": str(self.root),
+                    "tool_name": "shell_command",
+                    "tool_input": {"command": "pytest"},
+                    "tool_response": {"exit_code": 1, "output": "1 failed"},
+                }
+            )
+
+        request, _persist, _timeout = core.calls[-1]
+        self.assertIn("[current bottleneck model]", request.source_packet)
+        self.assertIn("[repeated explanation and workflow evidence]", request.source_packet)
+        self.assertIn("[failed or no-change mechanisms]", request.source_packet)
+        self.assertIn("token check", request.source_packet)
+        self.assertIn("1 failed", request.source_packet)
+        self.assertIn("[unresolved contradiction]", request.source_packet)
+        self.assertIn("讓登入流程通過完整驗收", request.source_packet)
+
     def test_checkpoint_is_marked_delivered_only_after_stdout_succeeds(self):
         core = ReviewCore(
             self.settings,
@@ -375,10 +456,9 @@ class CodexAdapterTests(unittest.TestCase):
             first = adapter.process(payload)
             hook_entry._emit_output(first, self.settings, io.StringIO())
             second = adapter.process(payload)
-        self.assertIn("先確認交付證據", first["hookSpecificOutput"]["additionalContext"])
-        self.assertIn(
-            "Martin Fowler lens",
+        self.assertEqual(
             first["hookSpecificOutput"]["additionalContext"],
+            "先確認交付證據是否真的覆蓋聲稱範圍。",
         )
         self.assertIsNone(second)
 
@@ -407,13 +487,9 @@ class CodexAdapterTests(unittest.TestCase):
         }
         with mock.patch.dict(os.environ, {}, clear=True):
             output = adapter.process(payload)
-        self.assertIn(
-            "先檢查均方估計",
+        self.assertEqual(
             output["hookSpecificOutput"]["additionalContext"],
-        )
-        self.assertIn(
-            "Leslie Lamport lens",
-            output["hookSpecificOutput"]["additionalContext"],
+            "先檢查均方估計是否偷渡逐點控制。",
         )
         self.assertIsNotNone(
             storage.latest_pending(self.settings.paths.data_dir, session)
@@ -491,6 +567,53 @@ class HookOutputTests(unittest.TestCase):
 
 
 class SharedCoreTests(unittest.TestCase):
+    def test_stop_timeout_is_logged_as_visible_non_injectable_status(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            base = settings_for(root)
+            settings = RuntimeSettings(
+                base.provider,
+                base.model,
+                120,
+                90,
+                base.paths,
+            )
+            calls = []
+
+            def dispatch(*_args, **kwargs):
+                calls.append(kwargs)
+                return {
+                    "status": "error",
+                    "finding": "",
+                    "usage": {},
+                    "error_kind": "timeout",
+                }
+
+            session = SessionRef("codex_cli", "timeout", cwd=str(root))
+            ReviewCore(settings, dispatch=dispatch).review(
+                ReviewRequest(
+                    1,
+                    "stop",
+                    "stop",
+                    session,
+                    EvidenceBundle(assistant_claim="已完成"),
+                    "已完成",
+                    "timeout",
+                ),
+                persist_reaction=True,
+            )
+            entries = storage.read_reaction_entries(
+                settings.paths.data_dir, session
+            )
+
+        self.assertEqual(calls[0]["timeout_sec"], 120)
+        self.assertEqual(entries[-1]["kind"], "review_status")
+        self.assertEqual(
+            entries[-1]["reaction"],
+            "Reviewer 逾時（120 秒）；本輪沒有 Nudge。",
+        )
+        self.assertEqual(entries[-1]["delivery_status"], "")
+
     def test_stop_is_primary_and_checkpoint_routing_uses_only_new_event(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -707,6 +830,94 @@ class SharedCoreTests(unittest.TestCase):
 
 
 class GrokProviderTests(unittest.TestCase):
+    def test_windows_cleanup_targets_the_exact_process_tree(self):
+        process = mock.Mock(pid=4321)
+        process.poll.return_value = None
+        process.communicate.return_value = ("", "")
+        completed = mock.Mock(returncode=0, stdout="", stderr="")
+
+        with (
+            mock.patch.object(providers.os, "name", "nt"),
+            mock.patch(
+                "masters_nudge.providers.subprocess.run",
+                return_value=completed,
+            ) as run,
+        ):
+            providers._terminate_process_tree(process)
+
+        self.assertEqual(
+            run.call_args.args[0],
+            ["taskkill.exe", "/PID", "4321", "/T", "/F"],
+        )
+        process.communicate.assert_called_once_with(timeout=5)
+
+    def test_grok_timeout_terminates_the_started_process_tree(self):
+        process = mock.Mock(pid=4321)
+        process.communicate.side_effect = subprocess.TimeoutExpired(
+            cmd=["grok"], timeout=12
+        )
+        errors = []
+
+        with (
+            mock.patch(
+                "masters_nudge.providers.subprocess.Popen",
+                return_value=process,
+            ),
+            mock.patch(
+                "masters_nudge.providers._terminate_process_tree"
+            ) as terminate,
+        ):
+            result = providers.call_grok_result(
+                "system",
+                "evidence",
+                "grok-4.6",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+                log_error=errors.append,
+            )
+
+        self.assertEqual(result["error_kind"], "timeout")
+        terminate.assert_called_once_with(process, log_error=errors.append)
+
+    def test_grok_accepts_valid_schema_output_when_cli_hits_max_turns(self):
+        payload = json.dumps(
+            {
+                "text": json.dumps(
+                    {
+                        "status": "finding",
+                        "finding": "先固定 GPU baseline 再比較。",
+                    },
+                    ensure_ascii=False,
+                ),
+                "stopReason": "cancelled",
+                "structuredOutput": None,
+                "structuredOutputError": "model did not produce structured output",
+                "usage": {"input_tokens": 10, "output_tokens": 3},
+            },
+            ensure_ascii=False,
+        )
+        completed = mock.Mock(
+            returncode=1,
+            stdout=payload,
+            stderr="Error: max turns reached",
+        )
+        with mock.patch(
+            "masters_nudge.providers._run_grok_process", return_value=completed
+        ):
+            result = providers.call_grok_result(
+                "system",
+                "evidence",
+                "",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+            )
+
+        self.assertEqual(result["status"], "finding")
+        self.assertEqual(result["finding"], "先固定 GPU baseline 再比較。")
+        self.assertEqual(result["usage"]["input_tokens"], 10)
+
     def test_grok_runs_one_tool_free_schema_constrained_turn(self):
         payload = json.dumps(
             {"result": {"status": "finding", "finding": "先確認停止條件。"}},
@@ -714,8 +925,18 @@ class GrokProviderTests(unittest.TestCase):
             indent=2,
         )
         completed = mock.Mock(returncode=0, stdout=payload, stderr="")
+        observed = {}
+
+        def fake_run(command, **kwargs):
+            observed["command"] = command
+            observed["kwargs"] = kwargs
+            reviewer_cwd = Path(kwargs["cwd"])
+            self.assertTrue(reviewer_cwd.is_dir())
+            self.assertEqual(list(reviewer_cwd.iterdir()), [])
+            return completed
+
         with tempfile.TemporaryDirectory() as raw, mock.patch(
-            "masters_nudge.providers.subprocess.run", return_value=completed
+            "masters_nudge.providers._run_grok_process", side_effect=fake_run
         ) as run:
             schema = Path(raw) / "schema.json"
             schema.write_text(
@@ -731,14 +952,27 @@ class GrokProviderTests(unittest.TestCase):
                 grok_bin_resolver=lambda: "grok",
             )
         self.assertEqual(result["finding"], "先確認停止條件。")
-        command = run.call_args.args[0]
-        import subprocess
-        expected_flags = (
-            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-        )
-        self.assertEqual(run.call_args.kwargs.get("creationflags", 0), expected_flags)
+        command = observed["command"]
         self.assertIn("--disable-web-search", command)
-        self.assertEqual(command[command.index("--tools") + 1], "")
+        self.assertNotIn("--tools", command)
+        denied = set(command[command.index("--disallowed-tools") + 1].split(","))
+        self.assertEqual(
+            denied,
+            {
+                "run_terminal_cmd",
+                "grep",
+                "read_file",
+                "search_replace",
+                "list_dir",
+                "web_search",
+                "web_fetch",
+                "todo_write",
+                "task",
+                "Agent",
+            },
+        )
+        self.assertIn("--cwd", command)
+        self.assertEqual(command[command.index("--cwd") + 1], observed["kwargs"]["cwd"])
         self.assertIn("--no-memory", command)
         self.assertIn("--no-subagents", command)
         self.assertEqual(command[command.index("--max-turns") + 1], "1")
@@ -751,7 +985,7 @@ class GrokProviderTests(unittest.TestCase):
             stderr="",
         )
         with mock.patch(
-            "masters_nudge.providers.subprocess.run", return_value=completed
+            "masters_nudge.providers._run_grok_process", return_value=completed
         ) as run:
             providers.call_grok_result(
                 "system",
@@ -762,6 +996,75 @@ class GrokProviderTests(unittest.TestCase):
                 grok_bin_resolver=lambda: "grok",
             )
         self.assertNotIn("--model", run.call_args.args[0])
+
+    def test_grok_passes_explicit_reasoning_effort(self):
+        completed = mock.Mock(
+            returncode=0,
+            stdout=json.dumps({"status": "no_finding", "finding": ""}),
+            stderr="",
+        )
+        with mock.patch(
+            "masters_nudge.providers._run_grok_process", return_value=completed
+        ) as run:
+            providers.call_grok_result(
+                "system",
+                "evidence",
+                "grok-4.6",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                reasoning_effort="medium",
+                grok_bin_resolver=lambda: "grok",
+            )
+
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[command.index("--reasoning-effort") + 1],
+            "medium",
+        )
+
+    def test_provider_dispatch_forwards_reasoning_effort_to_grok(self):
+        with mock.patch(
+            "masters_nudge.providers.call_grok_result",
+            return_value={"status": "no_finding", "finding": "", "usage": {}},
+        ) as call:
+            providers.dispatch_call_result(
+                "grok",
+                "system",
+                "evidence",
+                "",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                reasoning_effort="medium",
+            )
+
+        self.assertEqual(call.call_args.kwargs["reasoning_effort"], "medium")
+
+    def test_grok_subscription_call_does_not_inherit_xai_api_key(self):
+        completed = mock.Mock(
+            returncode=0,
+            stdout=json.dumps({"status": "no_finding", "finding": ""}),
+            stderr="",
+        )
+        with mock.patch.dict(os.environ, {"XAI_API_KEY": "must-not-be-used"}), mock.patch(
+            "masters_nudge.providers._run_grok_process", return_value=completed
+        ) as run:
+            providers.call_grok_result(
+                "system",
+                "evidence",
+                "",
+                schema_path=HERE / "reaction-schema.json",
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+            )
+
+        child_environment = run.call_args.kwargs["environment"]
+        self.assertNotIn("XAI_API_KEY", child_environment)
+        self.assertEqual(child_environment["MASTERS_NUDGE_ACTIVE"], "1")
+        for vendor in ("CLAUDE", "CURSOR"):
+            for source in ("SKILLS", "RULES", "AGENTS", "MCPS", "HOOKS", "SESSIONS"):
+                self.assertEqual(
+                    child_environment[f"GROK_{vendor}_{source}_ENABLED"], "false"
+                )
 
     def test_grok_parses_real_cli_camel_case_envelope_and_usage(self):
         raw = json.dumps(

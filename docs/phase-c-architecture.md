@@ -12,7 +12,7 @@ hosts enter the same `ReviewCore` for an actual review.
 |---|---|---|
 | Host adapter | Native JSON parsing, session/turn identity, evidence capture, turn journal, checkpoint deduplication, delivery state | Persona prompt logic or provider-specific review policy |
 | Shared contracts and evidence | Normalized event/request types, bounded packet construction, evidence limits | Native delivery timing or provider invocation |
-| Shared core | Lens routing, prompt composition, provider dispatch, sanitization, recent-reaction context, reaction persistence, telemetry | Claude/Codex transcript wire formats or host delivery state |
+| Shared core | Lens routing, prompt composition, provider dispatch, sanitization, cold current-state input, reaction persistence, telemetry | Claude/Codex transcript wire formats or host delivery state |
 | Provider adapter | Cloud CLI or local-only HTTP invocation, schema parsing, usage extraction, recursion guard and transport privacy checks | Host hook semantics |
 
 The host-neutral event contracts are `PromptSubmitted`, `ToolCompleted`, and
@@ -43,7 +43,7 @@ they are not inserted as pass-through callbacks in the production control flow.
 |---|---|---|
 | Start turn | `UserPromptSubmit` stores task anchor and transcript offset | `UserPromptSubmit` stores task anchor; transcript content is never parsed |
 | Collect evidence | Claude transcript slice, direct hook event, optional agentcam | Every delivered `PostToolUse` appends a bounded journal record |
-| Checkpoint | `PostToolUseFailure`; selected successful mutating tools | `PostToolUse`; structured failures when delivered, test output, first >80-line diff |
+| Checkpoint | `PostToolUseFailure`; selected successful mutating tools | `PostToolUse`; structured failures when delivered, test output, first >80-line diff; structured Shader research uses semantic changes in its contract/experiment/result sources instead of the generic event budget |
 | End of turn | Native async `Stop` worker | Fast `Stop --detach-stop` shim launches the background worker |
 | Deliver Stop finding | Plain additional context on the next prompt | JSON `hookSpecificOutput.additionalContext` on the next prompt |
 
@@ -54,6 +54,10 @@ itself does not name the person or lens.
 Codex's documented transcript path is retained only as metadata because its
 format is not a stable hooks interface. The Codex journal is capped at 8,000
 characters per turn; individual tool records are capped at 3,000 characters.
+For a structured Shader workspace, those journal contents do not form the
+strategy-review packet. `shader_progress.py` reads the three authoritative
+workspace JSON files and renders a compact delta/current projection. Its cached
+fingerprint and normalized prior projection are disposable routing state.
 
 ## Storage and compatibility
 
@@ -72,7 +76,9 @@ Codex delivery state is a receipt ledger, not only a last-seen cursor. Reactions
 are generated as `queued`; successful hook stdout records `injected` with the
 receiving event sequence and native event name. Failed writes remain retryable,
 while stale reactions become `expired` and stay visible as history without being
-inserted into a much later context.
+inserted into a much later context. A queued reaction skipped in favor of a
+newer one is explicitly recorded as `superseded`. Detached strategy reviews are
+single-flight per session so slow providers cannot accumulate concurrent calls.
 
 The floating window and Claude injection path can read pre-Phase-C
 `~/.claude/buddy/` logs/config. They do not move, rewrite, or delete them.

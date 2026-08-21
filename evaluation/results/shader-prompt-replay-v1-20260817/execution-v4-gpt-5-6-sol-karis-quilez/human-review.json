@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "rubric": {
+    "observation_not_instruction": "true or false",
+    "complete_finding": "true or false",
+    "blind_spot_strength": "0, 1, or 2",
+    "persona_aligned": "true or false"
+  },
+  "reviews": [
+    {
+      "job_id": "karis-1",
+      "lens": "karis",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "C17不是單純減少工作量，而是把成本轉移到材質取樣與暫存器壓力。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-2",
+      "lens": "karis",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "C17把ALU成本轉成取樣與暫存器壓力，6.9 ms只代表RTX 4070固定鏡頭的Forward結果。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "karis-3",
+      "lens": "karis",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "C17把成本從程序運算轉成取樣與暫存器壓力，6.9 ms只證明此場景的Forward收益。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-1",
+      "lens": "quilez",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "C17 將成本從 ALU 轉到取樣與暫存器壓力，6.9 ms 只證明固定 Forward 場景受益。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-2",
+      "lens": "quilez",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "6.9 ms 的勝出伴隨 register 由 28 增至 40，成本可能轉成佔用壓力。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "quilez-3",
+      "lens": "quilez",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "C17 把 ALU 成本轉移到取樣與暫存壓力，RTX 固定鏡頭的收益尚不能代表整體工作量下降。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    }
+  ]
+}

@@ -2,9 +2,9 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-**Before a coding agent decides what to do next, add one brief reminder from a different angle.**
+**Before a coding agent decides what to do next, ask one brief question from a different angle.**
 
-At a few key moments, Masters’ Nudge asks another model to generate one brief reminder from the current progress, then adds it to the main agent's context. It does not take over the task or inspect code line by line; the reminder simply makes the model more likely to notice a direction it may have overlooked.
+At a few key moments, Masters’ Nudge asks another model to generate one brief open question from the current progress, then adds it to the main agent's context. It does not take over the task or inspect code line by line; the question simply makes the model more likely to reconsider a direction it may have overlooked.
 
 In LLM terms, it uses a dynamic frame to guide the reviewer in generating a Nudge, then injects that Nudge into the main agent's context, indirectly shifting the conditional probability distribution of the tokens that follow.
 
@@ -16,7 +16,7 @@ The feature and automated tests are done, so the main agent is ready to call the
 
 **Nudge**
 
-> The clean install is still unverified.
+> What would prove the clean install actually works？
 
 **Reconsidered next move**
 
@@ -52,9 +52,9 @@ Start with the **[benchmark result and limitations](experiment/riemann-domain/be
 then read the **[complete 17 traceable interactions](experiment/riemann-domain/benchmark/interactions.md)**
 and, if useful, the **[four reproducible route-closure packages](experiment/riemann-domain/benchmark/closures/README.md)**.
 
-## Why only one line?
+## Why only one question?
 
-Each nudge is at most 52 characters and points to one concrete workflow tension or question.
+Each nudge is one open question of at most 52 characters, grounded in a concrete workflow tension.
 
 It may surface an assumption that was never revisited, feedback that stops too early, growing scope, a fragile event order, or a completion claim that has moved ahead of its evidence.
 
@@ -86,7 +86,7 @@ Coding agent works normally
 | Tool failure | The fix may address only the surface symptom | Main agent |
 | Test failure | The repair may be taking a longer route around the problem | Main agent |
 | First change over ~80 lines | The task may be growing beyond its original scope | Main agent |
-| Repeated command/failure family, 8 meaningful events, or another ~80 changed lines | Local progress may not shorten the original acceptance criteria | Main agent and floating window |
+| Repeated command/failure family, an edit followed by new validation evidence, or another ~80 changed lines | Local progress may not shorten the original acceptance criteria | Main agent and floating window |
 | Goal declares `complete` or `blocked` | Distinguish objective completion, a sub-result, and path exhaustion | Main agent and floating window |
 | End of turn | Check whether the work is actually complete | Main agent and the floating window |
 
@@ -238,12 +238,12 @@ hot-path evidence may select Carmack, or a completion boundary may select
 Linus. The switch never changes the dropdown and never persists into the next
 review decision.
 
-Dynamic checkpoint lenses have a session-local budget. After five switches,
-the next three checkpoints that would have switched are forced back to the
-primary lens, then the budget resets. Quiet primary checkpoints and Stop do not
-consume this cooldown. Routing examines the new checkpoint event rather than
-old keywords accumulated in the full context packet. A timeout or silent
-review still counts as a switch because it displaced a primary-lens call.
+Checkpoint routing excludes the two most recently successfully injected lenses,
+then selects the first eligible lens in current evidence order. Only
+`delivery_status=injected` advances this cooldown; timeout, error, `no_finding`,
+expired, and superseded reviews do not. The Provider receives only the current
+bounded packet, without old findings or Persona history. Stop still uses the
+stage primary lens.
 
 If Lamport and Carmack both match the same new event, Lamport goes first because
 correctness comes before speed. A lone word such as `async`, `cache`,
@@ -251,13 +251,55 @@ correctness comes before speed. A lone word such as `async`, `cache`,
 
 Each name stands for a conceptual lens and a set of attention areas. The nudge does not imitate that person's voice and does not add another code review; it uses visible technical facts only as anchors for reconsidering the workflow.
 
-Whatever the stage, explicit destructive action, security or authorization risk, drift from the user's request, and completion claims contradicted by visible evidence still stop the line first.
-
 The floating-window dropdown stores the stage in `~/.masters-nudge/data/config.json`. Your choice applies from the next review; Build is the default. The dropdown shows your chosen stage; the colored badge shows the viewpoint used for the latest nudge. A temporary checkpoint lens changes the badge, not the dropdown. A pre-existing `~/.claude/buddy/config.json` remains readable until a new neutral config is saved.
 
-New configuration files use `{"stage":"build"}`. Valid stages are `design`, `build`, `evolve`, and `review`. General workflow evidence and stop-the-line checks are the shared base for every stage, not a selectable filter.
+In a workspace configured with `domain: "shader"`, the same window instead
+shows the six Shader specialists. That choice is stored as the workspace's
+`primary_lens`: Stop always uses it, while a checkpoint may temporarily switch
+to another specialist when the current event contains matching evidence. The
+temporary checkpoint lens changes the badge but not the dropdown selection.
 
-`MASTERS_NUDGE_PERSONA` (or legacy `BUDDY_PERSONA`) set before the host starts remains a force override and disables checkpoint lens switching. Old persona-based config files remain readable: the four lifecycle lenses map to their stages, old General settings fall back to the default Build stage, and old Lamport/Carmack choices stay locked until a stage is selected in the window.
+### Recommended Shader environment
+
+The recommended Shader profile preserves the V12 benchmark environment rather
+than whichever reviewer happens to be the host default:
+
+```powershell
+python masters_nudge_cli.py shader configure-recommended --workspace "E:\path\to\shader-workspace"
+```
+
+This stores `shader / explore / anthropic / opus / review all` for that
+workspace, with no fixed `primary_lens`, so checkpoint routing remains
+automatic. Shader reviews use only the bounded current research packet, ask at
+most one open question of 52 characters ending in `？`, and inject only that
+question without a visible product, reason, or Persona label. After a finding
+is successfully injected, that Persona is ineligible for the next two
+checkpoint selections; timeouts, errors, `no_finding`, expired, and superseded
+findings do not advance the cooldown. Stop still uses the stage primary.
+
+This is a reproducible recommended preset, not a promise that `opus` is always
+the best Provider. In the fixed 50-candidate experiment family, V12 reached a
+20.3132% accepted median improvement; later runs also showed meaningful
+run-to-run and Provider variance, so the observation is not a causal guarantee.
+
+When a Shader workspace provides `benchmark/architecture-contract.json`,
+`benchmark/architecture-experiments.json`, and
+`benchmark/architecture-result.json`, long-flow reviews trigger only when the
+JSON meaning of those authoritative sources changes. The reviewer receives a
+compact, read-time delta and current projection; runtime stores only a
+rebuildable source fingerprint, not a second research truth. Software reviews
+likewise no longer use an eight-tool-event timer: a changed implementation
+followed by new test, build, benchmark, or verification evidence forms a
+reviewable evidence cycle. A session runs at most one strategy provider call at
+a time, and an undelivered finding
+made stale by newer research state receives a `superseded` receipt. See the
+outcome-only Goal template at
+[`domains/shader/goal-template.txt`](domains/shader/goal-template.txt); stop
+conditions remain in the workspace contract.
+
+New configuration files use `{"stage":"build"}`. Valid stages are `design`, `build`, `evolve`, and `review`. General is the workflow-evidence compatibility base, not a selectable filter.
+
+`MASTERS_NUDGE_PERSONA` (or legacy `BUDDY_PERSONA`) sets the Stop primary. Checkpoints can still switch using current evidence and the successful-injection cooldown. Old persona-based config files remain readable: the four lifecycle lenses map to their stages and old General settings fall back to the default Build stage.
 
 A lens changes which part of the workflow gets reconsidered first. It does not change the evidence rules, model-call count, single-Nudge limit, or length cap. Files under `personas/` append to `buddy-prompt.txt`. All six viewpoints share one model call; they are not six agents speaking at once.
 
@@ -313,7 +355,7 @@ Host-aware defaults remove the need for a second login: Claude Code uses Anthrop
 | `MASTERS_NUDGE_PROVIDER` / `BUDDY_PROVIDER` | Claude: `anthropic`; Codex: `openai` | `openai` (`codex exec`), `anthropic` (`claude -p`), `grok`, or `ollama-local` |
 | `MASTERS_NUDGE_MODEL` / `BUDDY_MODEL` | Claude: `sonnet`; Codex: `gpt-5.6-sol`; Grok: CLI default; local: required | Model name for the chosen provider |
 | `MASTERS_NUDGE_OLLAMA_URL` / `BUDDY_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback-only Ollama base URL; used only by `ollama-local` |
-| `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `60` | End-of-turn model-call timeout (seconds) |
+| `MASTERS_NUDGE_TIMEOUT` / `BUDDY_TIMEOUT` | `120` | End-of-turn model-call timeout (seconds) |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` / `BUDDY_CHECKPOINT_TIMEOUT` | `90` | Max wait for a mid-turn review (seconds) |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | New logs, state, config, and content-free telemetry |
 | `MASTERS_NUDGE_RUNTIME_DIR` | Plugin root; legacy: `~/.masters-nudge/runtime` | Override the prompt/schema/persona runtime directory |
@@ -340,13 +382,12 @@ Each review appends content-free metadata to `~/.masters-nudge/data/review-telem
 With the default cloud providers, **conversation and tool-event data go to an external model provider.** With `ollama-local`, the same payload is sent only to the validated loopback Ollama server. Each end-of-turn review and each matching mid-turn review is a separate model call. A payload may include:
 
 1. Latest user prompt (≤2000 chars; long text keeps head and tail with an explicit middle cut)
-2. Mid-turn: triggering tool event (≤3000) and recent agent context (≤1200)
-3. End of turn: last claim (≤2500) and current-turn tool results (≤2000; may include Read contents, command output, errors, diffs). Claude can fall back to a bounded transcript slice; Codex never parses its transcript and instead uses the bounded PostToolUse journal
+2. Mid-turn: a bounded research-state packet containing the current classified bottleneck, visible recent agent explanation when the host supplies it, structured workflow recurrence (≤1800), a recent Codex tool-journal slice (≤3500), and the still-open target/evidence tension (≤2200). Workflow recurrence is behavioral evidence, not a claim about the agent's stated reasoning
+3. End of turn: last claim (≤2500) and current-turn tool results (≤2000; may include Read contents, command output, errors, diffs). Claude can fall back to a bounded transcript slice; Codex never parses its transcript and instead uses the bounded PostToolUse journal. This Stop packet is separate from the mid-turn research-state packet
 4. Optional agentcam excerpts (combined ≤2000)
-5. Up to 3 prior short reactions in the session (reduces repetition)
-6. Review system prompt and optional persona file (instructions, not your project source as such)
+5. Review system prompt and optional persona file (instructions, not your project source as such)
 
-Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; `grok` uses the signed-in Grok CLI with web search and agent tools explicitly disabled, but still sends the payload to xAI. Switching provider mid-session can resend earlier reactions to the new provider as recent context. `ollama-local` accepts only loopback HTTP, disables client proxies and redirects, requires Ollama to report cloud disabled before every generation, and rejects remote model metadata. Any failure produces no nudge and never falls back to another provider.
+Without an override, Claude Code forwards the evidence packet to Anthropic and Codex forwards it to OpenAI. Setting `MASTERS_NUDGE_PROVIDER` can switch either host; `grok` uses the signed-in Grok CLI with web search and agent tools explicitly disabled, but still sends the payload to xAI. Every Provider review receives only the bounded current state, never old Nudge text or Persona history. `ollama-local` accepts only loopback HTTP, disables client proxies and redirects, requires Ollama to report cloud disabled before every generation, and rejects remote model metadata. Any failure produces no nudge and never falls back to another provider.
 
 Reactions, task anchors, bounded tool journals, and the selected local model name are stored in plain text under `~/.masters-nudge/data/`. Existing `~/.claude/buddy/` logs and config remain readable but are not automatically moved or deleted. Local-only mode cannot audit the operating system or a malicious process impersonating Ollama; the user remains responsible for the local runtime and model license. Provider retention/training terms change, so check current policy when using cloud mode.
 
@@ -371,7 +412,7 @@ the saved lifecycle stage. Rook itself remains graphite black.
 
 ### Localization
 
-Shipped prompt language is Traditional Chinese. For another language, update `buddy-prompt.txt`, the hook wrappers in `checkpoint.py`, `inject.py`, and `masters_nudge/codex_adapter.py` (search for `第三方觀察`), and optionally Chinese fixtures in `test_buddy.py`. Plumbing is language-neutral.
+Shipped prompt language is Traditional Chinese. For another language, update `buddy-prompt.txt` and the relevant Chinese test fixtures. Injected Nudge text has no visible product, reason, or Persona wrapper. Plumbing is language-neutral.
 
 ## Implementation notes
 
@@ -383,7 +424,7 @@ pass-through callbacks.
 
 The shared core owns lens routing, prompt composition, provider dispatch, the
 36–42-character completion target / 52-character hard cap, structured-output
-handling, recent-reaction context, reaction persistence, and telemetry. Host
+handling, cold current-state packets, reaction persistence, and telemetry. Host
 adapters own native event parsing, evidence capture, turn journals, checkpoint
 deduplication, and delivery state. Shared evidence helpers build a small labeled
 packet rather than resending a full transcript. Output contract:
@@ -418,8 +459,7 @@ Runtime:
 |---|---|
 | `~/.masters-nudge/data/<host>--<session_id>.log` | Reaction JSONL |
 | `~/.masters-nudge/data/<host>--<session_id>.turn.json` | Task anchor and bounded tool journal |
-| `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | Inject read pointer |
-| `~/.masters-nudge/data/<host>--<session_id>.lens-route.json` | Checkpoint override count and cooldown |
+| `~/.masters-nudge/data/<host>--<session_id>.delivery.json` | Injection state and successful-injection Persona cooldown source |
 | `~/.masters-nudge/data/config.json` | Lifecycle stage saved by the window |
 | `~/.masters-nudge/data/<host>--<session_id>.checkpoints/` | Mid-turn dedup |
 | `~/.masters-nudge/data/error.log` | Error log |

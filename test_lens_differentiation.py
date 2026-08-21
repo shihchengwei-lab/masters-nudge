@@ -46,8 +46,9 @@ class LensDifferentiationTests(unittest.TestCase):
     def test_v2_uses_non_terminal_checkpoint_with_the_same_six_lenses(self):
         fixture = lens_differentiation_run_v2.load_fixture()
         packet = lens_differentiation_run_v2.build_packet(fixture)
-        self.assertIn("[checkpoint evidence]", packet)
-        self.assertIn("[recent agent context]", packet)
+        self.assertIn("[current bottleneck model]", packet)
+        self.assertIn("visible agent explanation:", packet)
+        self.assertIn("[unresolved contradiction]", packet)
         self.assertNotIn("[agent final claim]", packet)
         jobs = lens_differentiation_run_v2.build_jobs(
             fixture, repeats=3, seed=20260824

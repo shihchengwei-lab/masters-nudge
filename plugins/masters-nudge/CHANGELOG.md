@@ -1,5 +1,21 @@
 # Changelog
 
+- Align software reviews with the Shader interaction contract: one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route/provider/delivery records.
+- Add a `shader configure-recommended` workspace preset that preserves the V12 Shader environment (`anthropic / opus / explore / review all`, automatic Persona routing), and keep Shader injection label-free on both Codex and Claude paths.
+- Terminate the full Grok reviewer process tree after a deadline, preventing timed-out Windows hook workers and their CLI descendants from lingering.
+- Add a two-injection Shader Persona cooldown: only successfully injected findings count, routing keeps the Provider cold, and the next eligible Persona follows the original evidence ranking.
+- Include live Shader candidate results from either `benchmark/candidate-results.json` or per-candidate `Evidence/LongTail/*/result.json` and `failure.json` files in the semantic research fingerprint and projection, focus the packet on the latest observed candidate, and retain generic long-goal checkpoints when structured evidence temporarily remains unchanged.
+- Enrich semantic Shader reviews with candidate decision material, the latest direct tool evidence, and explicit missing-field markers; route research changes from structured evidence dimensions, suppress only an unchanged evidence-gap pair, and record route basis, gap fingerprint, and material completeness in telemetry.
+- Trigger structured Shader strategy reviews from semantic changes in the architecture contract, experiment registry, and result files instead of the generic eight-event workflow budget; send a compact source projection without replaying the full tool journal.
+- Make Shader specialist routing prefer the strongest current evidence rather than balancing historical invocation counts.
+- Add per-session strategy single-flight, source-aware Shader delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
+- Record Shader `expand` / `deepen` / live-`guard` opportunities in telemetry as an observational metric, not a runtime quota.
+- Add Shader candidate-search governance where the 50-slot budget counts distinct bottleneck-hypothesis/work-elimination cells, while near-neighbor numeric and algebraic variants become separately budgeted refinements.
+- Report nearest-rank observed p95 for all Shader replay attempts and successful responses separately, retaining timeout wall time in the operational tail while labeling three-sample persona p95 as descriptive only.
+- Expand mid-turn checkpoint input from one triggering event into a bounded research state containing the current bottleneck proxy, workflow recurrence, mechanism outcomes, and the still-open target/evidence tension; keep Stop input unchanged.
+- Show six Shader specialists in the Tk selector for Shader workspaces; persist a workspace-scoped Stop primary while retaining evidence-driven checkpoint switching.
+- Raise the default Stop reviewer timeout from 60 to 120 seconds, and keep timeout status entries visible in Tk without incorrectly labeling them as pending injection.
+- Pass the caller's workspace explicitly through the window launcher so Tk domain selectors no longer depend on the plugin script's working directory.
 - Reviewer provider CLIs now run without opening transient console windows on Windows.
 
 ## 0.1.0-dev.2 — Unreleased prerelease

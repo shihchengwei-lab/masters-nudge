@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "rubric": {
+    "observation_not_instruction": "true or false",
+    "complete_finding": "true or false",
+    "blind_spot_strength": "0, 1, or 2",
+    "persona_aligned": "true or false"
+  },
+  "reviews": [
+    {
+      "job_id": "carmack-1",
+      "lens": "carmack",
+      "repeat": 1,
+      "status": "finding",
+      "raw_finding": "C17把六層噪聲換成兩次取樣並上移頂點後，機器少做的是片元算術，不是整條像素路徑。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "carmack-2",
+      "lens": "carmack",
+      "repeat": 2,
+      "status": "finding",
+      "raw_finding": "固定鏡頭少了1.2毫秒，但六層噪聲已改由取樣、頂點插值與更高暫存器壽命承擔。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    },
+    {
+      "job_id": "carmack-3",
+      "lens": "carmack",
+      "repeat": 3,
+      "status": "finding",
+      "raw_finding": "6.9ms與較少片段指令並未讓六層噪聲消失，成本已改由查找、插值與升高的暫存器承載。",
+      "judgment": {
+        "observation_not_instruction": null,
+        "complete_finding": null,
+        "blind_spot_strength": null,
+        "persona_aligned": null,
+        "note": ""
+      }
+    }
+  ]
+}

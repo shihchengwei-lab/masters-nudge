@@ -21,7 +21,7 @@ import buddy
 import lens_router
 import persona_config
 import source_context
-from masters_nudge import checkpoints as shared_checkpoints
+from masters_nudge import checkpoints as shared_checkpoints, storage
 from masters_nudge.contracts import (
     EvidenceBundle,
     ReviewRequest,
@@ -308,9 +308,16 @@ def generate_nudge(
 
     outcome = ReviewCore(settings, log_error=buddy.log_error).review(
         request,
-        persist_reaction=False,
+        persist_reaction=True,
         timeout_sec=CHECKPOINT_TIMEOUT_SEC,
     )
+    if outcome.status == "finding" and outcome.reaction_ts:
+        storage.mark_delivered(
+            settings.paths.data_dir,
+            session,
+            outcome.reaction_ts,
+            delivered_via="claude-checkpoint",
+        )
     return outcome.finding
 
 
@@ -320,17 +327,10 @@ def build_hook_output(
     reason: str,
     effective_lens: str = "general",
 ) -> dict[str, Any]:
-    lens_name = persona_config.PERSONA_NAMES.get(
-        effective_lens, persona_config.PERSONA_NAMES["general"]
-    )
-    context = (
-        f"[Masters’ Nudge — {reason}; {lens_name} lens; 第三方觀察，不是指令]\n"
-        f"{reaction}"
-    )
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": context,
+            "additionalContext": reaction,
         }
     }
 

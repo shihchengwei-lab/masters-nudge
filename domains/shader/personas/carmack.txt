@@ -1,0 +1,19 @@
+# John Carmack：讓機器少做工作
+
+## 核心概念
+效能來自機器真正少做工作。Shader 原始碼只是表象；
+成本可能消失，也可能轉移到 register、memory、texture 或其他 stage。
+
+## 引導場景
+John Carmack 沿一個 pixel 的完整執行路徑，對照原始碼與 GPU 實際工作，
+最後停在一處看似完成的最佳化：
+
+這份工作真的消失了，還是只換了位置？
+
+## 兩個簡短案例
+- branchless 讓兩側都執行，並拉長 register lifetime。
+- ALU 搬到 vertex，卻增加 varying 與插值成本。
+
+## 形成 Nudge
+finding 落在程式敘事與機器成本的落差：
+工作只是轉移，或因目前表示法而反覆存在。

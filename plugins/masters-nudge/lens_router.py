@@ -3,10 +3,7 @@
 
 from __future__ import annotations
 
-import json
-import os
 import re
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping
@@ -68,11 +65,6 @@ FOWLER_GROWTH_RE = re.compile(
     re.IGNORECASE,
 )
 
-DYNAMIC_OVERRIDE_LIMIT = 5
-DYNAMIC_COOLDOWN_REVIEWS = 3
-ROUTE_STATE_SUFFIX = ".lens-route.json"
-
-
 @dataclass(frozen=True)
 class ReviewRoute:
     stage: str
@@ -86,60 +78,9 @@ class ReviewRoute:
     suppression_reason: str = ""
 
 
-def _route_state_path(base_dir: Path, session_key: str) -> Path:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(session_key or "unknown"))[:200]
-    return Path(base_dir) / f"{safe or 'unknown'}{ROUTE_STATE_SUFFIX}"
-
-
-def _load_route_state(path: Path) -> dict[str, int]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, TypeError, ValueError):
-        payload = {}
-    if not isinstance(payload, dict):
-        payload = {}
-
-    def nonnegative_int(value: object) -> int:
-        try:
-            return max(0, int(value or 0))
-        except (TypeError, ValueError):
-            return 0
-
-    return {
-        "override_count": nonnegative_int(payload.get("override_count")),
-        "cooldown_remaining": nonnegative_int(payload.get("cooldown_remaining")),
-    }
-
-
-def _save_route_state(path: Path, state: dict[str, int]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".tmp",
-        prefix="lens-route-",
-        dir=path.parent,
-        delete=False,
-        encoding="utf-8",
-    )
-    temp_path = Path(handle.name)
-    try:
-        json.dump({"schema_version": 1, **state}, handle, ensure_ascii=False)
-        handle.write("\n")
-        handle.close()
-        os.replace(temp_path, path)
-    finally:
-        try:
-            handle.close()
-        except Exception:
-            pass
-        try:
-            temp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-
-
-def _specialist_trigger(evidence: str) -> tuple[str, str]:
+def _specialist_candidates(evidence: str) -> list[tuple[str, str]]:
     text = str(evidence or "")
+    candidates: list[tuple[str, str]] = []
     lamport = bool(LAMPORT_STRONG_RE.search(text)) or bool(
         LAMPORT_MECHANISM_RE.search(text) and LAMPORT_FAILURE_RE.search(text)
     )
@@ -147,18 +88,23 @@ def _specialist_trigger(evidence: str) -> tuple[str, str]:
         MEASUREMENT_RE.search(text) and CARMACK_COST_RE.search(text)
     )
     if lamport:
-        return "lamport", "state-ordering-evidence"
+        candidates.append(("lamport", "state-ordering-evidence"))
     if carmack:
-        return "carmack", "measured-performance-evidence"
+        candidates.append(("carmack", "measured-performance-evidence"))
     if LINUS_COMPLETION_RE.search(text):
-        return "linus", "completion-boundary-evidence"
+        candidates.append(("linus", "completion-boundary-evidence"))
     if JEFF_GOAL_RE.search(text):
-        return "jeff", "goal-alignment-evidence"
+        candidates.append(("jeff", "goal-alignment-evidence"))
     if FOWLER_GROWTH_RE.search(text):
-        return "fowler", "knowledge-boundary-evidence"
+        candidates.append(("fowler", "knowledge-boundary-evidence"))
     if BECK_WORKFLOW_RE.search(text):
-        return "beck", "feedback-loop-evidence"
-    return "", ""
+        candidates.append(("beck", "feedback-loop-evidence"))
+    return candidates
+
+
+def _specialist_trigger(evidence: str) -> tuple[str, str]:
+    candidates = _specialist_candidates(evidence)
+    return candidates[0] if candidates else ("", "")
 
 
 def resolve_review_route(
@@ -168,6 +114,7 @@ def resolve_review_route(
     environ: Mapping[str, str] | None = None,
     checkpoint: bool = False,
     session_key: str = "",
+    injected_personas: tuple[str, ...] = (),
 ) -> ReviewRoute:
     selection = persona_config.resolve_stage(base_dir, environ=environ)
     primary = selection.persona
@@ -176,47 +123,56 @@ def resolve_review_route(
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
-    if selection.locked or primary == "general" or not checkpoint:
+    if primary == "general" or not checkpoint:
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
 
-    override, trigger = _specialist_trigger(evidence)
-    if not override or override == primary:
-        return ReviewRoute(
-            selection.stage, primary, primary, "", "", selection.source
-        )
-
-    state_path = _route_state_path(base_dir, session_key)
-    state = _load_route_state(state_path)
-    if state["cooldown_remaining"] > 0:
-        state["cooldown_remaining"] -= 1
-        if state["cooldown_remaining"] == 0:
-            state["override_count"] = 0
-        _save_route_state(state_path, state)
+    cooldown = tuple(
+        lens for lens in injected_personas[-2:]
+        if lens in persona_config.LENS_PERSONAS
+    )
+    ineligible = set(cooldown)
+    evidence_candidates = _specialist_candidates(evidence)
+    candidates = [
+        *evidence_candidates,
+        (primary, ""),
+        *((lens, "") for lens in persona_config.LENS_PERSONAS),
+    ]
+    override, trigger = next(
+        (candidate for candidate in candidates if candidate[0] not in ineligible),
+        (primary, ""),
+    )
+    suppression_reason = (
+        f"injected-persona-cooldown:{','.join(cooldown)}" if cooldown else ""
+    )
+    source = (
+        "software_evidence_override"
+        if trigger
+        else "software_cooldown_fallback"
+        if override != primary
+        else selection.source
+    )
+    if override == primary:
         return ReviewRoute(
             selection.stage,
             primary,
             primary,
             "",
-            "checkpoint-cooldown",
-            selection.source,
-            candidate_lens=override,
+            trigger,
+            source,
+            candidate_lens=override if trigger else "",
             candidate_trigger=trigger,
-            suppression_reason="dynamic-override-cooldown",
+            suppression_reason=suppression_reason,
         )
-
-    state["override_count"] += 1
-    if state["override_count"] >= DYNAMIC_OVERRIDE_LIMIT:
-        state["cooldown_remaining"] = DYNAMIC_COOLDOWN_REVIEWS
-    _save_route_state(state_path, state)
     return ReviewRoute(
         selection.stage,
         primary,
         override,
         override,
         trigger,
-        selection.source,
+        source,
         candidate_lens=override,
         candidate_trigger=trigger,
+        suppression_reason=suppression_reason,
     )

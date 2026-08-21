@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "fixture_id": "lean-impact-shield-c17-checkpoint",
+  "lenses": [
+    "akenine_moller",
+    "carmack",
+    "karis",
+    "lottes",
+    "quilez",
+    "tatarchuk"
+  ],
+  "rows": 18,
+  "timeouts": 2,
+  "prompt_quality_denominator": 16,
+  "latency_ms": {
+    "method": "nearest-rank",
+    "attempts": {
+      "samples": 18,
+      "p95": 91865
+    },
+    "successful": {
+      "samples": 16,
+      "p95": 88822
+    }
+  },
+  "rates": {
+    "non_imperative": 0.938,
+    "complete_finding": 1.0,
+    "review_tone_free": 1.0
+  },
+  "by_lens": {
+    "akenine_moller": {
+      "calls": 3,
+      "findings": 3,
+      "timeouts": 0,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 71198
+        },
+        "successful": {
+          "samples": 3,
+          "p95": 71198
+        }
+      },
+      "non_imperative": 3,
+      "complete": 3,
+      "theme_term_aligned": 3,
+      "theme_hits": [
+        {
+          "repeat": 1,
+          "hits": [
+            "透明",
+            "重疊"
+          ]
+        },
+        {
+          "repeat": 2,
+          "hits": [
+            "透明"
+          ]
+        },
+        {
+          "repeat": 3,
+          "hits": [
+            "透明",
+            "重疊"
+          ]
+        }
+      ]
+    },
+    "carmack": {
+      "calls": 3,
+      "findings": 3,
+      "timeouts": 0,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 88822
+        },
+        "successful": {
+          "samples": 3,
+          "p95": 88822
+        }
+      },
+      "non_imperative": 3,
+      "complete": 3,
+      "theme_term_aligned": 3,
+      "theme_hits": [
+        {
+          "repeat": 1,
+          "hits": [
+            "工作",
+            "成本"
+          ]
+        },
+        {
+          "repeat": 2,
+          "hits": [
+            "工作"
+          ]
+        },
+        {
+          "repeat": 3,
+          "hits": [
+            "工作"
+          ]
+        }
+      ]
+    },
+    "karis": {
+      "calls": 3,
+      "findings": 1,
+      "timeouts": 2,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 91865
+        },
+        "successful": {
+          "samples": 1,
+          "p95": 67674
+        }
+      },
+      "non_imperative": 1,
+      "complete": 1,
+      "theme_term_aligned": 0,
+      "theme_hits": []
+    },
+    "lottes": {
+      "calls": 3,
+      "findings": 3,
+      "timeouts": 0,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 72731
+        },
+        "successful": {
+          "samples": 3,
+          "p95": 72731
+        }
+      },
+      "non_imperative": 3,
+      "complete": 3,
+      "theme_term_aligned": 2,
+      "theme_hits": [
+        {
+          "repeat": 1,
+          "hits": [
+            "移動",
+            "時間",
+            "SSIM"
+          ]
+        },
+        {
+          "repeat": 2,
+          "hits": [
+            "SSIM"
+          ]
+        }
+      ]
+    },
+    "quilez": {
+      "calls": 3,
+      "findings": 3,
+      "timeouts": 0,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 69278
+        },
+        "successful": {
+          "samples": 3,
+          "p95": 69278
+        }
+      },
+      "non_imperative": 2,
+      "complete": 3,
+      "theme_term_aligned": 3,
+      "theme_hits": [
+        {
+          "repeat": 1,
+          "hits": [
+            "表示",
+            "噪聲"
+          ]
+        },
+        {
+          "repeat": 2,
+          "hits": [
+            "噪聲"
+          ]
+        },
+        {
+          "repeat": 3,
+          "hits": [
+            "噪聲",
+            "程序"
+          ]
+        }
+      ]
+    },
+    "tatarchuk": {
+      "calls": 3,
+      "findings": 3,
+      "timeouts": 0,
+      "latency_ms": {
+        "method": "nearest-rank",
+        "attempts": {
+          "samples": 3,
+          "p95": 88233
+        },
+        "successful": {
+          "samples": 3,
+          "p95": 88233
+        }
+      },
+      "non_imperative": 3,
+      "complete": 3,
+      "theme_term_aligned": 1,
+      "theme_hits": [
+        {
+          "repeat": 2,
+          "hits": [
+            "RTX",
+            "GPU"
+          ]
+        }
+      ]
+    }
+  },
+  "gates": {
+    "integrity": true,
+    "evaluable": false,
+    "non_imperative_80pct": true,
+    "complete_90pct": true,
+    "unique_representatives": true,
+    "no_person_name_leakage": true
+  },
+  "automated_passed": false,
+  "claim_boundary": "Theme terms and imperative flags are diagnostics. Blind-spot strength and persona alignment require human review of raw findings.",
+  "latency_claim_boundary": "Observed sample p95 uses nearest-rank. Attempt p95 includes timeout wall time; successful p95 excludes every error. With three calls per lens, per-lens p95 equals that lens's maximum observed latency and is not a population tail-latency estimate."
+}

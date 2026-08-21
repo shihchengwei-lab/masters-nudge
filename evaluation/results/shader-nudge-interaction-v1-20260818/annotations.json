@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "session_id": "01a00b40-3d9d-7e42-a5f1-83ad83516c01",
+  "cohort": {
+    "name": "2026-08-17 05:04-06:15 固定最近 10 則快照",
+    "generated_count": 10,
+    "selection_rule": "使用者於 2026-08-17 06:30 前要求列出的最近 10 則實際 Nudge；其中 9 則成功注入。"
+  },
+  "annotations": [
+    {
+      "reaction_ts": "2026-08-17T05:04:04.502398",
+      "reaction_class": "temporal_only",
+      "evaluable": true,
+      "content_match": true,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": true,
+      "evidence": "套件 SHA 建議與後續動作相符，但模型在注入前已排定相同步驟。",
+      "source": "heartbeat 2026-08-16T21:16:26.594Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:16:44.816541",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": false,
+      "evidence": "要求停止既有路徑並改列 Candidate 004 產物，模型仍持續原定 Candidate 008 驗證。",
+      "source": "heartbeat 2026-08-16T21:44:31.816Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:18:10.860819",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": false,
+      "evidence": "要求停止 Candidate 008 並回交 Candidate 004 GPU bound，後續沒有相符的路徑改變。",
+      "source": "heartbeat 2026-08-16T21:44:31.816Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:30:15.958777",
+      "reaction_class": "temporal_only",
+      "evaluable": true,
+      "content_match": true,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": true,
+      "evidence": "後續補出 Candidate 008 profiler 證據，但相同步驟在注入前已明確排定。",
+      "source": "heartbeat 2026-08-16T21:44:31.816Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:35:24.614286",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": false,
+      "evidence": "移除 Candidate 008 sampler 的觀察未被採用，模型維持既定驗證與登錄路徑。",
+      "source": "heartbeat 2026-08-16T21:44:31.816Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:39:14.236111",
+      "reaction_class": "temporal_only",
+      "evaluable": true,
+      "content_match": true,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": true,
+      "evidence": "Candidate 009 raw samples 隨後產生，但模型在 Nudge 注入前已排定同一步驟。",
+      "source": "heartbeat 2026-08-16T21:44:31.816Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:55:23.239524",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": false,
+      "evidence": "注入時 Candidate 009 已完成登錄且 Candidate 010 已排定，模型沒有回頭改 pass。",
+      "source": "heartbeat 2026-08-16T22:14:13.379Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T05:57:28.822810",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": true,
+      "evidence": "注入時 Candidate 009 profiler 已完成且 Candidate 010 已進入正式量測，模型未改變路徑。",
+      "source": "heartbeat 2026-08-16T22:14:13.379Z"
+    },
+    {
+      "reaction_ts": "2026-08-17T06:15:09.138202",
+      "reaction_class": "no_observable_response",
+      "evaluable": true,
+      "content_match": false,
+      "behavior_change": false,
+      "explicit_reference": false,
+      "reframed": false,
+      "delayed": true,
+      "evidence": "要求停止 Candidate 011 materializer 並回頭處理 Candidate 009，模型仍沿既定候選驗證路徑前進。",
+      "source": "heartbeat 2026-08-16T22:45:23.064Z"
+    }
+  ],
+  "excluded": [
+    {
+      "reaction_ts": "2026-08-17T05:38:04.426944",
+      "reason": "expired; not injected"
+    }
+  ]
+}

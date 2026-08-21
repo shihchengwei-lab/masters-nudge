@@ -30,11 +30,13 @@ FILES = (
     "reaction-schema.json",
     "review_telemetry.py",
     "source_context.py",
+    "shader_progress.py",
+    "shader_router.py",
     "spritesheet.webp",
     "start_buddy_window.bat",
 )
 
-DIRECTORIES = ("masters_nudge", "personas")
+DIRECTORIES = ("domains", "masters_nudge", "personas")
 ASSETS = {
     "docs/images/masters-nudge-six-lenses-hero.png": (
         "assets/masters-nudge-six-lenses-hero.png"
