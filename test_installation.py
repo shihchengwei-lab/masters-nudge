@@ -531,6 +531,12 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertIn("hooks/run_python.sh", workflow)
         self.assertIn("hooks\\run_python.cmd", workflow)
         self.assertIn("masters_nudge_cli.py\" doctor --host all --json", workflow)
+        self.assertNotIn('assert data["core_ready"]', workflow)
+        self.assertNotIn("-not $doctor.core_ready", workflow)
+        self.assertIn('data["python"]["ready"]', workflow)
+        self.assertIn('data["data"]["writable"]', workflow)
+        self.assertIn("$doctor.python.ready", workflow)
+        self.assertIn("$doctor.data.writable", workflow)
         self.assertIn("Expected two host-namespaced turn states", workflow)
 
 

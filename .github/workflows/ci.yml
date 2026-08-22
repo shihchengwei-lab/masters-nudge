@@ -44,7 +44,7 @@ jobs:
           MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" \
             "$plugin_root/masters_nudge_cli.py" doctor --host all --json \
             > "$smoke_root/doctor.json"
-          python -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); assert data["core_ready"] and not data["runtime"]["missing"]' \
+          python -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); assert data["python"]["ready"] and data["data"]["writable"] and not data["runtime"]["missing"]' \
             "$smoke_root/doctor.json"
 
           printf '%s\n' '{"hook_event_name":"UserPromptSubmit","session_id":"claude-ci","turn_id":"t","cwd":".","prompt":"smoke"}' \
@@ -78,7 +78,7 @@ jobs:
             "$pluginRoot\masters_nudge_cli.py" doctor --host all --json `
             | Set-Content -LiteralPath $doctorPath -Encoding utf8
           $doctor = Get-Content -Raw -LiteralPath $doctorPath | ConvertFrom-Json
-          if (-not $doctor.core_ready -or $doctor.runtime.missing.Count -ne 0) {
+          if (-not $doctor.python.ready -or -not $doctor.data.writable -or $doctor.runtime.missing.Count -ne 0) {
             throw "Copied plugin package is not self-contained"
           }
 
