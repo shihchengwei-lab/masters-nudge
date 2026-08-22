@@ -406,6 +406,130 @@ class ShaderResearchProjectionTests(unittest.TestCase):
             self.assertIn("frontier: BaselineV0", snapshot.projection)
             self.assertIn("coverage: resolved=0; unresolved=50", snapshot.projection)
 
+    def test_webgpu_black_hole_schema_preserves_candidates_and_search_coverage(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            write_json(
+                root / "benchmark" / "architecture-contract.json",
+                {
+                    "status": "active",
+                    "claims_permitted": False,
+                    "research_question": "Find the WebGPU black-hole frontier.",
+                    "search_contract": {
+                        "candidate_budget": 4,
+                        "candidate_id_range": "A01-A04",
+                        "prefrozen_mechanism_inventory": [
+                            "raymarch-budget-and-early-exit",
+                            "blackbody-color-and-temperature-profile",
+                            "starfield",
+                        ],
+                    },
+                },
+            )
+            write_json(
+                root / "benchmark" / "architecture-experiments.json",
+                {
+                    "candidate_budget": 4,
+                    "candidate_id_range": "A01-A04",
+                    "experiments": [
+                        {
+                            "candidate_id": "A01",
+                            "parent_id": "A00",
+                            "mechanism_id": "raymarch-budget-and-early-exit",
+                            "status": "qualified",
+                            "change": "Remove redundant loop state.",
+                            "evidence_ref": "benchmark/evidence/A01-evaluation.json",
+                            "evidence_dimensions": ["execution"],
+                            "performance": {"paired_mean_improvement_percent": 0.5},
+                            "visual": {"global_ssim": 1.0},
+                        },
+                        {
+                            "candidate_id": "A02",
+                            "parent_id": "A00",
+                            "mechanism_id": "raymarch-budget-and-early-exit",
+                            "status": "visual-rejected",
+                            "change": "Reduce the raymarch ceiling.",
+                        },
+                        {
+                            "candidate_id": "A03",
+                            "parent_id": "A00",
+                            "mechanism_id": "raymarch-budget-and-early-exit",
+                            "status": "visual-rejected",
+                            "change": "Reduce the raymarch ceiling again.",
+                        },
+                        {
+                            "candidate_id": "A04",
+                            "parent_id": "A00",
+                            "mechanism_id": "blackbody-color-and-temperature-profile",
+                            "status": "exhausted",
+                            "change": "Change the blackbody lookup.",
+                        },
+                    ],
+                },
+            )
+            write_json(
+                root / "benchmark" / "architecture-result.json",
+                {
+                    "status": "phase-close-unsaturated",
+                    "current_frontier": [
+                        {"candidate_id": "A01", "status": "qualified"}
+                    ],
+                    "resolved_candidate_cells": 4,
+                    "unresolved_candidate_cells": 0,
+                    "saturation_reached": False,
+                    "claims_permitted": False,
+                    "evaluated_candidates": 4,
+                },
+            )
+
+            snapshot = shader_progress.load_research_snapshot(root)
+
+            self.assertIsNotNone(snapshot)
+            assert snapshot is not None
+            self.assertEqual(["A01"], snapshot.state["result"]["frontier"])
+            self.assertEqual(
+                ["A01", "A02", "A03", "A04"],
+                [item["id"] for item in snapshot.state["candidates"]],
+            )
+            first = snapshot.state["candidates"][0]
+            self.assertEqual(
+                "raymarch-budget-and-early-exit", first["family"]
+            )
+            self.assertEqual("A00", first["parent_frontier_id"])
+            self.assertEqual("Remove redundant loop state.", first["implementation_delta"])
+            self.assertEqual(
+                ["benchmark/evidence/A01-evaluation.json"],
+                first["evidence_refs"],
+            )
+            self.assertEqual(
+                {"paired_mean_improvement_percent": 0.5}, first["metrics"]
+            )
+            self.assertEqual({"global_ssim": 1.0}, first["quality"])
+            self.assertEqual(
+                {
+                    "raymarch-budget-and-early-exit": 3,
+                    "blackbody-color-and-temperature-profile": 1,
+                },
+                snapshot.state["search"]["family_distribution"],
+            )
+            self.assertEqual(3, snapshot.state["search"]["consecutive_failures"])
+            self.assertEqual(4, snapshot.state["search"]["evaluated"])
+            self.assertEqual(4, snapshot.state["search"]["budget"])
+            self.assertEqual(0, snapshot.state["search"]["remaining"])
+            self.assertEqual(
+                ["starfield"], snapshot.state["search"]["unexplored_mechanisms"]
+            )
+            self.assertIn("search budget: evaluated=4/4; remaining=0", snapshot.projection)
+            self.assertIn(
+                "candidate families: raymarch-budget-and-early-exit=3; "
+                "blackbody-color-and-temperature-profile=1",
+                snapshot.projection,
+            )
+            self.assertIn("consecutive explicit failures: 3", snapshot.projection)
+            self.assertIn(
+                "unexplored prefrozen mechanisms: starfield", snapshot.projection
+            )
+
     def test_known_research_files_are_the_only_authoritative_inputs(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

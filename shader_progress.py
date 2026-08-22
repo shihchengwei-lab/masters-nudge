@@ -33,6 +33,13 @@ ACTIVE_STATUSES = {
     "running",
     "visual-passed",
 }
+EXPLICIT_FAILURE_STATUSES = {
+    "exhausted",
+    "failed",
+    "performance-rejected",
+    "rejected",
+    "visual-rejected",
+}
 
 DECISION_MATERIAL_FIELDS = (
     "parent_frontier_id",
@@ -144,16 +151,22 @@ def _candidate_state(experiments: dict[str, Any]) -> list[dict[str, Any]]:
     for value in raw:
         if not isinstance(value, dict):
             continue
-        candidate_id = str(value.get("id") or "").strip()
+        candidate_id = str(value.get("id") or value.get("candidate_id") or "").strip()
         if not candidate_id:
             continue
         candidates.append({
             "id": candidate_id,
-            "family": _text(value.get("family") or value.get("mechanism_family")),
+            "family": _text(
+                value.get("family")
+                or value.get("mechanism_family")
+                or value.get("mechanism_id")
+            ),
             "status": _text(value.get("status") or "unknown").lower(),
             "bottleneck": _text(value.get("bottleneck_classification")),
             "parent_frontier_id": _text(
-                value.get("parent_frontier_id") or value.get("parent")
+                value.get("parent_frontier_id")
+                or value.get("parent")
+                or value.get("parent_id")
             ),
             "hypothesis_family": _text(value.get("hypothesis_family")),
             "falsifiable_statement": _text(
@@ -167,9 +180,12 @@ def _candidate_state(experiments: dict[str, Any]) -> list[dict[str, Any]]:
                 value.get("implementation_delta")
                 or value.get("change_summary")
                 or value.get("single_change")
+                or value.get("change")
             ),
             "evidence_refs": _evidence_refs(
-                value.get("evidence_refs") or value.get("evidence_files")
+                value.get("evidence_refs")
+                or value.get("evidence_files")
+                or value.get("evidence_ref")
             ),
             "decision": _text(value.get("decision")),
             "unresolved_question": _text(
@@ -181,7 +197,10 @@ def _candidate_state(experiments: dict[str, Any]) -> list[dict[str, Any]]:
                 )
             ],
             "metrics": _mapping(
-                value.get("metrics") or value.get("benchmark") or value.get("measurement")
+                value.get("metrics")
+                or value.get("benchmark")
+                or value.get("measurement")
+                or value.get("performance")
             ),
             "quality": _mapping(value.get("quality") or value.get("visual")),
             "contract_fingerprint": _text(value.get("contract_fingerprint")),
@@ -452,7 +471,7 @@ def _frontier_ids(result: dict[str, Any]) -> list[str]:
     values: list[str] = []
     for item in raw:
         if isinstance(item, dict):
-            value = item.get("candidate") or item.get("id")
+            value = item.get("candidate") or item.get("id") or item.get("candidate_id")
         else:
             value = item
         text = str(value or "").strip()
@@ -466,6 +485,67 @@ def _first_present(payload: dict[str, Any], *keys: str) -> Any:
         if key in payload:
             return payload.get(key)
     return None
+
+
+def _integer(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
+
+
+def _search_state(
+    contract: dict[str, Any],
+    experiments: dict[str, Any],
+    result: dict[str, Any],
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    search_contract = _mapping(contract.get("search_contract"))
+    budget = _integer(_first_present(experiments, "candidate_budget"))
+    if budget is None:
+        budget = _integer(_first_present(search_contract, "candidate_budget"))
+    evaluated = _integer(_first_present(result, "evaluated_candidates"))
+    if evaluated is None:
+        evaluated = len(candidates)
+
+    family_distribution: dict[str, int] = {}
+    for candidate in candidates:
+        family = _text(candidate.get("family"))
+        if family:
+            family_distribution[family] = family_distribution.get(family, 0) + 1
+
+    consecutive_failures = 0
+    for candidate in reversed(candidates):
+        status = _text(candidate.get("status")).lower()
+        if status in EXPLICIT_FAILURE_STATUSES or status.endswith("-rejected"):
+            consecutive_failures += 1
+            continue
+        break
+
+    inventory = _string_list(
+        search_contract.get("prefrozen_mechanism_inventory")
+        or experiments.get("prefrozen_mechanism_inventory")
+    )
+    explored_families = set(family_distribution)
+    unexplored_mechanisms = [
+        mechanism for mechanism in inventory if mechanism not in explored_families
+    ]
+    return {
+        "budget": budget,
+        "candidate_id_range": _text(
+            _first_present(experiments, "candidate_id_range")
+            or _first_present(search_contract, "candidate_id_range")
+        ),
+        "evaluated": evaluated,
+        "remaining": max(0, budget - evaluated) if budget is not None else None,
+        "family_distribution": family_distribution,
+        "consecutive_failures": consecutive_failures,
+        "prefrozen_mechanism_inventory": inventory,
+        "unexplored_mechanisms": unexplored_mechanisms,
+    }
 
 
 def _normalized_state(
@@ -528,6 +608,7 @@ def _normalized_state(
             ),
             "failed": sum(item.get("status") == "failed" for item in normalized_results),
         },
+        "search": _search_state(contract, experiments, result, candidates),
         "candidates": candidates,
     }
 
@@ -543,6 +624,34 @@ def _render_projection(state: dict[str, Any]) -> str:
         f"result: {result['status']}; frontier: {frontier}",
         f"coverage: resolved={result['resolved']}; unresolved={result['unresolved']}; saturation={result['saturation_rule_met']}",
     ]
+    search = state.get("search", {})
+    if search.get("budget") is not None:
+        lines.append(
+            "search budget: "
+            f"evaluated={search.get('evaluated')}/{search['budget']}; "
+            f"remaining={search.get('remaining')}"
+        )
+    family_distribution = search.get("family_distribution", {})
+    if family_distribution:
+        lines.append(
+            "candidate families: "
+            + "; ".join(
+                f"{family}={count}"
+                for family, count in family_distribution.items()
+            )
+        )
+    if candidates:
+        lines.append(
+            "consecutive explicit failures: "
+            f"{search.get('consecutive_failures', 0)}"
+        )
+    inventory = search.get("prefrozen_mechanism_inventory", [])
+    if inventory:
+        unexplored = search.get("unexplored_mechanisms", [])
+        lines.append(
+            "unexplored prefrozen mechanisms: "
+            f"{', '.join(unexplored) if unexplored else 'none'}"
+        )
     evidence_progress = state.get("evidence_progress", {})
     if evidence_progress.get("observed"):
         lines.append(
