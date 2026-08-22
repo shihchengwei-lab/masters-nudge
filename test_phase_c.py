@@ -278,6 +278,76 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIsInstance(failure, ToolCompleted)
         self.assertTrue(failure.failed)
 
+    def test_active_goal_context_populates_turn_anchor_and_progress_objective(self):
+        transcript = self.root / "rollout.jsonl"
+        transcript.write_text(
+            json.dumps(
+                {
+                    "type": "response_item",
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": (
+                                    '<codex_internal_context source="goal">\n'
+                                    "<objective>\n改善黑洞特效的效能。\n</objective>\n"
+                                    "</codex_internal_context>"
+                                ),
+                            }
+                        ],
+                    },
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        core = FakeCore(self.settings, ReviewOutcome("no_finding"))
+        adapter = CodexAdapter(core)  # type: ignore[arg-type]
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "goal-session",
+                    "turn_id": "goal-turn",
+                    "cwd": str(self.root),
+                    "prompt": "",
+                    "transcript_path": str(transcript),
+                }
+            )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "goal-session",
+                    "turn_id": "goal-turn",
+                    "cwd": str(self.root),
+                    "tool_name": "Read",
+                    "tool_input": {"file_path": "blackhole-shader.js"},
+                    "tool_response": {"content": "shader"},
+                }
+            )
+
+        session = SessionRef(
+            "codex_cli", "goal-session", "goal-turn", str(self.root)
+        )
+        self.assertEqual(
+            storage.load_turn_state(self.settings.paths.data_dir, session)[
+                "task_anchor"
+            ],
+            "改善黑洞特效的效能。",
+        )
+        self.assertEqual(
+            json.loads(
+                storage.state_path(
+                    self.settings.paths.data_dir, session, "progress"
+                ).read_text(encoding="utf-8")
+            )["goal_objective"],
+            "改善黑洞特效的效能。",
+        )
+
     def test_stop_review_uses_journal_not_transcript_contents(self):
         core = FakeCore(self.settings, ReviewOutcome("no_finding"))
         adapter = CodexAdapter(core)  # type: ignore[arg-type]

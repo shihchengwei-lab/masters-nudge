@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from pathlib import Path
 from typing import Any, Callable
@@ -40,6 +41,54 @@ FAILURE_TEXT_RE = re.compile(
 )
 
 DELIVERY_MARKER_KEY = "_masters_nudge_delivery"
+GOAL_CONTEXT_RE = re.compile(
+    r"<codex_internal_context\s+source=[\"']goal[\"'][^>]*>"
+    r".*?<objective>\s*(.*?)\s*</objective>",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _goal_from_transcript(transcript_path: str) -> str:
+    if not transcript_path:
+        return ""
+    try:
+        raw = Path(transcript_path).read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    objective = ""
+    for line in raw.splitlines():
+        try:
+            item = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        payload = item.get("payload") if isinstance(item, dict) else None
+        if not isinstance(payload, dict) or payload.get("role") != "user":
+            continue
+        content = payload.get("content")
+        if not isinstance(content, list):
+            continue
+        for block in content:
+            if not isinstance(block, dict) or block.get("type") != "input_text":
+                continue
+            match = GOAL_CONTEXT_RE.search(str(block.get("text") or ""))
+            if match:
+                objective = match.group(1).strip()
+    return objective
+
+
+def _prompt_text(payload: dict[str, Any]) -> str:
+    prompt = str(payload.get("prompt") or "").strip()
+    if prompt:
+        return prompt
+    goal = payload.get("goal")
+    if isinstance(goal, dict):
+        objective = str(goal.get("objective") or "").strip()
+        if objective:
+            return objective
+    objective = str(payload.get("objective") or "").strip()
+    if objective:
+        return objective
+    return _goal_from_transcript(str(payload.get("transcript_path") or ""))
 
 
 def _with_delivery_marker(
@@ -151,7 +200,7 @@ def normalize_event(payload: dict[str, Any]):
     if event_name == "UserPromptSubmit":
         return PromptSubmitted(
             session,
-            str(payload.get("prompt") or ""),
+            _prompt_text(payload),
             transcript_path=str(payload.get("transcript_path") or ""),
         )
     if event_name in {"PostToolUse", "PostToolUseFailure"}:

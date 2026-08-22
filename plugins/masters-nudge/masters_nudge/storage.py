@@ -459,6 +459,10 @@ def record_tool_progress(
             "goal_objective": "",
         },
     )
+    if not state.get("goal_objective"):
+        task_anchor = str(load_turn_state(data_dir, session).get("task_anchor") or "")
+        if task_anchor:
+            state["goal_objective"] = source_context.head_tail(task_anchor, 1000)
     event_seq = int(state.get("event_seq") or 0) + 1
     recent = state.get("recent") if isinstance(state.get("recent"), list) else []
     meaningful = bool(mutating or command_family or goal_transition)
