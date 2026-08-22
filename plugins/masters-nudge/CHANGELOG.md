@@ -7,11 +7,14 @@ Target package version: `0.2.0-dev.1`.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, shell wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks.
 - Publish and verify the [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release before removing historical raw evaluations, screenshots, workspaces, and the full Riemann research/runtime snapshots from the product branch.
 - Retain compact evidence summaries and a single `evaluation/README.md` index with explicit non-causal and non-generalization boundaries.
-- Keep only the Riemann domain prompt, router, observational benchmark snapshot, and reproducible route-closure certificates in the repository.
+- Move the remaining Riemann domain, observational benchmark, and closure certificates out of the product branch after verifying that the fixed archive tag preserves the complete 102-file tree; label the run as pre-question-contract history with incomplete delivery receipts.
+- Keep the frozen Unity／URP Shader protocol unchanged and add a separate Three.js／WebGPU V2 draft with an unconfirmed domain-fit gate. Do not add a production adapter until an unchanged-domain smoke exposes a reproducible workspace evidence, routing, or prompt gap.
 - Move active Shader regression inputs into `tests/fixtures/shader/` so product tests no longer depend on historical evaluation directories.
 - Make the Nudge interaction generator refuse an existing output directory instead of overwriting earlier results.
 - Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
 - Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
+- Keep Shader candidate questions eligible for six subsequent tool events when source state changes, while retaining strict fingerprint invalidation for local findings and longer-lived trajectory questions.
+- Record the first observable tool action or Stop claim after each injected question in its delivery receipt; this is temporal evidence only and does not attribute the action or result to the Nudge.
 
 - Align software reviews with the Shader interaction contract: one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route/provider/delivery records.
 - Add a `shader configure-recommended` workspace preset that preserves the V12 Shader environment (`anthropic / opus / explore / review all`, automatic Persona routing), and keep Shader injection label-free on both Codex and Claude paths.
@@ -23,7 +26,7 @@ Target package version: `0.2.0-dev.1`.
 - Make Shader specialist routing prefer the strongest current evidence rather than balancing historical invocation counts.
 - Add per-session strategy single-flight, source-aware Shader delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
 - Record Shader `expand` / `deepen` / live-`guard` opportunities in telemetry as an observational metric, not a runtime quota.
-- Add Shader candidate-search governance where the 50-slot budget counts distinct bottleneck-hypothesis/work-elimination cells, while near-neighbor numeric and algebraic variants become separately budgeted refinements.
+- Add Shader candidate-search governance where a configured numeric budget counts distinct bottleneck-hypothesis/work-elimination cells, while near-neighbor numeric and algebraic variants become separately budgeted refinements; allow an explicit unbounded mode whose stop is governed by observed search saturation.
 - Report nearest-rank observed p95 for all Shader replay attempts and successful responses separately, retaining timeout wall time in the operational tail while labeling three-sample persona p95 as descriptive only.
 - Expand mid-turn checkpoint input from one triggering event into a bounded research state containing the current bottleneck proxy, workflow recurrence, mechanism outcomes, and the still-open target/evidence tension; keep Stop input unchanged.
 - Show six Shader specialists in the Tk selector for Shader workspaces; persist a workspace-scoped Stop primary while retaining evidence-driven checkpoint switching.

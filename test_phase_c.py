@@ -546,6 +546,22 @@ class CodexAdapterTests(unittest.TestCase):
         )
         hook_entry._emit_output(output, self.settings, io.StringIO())
         self.assertIsNone(storage.latest_pending(self.settings.paths.data_dir, session))
+        followup_payload = dict(payload)
+        followup_payload.update(
+            {
+                "tool_name": "Read",
+                "tool_input": {"file_path": "benchmark/result.json"},
+                "tool_response": {"content": "{}"},
+            }
+        )
+        with mock.patch.dict(os.environ, {}, clear=True):
+            adapter.process(followup_payload)
+        delivery = storage.load_delivery_state(self.settings.paths.data_dir, session)
+        receipt = next(iter(delivery["receipts"].values()))
+        self.assertEqual(receipt["response_observation"]["kind"], "tool")
+        self.assertEqual(
+            receipt["response_observation"]["observation"]["tool"], "Read"
+        )
 
     def test_stop_finding_is_delivered_once_on_next_prompt(self):
         session = SessionRef("codex_cli", "s", "old-turn", str(self.root))

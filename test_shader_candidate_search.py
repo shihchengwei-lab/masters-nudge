@@ -138,6 +138,37 @@ class ShaderCandidateSearchTests(unittest.TestCase):
         self.assertEqual(2, report["candidate_cells"])
         self.assertEqual(1, report["existing_cell_rejections"])
 
+    def test_unbounded_search_uses_saturation_instead_of_numeric_budgets(self):
+        state = registry.new_registry(
+            max_candidate_cells=None,
+            refinement_limit_per_cell=None,
+        )
+        parent = registry.register_candidate(state, proposal("normal"))
+        second = registry.register_candidate(
+            state,
+            proposal("divide", mechanism="remove-dependent-divide"),
+        )
+        refinement_results = [
+            registry.register_refinement(
+                state,
+                parent["candidate_id"],
+                {
+                    "name": f"refinement-{index}",
+                    "changed_variable": "step policy",
+                    "discriminator": "timestamp-query distribution",
+                },
+            )
+            for index in range(4)
+        ]
+
+        report = registry.coverage_report(state)
+        self.assertTrue(parent["accepted"])
+        self.assertTrue(second["accepted"])
+        self.assertTrue(all(result["accepted"] for result in refinement_results))
+        self.assertIsNone(report["candidate_cell_budget"])
+        self.assertIsNone(report["candidate_cells_remaining"])
+        self.assertIsNone(report["refinement_budget_per_cell"])
+
 
 if __name__ == "__main__":
     unittest.main()

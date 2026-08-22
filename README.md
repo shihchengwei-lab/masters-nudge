@@ -101,17 +101,17 @@ Depending on the event, the packet can contain:
 - optional agentcam evidence;
 - the reviewer prompt and selected lens.
 
-Reactions, task anchors, bounded journals, delivery receipts, local-model selection, and content-free telemetry are stored as plain text under `~/.masters-nudge/data/`. Provider retention and training policies are outside this repository and may change.
+Reactions, task anchors, bounded journals, delivery receipts, the first observable host action after an injection, local-model selection, and content-free telemetry are stored as plain text under `~/.masters-nudge/data/`. A following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 
-The retained evidence index is [evaluation/README.md](evaluation/README.md). Historical raw runs, screenshots, workspaces, and the full Riemann research archive are preserved in the verified [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22).
+The retained evidence index is [evaluation/README.md](evaluation/README.md). Historical raw runs, screenshots, and workspaces are preserved in the verified [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22); the complete Riemann experiment remains available in its fixed [tagged source tree](https://github.com/shihchengwei-lab/masters-nudge/tree/evidence-archive-2026-08-22/experiment/riemann-domain).
 
 Current evidence supports only bounded claims:
 
 - Fixed synthetic packets showed lens separation and schema compliance; they do not prove general reliability.
 - Phase B synthetic tasks produced no positive treatment effect and were stopped.
-- The Riemann trace is observational, has no control arm, and does not establish causality or mathematical correctness.
+- The historical Riemann trace predates the question-only contract and has incomplete delivery receipts; it is not current product validation and establishes neither causality nor mathematical correctness.
 - Provider-reported tokens, latency, and estimated cost are not normalized across providers and are not billing guarantees.
 - Hook delivery is best-effort when a host does not emit an expected native event.
 

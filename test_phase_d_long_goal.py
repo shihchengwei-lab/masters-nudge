@@ -108,6 +108,63 @@ class DeliveryLifecycleTests(unittest.TestCase):
             self.assertEqual(receipt["event_seq"], 5)
             self.assertEqual(receipt["delivered_via"], "PostToolUse")
 
+    def test_injected_question_records_first_observable_model_action(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "response")
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="anthropic",
+                model="opus",
+                reaction="這個候選實際減少了哪一段 GPU 工作？",
+                route_metadata={"effective_lens": "carmack"},
+                source_event_seq=3,
+                source_fingerprint="candidate-a",
+                finding_scope="candidate",
+            )
+            storage.mark_delivered(
+                root,
+                session,
+                entry["ts"],
+                event_seq=4,
+                delivered_via="PostToolUse",
+            )
+
+            storage.observe_injected_response(
+                root,
+                session,
+                event_seq=5,
+                observation_kind="tool",
+                observation={
+                    "tool": "exec_command",
+                    "command_family": "node --test",
+                    "failed": False,
+                    "mutating": False,
+                },
+            )
+            storage.observe_injected_response(
+                root,
+                session,
+                event_seq=6,
+                observation_kind="tool",
+                observation={"tool": "apply_patch"},
+            )
+
+            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
+            self.assertEqual(receipt["response_observation"]["event_seq"], 5)
+            self.assertEqual(receipt["response_observation"]["kind"], "tool")
+            self.assertEqual(
+                receipt["response_observation"]["observation"]["command_family"],
+                "node --test",
+            )
+            observations = [
+                value
+                for value in storage.read_reaction_entries(root, session)
+                if value.get("kind") == "response_observation"
+            ]
+            self.assertEqual(len(observations), 1)
+
     def test_stale_pending_nudge_expires_instead_of_being_injected_late(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -282,7 +339,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             self.assertEqual(receipt["status"], "injected")
             self.assertEqual(receipt["delivered_via"], "PostToolUse")
 
-    def test_shader_pending_is_superseded_when_research_source_changed(self):
+    def test_shader_candidate_question_survives_recent_source_change(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
@@ -291,22 +348,53 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 session,
                 provider="grok",
                 model="",
-                reaction="舊分支觀察。",
+                reaction="這次變更是否仍保留相同的效能瓶頸？",
                 route_metadata={"effective_lens": "carmack"},
                 reason="shader-research-change",
+                source_event_seq=1,
                 source_fingerprint="research-old",
+                finding_scope="candidate",
             )
 
             pending = storage.latest_pending(
                 root,
                 session,
-                current_event_seq=2,
+                current_event_seq=4,
+                current_source_fingerprint="research-new",
+            )
+
+            self.assertEqual(pending["ts"], entry["ts"])
+            self.assertNotIn(
+                entry["ts"], storage.load_delivery_state(root, session)["receipts"]
+            )
+
+    def test_shader_candidate_question_expires_after_event_window(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "s")
+            entry = storage.append_reaction(
+                root,
+                session,
+                provider="anthropic",
+                model="opus",
+                reaction="這次變更是否仍保留相同的效能瓶頸？",
+                route_metadata={"effective_lens": "carmack"},
+                reason="shader-research-change",
+                source_event_seq=1,
+                source_fingerprint="research-old",
+                finding_scope="candidate",
+            )
+
+            pending = storage.latest_pending(
+                root,
+                session,
+                current_event_seq=8,
                 current_source_fingerprint="research-new",
             )
 
             self.assertIsNone(pending)
             receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
-            self.assertEqual(receipt["status"], "superseded")
+            self.assertEqual(receipt["status"], "expired")
 
 
 class LongGoalReplayTests(unittest.TestCase):

@@ -347,6 +347,19 @@ class CodexAdapter:
             goal_objective=objective,
         )
         event_seq = int(progress.get("event_seq") or 0)
+        storage.observe_injected_response(
+            self.data_dir,
+            event.session,
+            event_seq=event_seq,
+            observation_kind="tool",
+            observation={
+                "tool": event.tool_name,
+                "command_family": checkpoints.command_family(event),
+                "failed": event.failure_known and event.failed,
+                "mutating": event.mutating,
+                "goal_transition": transition,
+            },
+        )
         research = self._shader_research(event.session)
         checkpoint = checkpoints.classify_tool(event, changed_lines)
         strategy = checkpoints.classify_strategy(
@@ -734,6 +747,12 @@ class CodexAdapter:
     def _stop(self, event: TurnStopped) -> None:
         if event.stop_hook_active:
             return None
+        storage.observe_injected_response(
+            self.data_dir,
+            event.session,
+            observation_kind="stop",
+            observation={"assistant_claim": event.final_claim},
+        )
         state = storage.load_turn_state(self.data_dir, event.session)
         tool_evidence = str(state.get("tool_evidence") or "")
         agentcam_evidence = ""

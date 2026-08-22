@@ -330,9 +330,27 @@ def latest_pending(
         return None
     candidate = pending[-1]
     candidate_source = str(candidate.get("source_fingerprint") or "")
+    finding_scope = str(candidate.get("finding_scope") or "local")
+    source_seq = int(candidate.get("source_event_seq") or 0)
     if candidate_source and current_source_fingerprint:
         if candidate_source != current_source_fingerprint:
-            if candidate.get("finding_scope") == "trajectory":
+            if finding_scope == "trajectory":
+                return candidate
+            if finding_scope == "candidate":
+                if (
+                    current_event_seq
+                    and source_seq
+                    and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE
+                ):
+                    mark_delivery(
+                        data_dir,
+                        session,
+                        str(candidate.get("ts") or ""),
+                        status="expired",
+                        event_seq=current_event_seq,
+                        delivered_via="event-window-exhausted",
+                    )
+                    return None
                 return candidate
             mark_delivery(
                 data_dir,
@@ -344,7 +362,6 @@ def latest_pending(
             )
             return None
         return candidate
-    source_seq = int(candidate.get("source_event_seq") or 0)
     if current_event_seq and source_seq and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE:
         mark_delivery(
             data_dir,
@@ -433,6 +450,67 @@ def mark_delivered(
         event_seq=event_seq,
         delivered_via=delivered_via,
     )
+
+
+def observe_injected_response(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    event_seq: int = 0,
+    observation_kind: str,
+    observation: dict[str, Any],
+) -> dict[str, Any]:
+    """Attach the first observable host action after an injected question."""
+    state = load_delivery_state(data_dir, session)
+    eligible: list[tuple[str, dict[str, Any]]] = []
+    for reaction_ts, receipt in state["receipts"].items():
+        if not isinstance(receipt, dict) or receipt.get("status") != "injected":
+            continue
+        if isinstance(receipt.get("response_observation"), dict):
+            continue
+        delivery_seq = int(receipt.get("event_seq") or 0)
+        if event_seq and delivery_seq and event_seq < delivery_seq:
+            continue
+        eligible.append((str(reaction_ts), receipt))
+    if not eligible:
+        return {}
+
+    reaction_ts, receipt = eligible[-1]
+    normalized_observation = {
+        str(key): (
+            source_context.head_tail(value, 1000)
+            if isinstance(value, str)
+            else value
+        )
+        for key, value in observation.items()
+        if isinstance(value, (str, int, float, bool)) or value is None
+    }
+    response = {
+        "event_seq": int(event_seq or receipt.get("event_seq") or 0),
+        "observed_at": datetime.now().isoformat(),
+        "kind": str(observation_kind or "host-event"),
+        "observation": normalized_observation,
+    }
+    receipt["response_observation"] = response
+    state["receipts"][reaction_ts] = receipt
+    _atomic_write(state_path(data_dir, session, "delivery"), state)
+
+    entry = {
+        "schema_version": 2,
+        "ts": response["observed_at"],
+        "host": session.host,
+        "session_id": session.session_id,
+        "turn_id": session.turn_id,
+        "workspace": _normalized_workspace(session.repo_root or session.cwd),
+        "kind": "response_observation",
+        "reaction_ts": reaction_ts,
+        "observation_event_seq": response["event_seq"],
+        "observation_kind": response["kind"],
+        "observation": normalized_observation,
+    }
+    with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return response
 
 
 def record_tool_progress(

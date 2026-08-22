@@ -101,17 +101,17 @@ Shader 研究採用以下目標契約：交付在固定視覺與量測契約下�
 - 選用的 agentcam evidence；
 - Reviewer prompt 與所選濾鏡。
 
-Reactions、任務摘要、受限 journal、投遞 receipts、本機模型設定與不含對話內容的 telemetry，會以純文字存在 `~/.masters-nudge/data/`。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+Reactions、任務摘要、受限 journal、投遞 receipts、注入後第一個可觀察的 host 動作、本機模型設定與不含對話內容的 telemetry，會以純文字存在 `~/.masters-nudge/data/`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 
-保留的證據索引位於 [evaluation/README.md](evaluation/README.md)。歷史 raw runs、截圖、工作目錄，以及完整 Riemann 研究封存於已驗證的 [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)。
+保留的證據索引位於 [evaluation/README.md](evaluation/README.md)。歷史 raw runs、截圖與工作目錄封存於已驗證的 [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)；完整 Riemann 實驗仍可從固定的 [tagged source tree](https://github.com/shihchengwei-lab/masters-nudge/tree/evidence-archive-2026-08-22/experiment/riemann-domain) 取得。
 
 現有證據只支持以下有限結論：
 
 - 固定 synthetic packets 顯示濾鏡區分與 schema compliance；不能證明一般情境的可靠性。
 - Phase B synthetic tasks 沒有產生正向 treatment effect，實驗已停止。
-- Riemann trace 是沒有對照組的觀察紀錄，不能證明因果或數學正確性。
+- 歷史 Riemann trace 早於問句限定契約，而且投遞 receipt 不完整；不能作為目前產品驗證，也不能證明因果或數學正確性。
 - 不同 provider 回報的 token、latency 與估計成本不是同一口徑，也不是帳單保證。
 - 若 host 沒有送出預期原生事件，hook 投遞只能 best-effort。
 

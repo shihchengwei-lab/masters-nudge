@@ -12,12 +12,12 @@ FAMILY_ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 def new_registry(
     *,
-    max_candidate_cells: int,
-    refinement_limit_per_cell: int,
+    max_candidate_cells: int | None,
+    refinement_limit_per_cell: int | None,
 ) -> dict[str, Any]:
-    if max_candidate_cells < 1:
+    if max_candidate_cells is not None and max_candidate_cells < 1:
         raise ValueError("max_candidate_cells must be positive")
-    if refinement_limit_per_cell < 0:
+    if refinement_limit_per_cell is not None and refinement_limit_per_cell < 0:
         raise ValueError("refinement_limit_per_cell cannot be negative")
     return {
         "schema_version": 1,
@@ -122,7 +122,11 @@ def register_candidate(
             record_as_refinement_of=existing["candidate_id"],
         )
 
-    if len(state["candidates"]) >= int(state["max_candidate_cells"]):
+    max_candidate_cells = state.get("max_candidate_cells")
+    if (
+        max_candidate_cells is not None
+        and len(state["candidates"]) >= int(max_candidate_cells)
+    ):
         return _reject(
             state,
             name,
@@ -183,8 +187,8 @@ def register_refinement(
             missing=missing,
         )
 
-    limit = int(state["refinement_limit_per_cell"])
-    if len(parent["refinements"]) >= limit:
+    limit = state.get("refinement_limit_per_cell")
+    if limit is not None and len(parent["refinements"]) >= int(limit):
         return _reject(
             state,
             name,
@@ -206,7 +210,7 @@ def register_refinement(
     }
 
 
-def coverage_report(state: dict[str, Any]) -> dict[str, int]:
+def coverage_report(state: dict[str, Any]) -> dict[str, Any]:
     candidates = state.get("candidates") or []
     rejections = state.get("rejections") or []
     hypotheses = {
@@ -215,11 +219,20 @@ def coverage_report(state: dict[str, Any]) -> dict[str, int]:
     mechanisms = {
         item["work_elimination_mechanism"]["family"] for item in candidates
     }
+    max_candidate_cells = state.get("max_candidate_cells")
+    refinement_limit = state.get("refinement_limit_per_cell")
     return {
         "candidate_cells": len(candidates),
-        "candidate_cell_budget": int(state["max_candidate_cells"]),
-        "candidate_cells_remaining": max(
-            0, int(state["max_candidate_cells"]) - len(candidates)
+        "candidate_cell_budget": (
+            int(max_candidate_cells) if max_candidate_cells is not None else None
+        ),
+        "candidate_cells_remaining": (
+            max(0, int(max_candidate_cells) - len(candidates))
+            if max_candidate_cells is not None
+            else None
+        ),
+        "refinement_budget_per_cell": (
+            int(refinement_limit) if refinement_limit is not None else None
         ),
         "hypothesis_families": len(hypotheses),
         "mechanism_families": len(mechanisms),

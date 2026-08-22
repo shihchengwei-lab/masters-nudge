@@ -39,7 +39,9 @@ The loopback-only Ollama interface and signed-in Grok CLI path are compatibility
 
 Keep the current Shader profile, replay, candidate-cell registry, semantic progress projection, and interaction analysis. New evaluation output must use an explicit, nonexistent directory; historical result directories are immutable evidence.
 
-**Manual gate:** Separate a new protocol version whenever prompts, fixtures, provider settings, denominators, or acceptance rules change. Do not overwrite an earlier run or describe a fixed replay as general Shader performance evidence.
+The frozen Unity／URP V1 protocol remains unchanged. Three.js／WebGPU V2 is a separate draft for one fixed black-hole workload. Its current domain-fit status is `unconfirmed`; controlled baseline profiling must identify the dominant bottleneck before candidate search begins. Run the existing Shader domain unchanged first, and add an adapter only for a reproduced workspace evidence, routing, or prompt failure. The experiment requires 50 technically distinct candidates plus every scoped saturation gate; budget exhaustion with an unmet gate is `phase-close-unsaturated`.
+
+**Manual gate:** Separate a new protocol version whenever prompts, fixtures, provider settings, denominators, or acceptance rules change. Do not overwrite an earlier run, infer an adapter requirement without an observed failure, or describe a fixed replay as general Shader performance evidence. Do not start paid reviewer calls until provider, model, receipt smoke, and billing scope are frozen.
 
 ## Cut list
 
@@ -47,7 +49,7 @@ The following are deliberately outside the active product and should not return 
 
 - source/manual installers, hook snippets, shell wrappers, `BUDDY_*` aliases, and legacy runtime/data fallbacks;
 - stopped Phase B and lens-differentiation harnesses, raw workspaces, screenshots, and generated dashboards in the product branch;
-- the full Riemann research working tree, plugin/runtime snapshots, setup skill, and broken integration snapshot;
+- the full Riemann experiment tree, research working tree, plugin/runtime snapshots, setup skill, and broken integration snapshot;
 - a generic domain marketplace, persona merge system, or domain SDK;
 - automatic cost-skip enforcement, automatic provider fallback, or automatic local-model installation;
 - claims that a Nudge improves coding outcomes, that observational response timing is causal, or that archived mathematical material advances the Riemann hypothesis.
