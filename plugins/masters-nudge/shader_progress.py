@@ -22,7 +22,6 @@ CORE_RESEARCH_SOURCES = (
 )
 CANDIDATE_RESULTS_SOURCE = "benchmark/candidate-results.json"
 LIVE_EVIDENCE_ROOT = "Evidence/LongTail"
-RESEARCH_SOURCES = (*CORE_RESEARCH_SOURCES, CANDIDATE_RESULTS_SOURCE)
 ACTIVE_STATUSES = {
     "active",
     "candidate",

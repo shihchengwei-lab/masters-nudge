@@ -23,7 +23,7 @@ HERE = Path(__file__).resolve().parent
 def settings_for(root: Path) -> RuntimeSettings:
     return RuntimeSettings(
         "openai", "test-model", 60, 15,
-        RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+        RuntimePaths(HERE, root / "data", root / "error.log"),
     )
 
 
@@ -451,7 +451,6 @@ class LongGoalReplayTests(unittest.TestCase):
                     evidence,
                     environ={},
                     checkpoint=True,
-                    session_key="phase-d",
                 )
                 self.assertEqual(route.effective_lens, expected)
 

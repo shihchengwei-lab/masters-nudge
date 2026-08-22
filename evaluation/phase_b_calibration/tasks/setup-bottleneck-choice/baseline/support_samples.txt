@@ -1,6 +1,0 @@
-Rejected workspace names from setup tickets:
-- North Star
-- ACME CLOUD
-- design   guild
-
-All three users expected a lowercase URL slug to be created automatically.

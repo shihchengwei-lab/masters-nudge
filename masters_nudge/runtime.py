@@ -1,4 +1,4 @@
-"""Runtime configuration and neutral/legacy path resolution."""
+"""Runtime configuration and neutral data-path resolution."""
 
 from __future__ import annotations
 
@@ -34,12 +34,9 @@ HOST_DEFAULT_PROVIDERS = {
 def _value(
     environment: Mapping[str, str],
     primary: str,
-    legacy: str,
     default: str = "",
 ) -> str:
     value = environment.get(primary)
-    if value is None or str(value).strip() == "":
-        value = environment.get(legacy)
     if value is None or str(value).strip() == "":
         return default
     return str(value)
@@ -53,13 +50,10 @@ def _positive_int(value: str, default: int) -> int:
     return parsed if parsed > 0 else default
 
 
-def _explicit_value(
-    environment: Mapping[str, str], primary: str, legacy: str
-) -> str | None:
-    for name in (primary, legacy):
-        value = environment.get(name)
-        if value is not None and str(value).strip():
-            return str(value).strip()
+def _explicit_value(environment: Mapping[str, str], name: str) -> str | None:
+    value = environment.get(name)
+    if value is not None and str(value).strip():
+        return str(value).strip()
     return None
 
 
@@ -93,7 +87,6 @@ def _load_reviewer_config(path: Path) -> tuple[dict[str, str], str]:
 class RuntimePaths:
     runtime_dir: Path
     data_dir: Path
-    legacy_data_dir: Path
     error_log: Path
 
     @classmethod
@@ -107,18 +100,10 @@ class RuntimePaths:
         user_home = Path(
             environment.get("USERPROFILE") or environment.get("HOME") or Path.home()
         ).expanduser()
-        legacy_claude_dir = Path(
-            environment.get("BUDDY_CLAUDE_DIR") or user_home / ".claude"
-        ).expanduser()
-        legacy_data = legacy_claude_dir / "buddy"
-
         explicit_data = str(environment.get("MASTERS_NUDGE_DATA_DIR") or "").strip()
-        legacy_override = "BUDDY_CLAUDE_DIR" in environment and not explicit_data
         data_dir = (
             Path(explicit_data).expanduser()
             if explicit_data
-            else legacy_data
-            if legacy_override
             else user_home / ".masters-nudge" / "data"
         )
         explicit_runtime = str(
@@ -131,12 +116,8 @@ class RuntimePaths:
             if runtime_dir is not None
             else user_home / ".masters-nudge" / "runtime"
         )
-        error_log = (
-            legacy_claude_dir / "buddy-error.log"
-            if legacy_override
-            else data_dir / "error.log"
-        )
-        return cls(resolved_runtime, data_dir, legacy_data, error_log)
+        error_log = data_dir / "error.log"
+        return cls(resolved_runtime, data_dir, error_log)
 
 
 @dataclass(frozen=True)
@@ -166,15 +147,9 @@ class RuntimeSettings:
         configured, config_error = _load_reviewer_config(
             reviewer_config_path(paths.data_dir)
         )
-        explicit_provider = _explicit_value(
-            environment, "MASTERS_NUDGE_PROVIDER", "BUDDY_PROVIDER"
-        )
-        explicit_model = _explicit_value(
-            environment, "MASTERS_NUDGE_MODEL", "BUDDY_MODEL"
-        )
-        explicit_url = _explicit_value(
-            environment, "MASTERS_NUDGE_OLLAMA_URL", "BUDDY_OLLAMA_URL"
-        )
+        explicit_provider = _explicit_value(environment, "MASTERS_NUDGE_PROVIDER")
+        explicit_model = _explicit_value(environment, "MASTERS_NUDGE_MODEL")
+        explicit_url = _explicit_value(environment, "MASTERS_NUDGE_OLLAMA_URL")
         if explicit_provider:
             provider = explicit_provider.lower()
             source = "environment"
@@ -200,16 +175,13 @@ class RuntimeSettings:
             or DEFAULT_OLLAMA_URL
         )
         timeout = _positive_int(
-            _value(
-                environment, "MASTERS_NUDGE_TIMEOUT", "BUDDY_TIMEOUT", "120"
-            ),
+            _value(environment, "MASTERS_NUDGE_TIMEOUT", "120"),
             120,
         )
         checkpoint_timeout = _positive_int(
             _value(
                 environment,
                 "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
-                "BUDDY_CHECKPOINT_TIMEOUT",
                 "90",
             ),
             90,
@@ -228,15 +200,11 @@ class RuntimeSettings:
 
 def active_guard(environment: Mapping[str, str] | None = None) -> bool:
     environment = os.environ if environment is None else environment
-    return (
-        environment.get("MASTERS_NUDGE_ACTIVE") == "1"
-        or environment.get("BUDDY_ACTIVE") == "1"
-    )
+    return environment.get("MASTERS_NUDGE_ACTIVE") == "1"
 
 
 def reviewer_environment() -> dict[str, str]:
     return {
         **os.environ,
         "MASTERS_NUDGE_ACTIVE": "1",
-        "BUDDY_ACTIVE": "1",
     }

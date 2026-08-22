@@ -18,6 +18,7 @@ from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
 HERE = Path(__file__).resolve().parent
+SHADER_FIXTURES = HERE / "tests" / "fixtures" / "shader"
 
 
 def write_json(path: Path, payload: dict, *, indent: int | None = 2) -> None:
@@ -75,7 +76,7 @@ def settings_for(root: Path) -> RuntimeSettings:
         "test-model",
         60,
         15,
-        RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+        RuntimePaths(HERE, root / "data", root / "error.log"),
     )
 
 
@@ -99,12 +100,9 @@ class WorkerCore(FakeCore):
 class ShaderResearchProjectionTests(unittest.TestCase):
     def test_observed_long_tail_failure_fixture_routes_by_mechanism_not_generic_metrics(self):
         fixture = json.loads(
-            (
-                HERE
-                / "evaluation"
-                / "shader_long_tail"
-                / "observed-failure-fixture-v1.json"
-            ).read_text(encoding="utf-8")
+            (SHADER_FIXTURES / "observed-long-tail-failure-v1.json").read_text(
+                encoding="utf-8"
+            )
         )
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -297,12 +295,9 @@ class ShaderResearchProjectionTests(unittest.TestCase):
 
     def test_six_natural_material_classes_reach_the_expected_persona(self):
         fixture = json.loads(
-            (
-                HERE
-                / "evaluation"
-                / "shader_router"
-                / "material-routing-fixture-v1.json"
-            ).read_text(encoding="utf-8")
+            (SHADER_FIXTURES / "material-routing-v1.json").read_text(
+                encoding="utf-8"
+            )
         )
 
         self.assertEqual(1, fixture["schema_version"])

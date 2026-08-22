@@ -1,8 +1,11 @@
-import unittest
+import json
+import sys
 import tempfile
+import unittest
 from pathlib import Path
+from unittest import mock
 
-from evaluation.nudge_interaction import analysis, dashboard
+from evaluation.nudge_interaction import analysis, dashboard, generate
 from masters_nudge import storage
 from masters_nudge.contracts import SessionRef
 
@@ -283,6 +286,55 @@ class NudgeInteractionDashboardTests(unittest.TestCase):
         self.assertNotIn("延遲散點", html)
         self.assertNotIn("因果成功率", html)
         self.assertIn("不能證明因果", html)
+
+
+class NudgeInteractionGenerateTests(unittest.TestCase):
+    def test_generate_refuses_to_overwrite_an_existing_output_directory(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            telemetry_path = root / "telemetry.jsonl"
+            reaction_path = root / "reactions.jsonl"
+            annotations_path = root / "annotations.json"
+            output_dir = root / "existing-output"
+            telemetry_path.write_text("", encoding="utf-8")
+            reaction_path.write_text("", encoding="utf-8")
+            annotations_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "session_id": SESSION_ID,
+                        "cohort": {"name": "empty", "generated_count": 0},
+                        "annotations": [],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            output_dir.mkdir()
+            sentinel = output_dir / "keep.txt"
+            sentinel.write_text("do not overwrite", encoding="utf-8")
+
+            argv = [
+                "generate.py",
+                "--telemetry",
+                str(telemetry_path),
+                "--reaction-log",
+                str(reaction_path),
+                "--annotations",
+                str(annotations_path),
+                "--session-id",
+                SESSION_ID,
+                "--output-dir",
+                str(output_dir),
+            ]
+            with (
+                mock.patch.object(sys, "argv", argv),
+                self.assertRaisesRegex(SystemExit, "refusing to overwrite"),
+            ):
+                generate.main()
+
+            self.assertEqual("do not overwrite", sentinel.read_text(encoding="utf-8"))
+            self.assertFalse((output_dir / "metrics.json").exists())
+            self.assertFalse((output_dir / "dashboard.html").exists())
 
 
 if __name__ == "__main__":

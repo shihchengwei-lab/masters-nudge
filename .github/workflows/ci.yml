@@ -26,47 +26,83 @@ jobs:
       - name: Install test dependencies
         run: python -m pip install Pillow
       - name: Compile Python sources
-        run: >-
-          python -m compileall -q
-          buddy.py buddy_window.py checkpoint.py hook_entry.py inject.py
-          lens_router.py masters_nudge_cli.py persona_config.py
-          review_telemetry.py source_context.py masters_nudge evaluation
-          tools/build_plugin.py
+        run: python -m compileall -q .
       - name: Verify generated plugin runtime
         run: python tools/build_plugin.py --check
       - name: Run full test suite
         run: python -m unittest discover -v
-      - name: Check shell scripts and smoke-test installer
+      - name: Smoke-test self-contained plugin package
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          bash -n install.sh buddy.sh checkpoint.sh inject.sh \
-            plugins/masters-nudge/hooks/run_python.sh
-          sh plugins/masters-nudge/hooks/run_python.sh \
-            plugins/masters-nudge/masters_nudge_cli.py --help
-          root="$(mktemp -d)"
-          MASTERS_NUDGE_RUNTIME_DIR="$root/runtime" \
-            BUDDY_TARGET_DIR="$root/claude" \
-            bash install.sh --all
-          test -f "$root/runtime/hook_entry.py"
-          test -f "$root/runtime/masters_nudge/core.py"
-          test -f "$root/claude/buddy.py"
-      - name: Smoke-test PowerShell installer
+          set -eu
+          smoke_root="$(mktemp -d)"
+          plugin_root="$smoke_root/masters-nudge"
+          cp -R plugins/masters-nudge "$plugin_root"
+          bash -n "$plugin_root/hooks/run_python.sh"
+
+          MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" \
+            "$plugin_root/masters_nudge_cli.py" doctor --host all --json \
+            > "$smoke_root/doctor.json"
+          python -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); assert data["core_ready"] and not data["runtime"]["missing"]' \
+            "$smoke_root/doctor.json"
+
+          printf '%s\n' '{"hook_event_name":"UserPromptSubmit","session_id":"claude-ci","turn_id":"t","cwd":".","prompt":"smoke"}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_prompt.py"
+          printf '%s\n' '{"hook_event_name":"PostToolUse","session_id":"claude-ci","turn_id":"t","cwd":".","tool_name":"Read","tool_input":{},"tool_response":{}}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_checkpoint.py"
+          printf '%s\n' '{"hook_event_name":"Stop","session_id":"claude-empty","turn_id":"t","cwd":"."}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_stop.py"
+
+          printf '%s\n' '{"hook_event_name":"UserPromptSubmit","session_id":"codex-ci","turn_id":"t","cwd":".","prompt":"smoke"}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/hook_entry.py" --host codex_cli
+          printf '%s\n' '{"hook_event_name":"PostToolUse","session_id":"codex-ci","turn_id":"t","cwd":".","tool_name":"Read","tool_input":{},"tool_response":{}}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/hook_entry.py" --host codex_cli
+          printf '%s\n' '{"hook_event_name":"Stop","session_id":"codex-empty","turn_id":"t","cwd":"."}' \
+            | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/hook_entry.py" --host codex_cli
+
+          test "$(find "$smoke_root/data" -type f -name '*.turn.json' | wc -l | tr -d ' ')" = "2"
+      - name: Smoke-test self-contained plugin package on Windows
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $root = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
-          $runtime = Join-Path $root "runtime"
-          $claude = Join-Path $root "claude"
-          ./install.ps1 -HostName all -RuntimeDir $runtime -ClaudeTargetDir $claude
-          @(
-            (Join-Path $runtime "hook_entry.py"),
-            (Join-Path $runtime "masters_nudge/core.py"),
-            (Join-Path $claude "buddy.py")
-          ) | ForEach-Object {
-            if (-not (Test-Path -LiteralPath $_)) {
-              throw "Installer did not create $_"
-            }
+          $smokeRoot = Join-Path $env:RUNNER_TEMP ([guid]::NewGuid().ToString())
+          $pluginRoot = Join-Path $smokeRoot "masters-nudge"
+          $dataRoot = Join-Path $smokeRoot "data"
+          New-Item -ItemType Directory -Path $smokeRoot | Out-Null
+          Copy-Item -LiteralPath ./plugins/masters-nudge -Destination $pluginRoot -Recurse
+          $env:MASTERS_NUDGE_DATA_DIR = $dataRoot
+
+          $doctorPath = Join-Path $smokeRoot "doctor.json"
+          & "$pluginRoot\hooks\run_python.cmd" `
+            "$pluginRoot\masters_nudge_cli.py" doctor --host all --json `
+            | Set-Content -LiteralPath $doctorPath -Encoding utf8
+          $doctor = Get-Content -Raw -LiteralPath $doctorPath | ConvertFrom-Json
+          if (-not $doctor.core_ready -or $doctor.runtime.missing.Count -ne 0) {
+            throw "Copied plugin package is not self-contained"
           }
-          & ./plugins/masters-nudge/hooks/run_python.cmd `
-            ./plugins/masters-nudge/masters_nudge_cli.py --help
+
+          @{hook_event_name="UserPromptSubmit"; session_id="claude-ci"; turn_id="t"; cwd="."; prompt="smoke"} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\claude_prompt.py"
+          @{hook_event_name="PostToolUse"; session_id="claude-ci"; turn_id="t"; cwd="."; tool_name="Read"; tool_input=@{}; tool_response=@{}} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\claude_checkpoint.py"
+          @{hook_event_name="Stop"; session_id="claude-empty"; turn_id="t"; cwd="."} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\claude_stop.py"
+
+          @{hook_event_name="UserPromptSubmit"; session_id="codex-ci"; turn_id="t"; cwd="."; prompt="smoke"} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\hook_entry.py" --host codex_cli
+          @{hook_event_name="PostToolUse"; session_id="codex-ci"; turn_id="t"; cwd="."; tool_name="Read"; tool_input=@{}; tool_response=@{}} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\hook_entry.py" --host codex_cli
+          @{hook_event_name="Stop"; session_id="codex-empty"; turn_id="t"; cwd="."} `
+            | ConvertTo-Json -Compress `
+            | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\hook_entry.py" --host codex_cli
+
+          $turnFiles = @(Get-ChildItem -LiteralPath $dataRoot -Recurse -File -Filter *.turn.json)
+          if ($turnFiles.Count -ne 2) {
+            throw "Expected two host-namespaced turn states, found $($turnFiles.Count)"
+          }

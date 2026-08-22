@@ -33,6 +33,11 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
 
+    if args.output_dir.exists():
+        raise SystemExit(
+            f"refusing to overwrite output directory: {args.output_dir}"
+        )
+
     annotation_document = json.loads(args.annotations.read_text(encoding="utf-8"))
     metrics = analyze_session(
         _read_jsonl(args.telemetry),
@@ -40,7 +45,7 @@ def main() -> int:
         annotation_document,
         args.session_id,
     )
-    args.output_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir.mkdir(parents=True)
     (args.output_dir / "metrics.json").write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )

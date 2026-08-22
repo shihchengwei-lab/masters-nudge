@@ -1,67 +1,52 @@
 # Phase C: shared reviewer architecture
 
-Phase C separates *where an event came from* from *how Masters’ Nudge reviews
-it*. Codex CLI normalizes native hook payloads into stable events. The Claude
-compatibility path maps checkpoint payloads to `ToolCompleted`; its prompt and
-Stop entry points update turn state or construct `ReviewRequest` directly. Both
-hosts enter the same `ReviewCore` for an actual review.
+Phase C separates native host events from the review policy. Claude Code and Codex keep different adapters because their event payloads, journals, Stop timing, and delivery channels differ; both adapters construct the same bounded `ReviewRequest` and call the same `ReviewCore`.
 
-## Boundary
+## Ownership boundary
 
-| Layer | Owns | Must not own |
+| Layer | Owns | Does not own |
 |---|---|---|
-| Host adapter | Native JSON parsing, session/turn identity, evidence capture, turn journal, checkpoint deduplication, delivery state | Persona prompt logic or provider-specific review policy |
-| Shared contracts and evidence | Normalized event/request types, bounded packet construction, evidence limits | Native delivery timing or provider invocation |
-| Shared core | Lens routing, prompt composition, provider dispatch, sanitization, cold current-state input, reaction persistence, telemetry | Claude/Codex transcript wire formats or host delivery state |
-| Provider adapter | Cloud CLI or local-only HTTP invocation, schema parsing, usage extraction, recursion guard and transport privacy checks | Host hook semantics |
+| Host entry and adapter | Native JSON parsing, session/turn identity, evidence capture, checkpoint timing, delivery channel | Lens prompts, provider policy, output sanitation |
+| Shared checkpoints and evidence | Event classification, stable fingerprints, bounded packet construction | Host JSON or provider invocation |
+| `ReviewCore` | Routing, prompt composition, provider dispatch, sanitation, persistence, telemetry | Native transcript formats or hook stdout |
+| Provider adapter | CLI/HTTP invocation, schema parsing, usage extraction, recursion guard, transport checks | Hook semantics or delivery receipts |
+| Storage | Host-namespaced turn state, reactions, receipts, checkpoint claims, telemetry | Routing or provider choice |
 
-The host-neutral event contracts are `PromptSubmitted`, `ToolCompleted`, and
-`TurnStopped`; the Codex adapter uses all three, while the Claude compatibility
-path currently uses `ToolCompleted` for checkpoint classification. A
-`ReviewRequest` carries host/session/turn identity, bounded evidence, review
-reason, fingerprint, and shadow labels. Both hosts use the same `ReviewCore`,
-prompt/lenses, 36–42-character completion target, 52-character hard cap, and
-`reaction-schema.json` contract.
-If a finding reaches the hard cap without terminal punctuation, the shared
-sanitizer closes it at the last available clause boundary. This fallback never
-rejects the paid result or performs another provider call.
+The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `ReviewRequest`, and `ReviewOutcome`.
 
-Legacy callers may still import prompt and output helpers from `buddy.py`, but
-those names are compatibility delegates to `masters_nudge.prompting` and
-`masters_nudge.providers`. Evaluation scripts using the old API therefore
-exercise the same prompt composition, sanitization, length cap, and structured
-output parser and provider clients as the production core; `buddy.py` does not
-keep a second copy of those rules.
+## Host paths
 
-The live Claude Stop and checkpoint paths instantiate `ReviewCore` directly.
-Compatibility helper names remain available to older evaluation scripts, but
-they are not inserted as pass-through callbacks in the production control flow.
+Claude Code uses three small native entry points:
 
-## Host mapping
+- `claude_prompt.py` for `UserPromptSubmit`;
+- `claude_checkpoint.py` for successful mutating tools and `PostToolUseFailure`;
+- `claude_stop.py` for the async `Stop` review.
 
-| Review lifecycle | Claude Code | Codex CLI 0.147+ |
+Codex uses `hook_entry.py --host codex_cli` for prompt and tool events, plus `--detach-stop` for the fast Stop shim. `masters_nudge/codex_adapter.py` owns Codex payload normalization and its bounded per-turn tool journal.
+
+Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry files convert payloads and delivery behavior; they do not keep a second classifier or prompt/provider implementation.
+
+| Lifecycle | Claude Code | Codex |
 |---|---|---|
-| Start turn | `UserPromptSubmit` stores task anchor and transcript offset | `UserPromptSubmit` stores task anchor; transcript content is never parsed |
-| Collect evidence | Claude transcript slice, direct hook event, optional agentcam | Every delivered `PostToolUse` appends a bounded journal record |
-| Checkpoint | `PostToolUseFailure`; selected successful mutating tools | `PostToolUse`; structured failures when delivered, test output, first >80-line diff; structured Shader research uses semantic changes in its contract/experiment/result sources instead of the generic event budget |
-| End of turn | Native async `Stop` worker | Fast `Stop --detach-stop` shim launches the background worker |
-| Deliver Stop finding | Plain additional context on the next prompt | JSON `hookSpecificOutput.additionalContext` on the next prompt |
+| Start turn | Save the task anchor and transcript offset | Save the task anchor; do not parse the Codex transcript |
+| Collect evidence | Bounded transcript/event evidence and optional Agentcam report | Bounded `PostToolUse` journal and optional Agentcam report |
+| Checkpoint | Tool failure or selected successful mutation | Delivered structured failure, test output, large diff, long-goal or semantic Shader change |
+| End turn | Async native `Stop` worker | Detached Stop worker |
+| Deliver queued finding | Plain additional context at a later prompt | `hookSpecificOutput.additionalContext` at a later hook event |
 
-Every non-evaluation delivery envelope names the effective lens and review
-reason. That metadata sits outside the 52-character finding body; the body
-itself does not name the person or lens.
+A structured Shader workspace reads its declared contract, experiment registry, and result files and renders a compact semantic projection. Generic journal volume does not replace those authoritative inputs.
 
-Codex's documented transcript path is retained only as metadata because its
-format is not a stable hooks interface. The Codex journal is capped at 8,000
-characters per turn; individual tool records are capped at 3,000 characters.
-For a structured Shader workspace, those journal contents do not form the
-strategy-review packet. `shader_progress.py` reads the three authoritative
-workspace JSON files and renders a compact delta/current projection. Its cached
-fingerprint and normalized prior projection are disposable routing state.
+## Output and delivery
 
-## Storage and compatibility
+The user-visible contract is one sanitized finding or silence. Findings target a complete 36–42-character sentence and have a 52-character hard cap. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
 
-New writes default to `~/.masters-nudge/data/` and are host-namespaced:
+The injected hook output contains the finding text. Effective lens, route source, trigger, and review reason belong to local reaction and telemetry records; callers must not assume those fields are present in the host wire output.
+
+A generated reaction starts as `queued`. Successful insertion records an `injected` receipt with the receiving event; stale reactions become `expired`, skipped older reactions become `superseded`, and failed delivery remains inspectable. Detached strategy reviews are single-flight per session.
+
+## State
+
+New state is written under `~/.masters-nudge/data/` by default:
 
 ```text
 claude_code--<session>.log
@@ -70,37 +55,25 @@ codex_cli--<session>.log
 <host>--<session>.delivery.json
 <host>--<session>.checkpoints/
 reviewer.json
+review-telemetry.jsonl
 ```
 
-Codex delivery state is a receipt ledger, not only a last-seen cursor. Reactions
-are generated as `queued`; successful hook stdout records `injected` with the
-receiving event sequence and native event name. Failed writes remain retryable,
-while stale reactions become `expired` and stay visible as history without being
-inserted into a much later context. A queued reaction skipped in favor of a
-newer one is explicitly recorded as `superseded`. Detached strategy reviews are
-single-flight per session so slow providers cannot accumulate concurrent calls.
+One `.turn.json` record owns the task anchor, evidence offset, and current-turn state. There is no second source-state file for the same turn. Workspace profiles and reviewer configuration are host-neutral.
 
-The floating window and Claude injection path can read pre-Phase-C
-`~/.claude/buddy/` logs/config. They do not move, rewrite, or delete them.
-`BUDDY_*` variables remain aliases; `MASTERS_NUDGE_*` is preferred.
+The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, and does not delete original review data.
 
-## Failure behavior
+## Failure and privacy behavior
 
-Hooks fail open: malformed input, missing provider CLIs or local servers,
-timeouts, and reviewer schema errors are locally logged and never block the
-main coding agent. The `ollama-local` provider additionally fails closed with
-respect to egress: an invalid config, non-loopback endpoint, enabled Ollama
-cloud mode, or remote-model metadata produces no review and never falls back to
-a cloud provider.
-Checkpoint claims are released after reviewer errors/no-finding so a later
-equivalent event can retry; delivered findings keep their dedup marker.
+Hooks fail open for the main coding agent: malformed native input, unavailable provider CLIs, timeouts, schema errors, and local write failures produce no Nudge and are logged locally.
 
-The installed Windows Codex CLI 0.147.0 used for the live smoke had two runtime
-differences from current documentation: it skipped native `async: true` hooks,
-and a non-zero Bash result did not emit `PostToolUse`. The detached Stop shim
-handles the former. The latter makes immediate failure checkpoints best-effort
-on that build; Stop still reviews the task anchor and final claim. See the
-[smoke result](../evaluation/results/phase-c-codex-smoke-20260813/SMOKE_RESULT.md).
+Provider selection does not fail over silently. The Ollama path additionally fails closed for network privacy: only loopback HTTP is accepted, proxies and redirects are disabled, cloud-disabled status is checked, and remote model metadata is rejected.
 
-Codex hook field and trust behavior follow the
-[official hooks documentation](https://learn.chatgpt.com/docs/hooks).
+The Codex journal is capped per turn and per tool record. Claude transcript evidence, current claims, tool evidence, and optional Agentcam evidence are also bounded before entering `ReviewCore`. Full transcripts are not copied into telemetry.
+
+## Package and verification
+
+The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `tools/build_plugin.py` generates and verifies its runtime copy; marketplace metadata points to that package rather than to the repository root.
+
+The retained [Codex smoke result](../evaluation/results/phase-c-codex-smoke-20260813/SMOKE_RESULT.md) records one dated platform observation, not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
+
+See the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) and [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks) for the current host contracts.

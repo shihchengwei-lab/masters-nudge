@@ -15,62 +15,45 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Mapping
 
+from .contracts import safe_identifier
 from .local_ollama import (
     DEFAULT_OLLAMA_URL,
     inspect_local_ollama,
     normalize_loopback_url,
     validate_model_name,
 )
+from .plugin_inventory import (
+    INVENTORY_FILE,
+    PLUGIN_RUNTIME_FILES,
+    SOURCE_RUNTIME_FILES,
+    load_plugin_inventory,
+)
 from .runtime import RuntimePaths, RuntimeSettings, reviewer_config_path
 
 
-CORE_FILES = (
-    "buddy-prompt.txt",
-    "buddy.py",
-    "checkpoint.py",
-    "hook_entry.py",
-    "inject.py",
-    "lens_router.py",
-    "persona_config.py",
-    "reaction-schema.json",
-    "review_telemetry.py",
-    "source_context.py",
-    "shader_progress.py",
-    "shader_router.py",
-    "domains/shader/base-prompt.txt",
-    "domains/shader/goal-template.txt",
-    "domains/shader/personas/akenine_moller.txt",
-    "domains/shader/personas/carmack.txt",
-    "domains/shader/personas/karis.txt",
-    "domains/shader/personas/lottes.txt",
-    "domains/shader/personas/quilez.txt",
-    "domains/shader/personas/tatarchuk.txt",
-    "personas/beck.txt",
-    "personas/carmack.txt",
-    "personas/fowler.txt",
-    "personas/jeff.txt",
-    "personas/lamport.txt",
-    "personas/linus.txt",
-    "masters_nudge/checkpoints.py",
-    "masters_nudge/contracts.py",
-    "masters_nudge/core.py",
-    "masters_nudge/evidence.py",
-    "masters_nudge/local_ollama.py",
-    "masters_nudge/prompting.py",
-    "masters_nudge/providers.py",
-    "masters_nudge/profiles.py",
-    "masters_nudge/runtime.py",
-    "masters_nudge/storage.py",
-)
-
-PLUGIN_FILES = (
-    ".claude-plugin/plugin.json",
-    ".codex-plugin/plugin.json",
-    "hooks/claude.json",
-    "hooks/hooks.json",
-    "hooks/run_python.cmd",
-    "hooks/run_python.sh",
-)
+LEGACY_PERSONA_STAGES = {
+    "general": "build",
+    "jeff": "design",
+    "beck": "build",
+    "fowler": "evolve",
+    "linus": "review",
+}
+SPECIALIST_PERSONAS = {"lamport", "carmack"}
+STAGES = {"design", "build", "evolve", "review"}
+LEGACY_ENVIRONMENT_MAPPINGS = {
+    "BUDDY_ACTIVE": "MASTERS_NUDGE_ACTIVE",
+    "BUDDY_CHECKPOINT_TIMEOUT": "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
+    "BUDDY_CLAUDE_DIR": "MASTERS_NUDGE_DATA_DIR",
+    "BUDDY_MODEL": "MASTERS_NUDGE_MODEL",
+    "BUDDY_OLLAMA_URL": "MASTERS_NUDGE_OLLAMA_URL",
+    "BUDDY_PERSONA": "MASTERS_NUDGE_PERSONA",
+    "BUDDY_PROVIDER": "MASTERS_NUDGE_PROVIDER",
+    "BUDDY_SHADOW_EVALUATION_DAYS": "MASTERS_NUDGE_SHADOW_EVALUATION_DAYS",
+    "BUDDY_SHADOW_TARGET_CALLS": "MASTERS_NUDGE_SHADOW_TARGET_CALLS",
+    "BUDDY_SPRITE_PATH": "MASTERS_NUDGE_SPRITE_PATH",
+    "BUDDY_TIMEOUT": "MASTERS_NUDGE_TIMEOUT",
+    "BUDDY_WORKSPACE": "MASTERS_NUDGE_WORKSPACE",
+}
 
 CLAUDE_LEGACY_COMMANDS = {
     "bash ~/.claude/scripts/buddy/checkpoint.sh",
@@ -252,9 +235,7 @@ def _remove_exact_handlers(document: dict, host: str) -> tuple[dict, int]:
             continue
         kept_groups = []
         for group in groups:
-            if not isinstance(group, dict) or not isinstance(
-                group.get("hooks"), list
-            ):
+            if not isinstance(group, dict) or not isinstance(group.get("hooks"), list):
                 kept_groups.append(group)
                 continue
             handlers = []
@@ -279,9 +260,7 @@ def _backup_path(path: Path) -> Path:
     candidate = path.with_name(f"{path.name}.masters-nudge.{stamp}.bak")
     suffix = 1
     while candidate.exists():
-        candidate = path.with_name(
-            f"{path.name}.masters-nudge.{stamp}.{suffix}.bak"
-        )
+        candidate = path.with_name(f"{path.name}.masters-nudge.{stamp}.{suffix}.bak")
         suffix += 1
     return candidate
 
@@ -312,6 +291,238 @@ def _atomic_json_write(path: Path, document: dict) -> None:
         except Exception:
             pass
         temp_path.unlink(missing_ok=True)
+
+
+def _legacy_data_dir(environment: Mapping[str, str]) -> Path:
+    claude_dir = Path(
+        environment.get("BUDDY_CLAUDE_DIR") or _home(environment) / ".claude"
+    ).expanduser()
+    return claude_dir / "buddy"
+
+
+def _neutral_data_dir(environment: Mapping[str, str]) -> Path:
+    return RuntimePaths.resolve(environ=environment).data_dir
+
+
+def _read_json_object(path: Path) -> tuple[dict, str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {}, f"cannot read JSON: {exc}"
+    if not isinstance(payload, dict):
+        return {}, "JSON root must be an object"
+    return payload, ""
+
+
+def inspect_legacy_lifecycle(environment: Mapping[str, str]) -> dict:
+    legacy_path = _legacy_data_dir(environment) / "config.json"
+    destination = _neutral_data_dir(environment) / "config.json"
+    source = legacy_path
+    result = {
+        "source": str(source),
+        "destination": str(destination),
+        "exists": False,
+        "persona": "",
+        "stage": "",
+        "status": "not_found",
+        "applied": False,
+        "backup": "",
+        "error": "",
+    }
+
+    if destination.exists():
+        destination_payload, error = _read_json_object(destination)
+        if error:
+            result.update(
+                exists=True, source=str(destination), status="invalid", error=error
+            )
+            return result
+        if (
+            set(destination_payload) == {"stage"}
+            and str(destination_payload.get("stage") or "").strip().lower() in STAGES
+        ):
+            result.update(
+                exists=True,
+                source=str(destination),
+                stage=str(destination_payload["stage"]).strip().lower(),
+                status="already_migrated",
+            )
+            return result
+        if set(destination_payload) == {"persona"}:
+            source = destination
+            result["source"] = str(source)
+        else:
+            result.update(
+                exists=True,
+                source=str(destination),
+                status="conflict",
+                error="destination config is not a canonical stage config",
+            )
+            return result
+
+    if not source.exists():
+        return result
+    result["exists"] = True
+    payload, error = _read_json_object(source)
+    if error:
+        result.update(status="invalid", error=error)
+        return result
+    if set(payload) == {"persona"}:
+        persona = str(payload.get("persona") or "").strip().lower()
+    elif (
+        set(payload) == {"stage"}
+        and str(payload.get("stage") or "").strip().lower() == "general"
+    ):
+        persona = "general"
+    else:
+        result.update(
+            status="invalid",
+            error="legacy lifecycle config must contain only persona",
+        )
+        return result
+    result["persona"] = persona
+    if persona in SPECIALIST_PERSONAS:
+        result.update(
+            status="manual_required",
+            error=f"{persona} has no lossless lifecycle-stage mapping",
+        )
+        return result
+    stage = LEGACY_PERSONA_STAGES.get(persona)
+    if not stage:
+        result.update(
+            status="invalid", error=f"unsupported legacy persona: {persona!r}"
+        )
+        return result
+    result.update(stage=stage, status="would_migrate")
+    return result
+
+
+def migrate_legacy_lifecycle(
+    environment: Mapping[str, str], *, apply: bool = False
+) -> dict:
+    result = inspect_legacy_lifecycle(environment)
+    if not apply or result["status"] != "would_migrate":
+        return result
+    source = Path(result["source"])
+    destination = Path(result["destination"])
+    backup: Path | None = None
+    try:
+        if source.resolve() == destination.resolve():
+            backup = _backup_path(source)
+            shutil.copy2(source, backup)
+            result["backup"] = str(backup)
+        _atomic_json_write(destination, {"stage": result["stage"]})
+    except Exception as exc:
+        if backup is not None and backup.exists():
+            try:
+                shutil.copy2(backup, destination)
+            except OSError as restore_exc:
+                result["error"] = (
+                    f"migration failed: {exc}; restore failed: {restore_exc}"
+                )
+                result["status"] = "error"
+                return result
+        result.update(status="error", error=f"migration failed: {exc}")
+        return result
+    result.update(status="migrated", applied=True)
+    return result
+
+
+def _validate_jsonl(path: Path) -> str:
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        return f"cannot read log: {exc}"
+    for line_number, line in enumerate(lines, 1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except (TypeError, ValueError) as exc:
+            return f"line {line_number} is not valid JSON: {exc}"
+        if not isinstance(payload, dict):
+            return f"line {line_number} must be a JSON object"
+    return ""
+
+
+def inspect_legacy_logs(environment: Mapping[str, str]) -> dict:
+    source_dir = _legacy_data_dir(environment)
+    destination_dir = _neutral_data_dir(environment)
+    items = []
+    for source in sorted(source_dir.glob("*.log")) if source_dir.exists() else []:
+        safe_stem = safe_identifier(source.stem)
+        destination = destination_dir / f"claude_code--{safe_stem}.log"
+        error = ""
+        if safe_stem != source.stem:
+            error = "legacy log filename is not a safe session identifier"
+        else:
+            error = _validate_jsonl(source)
+        if error:
+            status = "invalid"
+        elif destination.exists():
+            try:
+                status = (
+                    "already_copied"
+                    if destination.read_bytes() == source.read_bytes()
+                    else "conflict"
+                )
+            except OSError as exc:
+                status = "invalid"
+                error = f"cannot compare destination: {exc}"
+        else:
+            status = "would_copy"
+        items.append(
+            {
+                "source_name": source.name,
+                "source": str(source),
+                "destination": str(destination),
+                "status": status,
+                "applied": False,
+                "error": error,
+            }
+        )
+    return {
+        "source": str(source_dir),
+        "destination": str(destination_dir),
+        "items": items,
+    }
+
+
+def migrate_legacy_logs(environment: Mapping[str, str], *, apply: bool = False) -> dict:
+    result = inspect_legacy_logs(environment)
+    if not apply:
+        return result
+    for item in result["items"]:
+        if item["status"] != "would_copy":
+            continue
+        source = Path(item["source"])
+        destination = Path(item["destination"])
+        created = False
+        try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with source.open("rb") as reader, destination.open("xb") as writer:
+                created = True
+                shutil.copyfileobj(reader, writer)
+                writer.flush()
+                os.fsync(writer.fileno())
+        except Exception as exc:
+            if created:
+                try:
+                    destination.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            item.update(status="error", error=f"migration failed: {exc}")
+            continue
+        item.update(status="copied", applied=True)
+    return result
+
+
+def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str, str]]:
+    return [
+        {"legacy": legacy, "replacement": replacement}
+        for legacy, replacement in sorted(LEGACY_ENVIRONMENT_MAPPINGS.items())
+        if str(environment.get(legacy) or "").strip()
+    ]
 
 
 def migrate_legacy_config(path: Path, host: str, *, apply: bool = False) -> dict:
@@ -353,20 +564,38 @@ def migrate_legacy(
         (name, config_path_for(name, environment))
         for name in _selected_hosts(host, environment)
     ]
-    results = [
-        migrate_legacy_config(
-            path, name, apply=False
+    results = [migrate_legacy_config(path, name, apply=False) for name, path in targets]
+    lifecycle = migrate_legacy_lifecycle(environment)
+    logs = migrate_legacy_logs(environment)
+    environment_aliases = inspect_legacy_environment(environment)
+    unsafe = (
+        any(item["error"] or item["near"] for item in results)
+        or lifecycle["status"] in {"invalid", "conflict", "error"}
+        or any(
+            item["status"] in {"invalid", "conflict", "error"} for item in logs["items"]
         )
-        for name, path in targets
-    ]
-    unsafe = any(item["error"] or item["near"] for item in results)
-    if apply and not unsafe:
+    )
+    lifecycle_manual = lifecycle["status"] == "manual_required"
+    if apply and not unsafe and not lifecycle_manual:
+        lifecycle = migrate_legacy_lifecycle(environment, apply=True)
+        logs = migrate_legacy_logs(environment, apply=True)
+        unsafe = lifecycle["status"] == "error" or any(
+            item["status"] == "error" for item in logs["items"]
+        )
+    if apply and not unsafe and not lifecycle_manual:
         results = [
-            migrate_legacy_config(path, name, apply=True)
-            for name, path in targets
+            migrate_legacy_config(path, name, apply=True) for name, path in targets
         ]
         unsafe = any(item["error"] or item["near"] for item in results)
-    return {"apply": apply, "unsafe": unsafe, "results": results}
+    return {
+        "apply": apply,
+        "unsafe": unsafe,
+        "manual_required": lifecycle_manual or bool(environment_aliases),
+        "results": results,
+        "lifecycle": lifecycle,
+        "logs": logs,
+        "environment": environment_aliases,
+    }
 
 
 def configure_local(
@@ -377,9 +606,7 @@ def configure_local(
     inspector: Callable[..., dict] = inspect_local_ollama,
 ) -> dict:
     environment = dict(os.environ if environ is None else environ)
-    path = reviewer_config_path(
-        RuntimePaths.resolve(environ=environment).data_dir
-    )
+    path = reviewer_config_path(RuntimePaths.resolve(environ=environment).data_dir)
     result = {
         "saved": False,
         "path": str(path),
@@ -406,9 +633,7 @@ def configure_local(
     result.update(model=selected_model, ollama_url=endpoint)
     result["diagnostic"] = diagnostic
     if not diagnostic.get("ready"):
-        result["error"] = str(
-            diagnostic.get("error") or "local Ollama is not ready"
-        )
+        result["error"] = str(diagnostic.get("error") or "local Ollama is not ready")
         return result
     try:
         _atomic_json_write(
@@ -432,9 +657,7 @@ def configure_grok(
     environ: Mapping[str, str] | None = None,
 ) -> dict:
     environment = dict(os.environ if environ is None else environ)
-    path = reviewer_config_path(
-        RuntimePaths.resolve(environ=environment).data_dir
-    )
+    path = reviewer_config_path(RuntimePaths.resolve(environ=environment).data_dir)
     executable = _provider_cli("grok", environment)
     result = {
         "saved": False,
@@ -473,7 +696,6 @@ def inspect_grok_cli(
     environment = dict(os.environ if environ is None else environ)
     environment.pop("XAI_API_KEY", None)
     environment["MASTERS_NUDGE_ACTIVE"] = "1"
-    environment["BUDDY_ACTIVE"] = "1"
     try:
         completed = subprocess.run(
             [executable, "models"],
@@ -493,19 +715,21 @@ def inspect_grok_cli(
     output = f"{completed.stdout}\n{completed.stderr}".strip()
     unauthenticated = "not authenticated" in output.lower()
     ready = completed.returncode == 0 and not unauthenticated
-    error = "" if ready else (
-        "grok CLI is not authenticated" if unauthenticated else f"grok CLI exit {completed.returncode}"
+    error = (
+        ""
+        if ready
+        else (
+            "grok CLI is not authenticated"
+            if unauthenticated
+            else f"grok CLI exit {completed.returncode}"
+        )
     )
     return {"ready": ready, "authenticated": ready, "error": error}
 
 
-def reset_local(
-    *, environ: Mapping[str, str] | None = None
-) -> dict:
+def reset_local(*, environ: Mapping[str, str] | None = None) -> dict:
     environment = dict(os.environ if environ is None else environ)
-    path = reviewer_config_path(
-        RuntimePaths.resolve(environ=environment).data_dir
-    )
+    path = reviewer_config_path(RuntimePaths.resolve(environ=environment).data_dir)
     try:
         existed = path.exists()
         path.unlink(missing_ok=True)
@@ -536,11 +760,22 @@ def doctor(
     environment = dict(os.environ if environ is None else environ)
     root = Path(plugin_root).resolve()
     python_ready = sys.version_info >= (3, 10)
-    missing_runtime = [name for name in CORE_FILES if not (root / name).exists()]
-    if (root / ".claude-plugin" / "plugin.json").exists():
-        missing_runtime.extend(
-            name for name in PLUGIN_FILES if not (root / name).exists()
-        )
+    is_plugin = (root / ".claude-plugin" / "plugin.json").exists() or (
+        root / ".codex-plugin" / "plugin.json"
+    ).exists()
+    required_runtime = SOURCE_RUNTIME_FILES
+    inventory_error = ""
+    if is_plugin:
+        installed_files, inventory_error = load_plugin_inventory(root)
+        if installed_files:
+            required_runtime = installed_files
+        else:
+            required_runtime = tuple(
+                dict.fromkeys((*SOURCE_RUNTIME_FILES, *PLUGIN_RUNTIME_FILES))
+            )
+    missing_runtime = [name for name in required_runtime if not (root / name).exists()]
+    if inventory_error:
+        missing_runtime.append(INVENTORY_FILE)
     host_results = []
     for name in _selected_hosts(host, environment):
         runtime_host = "claude_code" if name == "claude" else "codex_cli"
@@ -632,9 +867,7 @@ def doctor(
                 "hook_python_version": (
                     ".".join(map(str, hook_version)) if hook_version else ""
                 ),
-                "hook_python_ready": bool(
-                    hook_version and hook_version >= (3, 10, 0)
-                ),
+                "hook_python_ready": bool(hook_version and hook_version >= (3, 10, 0)),
                 "legacy": inspect_legacy_config(
                     config_path_for(name, environment), name
                 ),
@@ -673,9 +906,7 @@ def doctor(
     }
 
 
-def launch_window(
-    plugin_root: Path, *, workspace: str | Path = ""
-) -> dict:
+def launch_window(plugin_root: Path, *, workspace: str | Path = "") -> dict:
     root = Path(plugin_root).resolve()
     try:
         workspace_path = Path(workspace or Path.cwd()).expanduser().resolve()

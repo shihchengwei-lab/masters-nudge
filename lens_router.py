@@ -102,18 +102,12 @@ def _specialist_candidates(evidence: str) -> list[tuple[str, str]]:
     return candidates
 
 
-def _specialist_trigger(evidence: str) -> tuple[str, str]:
-    candidates = _specialist_candidates(evidence)
-    return candidates[0] if candidates else ("", "")
-
-
 def resolve_review_route(
     base_dir: Path,
     evidence: str = "",
     *,
     environ: Mapping[str, str] | None = None,
     checkpoint: bool = False,
-    session_key: str = "",
     injected_personas: tuple[str, ...] = (),
 ) -> ReviewRoute:
     selection = persona_config.resolve_stage(base_dir, environ=environ)

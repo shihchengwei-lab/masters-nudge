@@ -76,9 +76,13 @@ The packet itself says YAML has only one minimal case. The same concern appeared
 - Raw R2 rows SHA-256: `d4ce3ede1cc652e9055461c8b425f2f5c6f6dac1d53e21b9a269f355f7d211dc`
 - Blind packet SHA-256: `ef659fb7c71e7849da6efcd7c571600ad5516d40bd16232d409bb68f1a72c957`
 - Frozen judgments SHA-256: `3343102f36900413badec57319c7acdfc811ea41635fead9e9bee73b2aec743d`
-- Machine-readable metrics: [workflow-summary.json](workflow-summary.json)
-- Condition-blind judgments: [blind-judgments.json](blind-judgments.json)
-- Fully joined adjudication: [adjudicated.json](adjudicated.json)
+- Archived machine-readable metrics: `workflow-summary.json`
+- Archived condition-blind judgments: `blind-judgments.json`
+- Archived fully joined adjudication: `adjudicated.json`
+
+The files named above are preserved in the verified
+[`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)
+release.
 
 ## Next evaluation
 

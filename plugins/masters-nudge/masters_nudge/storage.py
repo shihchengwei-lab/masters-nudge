@@ -22,6 +22,30 @@ PROGRESS_EVENT_LIMIT = 12
 PENDING_MAX_EVENT_AGE = 6
 ATOMIC_REPLACE_ATTEMPTS = 5
 STRATEGY_RUN_STALE_SEC = 300
+MAX_ERROR_LOG_BYTES = 256 * 1024
+
+
+def append_error(error_log: Path, component: str, message: str) -> None:
+    """Append one bounded runtime error record; hook callers remain fail-open."""
+    try:
+        error_log = Path(error_log)
+        error_log.parent.mkdir(parents=True, exist_ok=True)
+        if error_log.exists():
+            size = error_log.stat().st_size
+            if size > MAX_ERROR_LOG_BYTES:
+                keep = size // 2
+                with error_log.open("rb") as handle:
+                    handle.seek(size - keep)
+                    handle.readline()
+                    tail = handle.read()
+                with error_log.open("wb") as handle:
+                    handle.write(tail)
+        with error_log.open("a", encoding="utf-8") as handle:
+            handle.write(
+                f"[{datetime.now().isoformat()}] {component}: {message}\n"
+            )
+    except Exception:
+        pass
 
 
 def session_stem(session: SessionRef) -> str:
@@ -246,49 +270,6 @@ def read_recent_reactions(
     ]
     reactions = [value for value in reactions if value]
     return [value[:max_chars] for value in reactions[-max_count:]]
-
-
-def read_legacy_reaction_entries(
-    legacy_data_dir: Path, session: SessionRef
-) -> list[dict[str, Any]]:
-    """Read the pre-Phase-C unnamespaced log without ever writing to it."""
-    path = Path(legacy_data_dir) / f"{safe_identifier(session.session_id)}.log"
-    if not path.exists():
-        return []
-    entries: list[dict[str, Any]] = []
-    try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            try:
-                value = json.loads(line)
-            except (TypeError, ValueError):
-                continue
-            if isinstance(value, dict):
-                entries.append(value)
-    except OSError:
-        return []
-    return entries
-
-
-def read_recent_reactions_compatible(
-    data_dir: Path,
-    legacy_data_dir: Path,
-    session: SessionRef,
-    max_count: int = 3,
-    max_chars: int = 200,
-) -> list[str]:
-    entries = (
-        read_legacy_reaction_entries(legacy_data_dir, session)
-        if session.host == "claude_code"
-        else []
-    )
-    entries.extend(read_reaction_entries(data_dir, session))
-    entries.sort(key=lambda entry: str(entry.get("ts") or ""))
-    reactions = [
-        str(entry.get("reaction") or "").strip()
-        for entry in entries
-        if entry.get("kind", "review") == "review"
-    ]
-    return [value[:max_chars] for value in reactions if value][-max_count:]
 
 
 def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:

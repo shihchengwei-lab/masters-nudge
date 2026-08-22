@@ -60,13 +60,7 @@ class ReviewCore:
         self.schema_path = settings.paths.runtime_dir / "reaction-schema.json"
 
     def _route_dir(self) -> Path:
-        current = self.settings.paths.data_dir
-        legacy = self.settings.paths.legacy_data_dir
-        if not (current / persona_config.CONFIG_FILE).exists() and (
-            legacy / persona_config.CONFIG_FILE
-        ).exists():
-            return legacy
-        return current
+        return self.settings.paths.data_dir
 
     def review(
         self,
@@ -130,7 +124,6 @@ class ReviewCore:
                 self._route_dir(),
                 routing_evidence,
                 checkpoint=checkpoint_routing,
-                session_key=f"{request.session.host}--{request.session.session_id}",
                 injected_personas=storage.read_recent_injected_personas(
                     self.settings.paths.data_dir,
                     request.session,

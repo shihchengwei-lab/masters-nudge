@@ -7,6 +7,15 @@ from unittest import mock
 from evaluation.shader_prompt_replay import replay
 
 
+LATENCY_FIXTURES = (
+    Path(__file__).resolve().parent
+    / "tests"
+    / "fixtures"
+    / "shader"
+    / "prompt-replay-latency-v1"
+)
+
+
 class ShaderPromptReplayTests(unittest.TestCase):
     def test_text_sha256_is_stable_across_platform_line_endings(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -279,17 +288,12 @@ class ShaderPromptReplayTests(unittest.TestCase):
         )
 
     def test_grok_medium_latency_artifact_matches_frozen_runs(self):
-        result_dir = (
-            replay.ROOT
-            / "evaluation"
-            / "results"
-            / "shader-prompt-replay-v1-20260817"
-            / "execution-v6-grok-medium-all"
-        )
-        runs_path = result_dir / "runs.json"
+        runs_path = LATENCY_FIXTURES / "runs.json"
         rows = json.loads(runs_path.read_text(encoding="utf-8"))["runs"]
         artifact = json.loads(
-            (result_dir / "latency-analysis.json").read_text(encoding="utf-8")
+            (LATENCY_FIXTURES / "latency-analysis.json").read_text(
+                encoding="utf-8"
+            )
         )
 
         self.assertEqual(

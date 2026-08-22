@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "purpose": "Freeze the completed shader-long-tail-v1 routing and material failure as a deterministic regression fixture.",
+  "source": {
+    "workspace": "E:\\projects\\shader-long-tail-v1",
+    "session_id": "01a01734-cfe3-7df3-ba9f-6503ca8d6741",
+    "observed_trajectory_provider_attempts": 87,
+    "observed_trajectory_findings": 70,
+    "observed_trajectory_no_findings": 9,
+    "observed_trajectory_errors": 8,
+    "observed_persona_findings": {
+      "akenine_moller": 32,
+      "lottes": 38,
+      "carmack": 0,
+      "karis": 0,
+      "quilez": 0,
+      "tatarchuk": 0
+    }
+  },
+  "source_files": {
+    "benchmark/architecture-contract.json": {
+      "status": "active",
+      "claims_permitted": false,
+      "product_contract_sha256": "bee6eab4cbf7addbc2716d25714a510115b8984cd7a883499342012c6bfd7627",
+      "research_question": "How far can attributable shader architecture changes move the fixed benchmark frontier?"
+    },
+    "benchmark/architecture-experiments.json": {
+      "experiments": [
+        {
+          "id": "LT050-add-sweep-normalize-rsqrt-to-ring-beam",
+          "stage": "combination",
+          "mechanism_family": "frontier-ring-beam-sweep-normalize-rsqrt",
+          "hypothesis": "Explicit sweep-direction rsqrt lowering may reduce vertex normalization cost.",
+          "single_change": "Apply explicit sweep normalization lowering inside the frontier vertex path.",
+          "status": "measured",
+          "source_sha256": "frozen-lt050-source",
+          "metrics": {
+            "gallery_incremental_gpu_median_ms": 0.948881,
+            "overdraw_mean_layers": 0.2460416704416275,
+            "shader_variants": 1,
+            "visual_ssim": 0.9999999972450304
+          },
+          "evidence_files": [
+            {"path": "Evidence/LT050/acceptance.json", "sha256": "frozen-a"},
+            {"path": "benchmark/results/LT050.json", "sha256": "frozen-b"}
+          ],
+          "decision": "rejected-not-frontier"
+        }
+      ]
+    },
+    "benchmark/architecture-result.json": {
+      "status": "research-complete",
+      "frontier": ["LT021", "LT042"],
+      "resolved_candidate_cells": 50,
+      "unresolved_candidate_cells": 0,
+      "saturation_reached": false,
+      "claims_permitted": false
+    }
+  },
+  "expected_v2": {
+    "primary_route_signal": "quilez|procedural-representation",
+    "gap_key": "quilez:procedural-representation",
+    "packet_sections": [
+      "candidate decision material",
+      "latest direct evidence",
+      "recent blind spots"
+    ]
+  }
+}

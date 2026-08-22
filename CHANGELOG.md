@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+Target package version: `0.2.0-dev.1`.
+
+- Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, shell wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks.
+- Publish and verify the [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release before removing historical raw evaluations, screenshots, workspaces, and the full Riemann research/runtime snapshots from the product branch.
+- Retain compact evidence summaries and a single `evaluation/README.md` index with explicit non-causal and non-generalization boundaries.
+- Keep only the Riemann domain prompt, router, observational benchmark snapshot, and reproducible route-closure certificates in the repository.
+- Move active Shader regression inputs into `tests/fixtures/shader/` so product tests no longer depend on historical evaluation directories.
+- Make the Nudge interaction generator refuse an existing output directory instead of overwriting earlier results.
+- Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
+- Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
+
 - Align software reviews with the Shader interaction contract: one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route/provider/delivery records.
 - Add a `shader configure-recommended` workspace preset that preserves the V12 Shader environment (`anthropic / opus / explore / review all`, automatic Persona routing), and keep Shader injection label-free on both Codex and Claude paths.
 - Terminate the full Grok reviewer process tree after a deadline, preventing timed-out Windows hook workers and their CLI descendants from lingering.
