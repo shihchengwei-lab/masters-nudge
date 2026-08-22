@@ -61,23 +61,39 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
         target.flush()
     except Exception:
         if isinstance(delivery, dict):
-            storage.mark_delivery(
+            try:
+                storage.mark_delivery(
+                    settings.paths.data_dir,
+                    delivery["session"],
+                    delivery["timestamp"],
+                    status="failed",
+                    event_seq=int(delivery.get("event_seq") or 0),
+                    delivered_via=str(delivery.get("event_name") or "hook"),
+                )
+            finally:
+                storage.release_delivery_claim(
+                    settings.paths.data_dir,
+                    delivery["session"],
+                    delivery["timestamp"],
+                    str(delivery.get("claim_token") or ""),
+                )
+        raise
+    if isinstance(delivery, dict):
+        try:
+            storage.mark_delivered(
                 settings.paths.data_dir,
                 delivery["session"],
                 delivery["timestamp"],
-                status="failed",
                 event_seq=int(delivery.get("event_seq") or 0),
                 delivered_via=str(delivery.get("event_name") or "hook"),
             )
-        raise
-    if isinstance(delivery, dict):
-        storage.mark_delivered(
-            settings.paths.data_dir,
-            delivery["session"],
-            delivery["timestamp"],
-            event_seq=int(delivery.get("event_seq") or 0),
-            delivered_via=str(delivery.get("event_name") or "hook"),
-        )
+        finally:
+            storage.release_delivery_claim(
+                settings.paths.data_dir,
+                delivery["session"],
+                delivery["timestamp"],
+                str(delivery.get("claim_token") or ""),
+            )
 
 
 def _launch_detached_payload(

@@ -22,6 +22,7 @@ PROGRESS_EVENT_LIMIT = 12
 PENDING_MAX_EVENT_AGE = 6
 ATOMIC_REPLACE_ATTEMPTS = 5
 STRATEGY_RUN_STALE_SEC = 300
+DELIVERY_CLAIM_STALE_SEC = 120
 MAX_ERROR_LOG_BYTES = 256 * 1024
 
 
@@ -58,6 +59,79 @@ def reaction_log_path(data_dir: Path, session: SessionRef) -> Path:
 
 def state_path(data_dir: Path, session: SessionRef, suffix: str) -> Path:
     return Path(data_dir) / f"{session_stem(session)}.{suffix}.json"
+
+
+def _claim_path(
+    data_dir: Path, session: SessionRef, namespace: str, key: str
+) -> Path:
+    digest = hashlib.sha256(str(key).encode("utf-8")).hexdigest()[:32]
+    return (
+        Path(data_dir)
+        / f"{session_stem(session)}.{safe_identifier(namespace)}-claims"
+        / digest
+    )
+
+
+def _claim_once(
+    data_dir: Path, session: SessionRef, namespace: str, key: str
+) -> str:
+    """Atomically reserve one session-scoped side effect across hook processes."""
+    if not key:
+        return ""
+    path = _claim_path(data_dir, session, namespace, key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    token = f"{os.getpid()}-{time.perf_counter_ns()}"
+    for _attempt in range(2):
+        try:
+            with path.open("x", encoding="utf-8") as handle:
+                handle.write(token + "\n")
+            return token
+        except FileExistsError:
+            try:
+                stale = time.time() - path.stat().st_mtime > DELIVERY_CLAIM_STALE_SEC
+            except OSError:
+                return ""
+            if not stale:
+                return ""
+            try:
+                path.unlink()
+            except OSError:
+                return ""
+        except OSError:
+            return ""
+    return ""
+
+
+def _release_claim(
+    data_dir: Path,
+    session: SessionRef,
+    namespace: str,
+    key: str,
+    token: str,
+) -> None:
+    if not key or not token:
+        return
+    path = _claim_path(data_dir, session, namespace, key)
+    try:
+        if path.read_text(encoding="utf-8").strip() != token:
+            return
+        path.unlink(missing_ok=True)
+        try:
+            path.parent.rmdir()
+        except OSError:
+            pass
+    except OSError:
+        pass
+
+
+def claim_delivery(data_dir: Path, session: SessionRef, timestamp: str) -> str:
+    return _claim_once(data_dir, session, "delivery", timestamp)
+
+
+def release_delivery_claim(
+    data_dir: Path, session: SessionRef, timestamp: str, token: str
+) -> None:
+    _release_claim(data_dir, session, "delivery", timestamp, token)
 
 
 def _reaction_timestamp() -> str:
@@ -476,6 +550,17 @@ def observe_injected_response(
         return {}
 
     reaction_ts, receipt = eligible[-1]
+    claim_token = _claim_once(data_dir, session, "response", reaction_ts)
+    if not claim_token:
+        return {}
+    state = load_delivery_state(data_dir, session)
+    current = state["receipts"].get(reaction_ts)
+    if not isinstance(current, dict) or isinstance(
+        current.get("response_observation"), dict
+    ):
+        _release_claim(data_dir, session, "response", reaction_ts, claim_token)
+        return {}
+    receipt = current
     normalized_observation = {
         str(key): (
             source_context.head_tail(value, 1000)
@@ -491,26 +576,29 @@ def observe_injected_response(
         "kind": str(observation_kind or "host-event"),
         "observation": normalized_observation,
     }
-    receipt["response_observation"] = response
-    state["receipts"][reaction_ts] = receipt
-    _atomic_write(state_path(data_dir, session, "delivery"), state)
+    try:
+        receipt["response_observation"] = response
+        state["receipts"][reaction_ts] = receipt
+        _atomic_write(state_path(data_dir, session, "delivery"), state)
 
-    entry = {
-        "schema_version": 2,
-        "ts": response["observed_at"],
-        "host": session.host,
-        "session_id": session.session_id,
-        "turn_id": session.turn_id,
-        "workspace": _normalized_workspace(session.repo_root or session.cwd),
-        "kind": "response_observation",
-        "reaction_ts": reaction_ts,
-        "observation_event_seq": response["event_seq"],
-        "observation_kind": response["kind"],
-        "observation": normalized_observation,
-    }
-    with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    return response
+        entry = {
+            "schema_version": 2,
+            "ts": response["observed_at"],
+            "host": session.host,
+            "session_id": session.session_id,
+            "turn_id": session.turn_id,
+            "workspace": _normalized_workspace(session.repo_root or session.cwd),
+            "kind": "response_observation",
+            "reaction_ts": reaction_ts,
+            "observation_event_seq": response["event_seq"],
+            "observation_kind": response["kind"],
+            "observation": normalized_observation,
+        }
+        with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        return response
+    finally:
+        _release_claim(data_dir, session, "response", reaction_ts, claim_token)
 
 
 def record_tool_progress(

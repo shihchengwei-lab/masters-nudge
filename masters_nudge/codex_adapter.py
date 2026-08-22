@@ -93,7 +93,7 @@ def _prompt_text(payload: dict[str, Any]) -> str:
 
 def _with_delivery_marker(
     output: dict[str, Any], session: SessionRef, timestamp: str, *, event_seq: int = 0,
-    event_name: str = "",
+    event_name: str = "", claim_token: str = "",
 ) -> dict[str, Any]:
     if timestamp:
         output[DELIVERY_MARKER_KEY] = {
@@ -101,6 +101,7 @@ def _with_delivery_marker(
             "timestamp": timestamp,
             "event_seq": int(event_seq or 0),
             "event_name": event_name,
+            "claim_token": claim_token,
         }
     return output
 
@@ -112,7 +113,7 @@ def _pending_output(
     *,
     event_seq: int = 0,
     current_source_fingerprint: str = "",
-) -> dict[str, Any] | None:
+) -> tuple[dict[str, Any] | None, bool]:
     pending = storage.latest_pending(
         data_dir,
         session,
@@ -120,18 +121,29 @@ def _pending_output(
         current_source_fingerprint=current_source_fingerprint,
     )
     if not pending:
-        return None
+        return None, False
     text = str(pending.get("reaction") or "").strip()
     timestamp = str(pending.get("ts") or "")
     if not text or not timestamp:
-        return None
+        return None, False
+    claim_token = storage.claim_delivery(data_dir, session, timestamp)
+    if not claim_token:
+        return None, True
     output = build_hook_output(
         event_name,
         text,
         evaluation_notice=pending.get("kind") == "evaluation_notice",
     )
-    return _with_delivery_marker(
-        output, session, timestamp, event_seq=event_seq, event_name=event_name
+    return (
+        _with_delivery_marker(
+            output,
+            session,
+            timestamp,
+            event_seq=event_seq,
+            event_name=event_name,
+            claim_token=claim_token,
+        ),
+        False,
     )
 
 
@@ -318,12 +330,13 @@ class CodexAdapter:
             transcript_path=event.transcript_path,
         )
         research = self._shader_research(event.session)
-        return _pending_output(
+        output, _delivery_busy = _pending_output(
             self.data_dir,
             "UserPromptSubmit",
             event.session,
             current_source_fingerprint=(research.fingerprint if research else ""),
         )
+        return output
 
     def _tool(self, event: ToolCompleted) -> dict[str, Any] | None:
         journal = storage.append_tool_evidence(
@@ -450,13 +463,15 @@ class CodexAdapter:
             if research is not None
             else str((strategy or checkpoint or {}).get("fingerprint") or "")
         )
-        pending_output = _pending_output(
+        pending_output, delivery_busy = _pending_output(
             self.data_dir,
             event.native_event_name,
             event.session,
             event_seq=event_seq,
             current_source_fingerprint=current_source_fingerprint,
         )
+        if delivery_busy:
+            return None
         if strategy and strategy["reason"] == "goal-transition":
             checkpoint = strategy
             storage.mark_strategy_reviewed(
@@ -615,6 +630,12 @@ class CodexAdapter:
                     event_seq=event_seq,
                     delivered_via="superseded-by-current-checkpoint",
                 )
+                storage.release_delivery_claim(
+                    self.data_dir,
+                    event.session,
+                    str(old_delivery.get("timestamp") or ""),
+                    str(old_delivery.get("claim_token") or ""),
+                )
         storage.complete_checkpoint(self.data_dir, event.session, fingerprint)
         storage.mark_checkpoint_delivery(
             self.data_dir,
@@ -630,12 +651,20 @@ class CodexAdapter:
         if not timestamp:
             pending = storage.latest_pending(self.data_dir, event.session)
             timestamp = str((pending or {}).get("ts") or "")
+        claim_token = ""
+        if timestamp:
+            claim_token = storage.claim_delivery(
+                self.data_dir, event.session, timestamp
+            )
+            if not claim_token:
+                return None
         return _with_delivery_marker(
             output,
             event.session,
             timestamp,
             event_seq=event_seq,
             event_name=event.native_event_name,
+            claim_token=claim_token,
         )
 
     def _run_strategy_payload(self, payload: dict[str, Any]) -> None:

@@ -592,6 +592,77 @@ class CodexAdapterTests(unittest.TestCase):
         )
         self.assertIsNone(second)
 
+    def test_duplicate_hook_dispatch_claims_pending_finding_once_before_stdout(self):
+        session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
+        storage.append_reaction(
+            self.settings.paths.data_dir,
+            session,
+            provider="anthropic",
+            model="opus",
+            reaction="同一則提醒只能注入一次。",
+            route_metadata={"effective_lens": "linus"},
+        )
+        adapter = CodexAdapter(FakeCore(self.settings, ReviewOutcome("no_finding")))
+        payload = {
+            "hook_event_name": "PostToolUse",
+            "session_id": "s",
+            "turn_id": "new-turn",
+            "cwd": str(self.root),
+            "tool_name": "Read",
+            "tool_input": {"file_path": "benchmark/result.json"},
+            "tool_response": {"content": "{}"},
+        }
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            first = adapter.process(payload)
+            duplicate = adapter.process(payload)
+
+        self.assertIsNotNone(first)
+        self.assertIsNone(duplicate)
+        hook_entry._emit_output(first, self.settings, io.StringIO())
+        receipts = [
+            json.loads(line)
+            for line in storage.reaction_log_path(
+                self.settings.paths.data_dir, session
+            ).read_text(encoding="utf-8").splitlines()
+            if json.loads(line).get("kind") == "delivery_receipt"
+        ]
+        self.assertEqual(len(receipts), 1)
+
+    def test_failed_hook_stdout_releases_delivery_claim_for_retry(self):
+        class BrokenStream:
+            def write(self, _text):
+                raise OSError("closed pipe")
+
+            def flush(self):
+                pass
+
+        session = SessionRef("codex_cli", "retry", "old-turn", str(self.root))
+        storage.append_reaction(
+            self.settings.paths.data_dir,
+            session,
+            provider="anthropic",
+            model="opus",
+            reaction="輸出失敗後必須能重試。",
+            route_metadata={"effective_lens": "linus"},
+        )
+        adapter = CodexAdapter(FakeCore(self.settings, ReviewOutcome("no_finding")))
+        payload = {
+            "hook_event_name": "UserPromptSubmit",
+            "session_id": "retry",
+            "turn_id": "new-turn",
+            "cwd": str(self.root),
+            "prompt": "繼續",
+        }
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            first = adapter.process(payload)
+            with self.assertRaises(OSError):
+                hook_entry._emit_output(first, self.settings, BrokenStream())
+            retry = adapter.process(payload)
+
+        self.assertIsNotNone(retry)
+
     def test_stop_finding_is_delivered_on_next_tool_without_new_prompt(self):
         session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
         storage.append_reaction(

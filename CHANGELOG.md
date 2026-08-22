@@ -4,6 +4,7 @@
 
 Target package version: `0.2.0-dev.1`.
 
+- Claim each pending Codex finding atomically before hook output so duplicate or concurrent `PostToolUse` dispatches cannot inject the same Nudge or response observation twice; release the claim when stdout fails so delivery remains retryable.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, shell wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks.
 - Publish and verify the [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release before removing historical raw evaluations, screenshots, workspaces, and the full Riemann research/runtime snapshots from the product branch.
 - Retain compact evidence summaries and a single `evaluation/README.md` index with explicit non-causal and non-generalization boundaries.
