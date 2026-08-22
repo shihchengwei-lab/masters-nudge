@@ -2,19 +2,16 @@
 """Masters' Nudge — floating Rook companion window with speech bubble.
 
 Displays an animated raven companion beside the latest nudge.
-Tails the active host-namespaced log, with read-only legacy compatibility.
+Tails the active host-namespaced log.
 
 Requires: Pillow (pip install Pillow)
 
 Run:
     python buddy_window.py
     pythonw buddy_window.py     # Windows, no console
-    start_buddy_window.bat      # Windows convenience launcher
-
 Env:
     MASTERS_NUDGE_DATA_DIR    override local data directory
-    MASTERS_NUDGE_SPRITE_PATH override spritesheet path (legacy BUDDY_*
-                        names remain supported; default: spritesheet.webp
+    MASTERS_NUDGE_SPRITE_PATH override spritesheet path (default: spritesheet.webp
                         next to this script). Point at any spritesheet you
                         prefer — the auto-frame detector handles arbitrary
                         transparent-background sheets.
@@ -46,11 +43,8 @@ except ImportError:
     sys.exit(1)
 
 _RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent)
-BUDDY_DIR = _RUNTIME.paths.data_dir
-LEGACY_BUDDY_DIR = _RUNTIME.paths.legacy_data_dir
-CUSTOM_SPRITE_PATH = os.environ.get("MASTERS_NUDGE_SPRITE_PATH") or os.environ.get(
-    "BUDDY_SPRITE_PATH"
-)
+DATA_DIR = _RUNTIME.paths.data_dir
+CUSTOM_SPRITE_PATH = os.environ.get("MASTERS_NUDGE_SPRITE_PATH")
 SPRITESHEET_PATH = Path(
     CUSTOM_SPRITE_PATH
     or Path(__file__).resolve().parent / "spritesheet.webp"
@@ -272,7 +266,6 @@ def resolve_window_workspace(
     environment = os.environ if environ is None else environ
     raw = str(
         environment.get("MASTERS_NUDGE_WORKSPACE")
-        or environment.get("BUDDY_WORKSPACE")
         or cwd
         or Path.cwd()
     )
@@ -308,20 +301,14 @@ class BuddyWindow:
         self.last_offset = 0
         self.last_reaction = ""
         self.last_reaction_ts = ""
-        config_dir = BUDDY_DIR
-        if not persona_config.config_path(config_dir).exists() and persona_config.config_path(
-            LEGACY_BUDDY_DIR
-        ).exists():
-            config_dir = LEGACY_BUDDY_DIR
+        config_dir = DATA_DIR
         workspace = resolve_window_workspace()
         repo_root = find_git_root(workspace)
         self.profile_session = SessionRef(
             "codex_cli", "window", cwd=workspace, repo_root=repo_root
         )
         self.workspace = session_workspace(self.profile_session)
-        profile, profile_error = load_workspace_profile(
-            BUDDY_DIR, self.profile_session
-        )
+        profile, profile_error = load_workspace_profile(DATA_DIR, self.profile_session)
         self.workspace_profile = profile
         self.profile_error = profile_error
         self.domain = profile.domain
@@ -334,7 +321,6 @@ class BuddyWindow:
                 profile.stage,
                 active_lens,
                 "workspace_profile",
-                False,
             )
         else:
             self.stage_selection = persona_config.resolve_stage(config_dir)
@@ -483,7 +469,7 @@ class BuddyWindow:
             initial_text = f"Workspace profile 無法讀取：{self.profile_error}"
         if self.domain != "shader" and self.stage_selection.source == "environment":
             initial_text = (
-                f"MASTERS_NUDGE_PERSONA / BUDDY_PERSONA 正在接管：{selected_label}。"
+                f"MASTERS_NUDGE_PERSONA 正在接管：{selected_label}。"
             )
 
         self.bubble_label = tk.Label(
@@ -519,7 +505,7 @@ class BuddyWindow:
         if self.domain == "shader":
             if selected is None:
                 return
-            result = set_shader_primary_lens(BUDDY_DIR, self.workspace, selected)
+            result = set_shader_primary_lens(DATA_DIR, self.workspace, selected)
             if not result["saved"]:
                 self.bubble_label.config(
                     text="Shader workspace 濾鏡無法儲存，仍使用原設定。"
@@ -539,7 +525,6 @@ class BuddyWindow:
                 self.workspace_profile.stage,
                 selected,
                 "workspace_profile",
-                False,
             )
             self._set_lens_badge(selected)
             message = (
@@ -554,14 +539,12 @@ class BuddyWindow:
         if stage is None:
             return
         try:
-            persona_config.save_stage(BUDDY_DIR, stage)
+            persona_config.save_stage(DATA_DIR, stage)
         except (OSError, ValueError):
             self.bubble_label.config(text="階段設定無法儲存，仍使用原設定。")
             return
         persona = persona_config.STAGE_LENSES[stage]
-        self.stage_selection = persona_config.StageSelection(
-            stage, persona, "config", False
-        )
+        self.stage_selection = persona_config.StageSelection(stage, persona, "config")
         self._set_lens_badge(persona)
         message = (
             f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
@@ -604,17 +587,16 @@ class BuddyWindow:
         self.root.after(POLL_MS, self._poll)
 
     def _find_active_log(self) -> Path | None:
-        directories = [BUDDY_DIR]
-        if LEGACY_BUDDY_DIR.resolve() != BUDDY_DIR.resolve():
-            directories.append(LEGACY_BUDDY_DIR)
-        logs = [
-            path
-            for directory in directories
-            if directory.exists()
-            for path in directory.glob("*.log")
-            if path.name not in {"error.log", "buddy-error.log"}
-            and reaction_log_workspace(path) == self.workspace
-        ]
+        logs = (
+            [
+                path
+                for path in DATA_DIR.glob("*.log")
+                if path.name != "error.log"
+                and reaction_log_workspace(path) == self.workspace
+            ]
+            if DATA_DIR.exists()
+            else []
+        )
         if not logs:
             return None
         logs.sort(key=lambda p: p.stat().st_mtime, reverse=True)

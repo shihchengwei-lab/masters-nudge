@@ -15,7 +15,6 @@ import json
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from pathlib import Path
@@ -124,7 +123,6 @@ def main() -> int:
             "MASTERS_NUDGE_MODEL": "sonnet" if args.provider == "anthropic" else "gpt-5.6-sol",
             "MASTERS_NUDGE_TIMEOUT": "60",
             "MASTERS_NUDGE_ACTIVE": "0",
-            "BUDDY_ACTIVE": "0",
         }
         command = [
             codex,

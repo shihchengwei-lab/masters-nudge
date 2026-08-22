@@ -30,9 +30,7 @@ def _print_doctor(result: dict) -> None:
         print("Missing runtime: " + ", ".join(result["runtime"]["missing"]))
     for item in result["hosts"]:
         status = "ready" if item["provider_ready"] else "not ready"
-        print(
-            f"{item['host']}: {item['provider']} / {item['model']} ({status})"
-        )
+        print(f"{item['host']}: {item['provider']} / {item['model']} ({status})")
         if item["configuration_error"]:
             print("  reviewer config: " + item["configuration_error"])
         local = item.get("local") or {}
@@ -67,8 +65,7 @@ def _print_doctor(result: dict) -> None:
             print("  trust: review this plugin in /hooks")
     ui = result["ui"]
     print(
-        "Optional window: "
-        + ("ready" if ui["ready"] else "missing Pillow or Tkinter")
+        "Optional window: " + ("ready" if ui["ready"] else "missing Pillow or Tkinter")
     )
 
 
@@ -91,6 +88,36 @@ def _print_migration(result: dict) -> None:
             )
         else:
             print(f"{item['host']}: no known legacy hooks found")
+    lifecycle = result["lifecycle"]
+    lifecycle_status = lifecycle["status"]
+    if lifecycle_status == "would_migrate":
+        print(
+            f"lifecycle config: would map {lifecycle['persona']} to "
+            f"{lifecycle['stage']}; rerun with --apply"
+        )
+    elif lifecycle_status == "migrated":
+        print(f"lifecycle config: migrated to {lifecycle['stage']}")
+    elif lifecycle_status == "already_migrated":
+        print(f"lifecycle config: already uses stage {lifecycle['stage']}")
+    elif lifecycle_status == "manual_required":
+        print(f"lifecycle config: manual choice required ({lifecycle['error']})")
+    elif lifecycle_status in {"invalid", "conflict", "error"}:
+        print(f"lifecycle config: {lifecycle_status} ({lifecycle['error']})")
+
+    for item in result["logs"]["items"]:
+        if item["status"] == "would_copy":
+            print(f"legacy log: would copy {item['source_name']}; rerun with --apply")
+        elif item["status"] == "copied":
+            print(f"legacy log: copied {item['source_name']}")
+        elif item["status"] in {"invalid", "conflict", "error"}:
+            detail = f" ({item['error']})" if item["error"] else ""
+            print(f"legacy log: {item['source_name']} is {item['status']}{detail}")
+
+    for item in result["environment"]:
+        print(
+            f"environment: replace {item['legacy']} with {item['replacement']} "
+            "manually; no shell profile was changed"
+        )
 
 
 def _print_local_configure(result: dict) -> None:
@@ -139,9 +166,7 @@ def main() -> int:
     window_parser.add_argument("--json", action="store_true")
 
     local_parser = subparsers.add_parser("local")
-    local_subparsers = local_parser.add_subparsers(
-        dest="local_command", required=True
-    )
+    local_subparsers = local_parser.add_subparsers(dest="local_command", required=True)
     local_configure_parser = local_subparsers.add_parser("configure")
     local_configure_parser.add_argument("--model", required=True)
     local_configure_parser.add_argument("--url", default=DEFAULT_OLLAMA_URL)
@@ -150,9 +175,7 @@ def main() -> int:
     local_reset_parser.add_argument("--json", action="store_true")
 
     grok_parser = subparsers.add_parser("grok")
-    grok_subparsers = grok_parser.add_subparsers(
-        dest="grok_command", required=True
-    )
+    grok_subparsers = grok_parser.add_subparsers(dest="grok_command", required=True)
     grok_configure_parser = grok_subparsers.add_parser("configure")
     grok_configure_parser.add_argument("--model", default="")
     grok_configure_parser.add_argument("--json", action="store_true")
@@ -163,12 +186,8 @@ def main() -> int:
     shader_subparsers = shader_parser.add_subparsers(
         dest="shader_command", required=True
     )
-    shader_configure_parser = shader_subparsers.add_parser(
-        "configure-recommended"
-    )
-    shader_configure_parser.add_argument(
-        "--workspace", default=str(Path.cwd())
-    )
+    shader_configure_parser = shader_subparsers.add_parser("configure-recommended")
+    shader_configure_parser.add_argument("--workspace", default=str(Path.cwd()))
     shader_configure_parser.add_argument("--json", action="store_true")
 
     args = parser.parse_args()
@@ -189,7 +208,7 @@ def main() -> int:
             print(json.dumps(result, ensure_ascii=False))
         else:
             _print_migration(result)
-        return 2 if result["unsafe"] else 0
+        return 2 if result["unsafe"] or result["manual_required"] else 0
     if args.command == "local":
         if args.local_command == "configure":
             result = configure_local(args.model, args.url)

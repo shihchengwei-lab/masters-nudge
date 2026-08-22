@@ -83,16 +83,14 @@ def _positive_int(value: Any, default: int) -> int:
 
 def configured_evaluation_days() -> int:
     return _positive_int(
-        os.environ.get("MASTERS_NUDGE_SHADOW_EVALUATION_DAYS")
-        or os.environ.get("BUDDY_SHADOW_EVALUATION_DAYS"),
+        os.environ.get("MASTERS_NUDGE_SHADOW_EVALUATION_DAYS"),
         DEFAULT_EVALUATION_DAYS,
     )
 
 
 def configured_target_calls() -> int:
     return _positive_int(
-        os.environ.get("MASTERS_NUDGE_SHADOW_TARGET_CALLS")
-        or os.environ.get("BUDDY_SHADOW_TARGET_CALLS"),
+        os.environ.get("MASTERS_NUDGE_SHADOW_TARGET_CALLS"),
         DEFAULT_TARGET_CALLS,
     )
 

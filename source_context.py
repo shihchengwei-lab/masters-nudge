@@ -3,11 +3,8 @@
 
 from __future__ import annotations
 
-import json
-import os
 import re
 from collections import Counter
-from pathlib import Path
 from typing import Any
 
 
@@ -51,59 +48,6 @@ def head_tail(text: str, max_chars: int) -> str:
     head_chars = max(1, (available * 2) // 5)
     tail_chars = available - head_chars
     return text[:head_chars] + TRUNCATION_MARKER + text[-tail_chars:]
-
-
-def _safe_session_id(session_id: str) -> str:
-    safe = re.sub(r"[^A-Za-z0-9_.-]", "_", str(session_id or ""))[:160]
-    return safe or "unknown"
-
-
-def source_state_path(state_dir: Path, session_id: str) -> Path:
-    return Path(state_dir) / f"{_safe_session_id(session_id)}.source.json"
-
-
-def load_source_state(state_dir: Path, session_id: str) -> dict:
-    path = source_state_path(state_dir, session_id)
-    if not path.exists():
-        return {"task_anchor": "", "transcript_offset": 0}
-    try:
-        state = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, TypeError):
-        return {"task_anchor": "", "transcript_offset": 0}
-    if not isinstance(state, dict):
-        return {"task_anchor": "", "transcript_offset": 0}
-    try:
-        transcript_offset = max(0, int(state.get("transcript_offset") or 0))
-    except (TypeError, ValueError):
-        transcript_offset = 0
-    return {
-        "task_anchor": str(state.get("task_anchor") or ""),
-        "transcript_offset": transcript_offset,
-    }
-
-
-def save_source_state(
-    state_dir: Path,
-    session_id: str,
-    prompt: str,
-    transcript_path: str = "",
-) -> None:
-    state_dir = Path(state_dir)
-    state_dir.mkdir(parents=True, exist_ok=True)
-    transcript_offset = 0
-    if transcript_path:
-        try:
-            transcript_offset = os.path.getsize(transcript_path)
-        except OSError:
-            transcript_offset = 0
-    state = {
-        "task_anchor": head_tail(prompt, TASK_ANCHOR_MAX_CHARS),
-        "transcript_offset": transcript_offset,
-    }
-    path = source_state_path(state_dir, session_id)
-    temp_path = path.with_suffix(path.suffix + ".tmp")
-    temp_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    os.replace(temp_path, path)
 
 
 def _section(label: str, content: str, max_chars: int) -> str:

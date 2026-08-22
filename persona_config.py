@@ -46,17 +46,10 @@ PERSONA_FOCUS = {
 
 
 @dataclass(frozen=True)
-class PersonaSelection:
-    persona: str
-    source: str
-
-
-@dataclass(frozen=True)
 class StageSelection:
     stage: str
     persona: str
     source: str
-    locked: bool = False
 
 
 def config_path(base_dir: Path) -> Path:
@@ -81,21 +74,16 @@ def stage_label(stage: str) -> str:
 def resolve_stage(
     base_dir: Path, *, environ: Mapping[str, str] | None = None
 ) -> StageSelection:
-    """Resolve env override, new stage config, legacy persona config, then Build."""
+    """Resolve the environment override, stage config, then Build."""
     environment = os.environ if environ is None else environ
-    env_persona = str(
-        environment.get("MASTERS_NUDGE_PERSONA")
-        or environment.get("BUDDY_PERSONA")
-        or ""
-    ).strip().lower()
+    env_persona = str(environment.get("MASTERS_NUDGE_PERSONA") or "").strip().lower()
     if env_persona:
         if env_persona == "general":
-            return StageSelection("build", "beck", "environment", True)
+            return StageSelection("build", "beck", "environment")
         return StageSelection(
             LENS_STAGES.get(env_persona, "forced"),
             env_persona,
             "environment",
-            True,
         )
 
     try:
@@ -107,32 +95,8 @@ def resolve_stage(
 
     config_stage = str(payload.get("stage") or "").strip().lower()
     if config_stage in STAGE_LENSES:
-        return StageSelection(
-            config_stage, STAGE_LENSES[config_stage], "config", False
-        )
-    if config_stage == "general":
-        return StageSelection("build", "beck", "legacy_config", False)
-
-    legacy_persona = str(payload.get("persona") or "").strip().lower()
-    if legacy_persona == "general":
-        return StageSelection("build", "beck", "legacy_config", False)
-    if legacy_persona in PERSONA_NAMES:
-        legacy_stage = LENS_STAGES.get(legacy_persona, "forced")
-        return StageSelection(
-            legacy_stage,
-            legacy_persona,
-            "legacy_config",
-            legacy_persona in {"lamport", "carmack"},
-        )
-    return StageSelection("build", "beck", "default", False)
-
-
-def resolve_persona(
-    base_dir: Path, *, environ: Mapping[str, str] | None = None
-) -> PersonaSelection:
-    """Backward-compatible primary persona view of the active stage."""
-    selection = resolve_stage(base_dir, environ=environ)
-    return PersonaSelection(selection.persona, selection.source)
+        return StageSelection(config_stage, STAGE_LENSES[config_stage], "config")
+    return StageSelection("build", "beck", "default")
 
 
 def _atomic_save(base_dir: Path, payload: dict[str, str], prefix: str) -> None:
@@ -169,12 +133,3 @@ def save_stage(base_dir: Path, stage: str) -> None:
     if key not in STAGE_LENSES:
         raise ValueError(f"unsupported stage: {stage!r}")
     _atomic_save(base_dir, {"stage": key}, "stage-")
-
-
-def save_persona(base_dir: Path, persona: str) -> None:
-    """Persist the legacy persona format for compatibility callers."""
-    key = str(persona or "").strip().lower()
-    if key not in PERSONA_NAMES:
-        raise ValueError(f"unsupported persona: {persona!r}")
-
-    _atomic_save(base_dir, {"persona": key}, "persona-")

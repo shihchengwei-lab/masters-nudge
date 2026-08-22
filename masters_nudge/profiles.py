@@ -258,12 +258,8 @@ def resolve_reviewer(
     environ: Mapping[str, str] | None = None,
 ) -> tuple[str, str, str]:
     environment = os.environ if environ is None else environ
-    explicit_provider = str(
-        environment.get("MASTERS_NUDGE_PROVIDER") or environment.get("BUDDY_PROVIDER") or ""
-    ).strip()
-    explicit_model = str(
-        environment.get("MASTERS_NUDGE_MODEL") or environment.get("BUDDY_MODEL") or ""
-    ).strip()
+    explicit_provider = str(environment.get("MASTERS_NUDGE_PROVIDER") or "").strip()
+    explicit_model = str(environment.get("MASTERS_NUDGE_MODEL") or "").strip()
     if profile.source != "workspace_profile":
         return settings.provider, settings.model, settings.configuration_source
     provider = explicit_provider.lower() or profile.provider

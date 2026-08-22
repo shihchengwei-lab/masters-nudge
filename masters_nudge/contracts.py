@@ -95,16 +95,6 @@ class ReviewOutcome:
     reaction_ts: str = ""
 
 
-@dataclass(frozen=True)
-class Delivery:
-    text: str = ""
-    reason: str = ""
-    effective_lens: str = "general"
-    event_name: str = ""
-    is_evaluation_notice: bool = False
-    timestamp: str = ""
-
-
 def safe_identifier(value: str, fallback: str = "unknown", limit: int = 160) -> str:
     """Return a path-safe identifier without importing a host implementation."""
     import re

@@ -18,6 +18,7 @@ from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
 HERE = Path(__file__).resolve().parent
+SHADER_FIXTURES = HERE / "tests" / "fixtures" / "shader"
 
 
 class ShaderRouteTests(unittest.TestCase):
@@ -193,7 +194,7 @@ class ShaderRouteTests(unittest.TestCase):
 
     def test_frozen_c17_packet_keeps_one_evidence_selected_lens(self):
         fixture = json.loads(
-            (HERE / "evaluation" / "shader_prompt_replay" / "fixture-v1.json").read_text(
+            (SHADER_FIXTURES / "prompt-replay-c17-v1.json").read_text(
                 encoding="utf-8"
             )
         )
@@ -494,7 +495,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             configured = profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -551,7 +552,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -600,7 +601,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -653,7 +654,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -717,7 +718,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -787,7 +788,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -858,7 +859,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,
@@ -914,7 +915,7 @@ class ShaderWorkspaceProfileTests(unittest.TestCase):
                 "host-default-model",
                 60,
                 15,
-                RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+                RuntimePaths(HERE, root / "data", root / "error.log"),
             )
             profiles.configure_workspace_profile(
                 settings.paths.data_dir,

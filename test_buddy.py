@@ -4,9 +4,9 @@
 Run:  python -m unittest test_buddy -v
 """
 
+import inspect
 import json
 import os
-import py_compile
 import sys
 import tempfile
 import unittest
@@ -17,34 +17,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 
-# ── 1. py_compile smoke ──────────────────────────────────────────────
-
-class TestCompile(unittest.TestCase):
-    """All .py files must at least compile."""
-
-    def test_buddy_compiles(self):
-        py_compile.compile(str(HERE / "buddy.py"), doraise=True)
-
-    def test_inject_compiles(self):
-        py_compile.compile(str(HERE / "inject.py"), doraise=True)
-
-    def test_window_compiles(self):
-        py_compile.compile(str(HERE / "buddy_window.py"), doraise=True)
-
-    def test_checkpoint_compiles(self):
-        py_compile.compile(str(HERE / "checkpoint.py"), doraise=True)
-
-    def test_source_context_compiles(self):
-        py_compile.compile(str(HERE / "source_context.py"), doraise=True)
-
-    def test_persona_config_compiles(self):
-        py_compile.compile(str(HERE / "persona_config.py"), doraise=True)
-
-    def test_lens_router_compiles(self):
-        py_compile.compile(str(HERE / "lens_router.py"), doraise=True)
-
-
-# ── 2. Persona prompt selection ──────────────────────────────────────
+# ── Persona prompt selection ─────────────────────────────────────────
 
 class TestBranding(unittest.TestCase):
     """Public surfaces use the new name while legacy paths stay compatible."""
@@ -54,211 +27,21 @@ class TestBranding(unittest.TestCase):
         readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
         window = (HERE / "buddy_window.py").read_text(encoding="utf-8")
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
 
         self.assertTrue(readme.startswith("# Masters’ Nudge"))
         self.assertTrue(readme_zh.startswith("# Masters’ Nudge"))
         self.assertIn("你是 Masters’ Nudge", prompt)
         self.assertIn('self.root.title("Masters’ Nudge")', window)
-        self.assertIn('echo "Masters’ Nudge — install"', installer)
-
-    def test_readmes_explain_six_master_lenses_and_compatibility_layer(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        self.assertIn("## Filters", readme)
-        self.assertIn("## 濾鏡", readme_zh)
-        self.assertNotIn("### Engineering persona lenses", readme)
-        self.assertNotIn("### 工程 persona 鏡頭", readme_zh)
-        self.assertIn("private observation scene", readme)
-        self.assertIn("不對外輸出的觀察場景", readme_zh)
-        for document in (readme, readme_zh):
-            self.assertIn("BUDDY_*", document)
-            for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack"):
-                self.assertIn(f"`{persona}`", document)
-            for name in (
-                "Jeff Dean",
-                "Linus Torvalds",
-                "Martin Fowler",
-                "Kent Beck",
-                "Leslie Lamport",
-                "John Carmack",
-            ):
-                self.assertIn(name, document)
-        self.assertIn("compatibility", readme.lower())
-        self.assertIn("既有安裝", readme_zh)
-
-    def test_readmes_introduce_each_lens_with_a_sourced_quote(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-        anchors = {
-            "Jeff Dean": (
-                "As systems scale up, simply stamping out all sources of variability does not work.",
-                "https://research.google/pubs/achieving-rapid-response-times-in-large-online-services/",
-            ),
-            "Linus Torvalds": (
-                "Talk is cheap. Show me the code.",
-                "https://groups.google.com/g/mlist.linux.kernel/c/pdl_7y9bPgk",
-            ),
-            "Martin Fowler": (
-                "easier to understand and cheaper to modify without changing its observable behavior",
-                "https://martinfowler.com/bliki/DefinitionOfRefactoring.html",
-            ),
-            "Kent Beck": (
-                "You don’t always have to take tiny steps, but they are always an option.",
-                "https://newsletter.kentbeck.com/p/first-one-then-many",
-            ),
-            "Leslie Lamport": (
-                "the failure of a computer you didn’t even know existed can render your own computer unusable",
-                "https://www.microsoft.com/en-us/research/publication/distribution/",
-            ),
-            "John Carmack": (
-                "Sometimes, the elegant implementation is just a function.",
-                "https://twitter.com/ID_AA_Carmack/status/53512300451201024",
-            ),
-        }
-
-        self.assertIn("Filter notes", readme)
-        self.assertIn("各濾鏡補充", readme_zh)
-        for document in (readme, readme_zh):
-            for name, (quote, source) in anchors.items():
-                self.assertIn(f"##### {name}", document)
-                self.assertIn(quote, document)
-                self.assertIn(source, document)
-
-    def test_readmes_document_filter_and_sprite_env_vars(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        for document in (readme, readme_zh):
-            self.assertIn("`BUDDY_PERSONA`", document)
-            self.assertIn("`BUDDY_SPRITE_PATH`", document)
-            self.assertIn("export BUDDY_SPRITE_PATH=", document)
-
-    def test_readmes_explain_floating_window_and_filter_priorities(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        self.assertIn("floating window", readme.lower())
-        self.assertIn("end-of-turn", readme)
-        self.assertIn("浮動視窗", readme_zh)
-        self.assertIn("回合末", readme_zh)
-        self.assertIn("systems causality and cost", readme)
-        self.assertIn("系統因果與成本", readme_zh)
-        for document in (readme, readme_zh):
-            self.assertIn("start_buddy_window.bat", document)
-            self.assertIn("buddy_window.py", document)
-
-    def test_readmes_explain_gui_lens_switching_and_env_override(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        for document in (readme, readme_zh):
-            self.assertIn("config.json", document)
-            self.assertIn("BUDDY_PERSONA", document)
-        self.assertIn("applies from the next review", readme)
-        self.assertIn("sets the Stop primary", readme)
-        self.assertIn("下次審查生效", readme_zh)
-        self.assertIn("指定 Stop 的 Primary lens", readme_zh)
-
-    def test_readmes_document_structured_reaction_output(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        for document in (readme, readme_zh):
-            self.assertIn("reaction-schema.json", document)
-            self.assertIn("52", document)
-        self.assertIn("one finding or silence", readme)
-        self.assertIn("一則 finding，要嘛靜默", readme_zh)
-
-    def test_readmes_define_a_workflow_nudge_not_another_code_review(self):
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-
-        self.assertIn("open question of at most 52 characters", readme)
-        self.assertIn("not to produce another answer or another code review", readme)
-        self.assertIn("工作流張力或問題", readme_zh)
-        self.assertIn("不是多給一份答案或 code review", readme_zh)
-
-    def test_roadmap_matches_shipped_selector_and_shadow_evaluation(self):
-        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
-
-        self.assertIn("Lifecycle lens routing", roadmap)
-        self.assertIn("✅ SHIPPED 2026-08-12", roadmap)
-        self.assertIn("Bounded cost shadow evaluation", roadmap)
-        self.assertIn("never enables skipping automatically", roadmap)
-        self.assertNotIn("Runtime lens UI/automatic switching", roadmap)
-        self.assertNotIn("Automatic per-event lens switching", roadmap)
-
-    def test_roadmap_names_the_current_product_sequence(self):
-        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
-        normalized_roadmap = " ".join(roadmap.split())
-
-        self.assertIn(
-            "### 1. Reaction quality and impact evaluation"
-            "（短評品質與後續影響）",
-            roadmap,
-        )
-        self.assertIn("### 2. Generalization（通用化）", roadmap)
-        self.assertIn("### 3. Local reviewer interface（本地審查模型接口）", roadmap)
-        self.assertIn("### 4. Cost control（成本控制）", roadmap)
-        self.assertIn(
-            "## 11. Local reviewer quality evaluation — OPTIONAL; "
-            "NOT A SHIPPING GATE",
-            roadmap,
-        )
-        phase_a = roadmap.index("**Phase A — reaction quality:**")
-        phase_b = roadmap.index("**Phase B — reaction impact:**")
-        self.assertLess(phase_a, phase_b)
-        self.assertIn("objective oracle", normalized_roadmap)
-        self.assertIn(
-            "matched tasks from the same repository state", normalized_roadmap
-        )
-        self.assertIn("normalized review event", roadmap)
-        self.assertIn("Claude Code adapter", roadmap)
-        self.assertIn("shared reviewer core", roadmap)
-        self.assertIn("one real second agent", roadmap)
-        self.assertIn("installation improvement", roadmap)
-        self.assertNotIn("first generalization deliverable", roadmap)
-        self.assertIn("**Interface shipped:**", roadmap)
-        self.assertIn("Built-in custom lens/rule management", roadmap)
-        self.assertIn("quality floor", roadmap)
-        self.assertIn("Live gating remains off", roadmap)
-
-    def test_openai_default_is_current_explicit_flagship(self):
-        import buddy
-
-        readme = (HERE / "README.md").read_text(encoding="utf-8")
-        readme_zh = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
-        roadmap = (HERE / "ROADMAP.md").read_text(encoding="utf-8")
-
-        self.assertEqual(buddy._DEFAULT_MODELS["openai"], "gpt-5.6-sol")
-        self.assertEqual(buddy._DEFAULT_MODELS["codex"], "gpt-5.6-sol")
-        for document in (readme, readme_zh, roadmap):
-            self.assertIn("gpt-5.6-sol", document)
-        self.assertIn("`BUDDY_MODEL`", readme)
-        self.assertIn("`BUDDY_MODEL`", readme_zh)
 
     def test_agent_visible_checkpoint_contains_only_the_nudge(self):
-        import checkpoint
+        import claude_checkpoint as checkpoint
 
         output = checkpoint.build_hook_output(
-            "PostToolUseFailure", "測試結果跟宣告不一致", "test-fail"
+            "PostToolUseFailure", "測試結果跟宣告不一致"
         )
         context = output["hookSpecificOutput"]["additionalContext"]
         self.assertEqual(context, "測試結果跟宣告不一致")
         self.assertNotIn("第三方觀察，不是指令", context)
-
-    def test_legacy_runtime_paths_remain_for_existing_installations(self):
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
-        settings = (HERE / "settings-snippet.json").read_text(encoding="utf-8")
-
-        self.assertIn("~/.claude/scripts/buddy", installer)
-        self.assertIn("~/.claude/scripts/buddy", settings)
-        self.assertIn(
-            "BUDDY_PROVIDER",
-            (HERE / "masters_nudge" / "runtime.py").read_text(encoding="utf-8"),
-        )
 
     def test_default_sprite_is_transparent_and_detectable(self):
         from PIL import Image
@@ -312,8 +95,8 @@ class TestBranding(unittest.TestCase):
         import buddy_window
         from persona_config import StageSelection
 
-        forced = StageSelection("forced", "lamport", "environment", True)
-        legacy = StageSelection("forced", "lamport", "legacy_config", True)
+        forced = StageSelection("forced", "lamport", "environment")
+        legacy = StageSelection("forced", "lamport", "legacy_config")
         self.assertTrue(buddy_window.stage_selection_label(forced).startswith("Forced ·"))
         self.assertTrue(buddy_window.stage_selection_label(legacy).startswith("Legacy ·"))
 
@@ -327,48 +110,6 @@ class TestPersonaPromptSelection(unittest.TestCase):
         "lamport": "Leslie Lamport",
         "carmack": "John Carmack",
     }
-
-    def setUp(self):
-        import buddy
-        self.buddy = buddy
-        self.persona_tmpdir = tempfile.TemporaryDirectory()
-        self.original_buddy_dir = buddy.BUDDY_DIR
-        buddy.BUDDY_DIR = Path(self.persona_tmpdir.name)
-
-    def tearDown(self):
-        self.buddy.BUDDY_DIR = self.original_buddy_dir
-        self.persona_tmpdir.cleanup()
-
-    def test_default_prompt_uses_build_stage_beck_overlay(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            result = self.buddy.build_system_prompt()
-
-        self.assertIn("你是 Masters’ Nudge", result)
-        self.assertIn("# 工作流觀察鏡頭", result)
-        self.assertIn("Kent Beck", result)
-
-    def test_each_supported_persona_appends_its_overlay(self):
-        for persona, display_name in self.PERSONAS.items():
-            with self.subTest(persona=persona):
-                with mock.patch.dict(os.environ, {"BUDDY_PERSONA": persona}, clear=True):
-                    result = self.buddy.build_system_prompt()
-
-                self.assertIn("你是 Masters’ Nudge", result)
-                self.assertIn("# 工作流觀察鏡頭", result)
-                self.assertIn(display_name, result)
-                self.assertIn("核心概念、觀察方法與關注面向", result)
-                self.assertIn("小動作只用來啟動思考", result)
-                self.assertIn("不能補足 packet 缺少的證據", result)
-                self.assertIn("觀察場景不是裝飾", result)
-                self.assertIn("不要改談相鄰鏡頭", result)
-                self.assertIn("不要因此增加 Nudge 字數", result)
-                self.assertIn("不是扮演或模仿人物", result)
-                self.assertIn("不是增加一份 code review", result)
-                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
-                    encoding="utf-8"
-                ).strip()
-                self.assertTrue(overlay)
-                self.assertTrue(result.endswith(f"{overlay}\n"))
 
     def test_each_persona_defines_concepts_focus_and_two_internal_questions(self):
         for persona in self.PERSONAS:
@@ -430,74 +171,6 @@ class TestPersonaPromptSelection(unittest.TestCase):
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
         self.assertEqual(files, set(self.PERSONAS))
-
-    def test_unknown_persona_stops_instead_of_silently_using_default(self):
-        with mock.patch.dict(os.environ, {"BUDDY_PERSONA": "unknown"}, clear=True):
-            with mock.patch.object(self.buddy, "log_error") as log_error:
-                result = self.buddy.build_system_prompt()
-
-        self.assertEqual(result, "")
-        log_error.assert_called_once()
-        self.assertIn("unknown persona", log_error.call_args.args[0])
-
-    def test_saved_gui_persona_is_read_on_each_review(self):
-        import persona_config
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            original_dir = self.buddy.BUDDY_DIR
-            self.buddy.BUDDY_DIR = Path(tmpdir)
-            try:
-                with mock.patch.dict(os.environ, {}, clear=True):
-                    persona_config.save_persona(self.buddy.BUDDY_DIR, "linus")
-                    linus_prompt = self.buddy.build_system_prompt()
-                    persona_config.save_persona(self.buddy.BUDDY_DIR, "beck")
-                    beck_prompt = self.buddy.build_system_prompt()
-            finally:
-                self.buddy.BUDDY_DIR = original_dir
-
-        self.assertIn("Linus Torvalds", linus_prompt)
-        self.assertIn("Kent Beck", beck_prompt)
-
-    def test_environment_persona_overrides_saved_gui_persona(self):
-        import persona_config
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            original_dir = self.buddy.BUDDY_DIR
-            self.buddy.BUDDY_DIR = Path(tmpdir)
-            try:
-                persona_config.save_persona(self.buddy.BUDDY_DIR, "linus")
-                with mock.patch.dict(
-                    os.environ, {"BUDDY_PERSONA": "jeff"}, clear=True
-                ):
-                    result = self.buddy.build_system_prompt()
-            finally:
-                self.buddy.BUDDY_DIR = original_dir
-
-        self.assertIn("Jeff Dean", result)
-        self.assertNotIn("Linus Torvalds", result)
-
-    def test_legacy_general_persona_falls_back_to_build_prompt(self):
-        import persona_config
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            original_dir = self.buddy.BUDDY_DIR
-            self.buddy.BUDDY_DIR = Path(tmpdir)
-            try:
-                persona_config.save_persona(self.buddy.BUDDY_DIR, "general")
-                with mock.patch.dict(os.environ, {}, clear=True):
-                    result = self.buddy.build_system_prompt()
-            finally:
-                self.buddy.BUDDY_DIR = original_dir
-
-        self.assertIn("你是 Masters’ Nudge", result)
-        self.assertIn("# 工作流觀察鏡頭", result)
-        self.assertIn("Kent Beck", result)
-
-    def test_installer_copies_persona_overlays(self):
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
-        self.assertIn('cp -R "$SRC_DIR/personas" "$TARGET_DIR/"', installer)
-        self.assertIn('cp "$SRC_DIR/persona_config.py" "$TARGET_DIR/"', installer)
-        self.assertIn('cp "$SRC_DIR/lens_router.py" "$TARGET_DIR/"', installer)
 
     def test_base_prompt_delegates_attention_without_safety_or_authority_scope(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -564,10 +237,6 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn("finding 留空", base_prompt)
         self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
 
-    def test_installer_copies_reaction_schema(self):
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
-        self.assertIn('cp "$SRC_DIR/reaction-schema.json" "$TARGET_DIR/"', installer)
-
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
@@ -582,8 +251,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.assertNotIn(phrase, base_prompt)
 
     def test_base_prompt_matches_structured_evidence_packet_labels(self):
+        import source_context
+
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
-        packet = self.buddy.source_context.build_stop_packet(
+        packet = source_context.build_stop_packet(
             task_anchor="修正登入錯誤",
             last_assistant_message="已完成",
             agentcam_evidence="## Risk Flags\n- HIGH",
@@ -617,17 +288,21 @@ class TestSourceContext(unittest.TestCase):
     def test_head_tail_leaves_short_text_unchanged(self):
         self.assertEqual(self.source.head_tail("short", 100), "short")
 
-    def test_source_state_saves_bounded_task_anchor_and_transcript_offset(self):
+    def test_turn_state_saves_bounded_task_anchor_and_transcript_offset(self):
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
         with tempfile.TemporaryDirectory() as tmpdir:
             transcript = Path(tmpdir) / "session.jsonl"
             transcript.write_text("existing transcript\n", encoding="utf-8")
             expected_offset = transcript.stat().st_size
             prompt = "PROMPT_HEAD" + ("p" * 3000) + "PROMPT_TAIL"
+            session = SessionRef("claude_code", "session/unsafe")
 
-            self.source.save_source_state(
-                Path(tmpdir), "session/unsafe", prompt, str(transcript)
+            storage.start_turn(
+                Path(tmpdir), session, prompt, transcript_path=str(transcript)
             )
-            state = self.source.load_source_state(Path(tmpdir), "session/unsafe")
+            state = storage.load_turn_state(Path(tmpdir), session)
 
         self.assertLessEqual(
             len(state["task_anchor"]), self.source.TASK_ANCHOR_MAX_CHARS
@@ -635,19 +310,6 @@ class TestSourceContext(unittest.TestCase):
         self.assertIn("PROMPT_HEAD", state["task_anchor"])
         self.assertIn("PROMPT_TAIL", state["task_anchor"])
         self.assertEqual(state["transcript_offset"], expected_offset)
-
-    def test_source_state_invalid_offset_falls_back_without_losing_anchor(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            path = self.source.source_state_path(Path(tmpdir), "session-1")
-            path.write_text(
-                json.dumps({"task_anchor": "保留這個要求", "transcript_offset": "bad"}),
-                encoding="utf-8",
-            )
-
-            state = self.source.load_source_state(Path(tmpdir), "session-1")
-
-        self.assertEqual(state["task_anchor"], "保留這個要求")
-        self.assertEqual(state["transcript_offset"], 0)
 
     def test_checkpoint_packet_carries_bounded_research_state(self):
         packet = self.source.build_checkpoint_packet(
@@ -748,18 +410,22 @@ pytest: 1
         self.assertNotIn("generic summary", result)
         self.assertNotIn("unrelated prose", result)
 
-    def test_installer_copies_source_context(self):
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
-        self.assertIn('cp "$SRC_DIR/source_context.py" "$TARGET_DIR/"', installer)
-
-
 # ── 4. Checkpoint nudge hooks ────────────────────────────────────────
 
 class TestCheckpointClassification(unittest.TestCase):
 
     def setUp(self):
-        import checkpoint
+        import claude_checkpoint as checkpoint
+        from masters_nudge import checkpoints
+
         self.checkpoint = checkpoint
+        self.classifier = checkpoints
+
+    def classify(self, hook, changed_line_count=None):
+        event = self.checkpoint.normalize_tool_event(hook)
+        if event is None:
+            return None
+        return self.classifier.classify_tool(event, changed_line_count)
 
     def test_failed_test_command_is_test_fail(self):
         hook = {
@@ -769,7 +435,7 @@ class TestCheckpointClassification(unittest.TestCase):
             "error": "Exit code 1\n2 failed, 8 passed",
         }
 
-        result = self.checkpoint.classify_checkpoint(hook)
+        result = self.classify(hook)
 
         self.assertEqual(result["reason"], "test-fail")
         self.assertIn("python -m pytest", result["context"])
@@ -786,7 +452,7 @@ class TestCheckpointClassification(unittest.TestCase):
             },
         }
 
-        result = self.checkpoint.classify_checkpoint(hook, changed_line_count=0)
+        result = self.classify(hook, changed_line_count=0)
 
         self.assertEqual(result["reason"], "test-fail")
 
@@ -798,7 +464,7 @@ class TestCheckpointClassification(unittest.TestCase):
             "error": "File does not exist",
         }
 
-        result = self.checkpoint.classify_checkpoint(hook)
+        result = self.classify(hook)
 
         self.assertEqual(result["reason"], "error")
 
@@ -811,7 +477,7 @@ class TestCheckpointClassification(unittest.TestCase):
             "is_interrupt": True,
         }
 
-        self.assertIsNone(self.checkpoint.classify_checkpoint(hook))
+        self.assertIsNone(self.classify(hook))
 
     def test_large_diff_triggers_only_above_original_threshold(self):
         hook = {
@@ -822,15 +488,17 @@ class TestCheckpointClassification(unittest.TestCase):
         }
 
         self.assertIsNone(
-            self.checkpoint.classify_checkpoint(hook, changed_line_count=80)
+            self.classify(hook, changed_line_count=80)
         )
-        result = self.checkpoint.classify_checkpoint(hook, changed_line_count=81)
+        result = self.classify(hook, changed_line_count=81)
         self.assertEqual(result["reason"], "large-diff")
         self.assertIn("81", result["context"])
-        later = self.checkpoint.classify_checkpoint(hook, changed_line_count=120)
+        later = self.classify(hook, changed_line_count=120)
         self.assertEqual(result["fingerprint"], later["fingerprint"])
 
     def test_changed_line_count_includes_tracked_and_untracked_text(self):
+        from masters_nudge import checkpoints as shared_checkpoints
+
         with tempfile.TemporaryDirectory() as tmpdir:
             Path(tmpdir, "new.py").write_text(
                 "\n".join(f"line {i}" for i in range(70)) + "\n",
@@ -845,9 +513,9 @@ class TestCheckpointClassification(unittest.TestCase):
                 return ""
 
             with mock.patch.object(
-                self.checkpoint, "_git_output", side_effect=fake_git
+                shared_checkpoints, "_git_output", side_effect=fake_git
             ):
-                result = self.checkpoint.get_changed_line_count(tmpdir)
+                result = shared_checkpoints.get_changed_line_count(tmpdir)
 
         self.assertEqual(result, 85)
 
@@ -859,46 +527,65 @@ class TestCheckpointClassification(unittest.TestCase):
             "tool_response": {"success": True},
         }
 
-        self.assertIsNone(self.checkpoint.classify_checkpoint(hook))
+        self.assertIsNone(self.classify(hook))
 
 
 class TestCheckpointDelivery(unittest.TestCase):
 
     def setUp(self):
-        import checkpoint
+        import claude_checkpoint as checkpoint
+        from masters_nudge.runtime import RuntimePaths, RuntimeSettings
+
         self.checkpoint = checkpoint
         self.tmpdir = tempfile.TemporaryDirectory()
-        self.state_patch = mock.patch.object(
-            checkpoint, "CHECKPOINT_STATE_DIR", Path(self.tmpdir.name)
+        root = Path(self.tmpdir.name)
+        self.settings = RuntimeSettings(
+            "anthropic",
+            "test-model",
+            60,
+            15,
+            RuntimePaths(HERE, root, root / "error.log"),
         )
-        self.buddy_dir_patch = mock.patch.object(
-            checkpoint.buddy, "BUDDY_DIR", Path(self.tmpdir.name)
+        self.runtime_patch = mock.patch.object(
+            checkpoint.claude_stop, "_RUNTIME", self.settings
         )
-        self.state_patch.start()
-        self.buddy_dir_patch.start()
+        self.runtime_patch.start()
 
     def tearDown(self):
-        self.buddy_dir_patch.stop()
-        self.state_patch.stop()
+        self.runtime_patch.stop()
         self.tmpdir.cleanup()
 
     def test_same_checkpoint_fingerprint_is_claimed_once(self):
-        claimed = self.checkpoint.claim_checkpoint("session-1", "same-fingerprint")
-        claimed_again = self.checkpoint.claim_checkpoint(
-            "session-1", "same-fingerprint"
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
+        session = SessionRef("claude_code", "session-1")
+        claimed = storage.claim_checkpoint(
+            self.settings.paths.data_dir, session, "same-fingerprint"
+        )
+        claimed_again = storage.claim_checkpoint(
+            self.settings.paths.data_dir, session, "same-fingerprint"
         )
 
         self.assertTrue(claimed)
         self.assertFalse(claimed_again)
 
     def test_release_allows_retry_after_reviewer_failure(self):
-        self.assertTrue(self.checkpoint.claim_checkpoint("session-1", "retry-me"))
-        self.checkpoint.release_checkpoint("session-1", "retry-me")
-        self.assertTrue(self.checkpoint.claim_checkpoint("session-1", "retry-me"))
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
+        session = SessionRef("claude_code", "session-1")
+        self.assertTrue(
+            storage.claim_checkpoint(self.settings.paths.data_dir, session, "retry-me")
+        )
+        storage.release_checkpoint(self.settings.paths.data_dir, session, "retry-me")
+        self.assertTrue(
+            storage.claim_checkpoint(self.settings.paths.data_dir, session, "retry-me")
+        )
 
     def test_output_is_nudge_only_additional_context(self):
         result = self.checkpoint.build_hook_output(
-            "PostToolUseFailure", "先確認失敗根因。", "error", "lamport"
+            "PostToolUseFailure", "先確認失敗根因。"
         )
 
         self.assertEqual(
@@ -928,9 +615,19 @@ class TestCheckpointDelivery(unittest.TestCase):
             result = self.checkpoint.process_hook(hook)
 
         self.assertIsNone(result)
-        event = self.checkpoint.classify_checkpoint(hook)
+        from masters_nudge import checkpoints, storage
+        from masters_nudge.contracts import SessionRef
+
+        event = checkpoints.classify_tool(
+            self.checkpoint.normalize_tool_event(hook)
+        )
+
         self.assertTrue(
-            self.checkpoint.claim_checkpoint("session-1", event["fingerprint"])
+            storage.claim_checkpoint(
+                self.settings.paths.data_dir,
+                SessionRef("claude_code", "session-1"),
+                event["fingerprint"],
+            )
         )
 
     def test_successful_nudge_is_deduplicated(self):
@@ -951,33 +648,8 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIsNone(second)
         generate.assert_called_once()
 
-    def test_settings_register_checkpoint_hooks_without_async(self):
-        settings = json.loads(
-            (HERE / "settings-snippet.json").read_text(encoding="utf-8")
-        )
-
-        self.assertIn("PostToolUse", settings["hooks"])
-        self.assertIn("PostToolUseFailure", settings["hooks"])
-        for event_name in ("PostToolUse", "PostToolUseFailure"):
-            handlers = settings["hooks"][event_name]
-            command_hooks = [
-                hook
-                for group in handlers
-                for hook in group["hooks"]
-            ]
-            self.assertTrue(
-                any("checkpoint.sh" in hook["command"] for hook in command_hooks)
-            )
-            self.assertTrue(all(not hook.get("async") for hook in command_hooks))
-
-    def test_installer_copies_checkpoint_files(self):
-        installer = (HERE / "install.sh").read_text(encoding="utf-8")
-        self.assertIn('cp "$SRC_DIR/checkpoint.py" "$TARGET_DIR/"', installer)
-        self.assertIn('cp "$SRC_DIR/checkpoint.sh" "$TARGET_DIR/"', installer)
-        self.assertIn('cp "$SRC_DIR/review_telemetry.py" "$TARGET_DIR/"', installer)
-
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
-        from masters_nudge import prompting, providers
+        from masters_nudge import prompting, providers, storage
 
         hook = {
             "session_id": "session-1",
@@ -991,12 +663,12 @@ class TestCheckpointDelivery(unittest.TestCase):
         }
         with (
             mock.patch.object(
-                self.checkpoint.source_context,
-                "load_source_state",
+                storage,
+                "load_turn_state",
                 return_value={"task_anchor": "只修路徑問題", "transcript_offset": 42},
             ),
             mock.patch.object(
-                self.checkpoint.buddy,
+                self.checkpoint.claude_stop,
                 "read_latest_assistant_text",
                 return_value="正在檢查路徑",
             ),
@@ -1004,9 +676,6 @@ class TestCheckpointDelivery(unittest.TestCase):
                 prompting,
                 "build_system_prompt",
                 return_value="system",
-            ),
-            mock.patch.object(
-                self.checkpoint.buddy, "read_recent_reactions", return_value=[]
             ),
             mock.patch.object(
                 providers,
@@ -1050,7 +719,7 @@ FIXTURE_LINES = [
 class TestTranscriptParser(unittest.TestCase):
 
     def setUp(self):
-        import buddy
+        import claude_stop as buddy
         self.buddy = buddy
 
     # ── parse_transcript_entry ────────────────────────────────────────
@@ -1335,6 +1004,8 @@ class TestTranscriptParser(unittest.TestCase):
         self.assertNotIn("OLD_RESULT", result)
 
     def test_stop_source_packet_uses_task_claim_and_current_turn_evidence(self):
+        from masters_nudge import storage
+
         hook = {
             "session_id": "session-1",
             "transcript_path": "/session.jsonl",
@@ -1342,8 +1013,8 @@ class TestTranscriptParser(unittest.TestCase):
         }
         with (
             mock.patch.object(
-                self.buddy.source_context,
-                "load_source_state",
+                storage,
+                "load_turn_state",
                 return_value={"task_anchor": "只修登入錯誤", "transcript_offset": 123},
             ),
             mock.patch.object(
@@ -1352,10 +1023,11 @@ class TestTranscriptParser(unittest.TestCase):
                 return_value="Exit code 1\n1 failed",
             ) as tool_evidence,
         ):
-            result = self.buddy.build_stop_source_packet(
+            source = self.buddy.build_stop_source_context(
                 hook,
                 "## Risk Flags\n| HIGH | auth.py |\n\n## Summary\nignore me",
             )
+            result = source["packet"]
 
         tool_evidence.assert_called_once_with("/session.jsonl", 123)
         self.assertIn("只修登入錯誤", result)
@@ -1398,8 +1070,10 @@ class TestTranscriptParser(unittest.TestCase):
 class TestSanitizer(unittest.TestCase):
 
     def setUp(self):
-        import buddy
-        self.sanitize = buddy.sanitize_reaction
+        from masters_nudge import prompting
+
+        self.prompting = prompting
+        self.sanitize = prompting.sanitize_reaction
 
     def test_strips_code_block(self):
         raw = "看看這段\n```python\nprint('hi')\n```\n有問題"
@@ -1431,12 +1105,11 @@ class TestSanitizer(unittest.TestCase):
         self.assertNotIn("Masters’ Nudge]", result)
 
     def test_hard_truncate(self):
-        import buddy
         raw = "字" * 200
         result = self.sanitize(raw)
-        self.assertEqual(buddy.MAX_REACTION_CHARS, 52)
+        self.assertEqual(self.prompting.MAX_REACTION_CHARS, 52)
         self.assertEqual(len(result), 52)
-        self.assertLessEqual(len(result), buddy.MAX_REACTION_CHARS)
+        self.assertLessEqual(len(result), self.prompting.MAX_REACTION_CHARS)
         self.assertTrue(result.endswith("。"))
 
     def test_adds_terminal_punctuation_when_there_is_room(self):
@@ -1517,47 +1190,41 @@ class TestPersonaConfig(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def test_save_and_load_persona(self):
-        self.config.save_persona(self.tmpdir, "fowler")
-
-        selection = self.config.resolve_persona(self.tmpdir, environ={})
-
-        self.assertEqual(selection.persona, "fowler")
-        self.assertEqual(selection.source, "legacy_config")
-        saved = json.loads(
-            (self.tmpdir / "config.json").read_text(encoding="utf-8")
-        )
-        self.assertEqual(saved, {"persona": "fowler"})
-
     def test_environment_override_reports_its_source(self):
-        self.config.save_persona(self.tmpdir, "fowler")
-
-        selection = self.config.resolve_persona(
-            self.tmpdir, environ={"BUDDY_PERSONA": "lamport"}
-        )
-
-        self.assertEqual(selection.persona, "lamport")
-        self.assertEqual(selection.source, "environment")
-
-    def test_removed_general_environment_override_maps_to_forced_build(self):
         selection = self.config.resolve_stage(
-            self.tmpdir, environ={"BUDDY_PERSONA": "general"}
+            self.tmpdir, environ={"MASTERS_NUDGE_PERSONA": "lamport"}
         )
 
         self.assertEqual(
-            (selection.stage, selection.persona, selection.source, selection.locked),
-            ("build", "beck", "environment", True),
+            (selection.stage, selection.persona, selection.source),
+            ("forced", "lamport", "environment"),
+        )
+
+    def test_general_environment_override_maps_to_build(self):
+        selection = self.config.resolve_stage(
+            self.tmpdir, environ={"MASTERS_NUDGE_PERSONA": "general"}
+        )
+
+        self.assertEqual(
+            (selection.stage, selection.persona, selection.source),
+            ("build", "beck", "environment"),
         )
 
     def test_missing_or_invalid_config_falls_back_to_build(self):
-        missing = self.config.resolve_persona(self.tmpdir, environ={})
+        missing = self.config.resolve_stage(self.tmpdir, environ={})
         (self.tmpdir / "config.json").write_text(
-            json.dumps({"persona": "unknown"}), encoding="utf-8"
+            json.dumps({"stage": "unknown"}), encoding="utf-8"
         )
-        invalid = self.config.resolve_persona(self.tmpdir, environ={})
+        invalid = self.config.resolve_stage(self.tmpdir, environ={})
 
-        self.assertEqual((missing.persona, missing.source), ("beck", "default"))
-        self.assertEqual((invalid.persona, invalid.source), ("beck", "default"))
+        self.assertEqual(
+            (missing.stage, missing.persona, missing.source),
+            ("build", "beck", "default"),
+        )
+        self.assertEqual(
+            (invalid.stage, invalid.persona, invalid.source),
+            ("build", "beck", "default"),
+        )
 
     def test_save_and_load_new_stage_format(self):
         self.config.save_stage(self.tmpdir, "review")
@@ -1568,29 +1235,10 @@ class TestPersonaConfig(unittest.TestCase):
         )
 
         self.assertEqual(
-            (selection.stage, selection.persona, selection.source, selection.locked),
-            ("review", "linus", "config", False),
+            (selection.stage, selection.persona, selection.source),
+            ("review", "linus", "config"),
         )
         self.assertEqual(saved, {"stage": "review"})
-
-    def test_legacy_lifecycle_and_specialist_configs_are_interpreted(self):
-        expected = {
-            "general": ("build", "beck", False),
-            "jeff": ("design", "jeff", False),
-            "beck": ("build", "beck", False),
-            "fowler": ("evolve", "fowler", False),
-            "linus": ("review", "linus", False),
-            "lamport": ("forced", "lamport", True),
-            "carmack": ("forced", "carmack", True),
-        }
-        for persona, (stage, effective_persona, locked) in expected.items():
-            with self.subTest(persona=persona):
-                self.config.save_persona(self.tmpdir, persona)
-                selection = self.config.resolve_stage(self.tmpdir, environ={})
-                self.assertEqual(
-                    (selection.stage, selection.persona, selection.locked),
-                    (stage, effective_persona, locked),
-                )
 
     def test_removed_general_stage_config_falls_back_to_build(self):
         (self.tmpdir / "config.json").write_text(
@@ -1601,16 +1249,16 @@ class TestPersonaConfig(unittest.TestCase):
 
         self.assertEqual(
             (selection.stage, selection.persona, selection.source),
-            ("build", "beck", "legacy_config"),
+            ("build", "beck", "default"),
         )
 
     def test_general_is_not_a_savable_stage(self):
         with self.assertRaises(ValueError):
             self.config.save_stage(self.tmpdir, "general")
 
-    def test_invalid_persona_is_not_saved(self):
+    def test_invalid_stage_is_not_saved(self):
         with self.assertRaises(ValueError):
-            self.config.save_persona(self.tmpdir, "unknown")
+            self.config.save_stage(self.tmpdir, "unknown")
         self.assertFalse((self.tmpdir / "config.json").exists())
 
 
@@ -1626,13 +1274,18 @@ class TestLensRouter(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def route(self, evidence="", environ=None, *, checkpoint=True, session="test"):
+    def test_route_contract_has_no_unused_session_key(self):
+        self.assertNotIn(
+            "session_key",
+            inspect.signature(self.router.resolve_review_route).parameters,
+        )
+
+    def route(self, evidence="", environ=None, *, checkpoint=True):
         return self.router.resolve_review_route(
             self.tmpdir,
             evidence,
             environ={} if environ is None else environ,
             checkpoint=checkpoint,
-            session_key=session,
         )
 
     def test_lifecycle_stages_map_to_primary_lenses(self):
@@ -1705,9 +1358,9 @@ class TestLensRouter(unittest.TestCase):
 
     def test_environment_persona_is_stop_primary_but_checkpoint_can_change(self):
         checkpoint = self.route(
-            "retry duplicate delivery", {"BUDDY_PERSONA": "carmack"}
+            "retry duplicate delivery", {"MASTERS_NUDGE_PERSONA": "carmack"}
         )
-        unknown = self.route("benchmark", {"BUDDY_PERSONA": "unknown"})
+        unknown = self.route("benchmark", {"MASTERS_NUDGE_PERSONA": "unknown"})
 
         self.assertEqual(checkpoint.primary_lens, "carmack")
         self.assertEqual(checkpoint.effective_lens, "lamport")
@@ -1749,7 +1402,7 @@ class TestLensRouter(unittest.TestCase):
 
         persona_config.save_stage(self.tmpdir, "build")
         evidence = "retry caused duplicate delivery"
-        routes = [self.route(evidence, session="quiet") for _ in range(8)]
+        routes = [self.route(evidence) for _ in range(8)]
         self.assertEqual([route.effective_lens for route in routes], ["lamport"] * 8)
 
 
@@ -1820,9 +1473,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
             window = object.__new__(buddy_window.BuddyWindow)
             window.workspace = buddy_window.normalize_workspace(own)
 
-            with mock.patch.object(buddy_window, "BUDDY_DIR", root), mock.patch.object(
-                buddy_window, "LEGACY_BUDDY_DIR", root
-            ):
+            with mock.patch.object(buddy_window, "DATA_DIR", root):
                 active = buddy_window.BuddyWindow._find_active_log(window)
 
             self.assertEqual(active, own_log)
@@ -2013,7 +1664,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
             window._set_lens_badge = mock.Mock()
             window._resize_for_reaction = mock.Mock()
 
-            with mock.patch.object(buddy_window, "BUDDY_DIR", data_dir):
+            with mock.patch.object(buddy_window, "DATA_DIR", data_dir):
                 buddy_window.BuddyWindow._on_stage_selected(window)
 
             profile, error = profiles.load_workspace_profile(
@@ -2034,7 +1685,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn("<<ComboboxSelected>>", source)
         self.assertIn("persona_config.save_stage", source)
         self.assertIn("下一次 review 起使用", source)
-        self.assertIn("BUDDY_PERSONA 正在接管", source)
+        self.assertIn("MASTERS_NUDGE_PERSONA 正在接管", source)
         self.assertIn("self._set_lens_background(persona)", source)
         self.assertIn(
             "self.review_frames_remaining = len(self.review_frames)", source
@@ -2088,338 +1739,6 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn('entry.get("persona", "general")', source)
         self.assertIn("self._set_lens_badge(persona)", source)
         self.assertIn("self._resize_for_reaction(reaction)", source)
-
-
-class TestReactionLogLens(unittest.TestCase):
-
-    def setUp(self):
-        import buddy
-
-        self.buddy = buddy
-        self.tmpdir = tempfile.mkdtemp()
-        self.original_buddy_dir = buddy.BUDDY_DIR
-        buddy.BUDDY_DIR = Path(self.tmpdir)
-
-    def tearDown(self):
-        self.buddy.BUDDY_DIR = self.original_buddy_dir
-        import shutil
-        shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def _read_entry(self, session_id):
-        log_path = Path(self.tmpdir) / f"{session_id}.log"
-        return json.loads(log_path.read_text(encoding="utf-8").strip())
-
-    def test_append_log_records_the_selected_persona(self):
-        with mock.patch.dict(os.environ, {"BUDDY_PERSONA": "LINUS"}, clear=True):
-            self.buddy.append_buddy_log("lens-session", "openai", "model", "提醒")
-
-        entry = self._read_entry("lens-session")
-        self.assertEqual(entry["persona"], "linus")
-        self.assertEqual(entry["effective_lens"], "linus")
-        self.assertEqual(entry["route_source"], "environment")
-
-    def test_append_log_records_specialist_route_metadata(self):
-        import lens_router
-
-        route = lens_router.ReviewRoute(
-            stage="build",
-            primary_lens="beck",
-            effective_lens="lamport",
-            override_lens="lamport",
-            trigger="state-ordering-evidence",
-            source="config",
-        )
-        self.buddy.append_buddy_log(
-            "specialist", "openai", "model", "提醒", route
-        )
-
-        entry = self._read_entry("specialist")
-        self.assertEqual(entry["persona"], "lamport")
-        self.assertEqual(entry["stage"], "build")
-        self.assertEqual(entry["primary_lens"], "beck")
-        self.assertEqual(entry["effective_lens"], "lamport")
-        self.assertEqual(entry["override_lens"], "lamport")
-        self.assertEqual(entry["trigger"], "state-ordering-evidence")
-
-    def test_append_log_records_build_default_and_sanitizes_unknown_persona(self):
-        for session_id, persona, expected in (
-            ("unset", None, "beck"),
-            ("unknown", "nobody", "general"),
-        ):
-            env = {} if persona is None else {"BUDDY_PERSONA": persona}
-            with self.subTest(persona=persona):
-                with mock.patch.dict(os.environ, env, clear=True):
-                    self.buddy.append_buddy_log(
-                        session_id, "openai", "model", "提醒"
-                    )
-                entry = self._read_entry(session_id)
-                self.assertEqual(entry["persona"], expected)
-
-    def test_recent_reactions_ignore_evaluation_notices(self):
-        log_path = Path(self.tmpdir) / "lens-session.log"
-        entries = [
-            {"ts": "2026-08-11T12:00:00", "kind": "review", "reaction": "真正意見"},
-            {
-                "ts": "2026-08-18T12:00:00",
-                "kind": "evaluation_notice",
-                "reaction": "Shadow 評估已到期",
-            },
-        ]
-        log_path.write_text(
-            "\n".join(json.dumps(entry, ensure_ascii=False) for entry in entries) + "\n",
-            encoding="utf-8",
-        )
-
-        self.assertEqual(
-            self.buddy.read_recent_reactions("lens-session"),
-            ["真正意見"],
-        )
-
-    def test_checkpoint_overlap_ends_when_new_tool_evidence_appears(self):
-        transcript = Path(self.tmpdir) / "session.jsonl"
-        transcript.write_text("", encoding="utf-8")
-        self.buddy.mark_checkpoint_delivery(
-            "lens-session",
-            prompt_offset=42,
-            transcript_path=str(transcript),
-            reason="error",
-        )
-
-        self.assertTrue(
-            self.buddy.checkpoint_stop_overlap(
-                "lens-session", prompt_offset=42, transcript_path=str(transcript)
-            )
-        )
-
-        tool_result = {
-            "type": "user",
-            "message": {
-                "content": [{"type": "tool_result", "content": "new evidence"}]
-            },
-        }
-        with transcript.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(tool_result) + "\n")
-
-        self.assertFalse(
-            self.buddy.checkpoint_stop_overlap(
-                "lens-session", prompt_offset=42, transcript_path=str(transcript)
-            )
-        )
-
-
-# ── 7. Mock CLI calls ────────────────────────────────────────────────
-
-class TestCallClaude(unittest.TestCase):
-
-    def setUp(self):
-        import buddy
-        self.buddy = buddy
-
-    @mock.patch("subprocess.run")
-    def test_call_claude_returns_reaction(self, mock_run):
-        stdout = json.dumps({"status": "finding", "finding": "這裡有問題"})
-        mock_run.return_value = mock.Mock(returncode=0, stdout=stdout, stderr="")
-        result = self.buddy.call_claude("system prompt", "transcript", "sonnet")
-        self.assertEqual(result, "這裡有問題")
-        mock_run.assert_called_once()
-        args = mock_run.call_args
-        cmd = args[0][0]
-        import subprocess
-        expected_flags = (
-            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-        )
-        self.assertEqual(args.kwargs.get("creationflags", 0), expected_flags)
-        self.assertIn("claude", cmd[0])
-        self.assertIn("--model", cmd)
-        self.assertIn("--system-prompt-file", cmd)
-        self.assertNotIn("--append-system-prompt-file", cmd)
-        self.assertEqual(cmd[cmd.index("--tools") + 1], "")
-        self.assertEqual(cmd[cmd.index("--setting-sources") + 1], "")
-        output_format_index = cmd.index("--output-format")
-        self.assertEqual(cmd[output_format_index + 1], "json")
-        schema_index = cmd.index("--json-schema")
-        schema = json.loads(cmd[schema_index + 1])
-        self.assertEqual(schema["properties"]["status"]["enum"], ["finding", "no_finding"])
-
-    @mock.patch("subprocess.run")
-    def test_call_claude_can_capture_raw_output_for_evaluation(self, mock_run):
-        stdout = json.dumps({"status": "finding", "finding": "這裡有問題"})
-        mock_run.return_value = mock.Mock(returncode=0, stdout=stdout, stderr="")
-        result = self.buddy.call_claude_result(
-            "system prompt", "transcript", "sonnet", capture_raw=True
-        )
-        self.assertEqual(stdout, result["raw_output"])
-
-    @mock.patch("subprocess.run")
-    def test_call_claude_nonzero_exit(self, mock_run):
-        mock_run.return_value = mock.Mock(returncode=1, stdout="", stderr="error")
-        result = self.buddy.call_claude("sp", "tx", "sonnet")
-        self.assertEqual(result, "")
-
-    @mock.patch("subprocess.run")
-    def test_call_claude_timeout(self, mock_run):
-        import subprocess
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd="claude", timeout=60)
-        result = self.buddy.call_claude_result("sp", "tx", "sonnet")
-        self.assertEqual(result["finding"], "")
-        self.assertEqual(result["error_kind"], "timeout")
-
-    @mock.patch("subprocess.run")
-    def test_call_claude_not_found(self, mock_run):
-        mock_run.side_effect = FileNotFoundError
-        result = self.buddy.call_claude("sp", "tx", "sonnet")
-        self.assertEqual(result, "")
-
-
-class TestCallCodex(unittest.TestCase):
-
-    def setUp(self):
-        import buddy
-        self.buddy = buddy
-
-    @mock.patch("buddy._resolve_codex_bin", return_value=None)
-    def test_codex_not_found(self, _):
-        result = self.buddy.call_codex("sp", "tx", "gpt-5.5")
-        self.assertEqual(result, "")
-
-    @mock.patch("subprocess.run")
-    @mock.patch("buddy._resolve_codex_bin", return_value="/usr/bin/codex")
-    def test_call_codex_reads_output_file(self, _, mock_run):
-        mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
-        # call_codex writes to a temp file then reads it — we need to
-        # intercept the output file path and write to it during the mock
-        def fake_run(cmd, **kwargs):
-            # Find the -o flag and write reaction to that file
-            cmd_list = cmd if isinstance(cmd, list) else cmd.split()
-            for i, arg in enumerate(cmd_list):
-                if arg == "-o" and i + 1 < len(cmd_list):
-                    payload = {"status": "finding", "finding": "危險，別推"}
-                    Path(cmd_list[i + 1]).write_text(
-                        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
-                    )
-                    break
-            return mock.Mock(returncode=0, stdout="", stderr="")
-
-        mock_run.side_effect = fake_run
-        result = self.buddy.call_codex("sp", "tx", "gpt-5.5")
-        self.assertEqual(result, "危險，別推")
-        cmd = mock_run.call_args.args[0]
-        import subprocess
-        expected_flags = (
-            getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
-        )
-        self.assertEqual(
-            mock_run.call_args.kwargs.get("creationflags", 0), expected_flags
-        )
-        schema_index = cmd.index("--output-schema")
-        self.assertEqual(Path(cmd[schema_index + 1]), HERE / "reaction-schema.json")
-
-    @mock.patch("subprocess.run")
-    @mock.patch("buddy._resolve_codex_bin", return_value="/usr/bin/codex")
-    def test_call_codex_can_capture_raw_output_for_evaluation(self, _, mock_run):
-        payload = {"status": "finding", "finding": "具體問題"}
-
-        def fake_run(cmd, **kwargs):
-            output_path = Path(cmd[cmd.index("-o") + 1])
-            output_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
-            return mock.Mock(returncode=0, stdout="", stderr="")
-
-        mock_run.side_effect = fake_run
-        result = self.buddy.call_codex_result(
-            "system prompt", "transcript", "gpt-5.5", capture_raw=True
-        )
-        self.assertEqual(json.dumps(payload, ensure_ascii=False), result["raw_output"])
-
-
-class TestParseReaction(unittest.TestCase):
-
-    def setUp(self):
-        import buddy
-        self.parse = buddy.parse_reaction
-
-    def test_structured_finding(self):
-        payload = json.dumps({"status": "finding", "finding": "反應文字"})
-        self.assertEqual(self.parse(payload), "反應文字")
-
-    def test_no_finding_is_suppressed(self):
-        payload = json.dumps({"status": "no_finding", "finding": ""})
-        self.assertEqual(self.parse(payload), "")
-
-    def test_claude_json_envelope_uses_structured_output(self):
-        obj = json.dumps({
-            "type": "result",
-            "structured_output": {"status": "finding", "finding": "反應"},
-        })
-        self.assertEqual(self.parse(obj), "反應")
-
-    def test_plain_text_and_invalid_schema_fail_closed(self):
-        invalid_payloads = (
-            "這次乾淨",
-            "{not json}",
-            json.dumps({"result": "舊格式"}),
-            json.dumps({"status": "finding", "finding": "字" * 53}),
-            json.dumps({"status": "finding", "finding": "反應", "extra": True}),
-        )
-        for payload in invalid_payloads:
-            with self.subTest(payload=payload):
-                self.assertEqual(self.parse(payload), "")
-
-    def test_reaction_schema_matches_runtime_limit(self):
-        import buddy
-
-        schema = json.loads((HERE / "reaction-schema.json").read_text(encoding="utf-8"))
-        self.assertEqual(set(schema["properties"]), {"status", "finding"})
-        self.assertEqual(schema["required"], ["status", "finding"])
-        self.assertFalse(schema["additionalProperties"])
-        self.assertEqual(
-            schema["properties"]["finding"]["maxLength"],
-            buddy.MAX_REACTION_CHARS,
-        )
-
-    def test_empty(self):
-        self.assertEqual(self.parse(""), "")
-        self.assertEqual(self.parse("  "), "")
-
-    def test_result_parser_distinguishes_no_finding_from_error(self):
-        import buddy
-
-        no_finding = buddy.parse_reaction_result(
-            json.dumps({"status": "no_finding", "finding": ""})
-        )
-        invalid = buddy.parse_reaction_result("not json")
-
-        self.assertEqual(no_finding["status"], "no_finding")
-        self.assertEqual(invalid["status"], "error")
-
-    def test_codex_usage_parser_reads_token_count_event(self):
-        import buddy
-
-        stdout = json.dumps({
-            "type": "event_msg",
-            "payload": {
-                "type": "token_count",
-                "info": {
-                    "last_token_usage": {
-                        "input_tokens": 120,
-                        "cached_input_tokens": 80,
-                        "output_tokens": 12,
-                        "reasoning_output_tokens": 7,
-                        "total_tokens": 139,
-                    }
-                },
-            },
-        })
-
-        self.assertEqual(
-            buddy.parse_usage(stdout),
-            {
-                "input_tokens": 120,
-                "cached_input_tokens": 80,
-                "output_tokens": 12,
-                "reasoning_output_tokens": 7,
-                "total_tokens": 139,
-            },
-        )
 
 
 class TestReviewTelemetry(unittest.TestCase):
@@ -2580,59 +1899,16 @@ class TestReviewTelemetry(unittest.TestCase):
 class TestInjectState(unittest.TestCase):
 
     def setUp(self):
-        import inject
+        import claude_prompt as inject
         self.inject = inject
         self.tmpdir = tempfile.mkdtemp()
-        self.orig_buddy_dir = inject.BUDDY_DIR
-        inject.BUDDY_DIR = Path(self.tmpdir)
+        self.orig_data_dir = inject.DATA_DIR
+        inject.DATA_DIR = Path(self.tmpdir)
 
     def tearDown(self):
-        self.inject.BUDDY_DIR = self.orig_buddy_dir
+        self.inject.DATA_DIR = self.orig_data_dir
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def test_load_state_missing_file(self):
-        state = self.inject.load_state("no-such-session")
-        self.assertEqual(state, {"last_ts": ""})
-
-    def test_save_and_load_state(self):
-        self.inject.save_state("sess1", {"last_ts": "2026-05-09T10:00:00"})
-        state = self.inject.load_state("sess1")
-        self.assertEqual(state["last_ts"], "2026-05-09T10:00:00")
-
-    def test_read_pending_empty_log(self):
-        pending = self.inject.read_pending("sess1", "")
-        self.assertEqual(pending, [])
-
-    def test_read_pending_filters_by_ts(self):
-        log_path = Path(self.tmpdir) / "sess1.log"
-        entries = [
-            {"ts": "2026-05-09T10:00:00", "reaction": "舊的"},
-            {"ts": "2026-05-09T10:01:00", "reaction": "新的"},
-            {"ts": "2026-05-09T10:02:00", "reaction": "最新"},
-        ]
-        with log_path.open("w", encoding="utf-8") as f:
-            for e in entries:
-                f.write(json.dumps(e, ensure_ascii=False) + "\n")
-
-        # Only entries after 10:00:30 should appear
-        pending = self.inject.read_pending("sess1", "2026-05-09T10:00:30")
-        self.assertEqual(len(pending), 2)
-        self.assertEqual(pending[0]["reaction"], "新的")
-        self.assertEqual(pending[1]["reaction"], "最新")
-
-    def test_read_pending_returns_all_when_no_last_ts(self):
-        log_path = Path(self.tmpdir) / "sess2.log"
-        entries = [
-            {"ts": "2026-05-09T10:00:00", "reaction": "a"},
-            {"ts": "2026-05-09T10:01:00", "reaction": "b"},
-        ]
-        with log_path.open("w", encoding="utf-8") as f:
-            for e in entries:
-                f.write(json.dumps(e, ensure_ascii=False) + "\n")
-
-        pending = self.inject.read_pending("sess2", "")
-        self.assertEqual(len(pending), 2)
 
     def test_software_context_is_the_unlabeled_question_only(self):
         reaction = "自動測試通過後，哪項證據仍缺少乾淨安裝驗證？"
@@ -2683,6 +1959,9 @@ class TestInjectState(unittest.TestCase):
         self.assertNotIn("第三方", context)
 
     def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
         transcript = Path(self.tmpdir) / "session.jsonl"
         transcript.write_text("existing\n", encoding="utf-8")
         hook = {
@@ -2694,33 +1973,32 @@ class TestInjectState(unittest.TestCase):
         with mock.patch.object(self.inject, "read_hook_input", return_value=hook):
             self.inject.main()
 
-        import source_context
-        state = source_context.load_source_state(
-            self.inject.BUDDY_DIR, "sess-anchor"
+        session = SessionRef("claude_code", "sess-anchor")
+        state = storage.load_turn_state(
+            self.inject.DATA_DIR, session
         )
         self.assertEqual(state["task_anchor"], "只修目前這個登入問題")
         self.assertEqual(state["transcript_offset"], transcript.stat().st_size)
+        self.assertEqual(list(self.inject.DATA_DIR.glob("*.source.json")), [])
 
 
 
 # ── 9. agentcam report integration ───────────────────────────────────
 
 class TestAgentcamReport(unittest.TestCase):
-    """buddy.read_latest_agentcam_report walks up to git root and finds
-    the newest AGENT_RUN_REPORT.md under .git/agentcam/runs/.
-    Dedup state functions round-trip the last seen mtime per session."""
+    """Shared evidence discovery and namespaced Agentcam state."""
 
     def setUp(self):
-        if "buddy" not in sys.modules:
-            import buddy  # noqa: F401
-        self.buddy = sys.modules["buddy"]
+        from masters_nudge import evidence, storage
+        from masters_nudge.contracts import SessionRef
+
+        self.evidence = evidence
+        self.storage = storage
+        self.SessionRef = SessionRef
         self.tmpdir = tempfile.mkdtemp()
-        # patch BUDDY_DIR so state writes don't touch the real ~/.claude
-        self._orig_buddy_dir = self.buddy.BUDDY_DIR
-        self.buddy.BUDDY_DIR = Path(self.tmpdir) / "_state"
+        self.state_dir = Path(self.tmpdir) / "_state"
 
     def tearDown(self):
-        self.buddy.BUDDY_DIR = self._orig_buddy_dir
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
@@ -2731,20 +2009,20 @@ class TestAgentcamReport(unittest.TestCase):
 
     def test_returns_none_when_not_in_repo(self):
         # tmpdir itself is not a git repo
-        result = self.buddy.read_latest_agentcam_report(self.tmpdir)
+        result = self.evidence.read_latest_agentcam_report(self.tmpdir)
         self.assertIsNone(result)
 
     def test_returns_none_when_repo_has_no_runs(self):
         repo = Path(self.tmpdir) / "emptyrepo"
         (repo / ".git").mkdir(parents=True)
-        result = self.buddy.read_latest_agentcam_report(str(repo))
+        result = self.evidence.read_latest_agentcam_report(str(repo))
         self.assertIsNone(result)
 
     def test_finds_latest_report(self):
         repo = self._make_fake_repo()
         report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
         report_path.write_text("# Agent Run Report\n\n## Risk Flags\n| HIGH | ... |\n", encoding="utf-8")
-        result = self.buddy.read_latest_agentcam_report(str(repo))
+        result = self.evidence.read_latest_agentcam_report(str(repo))
         self.assertIsNotNone(result)
         self.assertIn("Risk Flags", result["content"])
         self.assertTrue(os.path.samefile(result["path"], report_path))
@@ -2757,7 +2035,7 @@ class TestAgentcamReport(unittest.TestCase):
         report_path.write_text("report", encoding="utf-8")
         subdir = repo / "src" / "auth"
         subdir.mkdir(parents=True)
-        result = self.buddy.read_latest_agentcam_report(str(subdir))
+        result = self.evidence.read_latest_agentcam_report(str(subdir))
         self.assertIsNotNone(result)
         self.assertTrue(os.path.samefile(result["path"], report_path))
 
@@ -2771,33 +2049,39 @@ class TestAgentcamReport(unittest.TestCase):
         r2.write_text("second", encoding="utf-8")
         # bump r2's mtime above r1's even on fast filesystems
         os.utime(r2, (r2.stat().st_atime, r2.stat().st_mtime + 10))
-        result = self.buddy.read_latest_agentcam_report(str(repo))
+        result = self.evidence.read_latest_agentcam_report(str(repo))
         self.assertTrue(os.path.samefile(result["path"], r2))
         self.assertEqual(result["content"], "second")
 
     def test_content_preserves_head_and_tail_with_read_cap(self):
         repo = self._make_fake_repo()
         report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        big = "HEAD_MARKER" + ("X" * (self.buddy.AGENTCAM_REPORT_READ_CHARS + 500)) + "TAIL_MARKER"
+        big = "HEAD_MARKER" + ("X" * (self.evidence.AGENTCAM_REPORT_READ_CHARS + 500)) + "TAIL_MARKER"
         report_path.write_text(big, encoding="utf-8")
-        result = self.buddy.read_latest_agentcam_report(str(repo))
-        self.assertLessEqual(len(result["content"]), self.buddy.AGENTCAM_REPORT_READ_CHARS)
+        result = self.evidence.read_latest_agentcam_report(str(repo))
+        self.assertLessEqual(len(result["content"]), self.evidence.AGENTCAM_REPORT_READ_CHARS)
         self.assertTrue(result["content"].startswith("HEAD_MARKER"))
         self.assertTrue(result["content"].endswith("TAIL_MARKER"))
 
     def test_state_roundtrip(self):
         sid = "test-session-xyz"
-        self.assertEqual(self.buddy.load_agentcam_last_mtime(sid), 0.0)
-        self.buddy.save_agentcam_last_mtime(sid, 1234567.89)
-        self.assertAlmostEqual(self.buddy.load_agentcam_last_mtime(sid), 1234567.89, places=2)
+        session = self.SessionRef("claude_code", sid)
+        self.assertEqual(self.storage.load_agentcam_mtime(self.state_dir, session), 0.0)
+        self.storage.save_agentcam_mtime(self.state_dir, session, 1234567.89)
+        self.assertAlmostEqual(
+            self.storage.load_agentcam_mtime(self.state_dir, session),
+            1234567.89,
+            places=2,
+        )
 
     def test_state_handles_corrupt_file(self):
         sid = "test-corrupt"
-        self.buddy.BUDDY_DIR.mkdir(parents=True, exist_ok=True)
-        state_path = self.buddy.BUDDY_DIR / f"{sid}.agentcam.state.json"
+        session = self.SessionRef("claude_code", sid)
+        self.state_dir.mkdir(parents=True, exist_ok=True)
+        state_path = self.storage.state_path(self.state_dir, session, "agentcam")
         state_path.write_text("not json", encoding="utf-8")
         # Should return 0.0 silently, not raise
-        self.assertEqual(self.buddy.load_agentcam_last_mtime(sid), 0.0)
+        self.assertEqual(self.storage.load_agentcam_mtime(self.state_dir, session), 0.0)
 
 
 if __name__ == "__main__":

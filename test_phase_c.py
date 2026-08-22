@@ -14,10 +14,10 @@ from pathlib import Path
 from unittest import mock
 
 import review_telemetry
-import buddy
+import claude_stop as buddy
 import hook_entry
 import persona_config
-from masters_nudge import prompting, providers, storage
+from masters_nudge import providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
     EvidenceBundle,
@@ -40,7 +40,7 @@ def settings_for(root: Path) -> RuntimeSettings:
         "test-model",
         60,
         15,
-        RuntimePaths(HERE, root / "data", root / "legacy", root / "error.log"),
+        RuntimePaths(HERE, root / "data", root / "error.log"),
     )
 
 
@@ -64,18 +64,23 @@ class FakeCore:
         return self.outcome
 
 
-class RuntimeCompatibilityTests(unittest.TestCase):
-    def test_default_paths_are_host_neutral_with_legacy_read_location(self):
+class RuntimePathTests(unittest.TestCase):
+    def test_default_paths_are_host_neutral_without_legacy_runtime_state(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             paths = RuntimePaths.resolve(environ={"USERPROFILE": tmpdir})
             self.assertEqual(paths.data_dir, Path(tmpdir) / ".masters-nudge" / "data")
-            self.assertEqual(paths.legacy_data_dir, Path(tmpdir) / ".claude" / "buddy")
+            self.assertFalse(hasattr(paths, "legacy_data_dir"))
 
-    def test_legacy_path_override_preserves_existing_install_behavior(self):
+    def test_legacy_path_override_does_not_redirect_active_runtime_data(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            paths = RuntimePaths.resolve(environ={"BUDDY_CLAUDE_DIR": tmpdir})
-            self.assertEqual(paths.data_dir, Path(tmpdir) / "buddy")
-            self.assertEqual(paths.error_log, Path(tmpdir) / "buddy-error.log")
+            paths = RuntimePaths.resolve(
+                environ={"USERPROFILE": tmpdir, "BUDDY_CLAUDE_DIR": "C:/legacy"}
+            )
+            self.assertEqual(paths.data_dir, Path(tmpdir) / ".masters-nudge" / "data")
+            self.assertEqual(
+                paths.error_log,
+                Path(tmpdir) / ".masters-nudge" / "data" / "error.log",
+            )
 
     def test_new_environment_names_take_precedence(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -138,62 +143,24 @@ class NamespacedStorageTests(unittest.TestCase):
 
             self.assertEqual(entry["workspace"], os.path.normcase(str(root.resolve())))
 
-    def test_legacy_log_is_read_but_new_reaction_is_namespaced(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            data = root / "data"
-            legacy = root / "legacy"
-            legacy.mkdir()
-            session = SessionRef("claude_code", "s1")
-            (legacy / "s1.log").write_text(
-                json.dumps({"ts": "2026-01-01", "reaction": "舊提醒"}) + "\n",
-                encoding="utf-8",
-            )
-            storage.append_reaction(
-                data,
-                session,
-                provider="openai",
-                model="m",
-                reaction="新提醒",
-                route_metadata={"effective_lens": "beck"},
-            )
-            self.assertEqual(
-                storage.read_recent_reactions_compatible(data, legacy, session),
-                ["舊提醒", "新提醒"],
-            )
-            self.assertTrue((data / "claude_code--s1.log").exists())
-            self.assertFalse((data / "s1.log").exists())
-
-    def test_codex_does_not_import_an_unscoped_legacy_claude_reaction(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            root = Path(tmpdir)
-            legacy = root / "legacy"
-            legacy.mkdir()
-            (legacy / "same.log").write_text(
-                json.dumps({"ts": "2026-01-01", "reaction": "Claude 舊提醒"}) + "\n",
-                encoding="utf-8",
-            )
-            reactions = storage.read_recent_reactions_compatible(
-                root / "data", legacy, SessionRef("codex_cli", "same")
-            )
-            self.assertEqual(reactions, [])
-
-
 class ClaudeCompatibilityTests(unittest.TestCase):
     def test_stop_adapter_writes_new_host_namespaced_log(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
+            settings = settings_for(root)
             hook = {
                 "session_id": "claude-session",
                 "cwd": str(root),
                 "last_assistant_message": "已完成指定流程",
             }
             with (
-                mock.patch.object(buddy, "BUDDY_DIR", root / "data"),
-                mock.patch.object(buddy, "CLAUDE_DIR", root / ".claude"),
-                mock.patch.object(buddy, "ERROR_LOG", root / "error.log"),
+                mock.patch.object(buddy, "_RUNTIME", settings),
                 mock.patch.object(buddy, "read_hook_input", return_value=hook),
-                mock.patch.object(buddy, "read_latest_agentcam_report", return_value=None),
+                mock.patch.object(
+                    buddy.shared_evidence,
+                    "read_latest_agentcam_report",
+                    return_value=None,
+                ),
                 mock.patch.object(
                     providers,
                     "dispatch_call_result",
@@ -231,6 +198,28 @@ class DetachedStopTests(unittest.TestCase):
                 "s",
             )
 
+    def test_detached_strategy_uses_the_same_spool_launcher(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = settings_for(Path(tmpdir))
+            with mock.patch.object(hook_entry.subprocess, "Popen") as popen:
+                launched = hook_entry._schedule_strategy(
+                    settings,
+                    {"hook_event_name": "PostToolUse", "session_id": "s"},
+                    self.fail,
+                )
+
+            self.assertTrue(launched)
+            popen.assert_called_once()
+            command = popen.call_args.args[0]
+            self.assertIn("--strategy-payload-file", command)
+            payload_path = Path(
+                command[command.index("--strategy-payload-file") + 1]
+            )
+            self.assertEqual(
+                json.loads(payload_path.read_text(encoding="utf-8"))["session_id"],
+                "s",
+            )
+
 
 class CodexAdapterTests(unittest.TestCase):
     def setUp(self):
@@ -245,8 +234,6 @@ class CodexAdapterTests(unittest.TestCase):
         output = build_hook_output(
             "PostToolUse",
             "目前省下的工作，是否只是轉移到另一個 pass？",
-            reason="shader-research-change",
-            effective_lens="carmack",
         )
 
         self.assertEqual(
@@ -518,10 +505,12 @@ class HookOutputTests(unittest.TestCase):
                     "hookEventName": "PostToolUse",
                     "additionalContext": "B_N² 與 κ₃ 都要保留。",
                 },
-                "_masters_nudge_delivery": (
-                    session,
-                    "2026-08-14T09:00:00",
-                ),
+                "_masters_nudge_delivery": {
+                    "session": session,
+                    "timestamp": "2026-08-14T09:00:00",
+                    "event_seq": 0,
+                    "event_name": "PostToolUse",
+                },
             }
             raw = io.BytesIO()
             stream = io.TextIOWrapper(raw, encoding="cp950", newline="")
@@ -551,13 +540,36 @@ class HookOutputTests(unittest.TestCase):
             session = SessionRef("codex_cli", "s")
             output = {
                 "hookSpecificOutput": {"hookEventName": "PostToolUse"},
+                "_masters_nudge_delivery": {
+                    "session": session,
+                    "timestamp": "2026-08-14T09:00:00",
+                    "event_seq": 0,
+                    "event_name": "PostToolUse",
+                },
+            }
+            with self.assertRaises(OSError):
+                hook_entry._emit_output(output, settings, BrokenStream())
+            self.assertEqual(
+                storage.load_delivery_state(
+                    settings.paths.data_dir, session
+                )["last_ts"],
+                "",
+            )
+
+    def test_tuple_delivery_marker_is_ignored(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            settings = settings_for(Path(tmpdir))
+            session = SessionRef("codex_cli", "s")
+            output = {
+                "hookSpecificOutput": {"hookEventName": "PostToolUse"},
                 "_masters_nudge_delivery": (
                     session,
                     "2026-08-14T09:00:00",
                 ),
             }
-            with self.assertRaises(OSError):
-                hook_entry._emit_output(output, settings, BrokenStream())
+
+            hook_entry._emit_output(output, settings, io.StringIO())
+
             self.assertEqual(
                 storage.load_delivery_state(
                     settings.paths.data_dir, session
@@ -710,70 +722,6 @@ class SharedCoreTests(unittest.TestCase):
         parameters = inspect.signature(ReviewCore).parameters
         self.assertNotIn("prompt_builder", parameters)
         self.assertNotIn("telemetry_recorder", parameters)
-
-    def test_legacy_prompt_api_delegates_to_the_shared_contract(self):
-        with mock.patch.object(
-            prompting, "build_system_prompt", return_value="shared prompt"
-        ) as build:
-            self.assertEqual(buddy.build_system_prompt(), "shared prompt")
-
-        build.assert_called_once_with(
-            prompt_file=buddy.PROMPT_FILE,
-            persona_dir=buddy.PERSONA_DIR,
-            data_dir=buddy.BUDDY_DIR,
-            route=None,
-            log_error=buddy.log_error,
-        )
-        self.assertEqual(buddy.MAX_REACTION_CHARS, prompting.MAX_REACTION_CHARS)
-
-    def test_legacy_output_apis_delegate_to_the_shared_contract(self):
-        with mock.patch.object(
-            prompting, "sanitize_reaction", return_value="shared finding"
-        ) as sanitize:
-            self.assertEqual(buddy.sanitize_reaction("raw"), "shared finding")
-        sanitize.assert_called_once_with("raw")
-
-        expected = {"status": "no_finding", "finding": ""}
-        with mock.patch.object(
-            providers, "parse_reaction_result", return_value=expected
-        ) as parse:
-            self.assertIs(buddy.parse_reaction_result("raw json"), expected)
-        parse.assert_called_once_with("raw json")
-
-    def test_legacy_provider_apis_delegate_to_the_shared_clients(self):
-        expected = {"status": "no_finding", "finding": "", "usage": {}}
-        with mock.patch.object(
-            providers, "call_claude_result", return_value=expected
-        ) as call_claude:
-            self.assertIs(
-                buddy.call_claude_result("prompt", "packet", "model"), expected
-            )
-        call_claude.assert_called_once_with(
-            "prompt",
-            "packet",
-            "model",
-            schema_path=buddy.OUTPUT_SCHEMA_FILE,
-            timeout_sec=buddy.TIMEOUT_SEC,
-            capture_raw=False,
-            log_error=buddy.log_error,
-        )
-
-        with mock.patch.object(
-            providers, "call_codex_result", return_value=expected
-        ) as call_codex:
-            self.assertIs(
-                buddy.call_codex_result("prompt", "packet", "model"), expected
-            )
-        call_codex.assert_called_once_with(
-            "prompt",
-            "packet",
-            "model",
-            schema_path=buddy.OUTPUT_SCHEMA_FILE,
-            timeout_sec=buddy.TIMEOUT_SEC,
-            capture_raw=False,
-            log_error=buddy.log_error,
-            codex_bin_resolver=buddy._resolve_codex_bin,
-        )
 
     def test_both_hosts_feed_the_same_prompt_and_provider_boundary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -937,7 +885,7 @@ class GrokProviderTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as raw, mock.patch(
             "masters_nudge.providers._run_grok_process", side_effect=fake_run
-        ) as run:
+        ):
             schema = Path(raw) / "schema.json"
             schema.write_text(
                 (HERE / "reaction-schema.json").read_text(encoding="utf-8"),
@@ -1097,46 +1045,20 @@ class GrokProviderTests(unittest.TestCase):
 
 class PackagingTests(unittest.TestCase):
     def test_docs_describe_the_actual_host_core_boundary(self):
-        readme = " ".join((HERE / "README.md").read_text(encoding="utf-8").split())
-        readme_zh = " ".join(
-            (HERE / "README.zh-TW.md").read_text(encoding="utf-8").split()
-        )
         architecture = " ".join(
             (HERE / "docs" / "phase-c-architecture.md")
             .read_text(encoding="utf-8")
             .split()
         )
 
-        self.assertIn("Codex normalizes hook payloads", readme)
-        self.assertIn("Host adapters own native event parsing", readme)
-        self.assertIn("Codex 會把 hook payload 正規化", readme_zh)
-        self.assertIn("Host adapter 負責原生事件解析", readme_zh)
-        self.assertIn("the Codex adapter uses all three", architecture)
-        self.assertIn("reaction persistence, telemetry", architecture)
-        self.assertNotIn(
-            "Host adapters normalize hook payloads into prompt", readme
-        )
-
-    def test_codex_snippet_registers_three_supported_events(self):
-        snippet = json.loads((HERE / "codex-hooks-snippet.json").read_text(encoding="utf-8"))
-        hooks = snippet["hooks"]
-        self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse", "Stop"})
-        for event_name in hooks:
-            commands = [hook for group in hooks[event_name] for hook in group["hooks"]]
-            self.assertTrue(all("commandWindows" in hook for hook in commands))
-            self.assertTrue(all("hook_entry.py" in hook["command"] for hook in commands))
-        self.assertIn("--detach-stop", hooks["Stop"][0]["hooks"][0]["command"])
-        self.assertNotIn("async", hooks["Stop"][0]["hooks"][0])
-        self.assertNotIn("async", hooks["PostToolUse"][0]["hooks"][0])
-
-    def test_installers_include_shared_runtime_and_both_host_choices(self):
-        shell = (HERE / "install.sh").read_text(encoding="utf-8")
-        powershell = (HERE / "install.ps1").read_text(encoding="utf-8")
-        for text in (shell, powershell):
-            self.assertIn("masters_nudge", text)
-            self.assertIn("codex-hooks-snippet.json", text)
-            self.assertIn("claude", text.lower())
-            self.assertIn("codex", text.lower())
+        self.assertIn("Host entry and adapter", architecture)
+        self.assertIn("Shared checkpoints and evidence", architecture)
+        self.assertIn("ReviewCore", architecture)
+        self.assertIn("claude_prompt.py", architecture)
+        self.assertIn("claude_checkpoint.py", architecture)
+        self.assertIn("claude_stop.py", architecture)
+        self.assertIn("One `.turn.json` record", architecture)
+        self.assertNotIn("compatibility delegate", architecture.lower())
 
 
 if __name__ == "__main__":

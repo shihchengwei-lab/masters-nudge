@@ -8,8 +8,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import buddy
-import checkpoint
+import claude_checkpoint
+import claude_stop
 import masters_nudge_cli
 from masters_nudge.management import (
     configure_grok,
@@ -32,16 +32,12 @@ PLUGIN_ROOT = HERE / "plugins" / "masters-nudge"
 class HostDefaultTests(unittest.TestCase):
     def test_each_host_defaults_to_its_own_reviewer(self):
         environment = {"HOME": "/tmp/masters-nudge-test"}
-        claude = RuntimeSettings.from_env(
-            environ=environment, host="claude_code"
-        )
+        claude = RuntimeSettings.from_env(environ=environment, host="claude_code")
         codex = RuntimeSettings.from_env(environ=environment, host="codex_cli")
         legacy = RuntimeSettings.from_env(environ=environment)
 
         self.assertEqual((claude.provider, claude.model), ("anthropic", "sonnet"))
-        self.assertEqual(
-            (codex.provider, codex.model), ("openai", "gpt-5.6-sol")
-        )
+        self.assertEqual((codex.provider, codex.model), ("openai", "gpt-5.6-sol"))
         self.assertEqual(legacy.provider, "openai")
         self.assertEqual(claude.timeout_sec, 120)
         self.assertEqual(codex.timeout_sec, 120)
@@ -53,16 +49,15 @@ class HostDefaultTests(unittest.TestCase):
             "HOME": "/tmp/masters-nudge-test",
             "MASTERS_NUDGE_PROVIDER": "grok",
         }
-        settings = RuntimeSettings.from_env(
-            environ=environment, host="codex_cli"
-        )
+        settings = RuntimeSettings.from_env(environ=environment, host="codex_cli")
         self.assertEqual((settings.provider, settings.model), ("grok", ""))
 
 
 class RuntimeConfigurationTests(unittest.TestCase):
     def test_configure_grok_persists_cli_default_model(self):
-        with tempfile.TemporaryDirectory() as raw, patch(
-            "masters_nudge.management._provider_cli", return_value="grok"
+        with (
+            tempfile.TemporaryDirectory() as raw,
+            patch("masters_nudge.management._provider_cli", return_value="grok"),
         ):
             environment = {
                 "HOME": raw,
@@ -70,9 +65,7 @@ class RuntimeConfigurationTests(unittest.TestCase):
                 "MASTERS_NUDGE_DATA_DIR": str(Path(raw) / "data"),
             }
             result = configure_grok(environ=environment)
-            settings = RuntimeSettings.from_env(
-                environ=environment, host="codex_cli"
-            )
+            settings = RuntimeSettings.from_env(environ=environment, host="codex_cli")
         self.assertTrue(result["saved"])
         self.assertEqual((settings.provider, settings.model), ("grok", ""))
 
@@ -82,9 +75,7 @@ class RuntimeConfigurationTests(unittest.TestCase):
             "MASTERS_NUDGE_PROVIDER": "openai",
             "MASTERS_NUDGE_MODEL": "custom-model",
         }
-        settings = RuntimeSettings.from_env(
-            environ=environment, host="claude_code"
-        )
+        settings = RuntimeSettings.from_env(environ=environment, host="claude_code")
         self.assertEqual(
             (settings.provider, settings.model), ("openai", "custom-model")
         )
@@ -101,11 +92,13 @@ class RuntimeConfigurationTests(unittest.TestCase):
         self.assertEqual((settings.provider, settings.model), ("anthropic", "sonnet"))
 
     def test_python_entries_enforce_recursion_guard_without_shell_wrappers(self):
-        with patch.dict(os.environ, {"MASTERS_NUDGE_ACTIVE": "1"}), patch(
-            "buddy.read_hook_input"
-        ) as buddy_input, patch("checkpoint.sys.stdin.read") as checkpoint_input:
-            buddy.main()
-            checkpoint.main()
+        with (
+            patch.dict(os.environ, {"MASTERS_NUDGE_ACTIVE": "1"}),
+            patch("claude_stop.read_hook_input") as buddy_input,
+            patch("claude_checkpoint.sys.stdin.read") as checkpoint_input,
+        ):
+            claude_stop.main()
+            claude_checkpoint.main()
 
         buddy_input.assert_not_called()
         checkpoint_input.assert_not_called()
@@ -149,12 +142,8 @@ class LocalConfigurationTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            claude = RuntimeSettings.from_env(
-                environ=environment, host="claude_code"
-            )
-            codex = RuntimeSettings.from_env(
-                environ=environment, host="codex_cli"
-            )
+            claude = RuntimeSettings.from_env(environ=environment, host="claude_code")
+            codex = RuntimeSettings.from_env(environ=environment, host="codex_cli")
 
         for settings in (claude, codex):
             self.assertEqual(settings.provider, "ollama-local")
@@ -178,9 +167,7 @@ class LocalConfigurationTests(unittest.TestCase):
                 encoding="utf-8",
             )
             environment["MASTERS_NUDGE_PROVIDER"] = "anthropic"
-            settings = RuntimeSettings.from_env(
-                environ=environment, host="codex_cli"
-            )
+            settings = RuntimeSettings.from_env(environ=environment, host="codex_cli")
 
         self.assertEqual((settings.provider, settings.model), ("anthropic", "sonnet"))
         self.assertEqual(settings.configuration_source, "environment")
@@ -191,9 +178,7 @@ class LocalConfigurationTests(unittest.TestCase):
             path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
             path.parent.mkdir(parents=True)
             path.write_text("{broken", encoding="utf-8")
-            settings = RuntimeSettings.from_env(
-                environ=environment, host="claude_code"
-            )
+            settings = RuntimeSettings.from_env(environ=environment, host="claude_code")
 
         self.assertEqual(settings.provider, "configuration-error")
         self.assertEqual(settings.model, "")
@@ -202,7 +187,6 @@ class LocalConfigurationTests(unittest.TestCase):
     def test_unreadable_persistent_config_fails_closed(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = self._environment(raw)
-            path = reviewer_config_path(Path(environment["MASTERS_NUDGE_DATA_DIR"]))
             with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
                 settings = RuntimeSettings.from_env(
                     environ=environment, host="codex_cli"
@@ -215,14 +199,12 @@ class LocalConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             environment = self._environment(raw)
             environment["MASTERS_NUDGE_PROVIDER"] = "ollama-local"
-            settings = RuntimeSettings.from_env(
-                environ=environment, host="claude_code"
-            )
+            settings = RuntimeSettings.from_env(environ=environment, host="claude_code")
 
         self.assertEqual(settings.provider, "ollama-local")
         self.assertEqual(settings.model, "")
 
-    def test_legacy_environment_aliases_configure_local_provider(self):
+    def test_legacy_environment_aliases_no_longer_configure_runtime(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = {
                 **self._environment(raw),
@@ -230,14 +212,12 @@ class LocalConfigurationTests(unittest.TestCase):
                 "BUDDY_MODEL": "legacy-model",
                 "BUDDY_OLLAMA_URL": "http://localhost:22434",
             }
-            settings = RuntimeSettings.from_env(
-                environ=environment, host="codex_cli"
-            )
+            settings = RuntimeSettings.from_env(environ=environment, host="codex_cli")
 
-        self.assertEqual(settings.provider, "ollama-local")
-        self.assertEqual(settings.model, "legacy-model")
-        self.assertEqual(settings.ollama_url, "http://localhost:22434")
-        self.assertEqual(settings.configuration_source, "environment")
+        self.assertEqual(settings.provider, "openai")
+        self.assertEqual(settings.model, "gpt-5.6-sol")
+        self.assertEqual(settings.ollama_url, "http://127.0.0.1:11434")
+        self.assertEqual(settings.configuration_source, "host_default")
 
     def test_configure_preflights_then_writes_atomically_and_reset_is_scoped(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -333,42 +313,46 @@ class LocalCliTests(unittest.TestCase):
             "error": "",
         }
         output = io.StringIO()
-        with patch.object(
-            sys,
-            "argv",
-            [
-                "masters-nudge",
-                "local",
-                "configure",
-                "--model",
-                "chosen-model",
-                "--json",
-            ],
-        ), patch.object(
-            masters_nudge_cli, "configure_local", return_value=configured
-        ) as configure, redirect_stdout(output):
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "masters-nudge",
+                    "local",
+                    "configure",
+                    "--model",
+                    "chosen-model",
+                    "--json",
+                ],
+            ),
+            patch.object(
+                masters_nudge_cli, "configure_local", return_value=configured
+            ) as configure,
+            redirect_stdout(output),
+        ):
             status = masters_nudge_cli.main()
 
         self.assertEqual(status, 0)
         self.assertEqual(json.loads(output.getvalue())["model"], "chosen-model")
-        configure.assert_called_once_with(
-            "chosen-model", "http://127.0.0.1:11434"
-        )
+        configure.assert_called_once_with("chosen-model", "http://127.0.0.1:11434")
 
     def test_local_reset_warns_that_cloud_defaults_return(self):
         output = io.StringIO()
-        with patch.object(
-            sys, "argv", ["masters-nudge", "local", "reset"]
-        ), patch.object(
-            masters_nudge_cli,
-            "reset_local",
-            return_value={
-                "reset": True,
-                "removed": True,
-                "path": "/tmp/reviewer.json",
-                "error": "",
-            },
-        ), redirect_stdout(output):
+        with (
+            patch.object(sys, "argv", ["masters-nudge", "local", "reset"]),
+            patch.object(
+                masters_nudge_cli,
+                "reset_local",
+                return_value={
+                    "reset": True,
+                    "removed": True,
+                    "path": "/tmp/reviewer.json",
+                    "error": "",
+                },
+            ),
+            redirect_stdout(output),
+        ):
             status = masters_nudge_cli.main()
 
         self.assertEqual(status, 0)
@@ -381,14 +365,10 @@ class PluginPackagingTests(unittest.TestCase):
 
     def test_manifests_and_marketplaces_share_name_and_prerelease(self):
         codex = json.loads(
-            (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(
-                encoding="utf-8"
-            )
+            (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
         claude = json.loads(
-            (PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(
-                encoding="utf-8"
-            )
+            (PLUGIN_ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
         codex_marketplace = json.loads(
             (HERE / ".agents" / "plugins" / "marketplace.json").read_text(
@@ -396,39 +376,85 @@ class PluginPackagingTests(unittest.TestCase):
             )
         )
         claude_marketplace = json.loads(
-            (HERE / ".claude-plugin" / "marketplace.json").read_text(
-                encoding="utf-8"
-            )
+            (HERE / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8")
         )
 
         self.assertEqual(codex["name"], "masters-nudge")
-        self.assertEqual(codex["version"].split("+", 1)[0], "0.1.0-dev.2")
-        self.assertTrue(
-            codex["interface"]["privacyPolicyURL"].endswith("#privacy")
-        )
-        self.assertEqual(claude["version"], "0.1.0-dev.2")
+        self.assertEqual(codex["version"].split("+", 1)[0], "0.2.0-dev.1")
+        self.assertTrue(codex["interface"]["privacyPolicyURL"].endswith("#privacy"))
+        self.assertEqual(claude["version"], "0.2.0-dev.1")
         self.assertNotIn("hooks", codex)
         self.assertEqual(claude["hooks"], "./hooks/claude.json")
-        self.assertEqual(
-            claude["userConfig"]["python_command"]["default"], "python"
-        )
+        self.assertEqual(claude["userConfig"]["python_command"]["default"], "python")
         self.assertEqual(codex_marketplace["name"], "masters-nudge")
         self.assertEqual(
             codex_marketplace["plugins"][0]["source"]["path"],
             "./plugins/masters-nudge",
         )
-        self.assertEqual(
-            claude_marketplace["plugins"][0]["version"], claude["version"]
-        )
+        self.assertEqual(claude_marketplace["plugins"][0]["version"], claude["version"])
         self.assertIn(
             "local Ollama",
             " ".join(codex["interface"]["defaultPrompt"]),
         )
 
+    def test_inventory_rejects_unexpected_plugin_files(self):
+        with tempfile.TemporaryDirectory() as raw:
+            plugin_root = Path(raw) / "masters-nudge"
+            import shutil
+
+            shutil.copytree(PLUGIN_ROOT, plugin_root)
+            (plugin_root / "leftover.py").write_text("pass\n", encoding="utf-8")
+
+            with patch.object(build_plugin, "PLUGIN_ROOT", plugin_root):
+                errors = build_plugin.check_plugin()
+
+        self.assertIn("unexpected: plugins/masters-nudge/leftover.py", errors)
+
+    def test_inventory_rejects_missing_static_plugin_file(self):
+        with tempfile.TemporaryDirectory() as raw:
+            plugin_root = Path(raw) / "masters-nudge"
+            import shutil
+
+            shutil.copytree(PLUGIN_ROOT, plugin_root)
+            (plugin_root / "hooks" / "claude.json").unlink()
+
+            with patch.object(build_plugin, "PLUGIN_ROOT", plugin_root):
+                errors = build_plugin.check_plugin()
+
+        self.assertIn("missing: plugins/masters-nudge/hooks/claude.json", errors)
+
+    def test_claude_manifest_is_the_base_version_owner(self):
+        with tempfile.TemporaryDirectory() as raw:
+            import shutil
+
+            root = Path(raw)
+            plugin_root = root / "masters-nudge"
+            marketplace = root / "marketplace.json"
+            shutil.copytree(PLUGIN_ROOT, plugin_root)
+            shutil.copy2(HERE / ".claude-plugin" / "marketplace.json", marketplace)
+            claude_path = plugin_root / ".claude-plugin" / "plugin.json"
+            claude = json.loads(claude_path.read_text(encoding="utf-8"))
+            claude["version"] = "9.8.7-dev.6"
+            claude_path.write_text(json.dumps(claude), encoding="utf-8")
+
+            with (
+                patch.object(build_plugin, "PLUGIN_ROOT", plugin_root),
+                patch.object(build_plugin, "CLAUDE_MARKETPLACE", marketplace),
+            ):
+                build_plugin._sync_versions()
+
+            codex = json.loads(
+                (plugin_root / ".codex-plugin" / "plugin.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            marketplace_payload = json.loads(marketplace.read_text(encoding="utf-8"))
+
+        self.assertEqual(codex["version"].split("+", 1)[0], "9.8.7-dev.6")
+        self.assertEqual(marketplace_payload["plugins"][0]["version"], "9.8.7-dev.6")
+
     def test_host_hook_files_are_separate_and_reference_plugin_roots(self):
-        codex_text = (PLUGIN_ROOT / "hooks" / "hooks.json").read_text(
-            encoding="utf-8"
-        )
+        codex_text = (PLUGIN_ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8")
         claude_text = (PLUGIN_ROOT / "hooks" / "claude.json").read_text(
             encoding="utf-8"
         )
@@ -443,17 +469,19 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertIn("${user_config.python_command}", claude_text)
         self.assertIn('"args"', claude_text)
         self.assertNotIn('"command": "bash ', claude_text)
+        self.assertIn("claude_prompt.py", claude_text)
+        self.assertIn("claude_checkpoint.py", claude_text)
+        self.assertIn("claude_stop.py", claude_text)
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}/inject.py", claude_text)
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}/checkpoint.py", claude_text)
+        self.assertNotIn("${CLAUDE_PLUGIN_ROOT}/buddy.py", claude_text)
         post_tool_hook = codex["PostToolUse"][0]["hooks"][0]
         self.assertNotIn("async", post_tool_hook)
         self.assertGreaterEqual(post_tool_hook["timeout"], 90)
 
     def test_codex_launchers_are_fail_open(self):
-        windows = (PLUGIN_ROOT / "hooks" / "run_python.cmd").read_text(
-            encoding="utf-8"
-        )
-        posix = (PLUGIN_ROOT / "hooks" / "run_python.sh").read_text(
-            encoding="utf-8"
-        )
+        windows = (PLUGIN_ROOT / "hooks" / "run_python.cmd").read_text(encoding="utf-8")
+        posix = (PLUGIN_ROOT / "hooks" / "run_python.sh").read_text(encoding="utf-8")
 
         self.assertNotIn("exit /b %errorlevel%", windows)
         self.assertIn("PYTHONIOENCODING=utf-8", windows)
@@ -464,18 +492,52 @@ class PluginPackagingTests(unittest.TestCase):
     def test_readmes_lead_with_native_plugin_install(self):
         for name in ("README.md", "README.zh-TW.md"):
             text = (HERE / name).read_text(encoding="utf-8")
-            self.assertIn(
-                "claude plugin install masters-nudge@masters-nudge ", text
-            )
+            self.assertIn("claude plugin install masters-nudge@masters-nudge ", text)
             self.assertIn("--config python_command=python", text)
             self.assertIn("codex plugin add masters-nudge@masters-nudge", text)
             self.assertIn(
                 "0.1.0-dev.2",
                 (HERE / "CHANGELOG.md").read_text(encoding="utf-8"),
             )
-        self.assertTrue(
-            (PLUGIN_ROOT / "skills" / "setup-local" / "SKILL.md").exists()
+        self.assertIn(
+            "fixed visual and measurement contracts",
+            (HERE / "README.md").read_text(encoding="utf-8"),
         )
+        self.assertIn(
+            "固定視覺與量測契約",
+            (HERE / "README.zh-TW.md").read_text(encoding="utf-8"),
+        )
+        self.assertTrue((PLUGIN_ROOT / "skills" / "setup-local" / "SKILL.md").exists())
+
+    def test_ci_smokes_the_plugin_package_without_legacy_installers(self):
+        workflow = (HERE / ".github" / "workflows" / "ci.yml").read_text(
+            encoding="utf-8"
+        )
+
+        for entrypoint in (
+            "claude_prompt.py",
+            "claude_checkpoint.py",
+            "claude_stop.py",
+        ):
+            self.assertIn(entrypoint, workflow)
+        for removed in (
+            " buddy.py",
+            " checkpoint.py",
+            " inject.py",
+            " install.sh",
+            "./install.ps1",
+        ):
+            self.assertNotIn(removed, workflow)
+        self.assertIn("hooks/run_python.sh", workflow)
+        self.assertIn("hooks\\run_python.cmd", workflow)
+        self.assertIn("masters_nudge_cli.py\" doctor --host all --json", workflow)
+        self.assertNotIn('assert data["core_ready"]', workflow)
+        self.assertNotIn("-not $doctor.core_ready", workflow)
+        self.assertIn('data["python"]["ready"]', workflow)
+        self.assertIn('data["data"]["writable"]', workflow)
+        self.assertIn("$doctor.python.ready", workflow)
+        self.assertIn("$doctor.data.writable", workflow)
+        self.assertIn("Expected two host-namespaced turn states", workflow)
 
 
 class LegacyMigrationTests(unittest.TestCase):
@@ -503,9 +565,7 @@ class LegacyMigrationTests(unittest.TestCase):
             dry_run = migrate_legacy_config(path, "claude")
             self.assertEqual(dry_run["exact"], 1)
             self.assertFalse(dry_run["applied"])
-            self.assertEqual(
-                json.loads(path.read_text(encoding="utf-8")), original
-            )
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
 
             applied = migrate_legacy_config(path, "claude", apply=True)
             self.assertTrue(applied["applied"])
@@ -545,9 +605,7 @@ class LegacyMigrationTests(unittest.TestCase):
             result = migrate_legacy_config(path, "claude", apply=True)
             self.assertFalse(result["applied"])
             self.assertEqual(len(result["near"]), 1)
-            self.assertEqual(
-                json.loads(path.read_text(encoding="utf-8")), original
-            )
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
             self.assertEqual(list(path.parent.glob("*.bak")), [])
 
     def test_all_hosts_preflight_before_changing_either_config(self):
@@ -611,7 +669,7 @@ class LegacyMigrationTests(unittest.TestCase):
                                     {
                                         "type": "command",
                                         "command": "python3 ~/.masters-nudge/runtime/hook_entry.py --host codex_cli --detach-stop",
-                                        "commandWindows": "py -3 \"%USERPROFILE%\\.masters-nudge\\runtime\\hook_entry.py\" --host codex_cli --detach-stop",
+                                        "commandWindows": 'py -3 "%USERPROFILE%\\.masters-nudge\\runtime\\hook_entry.py" --host codex_cli --detach-stop',
                                     }
                                 ]
                             }
@@ -689,8 +747,176 @@ class LegacyMigrationTests(unittest.TestCase):
 
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
 
+    def test_migrate_copies_general_stage_config_and_log_idempotently(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            legacy = root / ".claude" / "buddy"
+            legacy.mkdir(parents=True)
+            (legacy / "config.json").write_text(
+                json.dumps({"persona": "general"}), encoding="utf-8"
+            )
+            legacy_log = legacy / "session-1.log"
+            legacy_log.write_text(
+                json.dumps({"ts": "2026-01-01", "reaction": "keep"}) + "\n",
+                encoding="utf-8",
+            )
+            environment = {"HOME": raw, "USERPROFILE": raw}
+
+            dry_run = migrate_legacy("claude", environ=environment)
+            self.assertEqual(dry_run["lifecycle"]["status"], "would_migrate")
+            self.assertEqual(dry_run["lifecycle"]["stage"], "build")
+            self.assertEqual(dry_run["logs"]["items"][0]["status"], "would_copy")
+            self.assertFalse((root / ".masters-nudge" / "data").exists())
+
+            applied = migrate_legacy("claude", apply=True, environ=environment)
+            data_dir = root / ".masters-nudge" / "data"
+            self.assertEqual(applied["lifecycle"]["status"], "migrated")
+            self.assertEqual(
+                json.loads((data_dir / "config.json").read_text(encoding="utf-8")),
+                {"stage": "build"},
+            )
+            copied = data_dir / "claude_code--session-1.log"
+            self.assertEqual(copied.read_bytes(), legacy_log.read_bytes())
+            self.assertTrue(legacy_log.exists())
+
+            repeated = migrate_legacy("claude", apply=True, environ=environment)
+            self.assertEqual(repeated["lifecycle"]["status"], "already_migrated")
+            self.assertEqual(repeated["logs"]["items"][0]["status"], "already_copied")
+            self.assertFalse(repeated["unsafe"])
+
+    def test_migrate_requires_manual_choice_for_specialist_persona(self):
+        for persona in ("lamport", "carmack"):
+            with self.subTest(persona=persona), tempfile.TemporaryDirectory() as raw:
+                legacy = Path(raw) / ".claude" / "buddy"
+                legacy.mkdir(parents=True)
+                (legacy / "config.json").write_text(
+                    json.dumps({"persona": persona}), encoding="utf-8"
+                )
+
+                result = migrate_legacy(
+                    "claude",
+                    apply=True,
+                    environ={"HOME": raw, "USERPROFILE": raw},
+                )
+
+                self.assertTrue(result["manual_required"])
+                self.assertEqual(result["lifecycle"]["status"], "manual_required")
+                self.assertFalse(
+                    (Path(raw) / ".masters-nudge" / "data" / "config.json").exists()
+                )
+
+    def test_migrate_converts_in_place_legacy_config_with_backup(self):
+        with tempfile.TemporaryDirectory() as raw:
+            config = Path(raw) / ".masters-nudge" / "data" / "config.json"
+            self._write(config, {"persona": "linus"})
+
+            result = migrate_legacy(
+                "claude",
+                apply=True,
+                environ={"HOME": raw, "USERPROFILE": raw},
+            )
+
+            self.assertEqual(result["lifecycle"]["status"], "migrated")
+            self.assertEqual(
+                json.loads(config.read_text(encoding="utf-8")), {"stage": "review"}
+            )
+            backup = Path(result["lifecycle"]["backup"])
+            self.assertTrue(backup.exists())
+            self.assertEqual(
+                json.loads(backup.read_text(encoding="utf-8")),
+                {"persona": "linus"},
+            )
+
+    def test_migrate_refuses_noncanonical_destination_config(self):
+        with tempfile.TemporaryDirectory() as raw:
+            config = Path(raw) / ".masters-nudge" / "data" / "config.json"
+            self._write(config, {"stage": "build", "extra": True})
+
+            result = migrate_legacy(
+                "claude",
+                apply=True,
+                environ={"HOME": raw, "USERPROFILE": raw},
+            )
+
+            self.assertTrue(result["unsafe"])
+            self.assertEqual(result["lifecycle"]["status"], "conflict")
+            self.assertEqual(
+                json.loads(config.read_text(encoding="utf-8")),
+                {"stage": "build", "extra": True},
+            )
+
+    def test_migrate_refuses_invalid_or_conflicting_log_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            legacy = root / ".claude" / "buddy"
+            destination = root / ".masters-nudge" / "data"
+            legacy.mkdir(parents=True)
+            destination.mkdir(parents=True)
+            (legacy / "bad.log").write_text("not-json\n", encoding="utf-8")
+            (legacy / "same.log").write_text('{"reaction":"old"}\n', encoding="utf-8")
+            conflict = destination / "claude_code--same.log"
+            conflict.write_text('{"reaction":"new"}\n', encoding="utf-8")
+
+            result = migrate_legacy(
+                "claude",
+                apply=True,
+                environ={"HOME": raw, "USERPROFILE": raw},
+            )
+
+            statuses = {
+                item["source_name"]: item["status"] for item in result["logs"]["items"]
+            }
+            self.assertEqual(statuses, {"bad.log": "invalid", "same.log": "conflict"})
+            self.assertTrue(result["unsafe"])
+            self.assertEqual(
+                conflict.read_text(encoding="utf-8"), '{"reaction":"new"}\n'
+            )
+
+    def test_migrate_reports_environment_alias_mappings_without_writing_profiles(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                "HOME": raw,
+                "USERPROFILE": raw,
+                "BUDDY_PROVIDER": "ollama-local",
+                "BUDDY_MODEL": "model-a",
+                "BUDDY_CLAUDE_DIR": str(Path(raw) / "legacy-claude"),
+            }
+
+            result = migrate_legacy("claude", apply=True, environ=environment)
+
+            mappings = {
+                item["legacy"]: item["replacement"] for item in result["environment"]
+            }
+            self.assertEqual(mappings["BUDDY_PROVIDER"], "MASTERS_NUDGE_PROVIDER")
+            self.assertEqual(mappings["BUDDY_MODEL"], "MASTERS_NUDGE_MODEL")
+            self.assertEqual(mappings["BUDDY_CLAUDE_DIR"], "MASTERS_NUDGE_DATA_DIR")
+            self.assertTrue(result["manual_required"])
+            self.assertFalse((Path(raw) / ".profile").exists())
+
 
 class DoctorTests(unittest.TestCase):
+    def test_doctor_requires_complete_runtime_dependency_inventory(self):
+        with tempfile.TemporaryDirectory() as raw:
+            import shutil
+
+            plugin_root = Path(raw) / "masters-nudge"
+            shutil.copytree(PLUGIN_ROOT, plugin_root)
+            missing = plugin_root / "masters_nudge" / "codex_adapter.py"
+            missing.unlink()
+            environment = {
+                "HOME": raw,
+                "USERPROFILE": raw,
+                "PATH": "",
+                "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
+            }
+            with patch(
+                "masters_nudge.management._provider_cli", return_value="fake-cli"
+            ):
+                result = doctor(plugin_root, "claude", environ=environment)
+
+        self.assertFalse(result["core_ready"])
+        self.assertIn("masters_nudge/codex_adapter.py", result["runtime"]["missing"])
+
     def test_doctor_reports_unauthenticated_grok_as_not_ready(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = {
@@ -700,9 +926,7 @@ class DoctorTests(unittest.TestCase):
                 "MASTERS_NUDGE_PROVIDER": "grok",
                 "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
             }
-            with patch(
-                "masters_nudge.management._provider_cli", return_value="grok"
-            ):
+            with patch("masters_nudge.management._provider_cli", return_value="grok"):
                 result = doctor(
                     PLUGIN_ROOT,
                     "claude",
@@ -726,13 +950,14 @@ class DoctorTests(unittest.TestCase):
                 "PATH": "",
                 "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
             }
-            with patch(
-                "masters_nudge.management._provider_cli", return_value="fake-cli"
-            ), patch("masters_nudge.management.importlib.util.find_spec") as find_spec:
+            with (
+                patch(
+                    "masters_nudge.management._provider_cli", return_value="fake-cli"
+                ),
+                patch("masters_nudge.management.importlib.util.find_spec") as find_spec,
+            ):
                 find_spec.side_effect = lambda name: None if name == "PIL" else object()
-                result = doctor(
-                    PLUGIN_ROOT, "claude", environ=environment
-                )
+                result = doctor(PLUGIN_ROOT, "claude", environ=environment)
 
             self.assertTrue(result["core_ready"])
             self.assertFalse(result["ui"]["ready"])
@@ -787,9 +1012,7 @@ class DoctorTests(unittest.TestCase):
             self.assertTrue(result["core_ready"])
             self.assertEqual(len(calls), 2)
             self.assertTrue(all(item["local"]["ready"] for item in result["hosts"]))
-            self.assertTrue(
-                all(item["provider_cli"] == "" for item in result["hosts"])
-            )
+            self.assertTrue(all(item["provider_cli"] == "" for item in result["hosts"]))
 
     def test_doctor_handles_invalid_local_inspection_result(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -808,20 +1031,21 @@ class DoctorTests(unittest.TestCase):
             )
 
             self.assertFalse(result["core_ready"])
-            self.assertIn(
-                "invalid result", result["hosts"][0]["local"]["error"]
-            )
+            self.assertIn("invalid result", result["hosts"][0]["local"]["error"])
 
     def test_window_launch_error_is_reported(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             (root / "buddy_window.py").write_text("pass\n", encoding="utf-8")
-            with patch(
-                "masters_nudge.management.importlib.util.find_spec",
-                return_value=object(),
-            ), patch(
-                "masters_nudge.management.subprocess.Popen",
-                side_effect=OSError("launch blocked"),
+            with (
+                patch(
+                    "masters_nudge.management.importlib.util.find_spec",
+                    return_value=object(),
+                ),
+                patch(
+                    "masters_nudge.management.subprocess.Popen",
+                    side_effect=OSError("launch blocked"),
+                ),
             ):
                 result = launch_window(root)
 
@@ -836,13 +1060,16 @@ class DoctorTests(unittest.TestCase):
             workspace.mkdir()
             (root / "buddy_window.py").write_text("pass\n", encoding="utf-8")
             process = Mock(pid=123)
-            with patch(
-                "masters_nudge.management.importlib.util.find_spec",
-                return_value=object(),
-            ), patch(
-                "masters_nudge.management.subprocess.Popen",
-                return_value=process,
-            ) as popen:
+            with (
+                patch(
+                    "masters_nudge.management.importlib.util.find_spec",
+                    return_value=object(),
+                ),
+                patch(
+                    "masters_nudge.management.subprocess.Popen",
+                    return_value=process,
+                ) as popen,
+            ):
                 result = launch_window(root, workspace=workspace)
 
         self.assertTrue(result["launched"])
@@ -855,20 +1082,24 @@ class DoctorTests(unittest.TestCase):
 
     def test_window_cli_forwards_explicit_workspace(self):
         workspace = r"E:\projects\shader-nudge-lab"
-        with patch.object(
-            sys,
-            "argv",
-            ["masters-nudge", "window", "--workspace", workspace, "--json"],
-        ), patch.object(
-            masters_nudge_cli,
-            "launch_window",
-            return_value={
-                "launched": True,
-                "pid": 123,
-                "missing": [],
-                "workspace": workspace,
-            },
-        ) as launch, redirect_stdout(io.StringIO()):
+        with (
+            patch.object(
+                sys,
+                "argv",
+                ["masters-nudge", "window", "--workspace", workspace, "--json"],
+            ),
+            patch.object(
+                masters_nudge_cli,
+                "launch_window",
+                return_value={
+                    "launched": True,
+                    "pid": 123,
+                    "missing": [],
+                    "workspace": workspace,
+                },
+            ) as launch,
+            redirect_stdout(io.StringIO()),
+        ):
             result = masters_nudge_cli.main()
 
         self.assertEqual(result, 0)
@@ -891,26 +1122,31 @@ class DoctorTests(unittest.TestCase):
             "review_mode": "all",
             "primary_lens": "",
         }
-        with patch.object(
-            sys,
-            "argv",
-            [
-                "masters-nudge",
-                "shader",
-                "configure-recommended",
-                "--workspace",
-                workspace,
-                "--json",
-            ],
-        ), patch.object(
-            masters_nudge_cli.RuntimeSettings,
-            "from_env",
-            return_value=settings,
-        ), patch.object(
-            masters_nudge_cli.profiles,
-            "configure_recommended_shader_profile",
-            return_value=saved,
-        ) as configure, redirect_stdout(io.StringIO()) as output:
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "masters-nudge",
+                    "shader",
+                    "configure-recommended",
+                    "--workspace",
+                    workspace,
+                    "--json",
+                ],
+            ),
+            patch.object(
+                masters_nudge_cli.RuntimeSettings,
+                "from_env",
+                return_value=settings,
+            ),
+            patch.object(
+                masters_nudge_cli.profiles,
+                "configure_recommended_shader_profile",
+                return_value=saved,
+            ) as configure,
+            redirect_stdout(io.StringIO()) as output,
+        ):
             result = masters_nudge_cli.main()
 
         self.assertEqual(result, 0)

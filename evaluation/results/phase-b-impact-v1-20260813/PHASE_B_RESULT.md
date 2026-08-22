@@ -30,4 +30,7 @@ Relative to control, treatment used USD 0.240309 more (+9.7%), averaged 0.44 mor
 
 Do not advance the current task set as evidence that the injection improves main-agent outcomes. Preserve this run as the V1 null pilot. The next iteration should improve task discrimination before changing the General prompt again: reduce ceiling tasks, replace or harden the floor task, and keep enough matched repeats to distinguish prompt effects from run variance.
 
-Machine-readable results are in [execution-v1/analysis.json](execution-v1/analysis.json); raw rows and all 36 workspaces are archived under [execution-v1](execution-v1/).
+The machine-readable analysis, raw rows, and all 36 workspaces are preserved in
+the verified
+[`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)
+release.

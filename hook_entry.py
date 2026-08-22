@@ -9,7 +9,6 @@ import os
 import subprocess
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 from masters_nudge import storage
@@ -19,7 +18,6 @@ from masters_nudge.runtime import RuntimeSettings, active_guard
 
 
 MAX_STDIN_BYTES = 1024 * 1024
-MAX_ERROR_LOG_BYTES = 256 * 1024
 
 
 def _settings(host: str = "codex_cli") -> RuntimeSettings:
@@ -30,16 +28,7 @@ def _settings(host: str = "codex_cli") -> RuntimeSettings:
 
 
 def _log_error(settings: RuntimeSettings, message: str) -> None:
-    path = settings.paths.error_log
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.exists() and path.stat().st_size > MAX_ERROR_LOG_BYTES:
-            tail = path.read_bytes()[-MAX_ERROR_LOG_BYTES // 2 :]
-            path.write_bytes(tail)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(f"{datetime.now().isoformat()} {message}\n")
-    except OSError:
-        pass
+    storage.append_error(settings.paths.error_log, "codex-hook", message)
 
 
 def _read_payload(payload_file: str = "") -> dict:
@@ -81,26 +70,34 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
                 delivered_via=str(delivery.get("event_name") or "hook"),
             )
         raise
-    if delivery:
-        if isinstance(delivery, dict):
-            storage.mark_delivered(
-                settings.paths.data_dir,
-                delivery["session"],
-                delivery["timestamp"],
-                event_seq=int(delivery.get("event_seq") or 0),
-                delivered_via=str(delivery.get("event_name") or "hook"),
-            )
-        else:  # compatibility with pre-receipt tests and cached runtimes
-            session, timestamp = delivery
-            storage.mark_delivered(settings.paths.data_dir, session, timestamp)
+    if isinstance(delivery, dict):
+        storage.mark_delivered(
+            settings.paths.data_dir,
+            delivery["session"],
+            delivery["timestamp"],
+            event_seq=int(delivery.get("event_seq") or 0),
+            delivered_via=str(delivery.get("event_name") or "hook"),
+        )
 
 
-def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> bool:
+def _launch_detached_payload(
+    settings: RuntimeSettings,
+    payload: dict,
+    *,
+    prefix: str,
+    payload_flag: str,
+    failure_label: str,
+    log_error,
+) -> bool:
     spool_dir = settings.paths.data_dir / "spool"
     spool_dir.mkdir(parents=True, exist_ok=True)
     handle = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".json", prefix="codex-strategy-",
-        dir=spool_dir, delete=False, encoding="utf-8",
+        mode="w",
+        suffix=".json",
+        prefix=prefix,
+        dir=spool_dir,
+        delete=False,
+        encoding="utf-8",
     )
     spool_path = Path(handle.name)
     try:
@@ -108,8 +105,12 @@ def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> b
         handle.write("\n")
         handle.close()
         command = [
-            sys.executable, str(Path(__file__).resolve()),
-            "--host", "codex_cli", "--strategy-payload-file", str(spool_path),
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--host",
+            "codex_cli",
+            payload_flag,
+            str(spool_path),
         ]
         kwargs = {
             "stdin": subprocess.DEVNULL,
@@ -129,7 +130,7 @@ def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> b
         subprocess.Popen(command, **kwargs)
         return True
     except Exception as exc:
-        log_error(f"detached strategy launch failed: {exc}")
+        log_error(f"{failure_label}: {exc}")
         try:
             handle.close()
         except Exception:
@@ -139,6 +140,17 @@ def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> b
         except OSError:
             pass
         return False
+
+
+def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> bool:
+    return _launch_detached_payload(
+        settings,
+        payload,
+        prefix="codex-strategy-",
+        payload_flag="--strategy-payload-file",
+        failure_label="detached strategy launch failed",
+        log_error=log_error,
+    )
 
 
 def _detach_stop(
@@ -151,55 +163,14 @@ def _detach_stop(
     """
     if payload.get("hook_event_name") != "Stop":
         return
-    spool_dir = settings.paths.data_dir / "spool"
-    spool_dir.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".json",
+    _launch_detached_payload(
+        settings,
+        payload,
         prefix="codex-stop-",
-        dir=spool_dir,
-        delete=False,
-        encoding="utf-8",
+        payload_flag="--payload-file",
+        failure_label="detached Stop launch failed",
+        log_error=log_error,
     )
-    spool_path = Path(handle.name)
-    try:
-        json.dump(payload, handle, ensure_ascii=False)
-        handle.write("\n")
-        handle.close()
-        command = [
-            sys.executable,
-            str(Path(__file__).resolve()),
-            "--host",
-            "codex_cli",
-            "--payload-file",
-            str(spool_path),
-        ]
-        kwargs = {
-            "stdin": subprocess.DEVNULL,
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
-            "close_fds": True,
-            "env": dict(os.environ),
-        }
-        if os.name == "nt":
-            kwargs["creationflags"] = (
-                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                | getattr(subprocess, "DETACHED_PROCESS", 0)
-                | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            )
-        else:
-            kwargs["start_new_session"] = True
-        subprocess.Popen(command, **kwargs)
-    except Exception as exc:
-        log_error(f"detached Stop launch failed: {exc}")
-        try:
-            handle.close()
-        except Exception:
-            pass
-        try:
-            spool_path.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def main() -> int:
@@ -210,7 +181,10 @@ def main() -> int:
     parser.add_argument("--strategy-payload-file", default="")
     args, _unknown = parser.parse_known_args()
     settings = _settings(args.host)
-    log_error = lambda message: _log_error(settings, message)
+
+    def log_error(message: str) -> None:
+        _log_error(settings, message)
+
     if args.host != "codex_cli":
         log_error(f"unsupported hook host: {args.host}")
         return 0

@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from pathlib import Path
 from typing import Any, Callable
 
-import persona_config
-import shader_router
 import shader_progress
 import review_telemetry
 import source_context
@@ -82,8 +79,6 @@ def _pending_output(
     output = build_hook_output(
         event_name,
         text,
-        reason=str(pending.get("reason") or "stop"),
-        effective_lens=str(pending.get("effective_lens") or "general"),
         evaluation_notice=pending.get("kind") == "evaluation_notice",
     )
     return _with_delivery_marker(
@@ -208,8 +203,6 @@ def build_hook_output(
     event_name: str,
     text: str,
     *,
-    reason: str,
-    effective_lens: str = "general",
     evaluation_notice: bool = False,
 ) -> dict[str, Any]:
     if evaluation_notice:
@@ -557,8 +550,6 @@ class CodexAdapter:
         output = build_hook_output(
             event.native_event_name,
             outcome.finding,
-            reason=checkpoint["reason"],
-            effective_lens=outcome.effective_lens,
         )
         timestamp = outcome.reaction_ts
         if not timestamp:

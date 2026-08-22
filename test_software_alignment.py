@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import inject
+import claude_prompt as inject
 import lens_router
 import persona_config
 import source_context
@@ -25,7 +25,6 @@ def settings_for(root: Path) -> RuntimeSettings:
         paths=RuntimePaths(
             runtime_dir=HERE,
             data_dir=root,
-            legacy_data_dir=root / "legacy",
             error_log=root / "error.log",
         ),
         ollama_url="http://127.0.0.1:11434",

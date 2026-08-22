@@ -1,7 +1,6 @@
 """Host-neutral runtime for Masters' Nudge."""
 
 from .contracts import (
-    Delivery,
     EvidenceBundle,
     NormalizedHookEvent,
     PromptSubmitted,
@@ -13,7 +12,6 @@ from .contracts import (
 )
 
 __all__ = [
-    "Delivery",
     "EvidenceBundle",
     "NormalizedHookEvent",
     "PromptSubmitted",
