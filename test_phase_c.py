@@ -348,6 +348,63 @@ class CodexAdapterTests(unittest.TestCase):
             "改善黑洞特效的效能。",
         )
 
+    def test_first_tool_recovers_active_goal_when_prompt_hook_did_not_fire(self):
+        transcript = self.root / "rollout-with-goal.jsonl"
+        transcript.write_text(
+            json.dumps(
+                {
+                    "type": "response_item",
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "input_text",
+                                "text": (
+                                    '<codex_internal_context source="goal">\n'
+                                    "<objective>\n改善黑洞特效的效能。\n</objective>\n"
+                                    "</codex_internal_context>"
+                                ),
+                            }
+                        ],
+                    },
+                },
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        adapter = CodexAdapter(
+            FakeCore(self.settings, ReviewOutcome("no_finding"))
+        )
+
+        with mock.patch.dict(os.environ, {}, clear=True):
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "goal-session-without-prompt",
+                    "turn_id": "goal-turn",
+                    "cwd": str(self.root),
+                    "transcript_path": str(transcript),
+                    "tool_name": "Read",
+                    "tool_input": {"file_path": "blackhole-shader.js"},
+                    "tool_response": {"content": "shader"},
+                }
+            )
+
+        session = SessionRef(
+            "codex_cli", "goal-session-without-prompt", "goal-turn", str(self.root)
+        )
+        turn = storage.load_turn_state(self.settings.paths.data_dir, session)
+        progress = json.loads(
+            storage.state_path(
+                self.settings.paths.data_dir, session, "progress"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(turn["task_anchor"], "改善黑洞特效的效能。")
+        self.assertGreater(turn["transcript_offset"], 0)
+        self.assertEqual(progress["goal_objective"], "改善黑洞特效的效能。")
+
     def test_stop_review_uses_journal_not_transcript_contents(self):
         core = FakeCore(self.settings, ReviewOutcome("no_finding"))
         adapter = CodexAdapter(core)  # type: ignore[arg-type]

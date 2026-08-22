@@ -288,6 +288,19 @@ class CodexAdapter:
     def process(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         if active_guard():
             return None
+        event_name = str(payload.get("hook_event_name") or "")
+        if event_name in {"PostToolUse", "PostToolUseFailure"}:
+            session = _session(payload)
+            state = storage.load_turn_state(self.data_dir, session)
+            if not state.get("task_anchor"):
+                recovered_prompt = _prompt_text(payload)
+                if recovered_prompt:
+                    storage.start_turn(
+                        self.data_dir,
+                        session,
+                        recovered_prompt,
+                        transcript_path=str(payload.get("transcript_path") or ""),
+                    )
         event = normalize_event(payload)
         if isinstance(event, PromptSubmitted):
             return self._prompt(event)
