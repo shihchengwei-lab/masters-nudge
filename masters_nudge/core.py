@@ -70,25 +70,19 @@ class ReviewCore:
         model = self.settings.model
         configuration_source = self.settings.configuration_source
         checkpoint_routing = request.kind != "stop"
-        routing_evidence = "\n".join(
-            part
-            for part in (
-                request.trigger,
-                request.reason,
-                request.routing_evidence,
-            )
-            if part
-        ) if checkpoint_routing else ""
+        routing_evidence = request.routing_evidence if checkpoint_routing else ""
         route = lens_router.resolve_review_route(
             self.settings.paths.data_dir,
             routing_evidence,
             checkpoint=checkpoint_routing,
+            routing_concern=(request.routing_concern if checkpoint_routing else ""),
             injected_personas=storage.read_recent_injected_personas(
                 self.settings.paths.data_dir,
                 request.session,
                 limit=2,
             ),
         )
+        route_fields = route_metadata(route)
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
@@ -142,7 +136,7 @@ class ReviewCore:
                 model=model,
                 reaction=finding,
                 route_metadata={
-                    **route_metadata(route),
+                    **route_fields,
                     "review_trigger": request.trigger or request.reason,
                     **(
                         {
@@ -178,7 +172,7 @@ class ReviewCore:
                 model=model,
                 reaction=status_text,
                 route_metadata={
-                    **route_metadata(route),
+                    **route_fields,
                     "review_trigger": request.trigger or request.reason,
                 },
                 kind="review_status",
@@ -199,22 +193,18 @@ class ReviewCore:
                 "model": model,
                 "configuration_source": configuration_source,
                 "persona": route.effective_lens,
-                **route_metadata(route),
+                **route_fields,
                 "review_trigger": request.trigger or request.reason,
                 "status": status,
                 "input_chars": len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
                 "finding_scope": _finding_scope(request),
-                "shadow_candidates": list(request.shadow_candidates),
                 "usage": result.get("usage") if isinstance(result, dict) else {},
             }
             review_telemetry.record_review(
                 self.settings.paths.data_dir,
                 telemetry_record,
-                notice_log_path=storage.reaction_log_path(
-                    self.settings.paths.data_dir, request.session
-                ),
             )
         except Exception as exc:
             self.log_error(f"review telemetry failed: {exc}")

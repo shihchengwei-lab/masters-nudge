@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
-from .prompting import MAX_REACTION_CHARS
+from .provider_contract import call_result, parse_reaction_result
 from .runtime import reviewer_environment
 
 
@@ -57,8 +57,6 @@ def _terminate_process_tree(
     log_error: Logger = _noop,
 ) -> None:
     """Terminate a timed-out reviewer and every descendant it started."""
-    if process.poll() is not None:
-        return
     try:
         if os.name == "nt":
             subprocess.run(
@@ -70,7 +68,9 @@ def _terminate_process_tree(
                 **_reviewer_process_kwargs(),
             )
         else:
-            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+            # `_run_cli_process` makes the reviewer PID its process-group ID.
+            # The group can outlive its leader, so do not look the PID up first.
+            os.killpg(process.pid, signal.SIGKILL)
     except (OSError, subprocess.SubprocessError) as exc:
         log_error(f"reviewer process-tree cleanup failed: {exc}")
         try:
@@ -86,12 +86,14 @@ def _terminate_process_tree(
             pass
 
 
-def _run_grok_process(
-    command: list[str],
+def _run_cli_process(
+    command: list[str] | str,
     *,
-    cwd: str,
+    input_text: str | None = None,
+    cwd: str | None = None,
     environment: dict[str, str],
     timeout_sec: int,
+    shell: bool = False,
     log_error: Logger = _noop,
 ) -> subprocess.CompletedProcess:
     kwargs = _reviewer_process_kwargs()
@@ -105,10 +107,11 @@ def _run_grok_process(
         encoding="utf-8",
         env=environment,
         cwd=cwd,
+        shell=shell,
         **kwargs,
     )
     try:
-        stdout, stderr = process.communicate(timeout=timeout_sec)
+        stdout, stderr = process.communicate(input=input_text, timeout=timeout_sec)
     except subprocess.TimeoutExpired:
         _terminate_process_tree(process, log_error=log_error)
         raise
@@ -117,6 +120,24 @@ def _run_grok_process(
         process.returncode,
         stdout,
         stderr,
+    )
+
+
+def _run_grok_process(
+    command: list[str],
+    *,
+    cwd: str,
+    environment: dict[str, str],
+    timeout_sec: int,
+    log_error: Logger = _noop,
+) -> subprocess.CompletedProcess:
+    """Compatibility seam for tests and Grok-specific call inspection."""
+    return _run_cli_process(
+        command,
+        cwd=cwd,
+        environment=environment,
+        timeout_sec=timeout_sec,
+        log_error=log_error,
     )
 
 
@@ -140,34 +161,6 @@ def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str
         log_error("reaction schema root must be an object")
         return ""
     return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
-
-
-def parse_reaction_result(
-    stdout: str, max_chars: int = MAX_REACTION_CHARS
-) -> dict:
-    stdout = str(stdout or "").strip()
-    if not stdout:
-        return {"status": "error", "finding": ""}
-    try:
-        obj = json.loads(stdout)
-    except (TypeError, ValueError):
-        return {"status": "error", "finding": ""}
-    if isinstance(obj, dict) and "structured_output" in obj:
-        obj = obj.get("structured_output")
-    if not isinstance(obj, dict) or set(obj) != {"status", "finding"}:
-        return {"status": "error", "finding": ""}
-    status = obj.get("status")
-    finding = obj.get("finding")
-    if not isinstance(finding, str):
-        return {"status": "error", "finding": ""}
-    if status == "no_finding":
-        return {"status": "no_finding", "finding": ""}
-    if status != "finding":
-        return {"status": "error", "finding": ""}
-    finding = finding.strip()
-    if not finding or len(finding) > max_chars:
-        return {"status": "error", "finding": ""}
-    return {"status": "finding", "finding": finding}
 
 
 def parse_usage(stdout: str) -> dict[str, int]:
@@ -221,10 +214,6 @@ def parse_usage(stdout: str) -> dict[str, int]:
     return best
 
 
-def call_result(status: str = "error", finding: str = "", **extra) -> dict:
-    return {"status": status, "finding": finding, "usage": {}, **extra}
-
-
 def call_claude_result(
     system_prompt: str,
     transcript_text: str,
@@ -232,7 +221,6 @@ def call_claude_result(
     *,
     schema_path: Path,
     timeout_sec: int,
-    capture_raw: bool = False,
     log_error: Logger = _noop,
 ) -> dict:
     user_prompt = "請對 stdin 提供的對話片段寫一句簡短的旁觀者反應。"
@@ -246,7 +234,7 @@ def call_claude_result(
     handle.write(system_prompt)
     handle.close()
     try:
-        result = subprocess.run(
+        result = _run_cli_process(
             [
                 "claude",
                 "-p",
@@ -264,21 +252,18 @@ def call_claude_result(
                 "--json-schema",
                 schema_json,
             ],
-            input=transcript_text,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=reviewer_environment(),
-            timeout=timeout_sec,
-            **_reviewer_process_kwargs(),
+            input_text=transcript_text,
+            environment=reviewer_environment(),
+            timeout_sec=timeout_sec,
+            log_error=log_error,
         )
         if result.returncode != 0:
             log_error(f"claude CLI exit {result.returncode}: {result.stderr[:500]}")
-            return call_result()
+            return call_result(error_kind="nonzero_exit")
         parsed = parse_reaction_result(result.stdout)
         parsed["usage"] = parse_usage(result.stdout)
-        if capture_raw:
-            parsed["raw_output"] = result.stdout
+        if parsed.get("status") == "error":
+            parsed["error_kind"] = "invalid_output"
         return parsed
     except subprocess.TimeoutExpired:
         log_error("claude CLI timeout")
@@ -363,7 +348,6 @@ def call_grok_result(
     schema_path: Path,
     timeout_sec: int,
     reasoning_effort: str = "",
-    capture_raw: bool = False,
     log_error: Logger = _noop,
     grok_bin_resolver: Callable[[], str | None] = resolve_grok_bin,
 ) -> dict:
@@ -423,13 +407,13 @@ def call_grok_result(
         )
         parsed = parse_grok_reaction_result(result.stdout)
         parsed["usage"] = parse_usage(result.stdout)
-        if capture_raw:
-            parsed["raw_output"] = result.stdout
         if parsed.get("status") != "error":
             return parsed
         if result.returncode != 0:
             log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(usage=parsed["usage"])
+            return call_result(
+                usage=parsed["usage"], error_kind="nonzero_exit"
+            )
         return parsed
     except subprocess.TimeoutExpired:
         log_error("grok CLI timeout")
@@ -452,14 +436,13 @@ def call_codex_result(
     *,
     schema_path: Path,
     timeout_sec: int,
-    capture_raw: bool = False,
     log_error: Logger = _noop,
     codex_bin_resolver: Callable[[], str | None] = resolve_codex_bin,
 ) -> dict:
     codex_bin = codex_bin_resolver()
     if not codex_bin:
         log_error("codex CLI not found (checked PATH + common npm paths)")
-        return call_result()
+        return call_result(error_kind="not_found")
     if not load_output_schema_json(schema_path, log_error):
         return call_result()
 
@@ -497,36 +480,37 @@ def call_codex_result(
             )
         else:
             command_value = command
-        result = subprocess.run(
+        result = _run_cli_process(
             command_value,
-            input=combined,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            env=reviewer_environment(),
-            timeout=timeout_sec,
+            input_text=combined,
+            environment=reviewer_environment(),
+            timeout_sec=timeout_sec,
             shell=use_shell,
-            **_reviewer_process_kwargs(),
+            log_error=log_error,
         )
         if result.returncode != 0:
             log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(usage=parse_usage(result.stdout))
+            return call_result(
+                usage=parse_usage(result.stdout), error_kind="nonzero_exit"
+            )
         try:
             raw_output = Path(output.name).read_text(encoding="utf-8")
         except Exception as exc:
             log_error(f"codex output read failed: {exc}")
-            return call_result(usage=parse_usage(result.stdout))
+            return call_result(
+                usage=parse_usage(result.stdout), error_kind="invalid_output"
+            )
         parsed = parse_reaction_result(raw_output)
         parsed["usage"] = parse_usage(result.stdout)
-        if capture_raw:
-            parsed["raw_output"] = raw_output
+        if parsed.get("status") == "error":
+            parsed["error_kind"] = "invalid_output"
         return parsed
     except subprocess.TimeoutExpired:
         log_error("codex timeout")
-        return call_result()
+        return call_result(error_kind="timeout")
     except FileNotFoundError:
         log_error(f"codex CLI not executable: {codex_bin}")
-        return call_result()
+        return call_result(error_kind="not_found")
     finally:
         try:
             os.unlink(output.name)
@@ -544,7 +528,6 @@ def dispatch_call_result(
     timeout_sec: int,
     ollama_url: str = DEFAULT_OLLAMA_URL,
     reasoning_effort: str = "",
-    capture_raw: bool = False,
     log_error: Logger = _noop,
 ) -> dict:
     if provider in ("openai", "codex"):
@@ -554,7 +537,6 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
-            capture_raw=capture_raw,
             log_error=log_error,
         )
     if provider == "anthropic":
@@ -564,7 +546,6 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
-            capture_raw=capture_raw,
             log_error=log_error,
         )
     if provider == "grok":
@@ -575,7 +556,6 @@ def dispatch_call_result(
             schema_path=schema_path,
             timeout_sec=timeout_sec,
             reasoning_effort=reasoning_effort,
-            capture_raw=capture_raw,
             log_error=log_error,
         )
     if provider == "ollama-local":
@@ -586,7 +566,6 @@ def dispatch_call_result(
             schema_path=schema_path,
             timeout_sec=timeout_sec,
             base_url=ollama_url,
-            capture_raw=capture_raw,
             log_error=log_error,
         )
     log_error(f"unsupported reviewer provider: {provider!r}")

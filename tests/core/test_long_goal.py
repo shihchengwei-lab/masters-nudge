@@ -160,7 +160,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
             observations = [
                 value
-                for value in storage.read_reaction_entries(root, session)
+                for value in storage.read_audit_entries(root, session)
                 if value.get("kind") == "response_observation"
             ]
             self.assertEqual(len(observations), 1)
@@ -299,6 +299,9 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(
                 scheduled[0]["checkpoint"]["trigger"], "repeated-command-family"
             )
+            self.assertEqual(
+                scheduled[0]["checkpoint"]["routing_concern"], "feedback-loop"
+            )
             self.assertEqual(core.calls, [])
 
     def test_second_failure_escalates_from_event_review_to_strategy_review(self):
@@ -326,6 +329,9 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(
                 scheduled[0]["checkpoint"]["trigger"], "repeated-failure-family"
             )
+            self.assertEqual(
+                scheduled[0]["checkpoint"]["routing_concern"], "feedback-loop"
+            )
 
     def test_goal_completion_is_reviewed_before_the_final_response(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -345,6 +351,7 @@ class LongGoalReplayTests(unittest.TestCase):
             )
             self.assertEqual(core.calls[0].kind, "goal_transition")
             self.assertEqual(core.calls[0].trigger, "goal-complete")
+            self.assertEqual(core.calls[0].routing_concern, "completion-boundary")
 
     def test_pending_nudge_does_not_hide_a_goal_transition_review(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -399,16 +406,16 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(scheduled, [])
 
     def test_strategy_signals_route_to_distinct_existing_lenses(self):
-        cases = {
-            "trigger: repeated-command-family": "beck",
-            "local proxy improved but acceptance criteria did not": "jeff",
-            "trigger: goal-complete": "linus",
-            "trigger: diff-growth": "fowler",
-            "duplicate delivery after retry": "lamport",
-            "benchmark latency 20ms": "carmack",
-        }
-        for evidence, expected in cases.items():
-            with self.subTest(evidence=evidence):
+        cases = (
+            ("ordinary workflow", "feedback-loop", "beck"),
+            ("local proxy improved but acceptance criteria did not", "", "jeff"),
+            ("ordinary completion record", "completion-boundary", "linus"),
+            ("ordinary diff record", "knowledge-boundary", "fowler"),
+            ("duplicate delivery after retry", "", "lamport"),
+            ("benchmark latency 20ms", "", "carmack"),
+        )
+        for evidence, routing_concern, expected in cases:
+            with self.subTest(evidence=evidence, routing_concern=routing_concern):
                 root = Path(tempfile.mkdtemp())
                 persona_config.save_stage(root, "build")
                 route = lens_router.resolve_review_route(
@@ -416,6 +423,7 @@ class LongGoalReplayTests(unittest.TestCase):
                     evidence,
                     environ={},
                     checkpoint=True,
+                    routing_concern=routing_concern,
                 )
                 self.assertEqual(route.effective_lens, expected)
 

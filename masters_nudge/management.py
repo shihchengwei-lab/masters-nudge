@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -22,11 +23,7 @@ from .local_ollama import (
     normalize_loopback_url,
     validate_model_name,
 )
-from .plugin_inventory import (
-    INVENTORY_FILE,
-    load_plugin_inventory,
-    runtime_files,
-)
+from .plugin_inventory import runtime_files
 from .runtime import RuntimePaths, RuntimeSettings, reviewer_config_path
 
 
@@ -38,6 +35,10 @@ LEGACY_PERSONA_STAGES = {
     "linus": "review",
 }
 SPECIALIST_PERSONAS = {"lamport", "carmack"}
+
+
+class _SourceChangedError(RuntimeError):
+    pass
 STAGES = {"design", "build", "evolve", "review"}
 LEGACY_ENVIRONMENT_MAPPINGS = {
     "BUDDY_ACTIVE": "MASTERS_NUDGE_ACTIVE",
@@ -187,11 +188,14 @@ def inspect_legacy_config(path: Path, host: str) -> dict:
         "exact": 0,
         "near": [],
         "error": "",
+        "source_digest": "",
     }
     if not path.exists():
         return result
     try:
-        document = json.loads(path.read_text(encoding="utf-8"))
+        source = path.read_bytes()
+        result["source_digest"] = hashlib.sha256(source).hexdigest()
+        document = json.loads(source.decode("utf-8"))
     except (OSError, ValueError) as exc:
         result["error"] = f"cannot read JSON: {exc}"
         return result
@@ -263,7 +267,19 @@ def _backup_path(path: Path) -> Path:
     return candidate
 
 
-def _atomic_json_write(path: Path, document: dict) -> None:
+def _source_digest(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def _atomic_json_write(
+    path: Path,
+    document: dict,
+    *,
+    expected_source_digest: str = "",
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     original_mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o600
     handle = tempfile.NamedTemporaryFile(
@@ -282,6 +298,8 @@ def _atomic_json_write(path: Path, document: dict) -> None:
         os.fsync(handle.fileno())
         handle.close()
         os.chmod(temp_path, original_mode)
+        if expected_source_digest and _source_digest(path) != expected_source_digest:
+            raise _SourceChangedError("source changed since preflight")
         os.replace(temp_path, path)
     finally:
         try:
@@ -533,10 +551,20 @@ def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str,
     return sorted(mappings, key=lambda item: item["legacy"])
 
 
-def migrate_legacy_config(path: Path, host: str, *, apply: bool = False) -> dict:
+def migrate_legacy_config(
+    path: Path,
+    host: str,
+    *,
+    apply: bool = False,
+    expected_source_digest: str = "",
+) -> dict:
     inspection = inspect_legacy_config(path, host)
     result = {**inspection, "applied": False, "removed": 0, "backup": ""}
     if inspection["error"] or inspection["near"] or not inspection["exact"]:
+        return result
+    planned_digest = expected_source_digest or str(inspection["source_digest"] or "")
+    if expected_source_digest and inspection["source_digest"] != expected_source_digest:
+        result["error"] = "source changed since preflight"
         return result
     if not apply:
         return result
@@ -544,10 +572,20 @@ def migrate_legacy_config(path: Path, host: str, *, apply: bool = False) -> dict
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
         updated, removed = _remove_exact_handlers(document, host)
+        if planned_digest and _source_digest(path) != planned_digest:
+            result["error"] = "source changed since preflight"
+            return result
         backup = _backup_path(path)
         shutil.copy2(path, backup)
         result["backup"] = str(backup)
-        _atomic_json_write(path, updated)
+        _atomic_json_write(
+            path,
+            updated,
+            expected_source_digest=planned_digest,
+        )
+    except _SourceChangedError as exc:
+        result["error"] = str(exc)
+        return result
     except Exception as exc:
         restore_error = ""
         if backup is not None and backup.exists():
@@ -585,20 +623,36 @@ def migrate_legacy(
     )
     lifecycle_manual = lifecycle["status"] == "manual_required"
     if apply and not unsafe and not lifecycle_manual:
+        results = [
+            migrate_legacy_config(
+                path,
+                name,
+                apply=True,
+                expected_source_digest=str(plan.get("source_digest") or ""),
+            )
+            for (name, path), plan in zip(targets, results)
+        ]
+        unsafe = any(item["error"] or item["near"] for item in results)
+    if apply and not unsafe and not lifecycle_manual:
         lifecycle = migrate_legacy_lifecycle(environment, apply=True)
         logs = migrate_legacy_logs(environment, apply=True)
         unsafe = lifecycle["status"] == "error" or any(
             item["status"] == "error" for item in logs["items"]
         )
-    if apply and not unsafe and not lifecycle_manual:
-        results = [
-            migrate_legacy_config(path, name, apply=True) for name, path in targets
-        ]
-        unsafe = any(item["error"] or item["near"] for item in results)
+    partial_applied = bool(
+        apply
+        and unsafe
+        and (
+            any(item.get("applied") for item in results)
+            or lifecycle.get("status") == "migrated"
+            or any(item.get("status") == "copied" for item in logs["items"])
+        )
+    )
     return {
         "apply": apply,
         "unsafe": unsafe,
         "manual_required": lifecycle_manual or bool(environment_aliases),
+        "partial_applied": partial_applied,
         "results": results,
         "lifecycle": lifecycle,
         "logs": logs,
@@ -735,7 +789,7 @@ def inspect_grok_cli(
     return {"ready": ready, "authenticated": ready, "error": error}
 
 
-def reset_local(*, environ: Mapping[str, str] | None = None) -> dict:
+def reset_reviewer_config(*, environ: Mapping[str, str] | None = None) -> dict:
     environment = dict(os.environ if environ is None else environ)
     path = reviewer_config_path(RuntimePaths.resolve(environ=environment).data_dir)
     try:
@@ -771,17 +825,8 @@ def doctor(
     is_plugin = (root / ".claude-plugin" / "plugin.json").exists() or (
         root / ".codex-plugin" / "plugin.json"
     ).exists()
-    required_runtime = runtime_files(installed=False)
-    inventory_error = ""
-    if is_plugin:
-        installed_files, inventory_error = load_plugin_inventory(root)
-        if installed_files:
-            required_runtime = installed_files
-        else:
-            required_runtime = runtime_files(installed=True)
+    required_runtime = runtime_files(installed=is_plugin)
     missing_runtime = [name for name in required_runtime if not (root / name).exists()]
-    if inventory_error and INVENTORY_FILE not in missing_runtime:
-        missing_runtime.append(INVENTORY_FILE)
     host_results = []
     for name in _selected_hosts(host, environment):
         runtime_host = "claude_code" if name == "claude" else "codex_cli"

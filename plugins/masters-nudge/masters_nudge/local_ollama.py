@@ -15,6 +15,8 @@ from urllib.request import (
     build_opener,
 )
 
+from .provider_contract import call_result, parse_reaction_result
+
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 MAX_HTTP_RESPONSE_BYTES = 1024 * 1024
@@ -23,6 +25,10 @@ MAX_MODEL_NAME_CHARS = 256
 
 class LocalOllamaError(RuntimeError):
     """A sanitized local-provider failure safe to write to the error log."""
+
+
+class LocalOllamaTimeout(LocalOllamaError):
+    """The loopback Ollama server exceeded the configured deadline."""
 
 
 class _RejectRedirects(HTTPRedirectHandler):
@@ -111,7 +117,12 @@ def _request_json(
             ) from exc
         finally:
             exc.close()
-    except (OSError, TimeoutError, URLError) as exc:
+    except (TimeoutError, URLError) as exc:
+        reason = getattr(exc, "reason", None)
+        if isinstance(exc, TimeoutError) or isinstance(reason, TimeoutError):
+            raise LocalOllamaTimeout(f"Ollama {path} timed out") from exc
+        raise LocalOllamaError(f"Ollama {path} is unavailable") from exc
+    except OSError as exc:
         raise LocalOllamaError(f"Ollama {path} is unavailable") from exc
     if len(raw) > MAX_HTTP_RESPONSE_BYTES:
         raise LocalOllamaError(f"Ollama {path} response is too large")
@@ -142,6 +153,7 @@ def inspect_local_ollama(
         "model_ready": False,
         "model_local": False,
         "error": "",
+        "error_kind": "",
     }
     try:
         endpoint = normalize_loopback_url(base_url)
@@ -181,6 +193,9 @@ def inspect_local_ollama(
         result["ready"] = True
     except (LocalOllamaError, ValueError) as exc:
         result["error"] = str(exc)
+        result["error_kind"] = (
+            "timeout" if isinstance(exc, LocalOllamaTimeout) else "not_found"
+        )
     return result
 
 
@@ -205,13 +220,10 @@ def call_local_ollama_result(
     schema_path: Path,
     timeout_sec: int,
     base_url: str = DEFAULT_OLLAMA_URL,
-    capture_raw: bool = False,
     log_error: Callable[[str], None] = lambda _message: None,
     opener_factory: Callable = _default_opener,
     parse_result: Callable[[str], dict] | None = None,
 ) -> dict:
-    from .providers import call_result, parse_reaction_result
-
     parser = parse_result or parse_reaction_result
     try:
         schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
@@ -219,7 +231,7 @@ def call_local_ollama_result(
             raise ValueError("schema root is not an object")
     except (OSError, ValueError) as exc:
         log_error(f"reaction schema unavailable for ollama-local: {exc}")
-        return call_result()
+        return call_result(error_kind="invalid_output")
 
     inspection = inspect_local_ollama(
         base_url,
@@ -229,7 +241,9 @@ def call_local_ollama_result(
     )
     if not inspection["ready"]:
         log_error(f"ollama-local unavailable: {inspection['error']}")
-        return call_result()
+        return call_result(
+            error_kind=str(inspection.get("error_kind") or "not_found")
+        )
 
     schema_text = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
     request_system = (
@@ -265,9 +279,13 @@ def call_local_ollama_result(
         if not isinstance(parsed, dict):
             raise LocalOllamaError("Ollama response parser returned an invalid result")
         parsed["usage"] = _usage_from_chat(response)
-        if capture_raw:
-            parsed["raw_output"] = raw_output
+        if parsed.get("status") == "error":
+            parsed["error_kind"] = "invalid_output"
         return parsed
     except (LocalOllamaError, ValueError) as exc:
         log_error(f"ollama-local call failed: {exc}")
-        return call_result()
+        return call_result(
+            error_kind=(
+                "timeout" if isinstance(exc, LocalOllamaTimeout) else "invalid_output"
+            )
+        )

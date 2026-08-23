@@ -8,7 +8,6 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-import review_telemetry
 import source_context
 
 from . import checkpoints, storage
@@ -127,11 +126,7 @@ def _pending_output(
     claim_token = storage.claim_delivery(data_dir, session, timestamp)
     if not claim_token:
         return None, True
-    output = build_hook_output(
-        event_name,
-        text,
-        evaluation_notice=pending.get("kind") == "evaluation_notice",
-    )
+    output = build_hook_output(event_name, text)
     return (
         _with_delivery_marker(
             output,
@@ -261,17 +256,11 @@ def _fingerprint(text: str) -> str:
 def build_hook_output(
     event_name: str,
     text: str,
-    *,
-    evaluation_notice: bool = False,
 ) -> dict[str, Any]:
-    if evaluation_notice:
-        context = f"[Masters’ Nudge — 本機評估通知]\n{text}"
-    else:
-        context = text
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": context,
+            "additionalContext": text,
         }
     }
 
@@ -479,6 +468,7 @@ class CodexAdapter:
             routing_evidence=checkpoint["context"],
             source_event_seq=event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
+            routing_concern=str(checkpoint.get("routing_concern") or ""),
         )
         try:
             outcome = self.core.review(
@@ -512,12 +502,6 @@ class CodexAdapter:
                     str(old_delivery.get("claim_token") or ""),
                 )
         storage.complete_checkpoint(self.data_dir, event.session, fingerprint)
-        storage.mark_checkpoint_delivery(
-            self.data_dir,
-            event.session,
-            reason=checkpoint["reason"],
-            tool_evidence=journal,
-        )
         output = build_hook_output(
             event.native_event_name,
             outcome.finding,
@@ -575,6 +559,7 @@ class CodexAdapter:
             routing_evidence=context,
             source_event_seq=event_seq,
             trigger=str(checkpoint.get("trigger") or "strategy-review"),
+            routing_concern=str(checkpoint.get("routing_concern") or ""),
         )
         try:
             outcome = self.core.review(
@@ -637,14 +622,6 @@ class CodexAdapter:
         )
         if not source_packet:
             return None
-        overlap = storage.checkpoint_stop_overlap(
-            self.data_dir, event.session, tool_evidence=tool_evidence
-        )
-        candidates = review_telemetry.stop_shadow_candidates(
-            tool_evidence=tool_evidence,
-            agentcam_evidence=agentcam_evidence,
-            checkpoint_overlap=overlap,
-        )
         request = ReviewRequest(
             schema_version=1,
             kind="stop",
@@ -652,7 +629,6 @@ class CodexAdapter:
             session=event.session,
             source_packet=source_packet,
             source_fingerprint=_fingerprint(source_packet),
-            shadow_candidates=tuple(candidates),
         )
         try:
             self.core.review(request, persist_reaction=True)

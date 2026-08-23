@@ -14,7 +14,6 @@ import json
 import os
 import sys
 
-import review_telemetry
 from masters_nudge import claude_adapter, evidence as shared_evidence, storage
 from masters_nudge.contracts import ReviewRequest
 from masters_nudge.core import ReviewCore
@@ -64,11 +63,6 @@ def main() -> None:
         log_error("empty source packet, skipping")
         return
 
-    candidates = review_telemetry.stop_shadow_candidates(
-        tool_evidence=str(source["tool_evidence"]),
-        agentcam_evidence=str(source["agentcam_evidence"]),
-        checkpoint_overlap=bool(source["checkpoint_overlap"]),
-    )
     request = ReviewRequest(
         schema_version=1,
         kind="stop",
@@ -78,7 +72,6 @@ def main() -> None:
         source_fingerprint=hashlib.sha256(
             source_packet.encode("utf-8", errors="replace")
         ).hexdigest()[:24],
-        shadow_candidates=tuple(candidates),
     )
 
     ReviewCore(settings, log_error=log_error).review(request, persist_reaction=True)

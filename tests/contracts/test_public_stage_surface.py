@@ -82,7 +82,7 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
         self.assertIn("Linus Torvalds", prompt)
 
     def test_public_docs_expose_stage_not_persona_or_people(self):
-        for name in ("README.md", "README.zh-TW.md", "docs/phase-c-architecture.md"):
+        for name in ("README.md", "README.zh-TW.md", "docs/architecture.md"):
             with self.subTest(name=name):
                 text = (HERE / name).read_text(encoding="utf-8")
                 self.assertIn("MASTERS_NUDGE_STAGE", text)

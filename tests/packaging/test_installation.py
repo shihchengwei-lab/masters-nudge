@@ -19,7 +19,7 @@ from masters_nudge.management import (
     launch_window,
     migrate_legacy,
     migrate_legacy_config,
-    reset_local,
+    reset_reviewer_config,
 )
 from masters_nudge.runtime import RuntimeSettings, reviewer_config_path
 from tools import build_plugin
@@ -232,7 +232,7 @@ class LocalConfigurationTests(unittest.TestCase):
             payload = json.loads(path.read_text(encoding="utf-8"))
             unrelated = path.parent / "reactions.log"
             unrelated.write_text("keep", encoding="utf-8")
-            reset = reset_local(environ=environment)
+            reset = reset_reviewer_config(environ=environment)
 
             self.assertTrue(result["saved"])
             self.assertEqual(payload["provider"], "ollama-local")
@@ -343,7 +343,7 @@ class LocalCliTests(unittest.TestCase):
             patch.object(sys, "argv", ["masters-nudge", "local", "reset"]),
             patch.object(
                 masters_nudge_cli,
-                "reset_local",
+                "reset_reviewer_config",
                 return_value={
                     "reset": True,
                     "removed": True,
@@ -357,6 +357,28 @@ class LocalCliTests(unittest.TestCase):
 
         self.assertEqual(status, 0)
         self.assertIn("cloud defaults", output.getvalue())
+
+    def test_grok_reset_reports_a_removal_error(self):
+        output = io.StringIO()
+        with (
+            patch.object(sys, "argv", ["masters-nudge", "grok", "reset"]),
+            patch.object(
+                masters_nudge_cli,
+                "reset_reviewer_config",
+                return_value={
+                    "reset": False,
+                    "removed": False,
+                    "path": "/tmp/reviewer.json",
+                    "error": "permission denied",
+                },
+            ),
+            redirect_stdout(output),
+        ):
+            status = masters_nudge_cli.main()
+
+        self.assertEqual(status, 1)
+        self.assertIn("permission denied", output.getvalue())
+        self.assertNotIn("No persistent reviewer config", output.getvalue())
 
 
 class PluginPackagingTests(unittest.TestCase):
@@ -380,9 +402,9 @@ class PluginPackagingTests(unittest.TestCase):
         )
 
         self.assertEqual(codex["name"], "masters-nudge")
-        self.assertEqual(codex["version"].split("+", 1)[0], "0.2.0-dev.1")
+        self.assertEqual(codex["version"].split("+", 1)[0], claude["version"])
+        self.assertIn("dev", claude["version"])
         self.assertTrue(codex["interface"]["privacyPolicyURL"].endswith("#privacy"))
-        self.assertEqual(claude["version"], "0.2.0-dev.1")
         self.assertNotIn("hooks", codex)
         self.assertEqual(claude["hooks"], "./hooks/claude.json")
         self.assertEqual(claude["userConfig"]["python_command"]["default"], "python")
@@ -598,6 +620,40 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertFalse(result["applied"])
             self.assertEqual(len(result["near"]), 1)
             self.assertEqual(json.loads(path.read_text(encoding="utf-8")), original)
+            self.assertEqual(list(path.parent.glob("*.bak")), [])
+
+    def test_apply_refuses_when_source_changed_since_preflight(self):
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "settings.json"
+            original = {
+                "hooks": {
+                    "Stop": [
+                        {
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "bash ~/.claude/scripts/buddy/buddy.sh",
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+            self._write(path, original)
+            plan = inspect_legacy_config(path, "claude")
+            changed = {**original, "unrelated": "changed after preflight"}
+            self._write(path, changed)
+
+            result = migrate_legacy_config(
+                path,
+                "claude",
+                apply=True,
+                expected_source_digest=plan["source_digest"],
+            )
+
+            self.assertFalse(result["applied"])
+            self.assertIn("changed since preflight", result["error"])
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), changed)
             self.assertEqual(list(path.parent.glob("*.bak")), [])
 
     def test_all_hosts_preflight_before_changing_either_config(self):
@@ -929,6 +985,37 @@ class DoctorTests(unittest.TestCase):
             shutil.copytree(PLUGIN_ROOT, plugin_root)
             missing = plugin_root / "masters_nudge" / "codex_adapter.py"
             missing.unlink()
+            environment = {
+                "HOME": raw,
+                "USERPROFILE": raw,
+                "PATH": "",
+                "CLAUDE_PLUGIN_OPTION_PYTHON_COMMAND": sys.executable,
+            }
+            with patch(
+                "masters_nudge.management._provider_cli", return_value="fake-cli"
+            ):
+                result = doctor(plugin_root, "claude", environ=environment)
+
+        self.assertFalse(result["core_ready"])
+        self.assertIn("masters_nudge/codex_adapter.py", result["runtime"]["missing"])
+
+    def test_doctor_ignores_a_shrunken_self_reported_inventory(self):
+        with tempfile.TemporaryDirectory() as raw:
+            import shutil
+
+            plugin_root = Path(raw) / "masters-nudge"
+            shutil.copytree(PLUGIN_ROOT, plugin_root)
+            (plugin_root / ".masters-nudge-inventory.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "files": [".masters-nudge-inventory.json"],
+                        "runtime_files": [".masters-nudge-inventory.json"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (plugin_root / "masters_nudge" / "codex_adapter.py").unlink()
             environment = {
                 "HOME": raw,
                 "USERPROFILE": raw,

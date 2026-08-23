@@ -3,7 +3,6 @@ import unittest
 from pathlib import Path
 
 from masters_nudge.plugin_inventory import (
-    INVENTORY_FILE,
     PACKAGE_MANIFEST,
     package_files,
     runtime_files,
@@ -44,11 +43,8 @@ class PackageManifestTests(unittest.TestCase):
     def test_build_and_runtime_inventories_derive_from_manifest(self):
         build_plugin = _load_build_plugin()
         expected = {Path(path) for path in package_files()}
-        expected.add(Path(INVENTORY_FILE))
         self.assertEqual(expected, build_plugin.expected_plugin_files())
-
-        packaged_runtime = set(build_plugin._inventory_payload()["runtime_files"])
-        self.assertEqual(set(runtime_files(installed=True)), packaged_runtime)
+        self.assertFalse(hasattr(build_plugin, "_inventory_payload"))
 
     def test_optional_ui_is_packaged_but_not_core_runtime(self):
         packaged = set(package_files())

@@ -75,6 +75,7 @@ def review_checkpoint(
         source_packet=source_packet,
         source_fingerprint=event["fingerprint"],
         routing_evidence=event["context"],
+        routing_concern=event.get("routing_concern", ""),
     )
     return ReviewCore(
         settings,
@@ -94,8 +95,6 @@ class PreparedCheckpoint:
     session: SessionRef
     fingerprint: str
     reaction_ts: str
-    reason: str
-    tool_evidence: str
 
 
 def build_hook_output(
@@ -131,11 +130,6 @@ def prepare_hook(hook: dict[str, Any]) -> PreparedCheckpoint | None:
                 settings.paths.data_dir, session, event["fingerprint"]
             )
             return None
-        turn_state = storage.load_turn_state(settings.paths.data_dir, session)
-        transcript_path = str(hook.get("transcript_path") or "")
-        tool_evidence = claude_adapter.read_recent_tool_evidence(
-            transcript_path, int(turn_state.get("transcript_offset") or 0)
-        )
         return PreparedCheckpoint(
             output=build_hook_output(
                 str(hook.get("hook_event_name") or "PostToolUse"), outcome.finding
@@ -143,8 +137,6 @@ def prepare_hook(hook: dict[str, Any]) -> PreparedCheckpoint | None:
             session=session,
             fingerprint=event["fingerprint"],
             reaction_ts=outcome.reaction_ts,
-            reason=event["reason"],
-            tool_evidence=tool_evidence,
         )
     except Exception as exc:
         claude_adapter.log_error(
@@ -194,12 +186,6 @@ def emit_prepared(
             prepared.reaction_ts,
             delivered_via="claude-checkpoint",
         )
-    storage.mark_checkpoint_delivery(
-        settings.paths.data_dir,
-        prepared.session,
-        reason=prepared.reason,
-        tool_evidence=prepared.tool_evidence,
-    )
 
 
 def main() -> None:

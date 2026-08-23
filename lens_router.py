@@ -45,7 +45,7 @@ MEASUREMENT_RE = re.compile(
     re.IGNORECASE,
 )
 BECK_WORKFLOW_RE = re.compile(
-    r"repeated-command-family|repeated-failure-family|feedback loop|"
+    r"feedback loop|"
     r"重複(?:測試|驗證|命令)|沒有新回饋|回饋迴路",
     re.IGNORECASE,
 )
@@ -55,12 +55,12 @@ JEFF_GOAL_RE = re.compile(
     re.IGNORECASE,
 )
 LINUS_COMPLETION_RE = re.compile(
-    r"goal-(?:complete|blocked)|goal-transition|completion boundary|"
+    r"completion boundary|"
     r"交付邊界|完成依據|路徑已耗盡",
     re.IGNORECASE,
 )
 FOWLER_GROWTH_RE = re.compile(
-    r"diff-growth|compensation spread|knowledge boundary|變動擴散|"
+    r"compensation spread|knowledge boundary|變動擴散|"
     r"補償邏輯|知識邊界",
     re.IGNORECASE,
 )
@@ -76,6 +76,16 @@ class ReviewRoute:
     candidate_lens: str = ""
     candidate_trigger: str = ""
     suppression_reason: str = ""
+
+
+STRUCTURED_CONCERNS = {
+    "feedback-loop": ("beck", "feedback-loop-evidence"),
+    "goal-alignment": ("jeff", "goal-alignment-evidence"),
+    "completion-boundary": ("linus", "completion-boundary-evidence"),
+    "knowledge-boundary": ("fowler", "knowledge-boundary-evidence"),
+    "state-ordering": ("lamport", "state-ordering-evidence"),
+    "measured-performance": ("carmack", "measured-performance-evidence"),
+}
 
 
 def _specialist_candidates(evidence: str) -> list[tuple[str, str]]:
@@ -108,6 +118,7 @@ def resolve_review_route(
     *,
     environ: Mapping[str, str] | None = None,
     checkpoint: bool = False,
+    routing_concern: str = "",
     injected_personas: tuple[str, ...] = (),
 ) -> ReviewRoute:
     selection = persona_config.resolve_stage(base_dir, environ=environ)
@@ -127,7 +138,15 @@ def resolve_review_route(
         if lens in persona_config.LENS_PERSONAS
     )
     ineligible = set(cooldown)
-    evidence_candidates = _specialist_candidates(evidence)
+    evidence_candidates = []
+    structured_candidate = STRUCTURED_CONCERNS.get(str(routing_concern or ""))
+    if structured_candidate is not None:
+        evidence_candidates.append(structured_candidate)
+    evidence_candidates.extend(
+        candidate
+        for candidate in _specialist_candidates(evidence)
+        if candidate not in evidence_candidates
+    )
     evidence_choice = next(
         (candidate for candidate in evidence_candidates if candidate[0] not in ineligible),
         None,

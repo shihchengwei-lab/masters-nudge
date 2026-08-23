@@ -1,4 +1,5 @@
 import inspect
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,7 @@ import claude_checkpoint
 import claude_prompt
 import claude_stop
 import masters_nudge
-from masters_nudge import claude_adapter
+from masters_nudge import claude_adapter, contracts
 from masters_nudge.contracts import ReviewOutcome, SessionRef
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
@@ -100,16 +101,42 @@ class TestClaudeSessionOwner(unittest.TestCase):
                 "load_turn_state",
                 return_value={"task_anchor": "task", "transcript_offset": 0},
             ) as load_state,
-            mock.patch.object(
-                claude_adapter.storage,
-                "checkpoint_stop_overlap",
-                return_value=False,
-            ),
         ):
             claude_adapter.build_stop_source_context(hook, session=session)
 
         session_from_hook.assert_not_called()
         self.assertIs(load_state.call_args.args[1], session)
+
+    def test_stop_fallback_never_reads_before_current_turn_offset(self):
+        transcript = Path(self.tmpdir.name) / "session.jsonl"
+        transcript.write_text(
+            json.dumps(
+                {
+                    "type": "assistant",
+                    "message": {"content": "OLD TURN SECRET"},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        offset = transcript.stat().st_size
+        hook = {"session_id": "session-1", "transcript_path": str(transcript)}
+        session = SessionRef("claude_code", "session-1")
+        with (
+            mock.patch.object(
+                claude_adapter.storage,
+                "load_turn_state",
+                return_value={"task_anchor": "current task", "transcript_offset": offset},
+            ),
+            mock.patch.object(
+                claude_adapter, "read_recent_transcript"
+            ) as unbounded_fallback,
+        ):
+            source = claude_adapter.build_stop_source_context(hook, session=session)
+
+        unbounded_fallback.assert_not_called()
+        self.assertNotIn("OLD TURN SECRET", source["packet"])
+        self.assertIn("current task", source["packet"])
 
     def test_internal_session_consumers_require_the_owned_session(self):
         checkpoint_session = inspect.signature(
@@ -134,6 +161,9 @@ class TestClaudeSessionOwner(unittest.TestCase):
             "TurnStopped",
         ):
             self.assertFalse(hasattr(masters_nudge, name), name)
+
+    def test_unused_normalized_hook_event_alias_is_removed(self):
+        self.assertFalse(hasattr(contracts, "NormalizedHookEvent"))
 
 
 if __name__ == "__main__":

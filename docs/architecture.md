@@ -1,6 +1,6 @@
-# Phase C: shared reviewer architecture
+# Shared reviewer architecture
 
-Phase C separates native host events from the review policy. Claude Code and Codex keep different adapters because their event payloads, journals, Stop timing, and delivery channels differ; both adapters construct the same bounded `ReviewRequest` and call the same `ReviewCore`.
+Native host events are separate from review policy. Claude Code and Codex keep different adapters because their event payloads, journals, Stop timing, and delivery channels differ; both adapters construct the same bounded `ReviewRequest` and call the same `ReviewCore`.
 
 ## Ownership boundary
 
@@ -10,7 +10,8 @@ Phase C separates native host events from the review policy. Claude Code and Cod
 | Shared checkpoints and evidence | Event classification, stable fingerprints, bounded packet construction | Host JSON or provider invocation |
 | `ReviewCore` | Routing, prompt composition, provider dispatch, sanitation, persistence, telemetry | Native transcript formats or hook stdout |
 | Provider adapter | CLI/HTTP invocation, schema parsing, usage extraction, recursion guard, transport checks | Hook semantics or delivery receipts |
-| Storage | Host-namespaced turn state, reactions, receipts, checkpoint claims, telemetry | Routing or provider choice |
+| Storage | Host-namespaced turn state, reactions, receipts, checkpoint claims | Routing, provider choice, or telemetry policy |
+| Diagnostic telemetry | Content-free route, status, latency, and provider-reported usage metadata | Review text, task content, cost policy, or automatic gates |
 
 The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `ReviewRequest`, and `ReviewOutcome`.
 
@@ -44,7 +45,7 @@ Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry file
 
 ## Output and delivery
 
-The user-visible contract is one sanitized finding or silence. Findings target a complete 36–42-character sentence and have a 52-character hard cap. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
+The provider is prompted to return one open question or silence. Runtime sanitation bounds any returned finding to 52 characters, but does not claim to mechanically enforce question quality. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
 
 The injected hook output contains the finding text. Effective lens, route source, trigger, and review reason belong to local reaction and telemetry records; callers must not assume those fields are present in the host wire output.
 
@@ -66,7 +67,7 @@ review-telemetry.jsonl
 
 One `.turn.json` record owns the task anchor, evidence offset, and current-turn state. There is no second source-state file for the same turn. Reviewer configuration is host-neutral.
 
-The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, and does not delete original review data.
+The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, refuses if the source changes after preflight, and does not delete original review data.
 
 ## Failure and privacy behavior
 
@@ -78,7 +79,7 @@ The Codex journal is capped per turn and per tool record. Claude transcript evid
 
 ## Package and verification
 
-The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `masters_nudge/plugin_inventory.py` owns one package manifest for generated files, static files, core runtime dependencies, and optional UI assets. `tools/build_plugin.py` and `doctor` derive their inventories from that manifest; marketplace metadata points to the generated package rather than to the repository root.
+The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `masters_nudge/plugin_inventory.py` owns one code-defined package manifest for generated files, static files, core runtime dependencies, and optional UI assets. `tools/build_plugin.py` and `doctor` derive their inventories from that manifest; the installed package does not self-report a second inventory. Marketplace metadata points to the generated package rather than to the repository root.
 
 Historical host-smoke evidence is preserved in the verified evidence archive linked from `evaluation/README.md`; it is not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
 

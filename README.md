@@ -4,8 +4,6 @@
 
 Masters’ Nudge gives Claude Code or Codex one brief, evidence-grounded second opinion at selected checkpoints and at the end of a turn. The reviewer prompt asks for one short open question or permits silence; the coding agent remains responsible for every decision and change.
 
-Current package version: `0.2.0-dev.1` (prerelease).
-
 ## What it does
 
 Masters’ Nudge packages hooks, skills, reviewer prompts, six software-engineering lenses, and an optional floating window as one plugin. It looks for workflow tensions such as an untested assumption, expanding scope, weak feedback, fragile event order, or a completion claim that has moved ahead of its evidence.
@@ -101,7 +99,7 @@ Depending on the event, the packet can contain:
 - optional agentcam evidence;
 - the reviewer prompt and selected lens.
 
-Reactions, task anchors, bounded journals, delivery receipts, local-model selection, and content-free telemetry are stored as plain text under `~/.masters-nudge/data/`. On Codex, a receipt may also record the first observable host action after an injection. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
+Reactions, task anchors, bounded journals, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. On Codex, a receipt may also record the first observable host action after an injection. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 
@@ -123,6 +121,6 @@ python -m unittest discover -v
 python tools/build_plugin.py --check
 ```
 
-- Architecture: [docs/phase-c-architecture.md](docs/phase-c-architecture.md)
+- Architecture: [docs/architecture.md](docs/architecture.md)
 - Active decisions: [ROADMAP.md](ROADMAP.md)
 - License: [MIT](LICENSE)

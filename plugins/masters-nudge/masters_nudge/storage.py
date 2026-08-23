@@ -312,7 +312,8 @@ def _normalized_workspace(value: str) -> str:
         return os.path.normcase(str(Path(value).expanduser().absolute())) if value else ""
 
 
-def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str, Any]]:
+def read_audit_entries(data_dir: Path, session: SessionRef) -> list[dict[str, Any]]:
+    """Return every valid event from the append-only session audit log."""
     path = reaction_log_path(data_dir, session)
     if not path.exists():
         return []
@@ -324,11 +325,21 @@ def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str,
                     value = json.loads(line)
                 except (TypeError, ValueError):
                     continue
-                if isinstance(value, dict) and value.get("kind") != "delivery_receipt":
+                if isinstance(value, dict):
                     entries.append(value)
     except OSError:
         return []
     return entries
+
+
+def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str, Any]]:
+    """Return only agent-visible reactions, excluding delivery audit events."""
+    return [
+        entry
+        for entry in read_audit_entries(data_dir, session)
+        if entry.get("kind", "review")
+        in {"review", "review_status"}
+    ]
 
 
 def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
@@ -726,47 +737,6 @@ def complete_checkpoint(data_dir: Path, session: SessionRef, fingerprint: str) -
         )
     except OSError:
         pass
-
-
-def _journal_digest(value: str) -> str:
-    return hashlib.sha256(str(value or "").encode("utf-8")).hexdigest()[:24]
-
-
-def mark_checkpoint_delivery(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    reason: str,
-    tool_evidence: str,
-) -> None:
-    _atomic_write(
-        state_path(data_dir, session, "checkpoint-delivery"),
-        {
-            "schema_version": 1,
-            "turn_id": session.turn_id,
-            "reason": reason,
-            "tool_evidence_fingerprint": _journal_digest(tool_evidence),
-        },
-    )
-
-
-def checkpoint_stop_overlap(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    tool_evidence: str,
-) -> bool:
-    state = _read_json(
-        state_path(data_dir, session, "checkpoint-delivery"), {}
-    )
-    if not state:
-        return False
-    recorded_turn = str(state.get("turn_id") or "")
-    if recorded_turn and session.turn_id and recorded_turn != session.turn_id:
-        return False
-    return str(state.get("tool_evidence_fingerprint") or "") == _journal_digest(
-        tool_evidence
-    )
 
 
 def load_agentcam_mtime(data_dir: Path, session: SessionRef) -> float:

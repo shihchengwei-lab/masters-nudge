@@ -21,11 +21,7 @@ Design any future experiment around consented, anonymized natural work traces, a
 
 **Manual gate:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 
-### 3. Cost-policy decision
-
-**Manual gate:** Keep automatic skip enforcement off. Any live cost gate requires an explicit review of the content-free telemetry window, adequate samples, false-skip risk, reaction-quality evidence, provider-specific normalization, and user approval.
-
-### 4. Optional reviewer quality
+### 3. Optional reviewer quality
 
 **Manual gate:** Publish model-specific recommendations only after a fixed-packet comparison with declared hardware, versions, latency, failures, and quality adjudication. Masters’ Nudge must not install, pull, or choose a local model for the user.
 
@@ -33,7 +29,7 @@ Design any future experiment around consented, anonymized natural work traces, a
 
 The following are deliberately outside the active product and should not return without a new decision and evidence:
 
-- source/manual installers, hook snippets, shell wrappers, `BUDDY_*` aliases, and legacy runtime/data fallbacks;
+- source/manual installers, hook snippets, legacy source wrappers, `BUDDY_*` aliases, and legacy runtime/data fallbacks; the packaged `hooks/run_python.cmd` and `hooks/run_python.sh` launchers remain required host entry points;
 - stopped Phase B and lens-differentiation harnesses, raw workspaces, screenshots, and generated dashboards in the product branch;
 - retired domain-specialization runtimes, protocols, fixtures, and research artifacts;
 - a generic domain marketplace, named-reviewer prompt merge system, or domain SDK;

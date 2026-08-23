@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -192,7 +193,8 @@ class LocalInspectionTests(unittest.TestCase):
             opener_factory=lambda: TimeoutOpener(),
         )
         self.assertFalse(timed_out["ready"])
-        self.assertIn("unavailable", timed_out["error"])
+        self.assertIn("timed out", timed_out["error"])
+        self.assertEqual(timed_out["error_kind"], "timeout")
 
         oversized = b"{" + b" " * local_ollama.MAX_HTTP_RESPONSE_BYTES + b"}"
         routes = {"/api/status": (200, oversized, {})}
@@ -203,6 +205,39 @@ class LocalInspectionTests(unittest.TestCase):
 
 
 class LocalCallTests(unittest.TestCase):
+    def test_timeout_is_machine_readable(self):
+        class TimeoutOpener:
+            def open(self, *_args, **_kwargs):
+                raise socket.timeout("slow")
+
+        result = local_ollama.call_local_ollama_result(
+            "prompt",
+            "packet",
+            "model",
+            schema_path=SCHEMA,
+            timeout_sec=5,
+            opener_factory=lambda: TimeoutOpener(),
+        )
+
+        self.assertEqual(result["error_kind"], "timeout")
+
+    def test_invalid_chat_output_is_machine_readable(self):
+        chat = {
+            "done": True,
+            "message": {"content": json.dumps({"wrong": "shape"})},
+        }
+        with FakeOllama(ready_routes(chat)) as fake:
+            result = local_ollama.call_local_ollama_result(
+                "prompt",
+                "packet",
+                "model",
+                schema_path=SCHEMA,
+                timeout_sec=5,
+                base_url=fake.url,
+            )
+
+        self.assertEqual(result["error_kind"], "invalid_output")
+
     def test_structured_finding_and_usage_use_native_ollama_chat(self):
         chat = {
             "done": True,
@@ -224,7 +259,6 @@ class LocalCallTests(unittest.TestCase):
                 schema_path=SCHEMA,
                 timeout_sec=5,
                 base_url=fake.url,
-                capture_raw=True,
             )
 
         self.assertEqual(result["status"], "finding")

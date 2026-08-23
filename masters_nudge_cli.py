@@ -14,7 +14,7 @@ from masters_nudge.management import (
     doctor,
     launch_window,
     migrate_legacy,
-    reset_local,
+    reset_reviewer_config,
 )
 
 
@@ -130,18 +130,16 @@ def _print_local_configure(result: dict) -> None:
         print("Local reviewer not configured: " + result["error"])
 
 
-def _print_local_reset(result: dict) -> None:
+def _print_reviewer_reset(result: dict) -> None:
     if not result["reset"]:
-        print("Local reviewer config not reset: " + result["error"])
+        print("Reviewer config not reset: " + result["error"])
     elif result["removed"]:
         print(
-            "Local reviewer config removed; environment overrides now win, "
+            "Persistent reviewer config removed; environment overrides now win, "
             "otherwise host cloud defaults are active again."
         )
     else:
-        print("No persistent local reviewer config was present.")
-
-
+        print("No persistent reviewer config was present.")
 def main() -> int:
     parser = argparse.ArgumentParser(prog="masters-nudge")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -208,11 +206,11 @@ def main() -> int:
             else:
                 _print_local_configure(result)
             return 0 if result["saved"] else 1
-        result = reset_local()
+        result = reset_reviewer_config()
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
         else:
-            _print_local_reset(result)
+            _print_reviewer_reset(result)
         return 0 if result["reset"] else 1
     if args.command == "grok":
         if args.grok_command == "configure":
@@ -226,13 +224,11 @@ def main() -> int:
             else:
                 print("Grok reviewer not configured: " + result["error"])
             return 0 if result["saved"] else 1
-        result = reset_local()
+        result = reset_reviewer_config()
         if args.json:
             print(json.dumps(result, ensure_ascii=False))
-        elif result["removed"]:
-            print("Persistent reviewer config removed; host defaults are active again.")
         else:
-            print("No persistent reviewer config was present.")
+            _print_reviewer_reset(result)
         return 0 if result["reset"] else 1
     result = launch_window(PLUGIN_ROOT, workspace=args.workspace)
     if args.json:

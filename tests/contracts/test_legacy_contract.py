@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-import review_telemetry
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
@@ -31,24 +30,6 @@ class PreOneSimplificationTests(unittest.TestCase):
             self.assertEqual("openai", settings.provider)
             self.assertNotEqual("legacy", settings.model)
             self.assertEqual("host_default", settings.configuration_source)
-
-    def test_shadow_thresholds_ignore_buddy_aliases(self):
-        with mock.patch.dict(
-            review_telemetry.os.environ,
-            {
-                "BUDDY_SHADOW_EVALUATION_DAYS": "99",
-                "BUDDY_SHADOW_TARGET_CALLS": "999",
-            },
-            clear=True,
-        ):
-            self.assertEqual(
-                review_telemetry.DEFAULT_EVALUATION_DAYS,
-                review_telemetry.configured_evaluation_days(),
-            )
-            self.assertEqual(
-                review_telemetry.DEFAULT_TARGET_CALLS,
-                review_telemetry.configured_target_calls(),
-            )
 
     def test_window_workspace_ignores_buddy_alias(self):
         import buddy_window

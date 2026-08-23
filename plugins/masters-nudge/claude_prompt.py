@@ -15,9 +15,6 @@ from masters_nudge.runtime import active_guard
 
 def build_context_text(entry: dict, reaction: str) -> str:
     """Return the bounded Nudge without authority-signalling metadata."""
-    timestamp = str(entry.get("ts") or "")
-    if entry.get("kind") == "evaluation_notice":
-        return f"[Masters’ Nudge 系統通知 | {timestamp}]\n{reaction}"
     return reaction
 
 
@@ -70,7 +67,6 @@ def main() -> None:
     reaction = (latest.get("reaction") or "").strip()
     if reaction:
         ts = latest.get("ts", "")
-        is_evaluation_notice = latest.get("kind") == "evaluation_notice"
         # Plain stdout enters the main agent's context through UserPromptSubmit.
         # The optional floating window reads the same local reaction history.
         flat_reaction = reaction.replace("\n", " ").strip()
@@ -82,9 +78,8 @@ def main() -> None:
             "",
             flat_reaction,
         ).strip()
-        max_chars = 160 if is_evaluation_notice else MAX_REACTION_CHARS
-        if len(flat_reaction) > max_chars:
-            flat_reaction = flat_reaction[:max_chars]
+        if len(flat_reaction) > MAX_REACTION_CHARS:
+            flat_reaction = flat_reaction[:MAX_REACTION_CHARS]
         if not flat_reaction:
             return
         context_text = build_context_text(latest, flat_reaction)

@@ -46,6 +46,19 @@ SEMANTIC_VALIDATION_RE = re.compile(
     re.IGNORECASE,
 )
 
+TRIGGER_ROUTING_CONCERNS = {
+    "repeated-command-family": "feedback-loop",
+    "repeated-failure-family": "feedback-loop",
+    "diff-growth": "knowledge-boundary",
+    "goal-complete": "completion-boundary",
+    "goal-blocked": "completion-boundary",
+}
+
+
+def routing_concern_for_trigger(trigger: str) -> str:
+    """Map classifier-owned triggers to router-owned structured concerns."""
+    return TRIGGER_ROUTING_CONCERNS.get(str(trigger or ""), "")
+
 
 def compact_json(value: Any) -> str:
     if isinstance(value, str):
@@ -239,6 +252,7 @@ def classify_strategy(
     return {
         "reason": reason,
         "trigger": trigger,
+        "routing_concern": routing_concern_for_trigger(trigger),
         "context": "\n".join(lines),
         "fingerprint": f"{reason}-{trigger}-{event_seq}",
     }

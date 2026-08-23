@@ -52,9 +52,6 @@ class TurnStopped:
     kind: Literal["turn_stopped"] = "turn_stopped"
 
 
-NormalizedHookEvent: TypeAlias = PromptSubmitted | ToolCompleted | TurnStopped
-
-
 @dataclass(frozen=True)
 class ReviewRequest:
     schema_version: int
@@ -64,9 +61,9 @@ class ReviewRequest:
     source_packet: str
     source_fingerprint: str
     routing_evidence: str = ""
-    shadow_candidates: tuple[str, ...] = ()
     source_event_seq: int = 0
     trigger: str = ""
+    routing_concern: str = ""
 
 
 @dataclass(frozen=True)

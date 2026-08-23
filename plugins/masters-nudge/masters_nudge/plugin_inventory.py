@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
-from pathlib import Path
 
-
-INVENTORY_SCHEMA_VERSION = 1
-INVENTORY_FILE = ".masters-nudge-inventory.json"
 
 @dataclass(frozen=True)
 class PackageFile:
@@ -48,6 +43,7 @@ PACKAGE_MANIFEST = (
     PackageFile("masters_nudge/local_ollama.py"),
     PackageFile("masters_nudge/management.py"),
     PackageFile("masters_nudge/plugin_inventory.py"),
+    PackageFile("masters_nudge/provider_contract.py"),
     PackageFile("masters_nudge/prompting.py"),
     PackageFile("masters_nudge/providers.py"),
     PackageFile("masters_nudge/runtime.py"),
@@ -95,56 +91,4 @@ def runtime_files(*, installed: bool) -> tuple[str, ...]:
         for entry in PACKAGE_MANIFEST
         if entry.runtime_required and (installed or entry.source == "generated")
     )
-    return (*paths, INVENTORY_FILE) if installed else paths
-
-
-def load_plugin_inventory(plugin_root: Path) -> tuple[tuple[str, ...], str]:
-    """Return a validated installed-plugin inventory and an error message."""
-    path = Path(plugin_root) / INVENTORY_FILE
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return (), f"missing inventory: {INVENTORY_FILE}"
-    except (OSError, ValueError) as exc:
-        return (), f"cannot read inventory: {exc}"
-    if (
-        not isinstance(payload, dict)
-        or payload.get("schema_version") != INVENTORY_SCHEMA_VERSION
-    ):
-        return (), "inventory has an invalid schema"
-    files = payload.get("files")
-    runtime_files = payload.get("runtime_files")
-    if not isinstance(files, list) or not files:
-        return (), "inventory files must be a non-empty list"
-    if not isinstance(runtime_files, list) or not runtime_files:
-        return (), "inventory runtime_files must be a non-empty list"
-
-    def normalize(values: list, field: str) -> tuple[list[str], str]:
-        normalized: list[str] = []
-        for value in values:
-            if not isinstance(value, str):
-                return [], f"inventory {field} entries must be strings"
-            relative = Path(value)
-            if (
-                relative.is_absolute()
-                or ".." in relative.parts
-                or "\\" in value
-                or value != relative.as_posix()
-            ):
-                return [], f"inventory contains an unsafe path: {value!r}"
-            normalized.append(value)
-        if len(set(normalized)) != len(normalized):
-            return [], f"inventory {field} contains duplicate paths"
-        return normalized, ""
-
-    normalized, error = normalize(files, "files")
-    if error:
-        return (), error
-    runtime, error = normalize(runtime_files, "runtime_files")
-    if error:
-        return (), error
-    if not set(runtime).issubset(normalized):
-        return (), "inventory runtime_files are not a subset of files"
-    if INVENTORY_FILE not in normalized:
-        return (), "inventory does not include itself"
-    return tuple(runtime), ""
+    return paths

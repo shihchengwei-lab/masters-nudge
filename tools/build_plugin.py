@@ -16,10 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from masters_nudge.plugin_inventory import (  # noqa: E402
-    INVENTORY_FILE,
-    INVENTORY_SCHEMA_VERSION,
     package_files,
-    runtime_files,
 )
 
 
@@ -31,10 +28,7 @@ CODEX_VERSION_RE = re.compile(r"^(?P<base>[^+]+)\+codex\.(?P<token>[^+]+)$")
 
 
 def expected_plugin_files() -> set[Path]:
-    return {
-        *(Path(relative) for relative in package_files()),
-        Path(INVENTORY_FILE),
-    }
+    return {Path(relative) for relative in package_files()}
 
 
 def _actual_plugin_files() -> set[Path]:
@@ -101,24 +95,6 @@ def _sync_versions() -> None:
         _write_json(CLAUDE_MARKETPLACE, marketplace)
 
 
-def _inventory_payload() -> dict:
-    required_runtime = {Path(relative) for relative in runtime_files(installed=True)}
-    unexpected_runtime = required_runtime - expected_plugin_files()
-    if unexpected_runtime:
-        labels = ", ".join(sorted(path.as_posix() for path in unexpected_runtime))
-        raise ValueError(f"runtime inventory is not packaged: {labels}")
-    return {
-        "schema_version": INVENTORY_SCHEMA_VERSION,
-        "base_version": _base_version(),
-        "files": sorted(path.as_posix() for path in expected_plugin_files()),
-        "runtime_files": sorted(path.as_posix() for path in required_runtime),
-    }
-
-
-def _write_inventory() -> None:
-    _write_json(PLUGIN_ROOT / INVENTORY_FILE, _inventory_payload())
-
-
 def write_plugin() -> None:
     PLUGIN_ROOT.mkdir(parents=True, exist_ok=True)
     for cache_dir in PLUGIN_ROOT.rglob("__pycache__"):
@@ -130,7 +106,6 @@ def write_plugin() -> None:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, destination)
     _sync_versions()
-    _write_inventory()
     expected = expected_plugin_files()
     for relative in sorted(_actual_plugin_files() - expected, reverse=True):
         (PLUGIN_ROOT / relative).unlink()
@@ -178,13 +153,6 @@ def check_plugin() -> list[str]:
             errors.append("version: Claude marketplace does not match Claude manifest")
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         errors.append(f"version: {exc}")
-    inventory_path = PLUGIN_ROOT / INVENTORY_FILE
-    if inventory_path.exists():
-        try:
-            if _read_json(inventory_path) != _inventory_payload():
-                errors.append(f"stale: {_label(Path(INVENTORY_FILE))}")
-        except (OSError, ValueError, json.JSONDecodeError) as exc:
-            errors.append(f"inventory: {exc}")
     return errors
 
 

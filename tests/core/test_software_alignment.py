@@ -75,8 +75,17 @@ class SoftwareQuestionContractTests(unittest.TestCase):
         self.assertIn("On Codex, a receipt may also record", english)
         self.assertIn("在 Codex 上，receipt 也可能記錄", chinese)
 
+    def test_readmes_do_not_duplicate_the_manifest_version_or_a_cost_experiment(self):
+        english = (HERE / "README.md").read_text(encoding="utf-8")
+        chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertNotIn("Current package version:", english)
+        self.assertNotIn("目前套件版本：", chinese)
+        self.assertIn("there is no active cost experiment", english)
+        self.assertIn("目前沒有正式成本實驗", chinese)
+
     def test_docs_do_not_reference_removed_compatibility_or_visibility_sections(self):
-        architecture = (HERE / "docs/phase-c-architecture.md").read_text(
+        architecture = (HERE / "docs/architecture.md").read_text(
             encoding="utf-8"
         )
         prompt_entry = (HERE / "claude_prompt.py").read_text(encoding="utf-8")

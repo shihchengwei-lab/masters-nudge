@@ -8,9 +8,56 @@ from pathlib import Path
 
 import lens_router
 import persona_config
+from masters_nudge import checkpoints
 
 
 class RoutingSimplificationTests(unittest.TestCase):
+    def test_classifier_emits_structured_concerns_for_known_triggers(self):
+        cases = {
+            "repeated-command-family": "feedback-loop",
+            "repeated-failure-family": "feedback-loop",
+            "diff-growth": "knowledge-boundary",
+            "goal-complete": "completion-boundary",
+            "goal-blocked": "completion-boundary",
+        }
+
+        for trigger, expected in cases.items():
+            with self.subTest(trigger=trigger):
+                self.assertEqual(
+                    checkpoints.routing_concern_for_trigger(trigger), expected
+                )
+
+    def test_structured_concern_routes_without_machine_trigger_text(self):
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw)
+            persona_config.save_stage(data_dir, "build")
+
+            route = lens_router.resolve_review_route(
+                data_dir,
+                "ordinary bounded workflow evidence",
+                routing_concern="knowledge-boundary",
+                checkpoint=True,
+            )
+
+        self.assertEqual(route.stage, "build")
+        self.assertEqual(route.primary_lens, "beck")
+        self.assertEqual(route.effective_lens, "fowler")
+        self.assertEqual(route.trigger, "knowledge-boundary-evidence")
+
+    def test_machine_trigger_words_are_not_reparsed_as_free_text(self):
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw)
+            persona_config.save_stage(data_dir, "build")
+
+            route = lens_router.resolve_review_route(
+                data_dir,
+                "trigger: diff-growth",
+                checkpoint=True,
+            )
+
+        self.assertEqual(route.effective_lens, "beck")
+        self.assertEqual(route.trigger, "")
+
     def test_cooldown_without_evidence_uses_general_instead_of_arbitrary_persona(self):
         with tempfile.TemporaryDirectory() as raw:
             data_dir = Path(raw)

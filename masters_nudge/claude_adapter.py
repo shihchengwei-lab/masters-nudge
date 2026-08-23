@@ -180,17 +180,11 @@ def build_stop_source_context(
     tool_evidence = read_recent_tool_evidence(transcript_path, offset)
     agentcam_evidence = source_context.extract_agentcam_evidence(agentcam_content)
 
-    if not any((last_assistant, tool_evidence, agentcam_evidence)):
-        packet = read_recent_transcript(transcript_path)
-    else:
-        packet = source_context.build_stop_packet(
-            task_anchor=str(state.get("task_anchor") or ""),
-            last_assistant_message=last_assistant,
-            tool_evidence=tool_evidence,
-            agentcam_evidence=agentcam_evidence,
-        )
-    overlap = storage.checkpoint_stop_overlap(
-        settings.paths.data_dir, session, tool_evidence=tool_evidence
+    packet = source_context.build_stop_packet(
+        task_anchor=str(state.get("task_anchor") or ""),
+        last_assistant_message=last_assistant,
+        tool_evidence=tool_evidence,
+        agentcam_evidence=agentcam_evidence,
     )
     return {
         "packet": packet,
@@ -198,5 +192,4 @@ def build_stop_source_context(
         "assistant_claim": last_assistant,
         "tool_evidence": tool_evidence,
         "agentcam_evidence": agentcam_evidence,
-        "checkpoint_overlap": overlap,
     }

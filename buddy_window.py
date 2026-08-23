@@ -26,6 +26,7 @@ from tkinter import ttk
 from pathlib import Path
 
 import persona_config
+from masters_nudge import storage
 from masters_nudge.contracts import find_git_root
 from masters_nudge.runtime import RuntimeSettings
 
@@ -259,14 +260,12 @@ class BuddyWindow:
         # State
         self.current_log: Path | None = None
         self.last_offset = 0
-        self.last_reaction = ""
         self.last_reaction_ts = ""
+        self._reported_error_kinds: set[tuple[str, str]] = set()
         self.workspace = resolve_window_workspace()
         self.stage_selection = persona_config.resolve_stage(DATA_DIR)
 
         # Load sprite
-        self.idle_source_frames: list[Image.Image] = []
-        self.review_source_frames: list[Image.Image] = []
         self.idle_frames: list[ImageTk.PhotoImage] = []
         self.review_frames: list[ImageTk.PhotoImage] = []
         self.review_frames_remaining = 0
@@ -309,7 +308,8 @@ class BuddyWindow:
             return
         try:
             img = Image.open(SPRITESHEET_PATH).convert("RGBA")
-        except Exception:
+        except Exception as exc:
+            self._report_error("window-sprite", exc)
             return
 
         rows = detect_frames(img)
@@ -341,8 +341,6 @@ class BuddyWindow:
         idle_pil = cut_and_scale(img, rows[idle_row_idx], SPRITE_HEIGHT)
         review_pil = cut_and_scale(img, rows[review_row_idx], SPRITE_HEIGHT)
 
-        self.idle_source_frames = idle_pil
-        self.review_source_frames = review_pil
         self.idle_frames = [ImageTk.PhotoImage(frame) for frame in idle_pil]
         self.review_frames = [ImageTk.PhotoImage(frame) for frame in review_pil]
 
@@ -440,13 +438,11 @@ class BuddyWindow:
             self.bubble_label.config(text="階段設定無法儲存，仍使用原設定。")
             return
         persona = persona_config.STAGE_SPECS[stage].persona
-        self.stage_selection = persona_config.StageSelection(stage, persona, "config")
         self._set_lens_badge(persona)
         message = (
             f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
             "若 coding agent 設有 MASTERS_NUDGE_STAGE，仍以環境變數為準。"
         )
-        self.last_reaction = message
         self.bubble_label.config(text=message)
         self._resize_for_reaction(message)
 
@@ -466,6 +462,20 @@ class BuddyWindow:
 
     # ── Log polling ───────────────────────────────────────
 
+    def _report_error(self, component: str, exc: Exception) -> None:
+        """Record each failure class once while keeping the UI loop alive."""
+        key = (component, type(exc).__name__)
+        reported = getattr(self, "_reported_error_kinds", set())
+        if key in reported:
+            return
+        reported.add(key)
+        self._reported_error_kinds = reported
+        storage.append_error(
+            _RUNTIME.paths.error_log,
+            component,
+            f"{type(exc).__name__}: {exc}",
+        )
+
     def _poll(self):
         try:
             active = self._find_active_log()
@@ -478,8 +488,8 @@ class BuddyWindow:
 
             if self.current_log:
                 self._read_new()
-        except Exception:
-            pass
+        except Exception as exc:
+            self._report_error("window-poll", exc)
         self.root.after(POLL_MS, self._poll)
 
     def _find_active_log(self) -> Path | None:
@@ -504,7 +514,8 @@ class BuddyWindow:
                 f.seek(self.last_offset)
                 chunk = f.read()
                 self.last_offset = f.tell()
-        except Exception:
+        except Exception as exc:
+            self._report_error("window-read", exc)
             return
 
         if not chunk:
@@ -533,13 +544,8 @@ class BuddyWindow:
                     continue
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
-                persona = (
-                    "evaluation"
-                    if entry.get("kind") == "evaluation_notice"
-                    else entry.get("persona", "general")
-                )
+                persona = entry.get("persona", "general")
                 if reaction:
-                    self.last_reaction = reaction
                     self.last_reaction_ts = str(ts or "")
                     self._set_lens_badge(persona)
                     self.frame_idx = -1
@@ -556,7 +562,8 @@ class BuddyWindow:
                             else ""
                         )
                         self.ts_label.config(text=f"{short_ts}{suffix}")
-            except Exception:
+            except Exception as exc:
+                self._report_error("window-entry", exc)
                 continue
 
 

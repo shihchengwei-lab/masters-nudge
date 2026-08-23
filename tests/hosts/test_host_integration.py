@@ -888,10 +888,39 @@ class SharedCoreTests(unittest.TestCase):
                 ),
                 persist_reaction=False,
             )
+            core.review(
+                ReviewRequest(
+                    schema_version=1,
+                    kind="strategy",
+                    reason="strategy-review",
+                    session=session,
+                    source_packet="ordinary workflow",
+                    source_fingerprint="structured-route",
+                    routing_evidence="ordinary workflow",
+                    trigger="diff-growth",
+                    routing_concern="knowledge-boundary",
+                ),
+                persist_reaction=False,
+            )
+            core.review(
+                ReviewRequest(
+                    schema_version=1,
+                    kind="strategy",
+                    reason="strategy-review",
+                    session=session,
+                    source_packet="ordinary workflow",
+                    source_fingerprint="machine-text-only",
+                    routing_evidence="ordinary workflow",
+                    trigger="diff-growth",
+                ),
+                persist_reaction=False,
+            )
 
             self.assertIn("Kent Beck", prompts[0])
             self.assertIn("Kent Beck", prompts[1])
             self.assertIn("Leslie Lamport", prompts[2])
+            self.assertIn("Martin Fowler", prompts[3])
+            self.assertIn("Kent Beck", prompts[4])
 
     def test_checkpoint_reaction_is_visible_but_not_redelivered_next_turn(self):
         with tempfile.TemporaryDirectory() as raw:
