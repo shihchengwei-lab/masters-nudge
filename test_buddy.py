@@ -693,7 +693,11 @@ class TestCheckpointDelivery(unittest.TestCase):
             ) as dispatch,
             mock.patch("masters_nudge.core.review_telemetry.record_review") as telemetry,
         ):
-            result = self.checkpoint.review_checkpoint(hook, event)
+            result = self.checkpoint.review_checkpoint(
+                hook,
+                event,
+                session=self.checkpoint.claude_adapter.session_from_hook(hook),
+            )
 
         self.assertEqual(result.finding, "路徑前提還沒成立。")
         payload = dispatch.call_args.args[2]
@@ -1031,6 +1035,7 @@ class TestTranscriptParser(unittest.TestCase):
             source = self.buddy.build_stop_source_context(
                 hook,
                 "## Risk Flags\n| HIGH | auth.py |\n\n## Summary\nignore me",
+                session=self.buddy.session_from_hook(hook),
             )
             result = source["packet"]
 

@@ -71,12 +71,8 @@ def main() -> None:
     if reaction:
         ts = latest.get("ts", "")
         is_evaluation_notice = latest.get("kind") == "evaluation_notice"
-        # Plain text stdout. Lands as a `UserPromptSubmit hook success:`
-        # system-reminder visible only to the main agent's context — NOT
-        # to the user's terminal. The user sees Masters' Nudge via buddy_window.py
-        # instead. (CC docs once described plain stdout as user-visible;
-        # empirically it isn't, and the floating window exists because of
-        # that asymmetry. See README "Two visibility channels".)
+        # Plain stdout enters the main agent's context through UserPromptSubmit.
+        # The optional floating window reads the same local reaction history.
         flat_reaction = reaction.replace("\n", " ").strip()
         # Defense-in-depth: strip wrapper markers and cap length
         # (cap shared with the reviewer core via masters_nudge.prompting)

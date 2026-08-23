@@ -16,7 +16,7 @@ The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `Revie
 
 ## Lifecycle selection and private attention cues
 
-`persona_config.STAGE_SPECS` owns each lifecycle stage's public name, practical focus, and private persona slug; compatibility views and window choices are derived from that registry. `persona_config.resolve_stage()` owns lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
+`persona_config.STAGE_SPECS` owns each lifecycle stage's public name, practical focus, and private persona slug; window choices read that registry directly. `persona_config.resolve_stage()` owns lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
 
 Public UI labels describe the engineering stage and practical focus. Internal persona slugs remain available for routing and telemetry, while the corresponding person name appears only in the provider prompt as a private attention cue. Direct reliability or performance evidence may select a specialist automatically; those specialists are not public stage settings.
 

@@ -168,10 +168,9 @@ def build_stop_source_context(
     hook: dict,
     agentcam_content: str = "",
     *,
-    session: SessionRef | None = None,
+    session: SessionRef,
 ) -> dict:
     settings = runtime_settings()
-    session = session or session_from_hook(hook)
     transcript_path = str(hook.get("transcript_path") or "")
     state = storage.load_turn_state(settings.paths.data_dir, session)
     offset = int(state.get("transcript_offset") or 0)

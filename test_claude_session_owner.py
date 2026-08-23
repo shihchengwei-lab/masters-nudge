@@ -7,6 +7,7 @@ from unittest import mock
 import claude_checkpoint
 import claude_prompt
 import claude_stop
+import masters_nudge
 from masters_nudge import claude_adapter
 from masters_nudge.contracts import ReviewOutcome, SessionRef
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
@@ -109,6 +110,30 @@ class TestClaudeSessionOwner(unittest.TestCase):
 
         session_from_hook.assert_not_called()
         self.assertIs(load_state.call_args.args[1], session)
+
+    def test_internal_session_consumers_require_the_owned_session(self):
+        checkpoint_session = inspect.signature(
+            claude_checkpoint.review_checkpoint
+        ).parameters["session"]
+        stop_session = inspect.signature(
+            claude_adapter.build_stop_source_context
+        ).parameters["session"]
+
+        self.assertIs(checkpoint_session.default, inspect.Parameter.empty)
+        self.assertIs(stop_session.default, inspect.Parameter.empty)
+
+    def test_package_root_does_not_reexport_internal_contracts(self):
+        self.assertFalse(hasattr(masters_nudge, "__all__"))
+        for name in (
+            "NormalizedHookEvent",
+            "PromptSubmitted",
+            "ReviewOutcome",
+            "ReviewRequest",
+            "SessionRef",
+            "ToolCompleted",
+            "TurnStopped",
+        ):
+            self.assertFalse(hasattr(masters_nudge, name), name)
 
 
 if __name__ == "__main__":

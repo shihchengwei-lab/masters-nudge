@@ -101,11 +101,6 @@ SELECTOR_STAGES = {
 }
 
 
-def stage_selection_label(selection: persona_config.StageSelection) -> str:
-    """Describe the selected lifecycle stage without exposing persona identity."""
-    return persona_config.stage_label(selection.stage)
-
-
 def window_height_for_reaction(reaction: str) -> int:
     """Estimate enough window height for a bounded nudge without clipping."""
     lines = reaction.splitlines() or [""]
@@ -383,7 +378,7 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
-        selected_label = stage_selection_label(self.stage_selection)
+        selected_label = persona_config.stage_label(self.stage_selection.stage)
         self.stage_var = tk.StringVar(value=selected_label)
         selector_state = (
             "disabled"

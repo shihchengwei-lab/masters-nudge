@@ -53,11 +53,10 @@ def review_checkpoint(
     hook: dict[str, Any],
     event: dict[str, str],
     *,
-    session: SessionRef | None = None,
+    session: SessionRef,
 ) -> ReviewOutcome:
     settings = claude_adapter.runtime_settings()
     transcript_path = str(hook.get("transcript_path") or "")
-    session = session or claude_adapter.session_from_hook(hook)
     state = storage.load_turn_state(settings.paths.data_dir, session)
     assistant_context = claude_adapter.read_latest_assistant_text(
         transcript_path, int(state.get("transcript_offset") or 0)

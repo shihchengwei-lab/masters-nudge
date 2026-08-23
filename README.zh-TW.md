@@ -2,7 +2,7 @@
 
 繁體中文 | [English](README.md)
 
-Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code 或 Codex 加入一個有證據依據的簡短第二意見。輸出要嘛是一句開放問句，要嘛保持安靜；所有決策與修改仍由主要 coding agent 負責。
+Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code 或 Codex 加入一個有證據依據的簡短第二意見。Reviewer prompt 會要求一個簡短的開放問句，或允許保持安靜；所有決策與修改仍由主要 coding agent 負責。
 
 目前套件版本：`0.2.0-dev.1`（預發行版）。
 
@@ -18,7 +18,7 @@ Nudge 不是 code review、命令，也不能證明另一個模型比較正確�
 
 - 支援 plugin 的 Claude Code 或 Codex CLI
 - Python 3.10+
-- 已登入所選雲端 host CLI；若使用本機 Ollama 則不需要雲端登入
+- 已登入所選雲端 reviewer provider 對應的 CLI；若使用本機 Ollama 則不需要雲端登入
 
 Claude Code：
 
@@ -101,7 +101,7 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 - 選用的 agentcam evidence；
 - Reviewer prompt 與所選濾鏡。
 
-Reactions、任務摘要、受限 journal、投遞 receipts、注入後第一個可觀察的 host 動作、本機模型設定與不含對話內容的 telemetry，會以純文字存在 `~/.masters-nudge/data/`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+Reactions、任務摘要、受限 journal、投遞 receipts、本機模型設定與不含對話內容的 telemetry，會以純文字存在 `~/.masters-nudge/data/`。在 Codex 上，receipt 也可能記錄注入後第一個可觀察的 host 動作。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 

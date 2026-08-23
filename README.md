@@ -2,7 +2,7 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-Masters’ Nudge gives Claude Code or Codex one brief, evidence-grounded second opinion at selected checkpoints and at the end of a turn. The output is either one short open question or silence; the coding agent remains responsible for every decision and change.
+Masters’ Nudge gives Claude Code or Codex one brief, evidence-grounded second opinion at selected checkpoints and at the end of a turn. The reviewer prompt asks for one short open question or permits silence; the coding agent remains responsible for every decision and change.
 
 Current package version: `0.2.0-dev.1` (prerelease).
 
@@ -18,7 +18,7 @@ Requirements:
 
 - A plugin-capable Claude Code or Codex CLI installation
 - Python 3.10+
-- The selected cloud host CLI signed in, unless local-only Ollama is configured
+- The CLI for the selected cloud reviewer provider is signed in, unless local-only Ollama is configured
 
 Claude Code:
 
@@ -101,7 +101,7 @@ Depending on the event, the packet can contain:
 - optional agentcam evidence;
 - the reviewer prompt and selected lens.
 
-Reactions, task anchors, bounded journals, delivery receipts, the first observable host action after an injection, local-model selection, and content-free telemetry are stored as plain text under `~/.masters-nudge/data/`. A following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
+Reactions, task anchors, bounded journals, delivery receipts, local-model selection, and content-free telemetry are stored as plain text under `~/.masters-nudge/data/`. On Codex, a receipt may also record the first observable host action after an injection. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 

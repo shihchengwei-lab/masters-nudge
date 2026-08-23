@@ -59,6 +59,31 @@ class SoftwareQuestionContractTests(unittest.TestCase):
 
         self.assertEqual(question, context)
 
+    def test_readmes_describe_questions_as_prompted_not_runtime_enforced(self):
+        english = (HERE / "README.md").read_text(encoding="utf-8")
+        chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("The reviewer prompt asks for one short open question", english)
+        self.assertNotIn("The output is either one short open question", english)
+        self.assertIn("Reviewer prompt 會要求一個簡短的開放問句", chinese)
+        self.assertNotIn("輸出要嘛是一句開放問句", chinese)
+
+    def test_readmes_limit_response_observation_to_codex(self):
+        english = (HERE / "README.md").read_text(encoding="utf-8")
+        chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("On Codex, a receipt may also record", english)
+        self.assertIn("在 Codex 上，receipt 也可能記錄", chinese)
+
+    def test_docs_do_not_reference_removed_compatibility_or_visibility_sections(self):
+        architecture = (HERE / "docs/phase-c-architecture.md").read_text(
+            encoding="utf-8"
+        )
+        prompt_entry = (HERE / "claude_prompt.py").read_text(encoding="utf-8")
+
+        self.assertNotIn("compatibility views", architecture)
+        self.assertNotIn("Two visibility channels", prompt_entry)
+
 
 class SoftwareColdStartTests(unittest.TestCase):
     def test_review_provider_receives_only_the_current_packet(self):

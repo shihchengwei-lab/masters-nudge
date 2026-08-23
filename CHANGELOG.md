@@ -14,6 +14,7 @@ Target package version: `0.2.0-dev.1`.
 - Replace stopped evaluation harnesses, fixtures, dated reports, screenshots, and an unused spritesheet builder with a single `evaluation/README.md` index that retains denominators, exclusions, null results, and explicit claim boundaries.
 - Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
 - Derive package membership and doctor dependencies from one manifest, Claude session identity from one adapter helper, and public stage views from one `StageSpec` registry.
+- Align README claims with prompt-level question guidance and Codex-only response observations; remove test-only Claude session fallbacks and unused forwarding surfaces.
 - Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
 - Record the first observable tool action or Stop claim after each injected question in its delivery receipt; this is temporal evidence only and does not attribute the action or result to the Nudge.
 - Align software reviews around one unlabeled open question, cold current-state input, delivery-aware two-filter cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route, provider, and delivery records.
