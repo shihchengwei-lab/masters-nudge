@@ -26,7 +26,6 @@ from masters_nudge.plugin_inventory import (  # noqa: E402
 PLUGIN_ROOT = ROOT / "plugins" / "masters-nudge"
 
 FILES = (
-    "CHANGELOG.md",
     "LICENSE",
     "buddy-prompt.txt",
     "buddy_window.py",
@@ -44,11 +43,6 @@ FILES = (
 )
 
 DIRECTORIES = ("masters_nudge", "personas")
-ASSETS = {
-    "docs/images/masters-nudge-six-lenses-hero.png": (
-        "assets/masters-nudge-six-lenses-hero.png"
-    ),
-}
 
 STATIC_FILES = (
     *PLUGIN_RUNTIME_FILES,
@@ -77,7 +71,6 @@ def _generated_targets() -> set[Path]:
             Path(directory) / path.relative_to(ROOT / directory)
             for path in _source_files(directory)
         )
-    targets.update(Path(destination) for destination in ASSETS.values())
     return targets
 
 
@@ -193,10 +186,6 @@ def write_plugin() -> None:
             destination,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
         )
-    for source, destination in ASSETS.items():
-        target = PLUGIN_ROOT / destination
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(ROOT / source, target)
     _sync_versions()
     _write_inventory()
     expected = expected_plugin_files()
@@ -249,12 +238,6 @@ def check_plugin() -> list[str]:
                 shallow=False,
             ):
                 errors.append(f"stale: {_label(Path(directory) / relative)}")
-    for source, destination in ASSETS.items():
-        target = PLUGIN_ROOT / destination
-        if not target.exists():
-            continue
-        elif not filecmp.cmp(ROOT / source, target, shallow=False):
-            errors.append(f"stale: {_label(Path(destination))}")
     try:
         base_version = _base_version()
         codex = _read_json(PLUGIN_ROOT / ".codex-plugin" / "plugin.json")

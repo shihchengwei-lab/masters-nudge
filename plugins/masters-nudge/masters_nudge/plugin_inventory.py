@@ -31,6 +31,7 @@ SOURCE_RUNTIME_FILES = (
     "personas/linus.txt",
     "masters_nudge/__init__.py",
     "masters_nudge/checkpoints.py",
+    "masters_nudge/claude_adapter.py",
     "masters_nudge/codex_adapter.py",
     "masters_nudge/contracts.py",
     "masters_nudge/core.py",

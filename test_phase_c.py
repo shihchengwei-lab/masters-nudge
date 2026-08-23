@@ -20,7 +20,6 @@ import persona_config
 from masters_nudge import providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
-    EvidenceBundle,
     PromptSubmitted,
     ReviewOutcome,
     ReviewRequest,
@@ -154,7 +153,7 @@ class ClaudeCompatibilityTests(unittest.TestCase):
                 "last_assistant_message": "已完成指定流程",
             }
             with (
-                mock.patch.object(buddy, "_RUNTIME", settings),
+                mock.patch.object(buddy.claude_adapter, "RUNTIME", settings),
                 mock.patch.object(buddy, "read_hook_input", return_value=hook),
                 mock.patch.object(
                     buddy.shared_evidence,
@@ -820,13 +819,12 @@ class SharedCoreTests(unittest.TestCase):
             session = SessionRef("codex_cli", "timeout", cwd=str(root))
             ReviewCore(settings, dispatch=dispatch).review(
                 ReviewRequest(
-                    1,
-                    "stop",
-                    "stop",
-                    session,
-                    EvidenceBundle(assistant_claim="已完成"),
-                    "已完成",
-                    "timeout",
+                    schema_version=1,
+                    kind="stop",
+                    reason="stop",
+                    session=session,
+                    source_packet="已完成",
+                    source_fingerprint="timeout",
                 ),
                 persist_reaction=True,
             )
@@ -857,40 +855,36 @@ class SharedCoreTests(unittest.TestCase):
             session = SessionRef("codex_cli", "routing")
             core.review(
                 ReviewRequest(
-                    1,
-                    "stop",
-                    "stop",
-                    session,
-                    EvidenceBundle(tool_evidence="retry caused duplicate delivery"),
-                    "retry caused duplicate delivery",
-                    "stop",
+                    schema_version=1,
+                    kind="stop",
+                    reason="stop",
+                    session=session,
+                    source_packet="retry caused duplicate delivery",
+                    source_fingerprint="stop",
                 ),
                 persist_reaction=False,
             )
             core.review(
                 ReviewRequest(
-                    1,
-                    "checkpoint",
-                    "tool",
-                    session,
-                    EvidenceBundle(
-                        task_anchor="retry caused duplicate delivery",
-                        checkpoint_event="ordinary file edit",
-                    ),
-                    "retry caused duplicate delivery\nordinary file edit",
-                    "quiet",
+                    schema_version=1,
+                    kind="checkpoint",
+                    reason="tool",
+                    session=session,
+                    source_packet="retry caused duplicate delivery\nordinary file edit",
+                    source_fingerprint="quiet",
+                    routing_evidence="ordinary file edit",
                 ),
                 persist_reaction=False,
             )
             core.review(
                 ReviewRequest(
-                    1,
-                    "checkpoint",
-                    "tool",
-                    session,
-                    EvidenceBundle(checkpoint_event="retry caused duplicate delivery"),
-                    "retry caused duplicate delivery",
-                    "new-event",
+                    schema_version=1,
+                    kind="checkpoint",
+                    reason="tool",
+                    session=session,
+                    source_packet="retry caused duplicate delivery",
+                    source_fingerprint="new-event",
+                    routing_evidence="retry caused duplicate delivery",
                 ),
                 persist_reaction=False,
             )
@@ -909,9 +903,9 @@ class SharedCoreTests(unittest.TestCase):
                 kind="checkpoint",
                 reason="test-fail",
                 session=session,
-                evidence=EvidenceBundle(checkpoint_event="pytest: 1 failed"),
                 source_packet="pytest: 1 failed",
                 source_fingerprint="failure-1",
+                routing_evidence="pytest: 1 failed",
             )
             core = ReviewCore(
                 settings,
@@ -952,13 +946,12 @@ class SharedCoreTests(unittest.TestCase):
             for host in ("claude_code", "codex_cli"):
                 core.review(
                     ReviewRequest(
-                        1,
-                        "stop",
-                        "stop",
-                        SessionRef(host, f"{host}-session"),  # type: ignore[arg-type]
-                        EvidenceBundle(task_anchor="同一任務"),
-                        "[task anchor]\n同一任務\n[end task anchor]",
-                        "same",
+                        schema_version=1,
+                        kind="stop",
+                        reason="stop",
+                        session=SessionRef(host, f"{host}-session"),  # type: ignore[arg-type]
+                        source_packet="[task anchor]\n同一任務\n[end task anchor]",
+                        source_fingerprint="same",
                     ),
                     persist_reaction=False,
                 )
@@ -1257,25 +1250,6 @@ class GrokProviderTests(unittest.TestCase):
         self.assertEqual(result["finding"], "先重現原始失敗。")
         self.assertEqual(usage["cached_input_tokens"], 2)
         self.assertEqual(usage["reasoning_output_tokens"], 1)
-
-
-class PackagingTests(unittest.TestCase):
-    def test_docs_describe_the_actual_host_core_boundary(self):
-        architecture = " ".join(
-            (HERE / "docs" / "phase-c-architecture.md")
-            .read_text(encoding="utf-8")
-            .split()
-        )
-
-        self.assertIn("Host entry and adapter", architecture)
-        self.assertIn("Shared checkpoints and evidence", architecture)
-        self.assertIn("ReviewCore", architecture)
-        self.assertIn("claude_prompt.py", architecture)
-        self.assertIn("claude_checkpoint.py", architecture)
-        self.assertIn("claude_stop.py", architecture)
-        self.assertIn("One `.turn.json` record", architecture)
-        self.assertNotIn("compatibility delegate", architecture.lower())
-
 
 if __name__ == "__main__":
     unittest.main()

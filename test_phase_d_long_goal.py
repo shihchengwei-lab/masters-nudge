@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Long-goal workflow, delivery receipt, and strategy checkpoint tests."""
+"""Goal persistence, delivery receipt, and strategy checkpoint tests."""
 
 from __future__ import annotations
 

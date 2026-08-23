@@ -79,10 +79,12 @@ Common environment variables:
 | `MASTERS_NUDGE_TIMEOUT` | `120` | End-of-turn reviewer timeout in seconds |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Mid-turn reviewer timeout in seconds |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs, state, receipts, telemetry, and reviewer config |
-| `MASTERS_NUDGE_PERSONA` | Unset | Force `jeff`, `beck`, `fowler`, `linus`, `lamport`, or `carmack` |
+| `MASTERS_NUDGE_STAGE` | Unset | Select `design`, `build`, `evolve`, or `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | Bundled sprite | Optional floating-window spritesheet |
 
-Environment variables override the persistent `reviewer.json` setting. A malformed persistent config stops the review and writes a diagnostic; it does not silently switch providers.
+Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
+
+The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. Reliability and Performance may take over automatically when the packet contains direct specialist evidence; they are not manual stage settings.
 
 Local-only mode accepts only loopback HTTP, disables client proxy use and redirects, requires Ollama to report cloud features disabled, and rejects remote model metadata. It never installs or pulls a model and never falls back to a cloud provider. Grok remains a cloud provider through the signed-in Grok CLI.
 

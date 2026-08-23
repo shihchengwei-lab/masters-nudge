@@ -79,10 +79,12 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 | `MASTERS_NUDGE_TIMEOUT` | `120` | 回合結束 reviewer 逾時秒數 |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 途中 reviewer 逾時秒數 |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
-| `MASTERS_NUDGE_PERSONA` | 未設定 | 強制 `jeff`、`beck`、`fowler`、`linus`、`lamport` 或 `carmack` |
+| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `design`、`build`、`evolve` 或 `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗 spritesheet |
 
-環境變數優先於持久化的 `reviewer.json`。若持久設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
+Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
+
+浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。當 evidence packet 有直接的專科證據時，Reliability 或 Performance 可以自動單次接手；兩者不是手動階段設定。
 
 本機模式只接受 loopback HTTP、停用 client proxy 與 redirect、要求 Ollama 回報 cloud 功能已關閉，並拒絕 remote model metadata。Masters’ Nudge 不會安裝或下載模型，也不會失敗後改用雲端 provider。Grok 則會透過已登入的 Grok CLI 使用 xAI 雲端服務。
 

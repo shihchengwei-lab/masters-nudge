@@ -885,6 +885,40 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertTrue(result["manual_required"])
             self.assertFalse((Path(raw) / ".profile").exists())
 
+    def test_migrate_requires_a_stage_choice_for_legacy_persona_environment(self):
+        with tempfile.TemporaryDirectory() as raw:
+            result = migrate_legacy(
+                "claude",
+                environ={
+                    "HOME": raw,
+                    "USERPROFILE": raw,
+                    "BUDDY_PERSONA": "linus",
+                },
+            )
+
+        [mapping] = result["environment"]
+        self.assertEqual(mapping["legacy"], "BUDDY_PERSONA")
+        self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
+        self.assertIn("design|build|evolve|review", mapping["note"])
+        self.assertTrue(result["manual_required"])
+
+    def test_migrate_reports_removed_masters_nudge_persona_override(self):
+        with tempfile.TemporaryDirectory() as raw:
+            result = migrate_legacy(
+                "claude",
+                environ={
+                    "HOME": raw,
+                    "USERPROFILE": raw,
+                    "MASTERS_NUDGE_PERSONA": "linus",
+                },
+            )
+
+        [mapping] = result["environment"]
+        self.assertEqual(mapping["legacy"], "MASTERS_NUDGE_PERSONA")
+        self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
+        self.assertIn("design|build|evolve|review", mapping["note"])
+        self.assertTrue(result["manual_required"])
+
 
 class DoctorTests(unittest.TestCase):
     def test_doctor_requires_complete_runtime_dependency_inventory(self):

@@ -17,8 +17,7 @@ def build_system_prompt(
     *,
     prompt_file: Path,
     persona_dir: Path,
-    data_dir: Path,
-    route: lens_router.ReviewRoute | None = None,
+    route: lens_router.ReviewRoute,
     log_error: Callable[[str], None] | None = None,
 ) -> str:
     logger = log_error or (lambda _message: None)
@@ -28,7 +27,6 @@ def build_system_prompt(
         logger(f"prompt file read failed: {exc}")
         return ""
 
-    route = route or lens_router.resolve_review_route(data_dir)
     personas = persona_config.LENS_PERSONAS
     persona = route.effective_lens
     if persona == "general":

@@ -91,16 +91,6 @@ class TestBranding(unittest.TestCase):
             self.assertRegex(color, r"^#[0-9A-Fa-f]{6}$")
             self.assertLess(max(int(color[i:i + 2], 16) for i in (1, 3, 5)), 100)
 
-    def test_specialist_selection_label_distinguishes_forced_from_legacy(self):
-        import buddy_window
-        from persona_config import StageSelection
-
-        forced = StageSelection("forced", "lamport", "environment")
-        legacy = StageSelection("forced", "lamport", "legacy_config")
-        self.assertTrue(buddy_window.stage_selection_label(forced).startswith("Forced ·"))
-        self.assertTrue(buddy_window.stage_selection_label(legacy).startswith("Legacy ·"))
-
-
 class TestPersonaPromptSelection(unittest.TestCase):
     PERSONAS = {
         "jeff": "Jeff Dean",
@@ -550,7 +540,7 @@ class TestCheckpointDelivery(unittest.TestCase):
             RuntimePaths(HERE, root, root / "error.log"),
         )
         self.runtime_patch = mock.patch.object(
-            checkpoint.claude_stop, "_RUNTIME", self.settings
+            checkpoint.claude_adapter, "RUNTIME", self.settings
         )
         self.runtime_patch.start()
 
@@ -612,10 +602,14 @@ class TestCheckpointDelivery(unittest.TestCase):
             "tool_input": {"file_path": "/missing.txt"},
             "error": "File does not exist",
         }
+        from masters_nudge.contracts import ReviewOutcome
+
         with mock.patch.object(
-            self.checkpoint, "generate_nudge", return_value=""
+            self.checkpoint.ReviewCore,
+            "review",
+            return_value=ReviewOutcome(status="error"),
         ):
-            result = self.checkpoint.process_hook(hook)
+            result = self.checkpoint.prepare_hook(hook)
 
         self.assertIsNone(result)
         from masters_nudge import checkpoints, storage
@@ -641,15 +635,23 @@ class TestCheckpointDelivery(unittest.TestCase):
             "tool_input": {"file_path": "/missing.txt"},
             "error": "File does not exist",
         }
+        from masters_nudge.contracts import ReviewOutcome
+
         with mock.patch.object(
-            self.checkpoint, "generate_nudge", return_value="路徑假設還沒成立。"
-        ) as generate:
-            first = self.checkpoint.process_hook(hook)
-            second = self.checkpoint.process_hook(hook)
+            self.checkpoint.ReviewCore,
+            "review",
+            return_value=ReviewOutcome(
+                status="finding",
+                finding="路徑假設還沒成立。",
+                reaction_ts="reaction-1",
+            ),
+        ) as review:
+            first = self.checkpoint.prepare_hook(hook)
+            second = self.checkpoint.prepare_hook(hook)
 
         self.assertIsNotNone(first)
         self.assertIsNone(second)
-        generate.assert_called_once()
+        review.assert_called_once()
 
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
         from masters_nudge import prompting, providers, storage
@@ -671,7 +673,7 @@ class TestCheckpointDelivery(unittest.TestCase):
                 return_value={"task_anchor": "只修路徑問題", "transcript_offset": 42},
             ),
             mock.patch.object(
-                self.checkpoint.claude_stop,
+                self.checkpoint.claude_adapter,
                 "read_latest_assistant_text",
                 return_value="正在檢查路徑",
             ),
@@ -691,9 +693,9 @@ class TestCheckpointDelivery(unittest.TestCase):
             ) as dispatch,
             mock.patch("masters_nudge.core.review_telemetry.record_review") as telemetry,
         ):
-            result = self.checkpoint.generate_nudge(hook, event)
+            result = self.checkpoint.review_checkpoint(hook, event)
 
-        self.assertEqual(result, "路徑前提還沒成立。")
+        self.assertEqual(result.finding, "路徑前提還沒成立。")
         payload = dispatch.call_args.args[2]
         self.assertIn("只修路徑問題", payload)
         self.assertIn("missing file", payload)
@@ -722,7 +724,7 @@ FIXTURE_LINES = [
 class TestTranscriptParser(unittest.TestCase):
 
     def setUp(self):
-        import claude_stop as buddy
+        from masters_nudge import claude_adapter as buddy
         self.buddy = buddy
 
     # ── parse_transcript_entry ────────────────────────────────────────
@@ -1193,24 +1195,24 @@ class TestPersonaConfig(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def test_environment_override_reports_its_source(self):
+    def test_stage_environment_override_reports_its_source(self):
         selection = self.config.resolve_stage(
-            self.tmpdir, environ={"MASTERS_NUDGE_PERSONA": "lamport"}
+            self.tmpdir, environ={"MASTERS_NUDGE_STAGE": "review"}
         )
 
         self.assertEqual(
             (selection.stage, selection.persona, selection.source),
-            ("forced", "lamport", "environment"),
+            ("review", "linus", "environment"),
         )
 
-    def test_general_environment_override_maps_to_build(self):
+    def test_invalid_stage_environment_fails_closed_to_build(self):
         selection = self.config.resolve_stage(
-            self.tmpdir, environ={"MASTERS_NUDGE_PERSONA": "general"}
+            self.tmpdir, environ={"MASTERS_NUDGE_STAGE": "general"}
         )
 
         self.assertEqual(
             (selection.stage, selection.persona, selection.source),
-            ("build", "beck", "environment"),
+            ("build", "beck", "invalid_environment"),
         )
 
     def test_missing_or_invalid_config_falls_back_to_build(self):
@@ -1359,16 +1361,17 @@ class TestLensRouter(unittest.TestCase):
         )
         self.assertEqual(route.effective_lens, "lamport")
 
-    def test_environment_persona_is_stop_primary_but_checkpoint_can_change(self):
+    def test_environment_stage_is_primary_but_checkpoint_can_change(self):
         checkpoint = self.route(
-            "retry duplicate delivery", {"MASTERS_NUDGE_PERSONA": "carmack"}
+            "retry duplicate delivery", {"MASTERS_NUDGE_STAGE": "review"}
         )
-        unknown = self.route("benchmark", {"MASTERS_NUDGE_PERSONA": "unknown"})
+        unknown = self.route("ordinary checkpoint", {"MASTERS_NUDGE_STAGE": "unknown"})
 
-        self.assertEqual(checkpoint.primary_lens, "carmack")
+        self.assertEqual(checkpoint.primary_lens, "linus")
         self.assertEqual(checkpoint.effective_lens, "lamport")
         self.assertEqual(checkpoint.override_lens, "lamport")
-        self.assertEqual(unknown.effective_lens, "unknown")
+        self.assertEqual(unknown.primary_lens, "beck")
+        self.assertEqual(unknown.effective_lens, "beck")
 
     def test_stop_always_uses_primary_even_with_override_evidence(self):
         import persona_config
@@ -1595,10 +1598,10 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertEqual(
             options,
             [
-                "Design · Jeff Dean（系統因果與成本）",
-                "Build · Kent Beck（小步驟與測試）",
-                "Evolve · Martin Fowler（重構與變更成本）",
-                "Review · Linus Torvalds（簡化與責任歸屬）",
+                "Design · 系統結構、因果與成本",
+                "Build · 小步驟、測試與回饋",
+                "Evolve · 重構與變更成本",
+                "Review · 簡化與責任歸屬",
             ],
         )
         for label, stage in zip(
@@ -1614,22 +1617,22 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn("<<ComboboxSelected>>", source)
         self.assertIn("persona_config.save_stage", source)
         self.assertIn("下一次 review 起使用", source)
-        self.assertIn("MASTERS_NUDGE_PERSONA 正在接管", source)
+        self.assertIn("MASTERS_NUDGE_STAGE 正在接管", source)
         self.assertIn("self._set_lens_background(persona)", source)
         self.assertIn(
             "self.review_frames_remaining = len(self.review_frames)", source
         )
 
-    def test_six_personas_have_distinct_named_badges_with_general_fallback(self):
+    def test_six_lenses_have_distinct_functional_badges_with_general_fallback(self):
         import buddy_window
 
         expected_names = {
-            "jeff": "Jeff Dean lens（系統因果與成本）",
-            "linus": "Linus Torvalds lens（簡化與責任歸屬）",
-            "fowler": "Martin Fowler lens（重構與變更成本）",
-            "beck": "Kent Beck lens（小步驟與測試）",
-            "lamport": "Leslie Lamport lens（狀態、順序與失敗）",
-            "carmack": "John Carmack lens（執行路徑與效能）",
+            "jeff": "Design · 系統結構、因果與成本",
+            "linus": "Review · 簡化與責任歸屬",
+            "fowler": "Evolve · 重構與變更成本",
+            "beck": "Build · 小步驟、測試與回饋",
+            "lamport": "Reliability · 狀態、順序與失敗",
+            "carmack": "Performance · 執行路徑與效能",
         }
         colors = set()
         for persona, expected_name in expected_names.items():
@@ -1646,7 +1649,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         )
         self.assertEqual(
             buddy_window.lens_badge(None)[0],
-            "● General lens（工作流與證據）",
+            "● General · 工作流與證據",
         )
 
     def test_window_grows_for_a_52_character_reaction(self):
@@ -1829,13 +1832,26 @@ class TestInjectState(unittest.TestCase):
 
     def setUp(self):
         import claude_prompt as inject
+        from masters_nudge.runtime import RuntimePaths, RuntimeSettings
+
         self.inject = inject
         self.tmpdir = tempfile.mkdtemp()
-        self.orig_data_dir = inject.DATA_DIR
-        inject.DATA_DIR = Path(self.tmpdir)
+        root = Path(self.tmpdir)
+        self.runtime_patch = mock.patch.object(
+            inject.claude_adapter,
+            "RUNTIME",
+            RuntimeSettings(
+                "anthropic",
+                "test-model",
+                60,
+                15,
+                RuntimePaths(HERE, root, root / "error.log"),
+            ),
+        )
+        self.runtime_patch.start()
 
     def tearDown(self):
-        self.inject.DATA_DIR = self.orig_data_dir
+        self.runtime_patch.stop()
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
@@ -1884,12 +1900,11 @@ class TestInjectState(unittest.TestCase):
             self.inject.main()
 
         session = SessionRef("claude_code", "sess-anchor")
-        state = storage.load_turn_state(
-            self.inject.DATA_DIR, session
-        )
+        data_dir = self.inject.claude_adapter.runtime_settings().paths.data_dir
+        state = storage.load_turn_state(data_dir, session)
         self.assertEqual(state["task_anchor"], "只修目前這個登入問題")
         self.assertEqual(state["transcript_offset"], transcript.stat().st_size)
-        self.assertEqual(list(self.inject.DATA_DIR.glob("*.source.json")), [])
+        self.assertEqual(list(data_dir.glob("*.source.json")), [])
 
 
 

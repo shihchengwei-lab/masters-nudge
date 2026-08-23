@@ -244,6 +244,26 @@ def classify_strategy(
     }
 
 
+def _failure_checkpoint(
+    event: ToolCompleted, *, reason: str, output: str, evidence_label: str
+) -> dict[str, str]:
+    payload = {
+        "tool_name": event.tool_name,
+        "tool_input": event.tool_input,
+        "tool_output": output,
+    }
+    return {
+        "reason": reason,
+        "context": (
+            f"reason: {reason}\n"
+            f"tool: {event.tool_name}\n"
+            f"input: {compact_json(event.tool_input)}\n"
+            f"{evidence_label}: {output}"
+        ),
+        "fingerprint": stable_fingerprint(reason, payload),
+    }
+
+
 def classify_tool(
     event: ToolCompleted,
     changed_line_count: int | None = None,
@@ -261,39 +281,14 @@ def classify_tool(
             or TEST_FAILURE_RE.search(output)
             else "error"
         )
-        payload = {
-            "tool_name": event.tool_name,
-            "tool_input": event.tool_input,
-            "tool_output": output,
-        }
-        return {
-            "reason": reason,
-            "context": (
-                f"reason: {reason}\n"
-                f"tool: {event.tool_name}\n"
-                f"input: {compact_json(event.tool_input)}\n"
-                f"failure: {output}"
-            ),
-            "fingerprint": stable_fingerprint(reason, payload),
-        }
+        return _failure_checkpoint(
+            event, reason=reason, output=output, evidence_label="failure"
+        )
 
     if is_shell and TEST_FAILURE_RE.search(output):
-        reason = "test-fail"
-        payload = {
-            "tool_name": event.tool_name,
-            "tool_input": event.tool_input,
-            "tool_output": output,
-        }
-        return {
-            "reason": reason,
-            "context": (
-                f"reason: {reason}\n"
-                f"tool: {event.tool_name}\n"
-                f"input: {compact_json(event.tool_input)}\n"
-                f"result: {output}"
-            ),
-            "fingerprint": stable_fingerprint(reason, payload),
-        }
+        return _failure_checkpoint(
+            event, reason="test-fail", output=output, evidence_label="result"
+        )
 
     if not event.mutating:
         return None

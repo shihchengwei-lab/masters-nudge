@@ -128,25 +128,38 @@ def resolve_review_route(
     )
     ineligible = set(cooldown)
     evidence_candidates = _specialist_candidates(evidence)
-    candidates = [
-        *evidence_candidates,
-        (primary, ""),
-        *((lens, "") for lens in persona_config.LENS_PERSONAS),
-    ]
-    override, trigger = next(
-        (candidate for candidate in candidates if candidate[0] not in ineligible),
-        (primary, ""),
+    evidence_choice = next(
+        (candidate for candidate in evidence_candidates if candidate[0] not in ineligible),
+        None,
     )
+    if evidence_choice is not None:
+        override, trigger = evidence_choice
+    elif primary not in ineligible:
+        override, trigger = primary, ""
+    else:
+        override, trigger = "general", ""
     suppression_reason = (
         f"injected-persona-cooldown:{','.join(cooldown)}" if cooldown else ""
     )
     source = (
         "software_evidence_override"
         if trigger
-        else "software_cooldown_fallback"
-        if override != primary
+        else "software_cooldown_general"
+        if override == "general"
         else selection.source
     )
+    if override == "general":
+        return ReviewRoute(
+            selection.stage,
+            primary,
+            "general",
+            "",
+            "",
+            source,
+            candidate_lens=(evidence_candidates[0][0] if evidence_candidates else ""),
+            candidate_trigger=(evidence_candidates[0][1] if evidence_candidates else ""),
+            suppression_reason=suppression_reason,
+        )
     if override == primary:
         return ReviewRoute(
             selection.stage,

@@ -13,7 +13,6 @@ import source_context
 
 from . import checkpoints, storage
 from .contracts import (
-    EvidenceBundle,
     PromptSubmitted,
     ReviewRequest,
     SessionRef,
@@ -475,13 +474,9 @@ class CodexAdapter:
             ),
             reason=checkpoint["reason"],
             session=event.session,
-            evidence=EvidenceBundle(
-                task_anchor=str(state.get("task_anchor") or ""),
-                checkpoint_event=checkpoint["context"],
-                tool_evidence=journal,
-            ),
             source_packet=source_packet,
             source_fingerprint=fingerprint,
+            routing_evidence=checkpoint["context"],
             source_event_seq=event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
         )
@@ -570,19 +565,14 @@ class CodexAdapter:
             ),
             tool_evidence=str(payload.get("journal") or ""),
         )
-        evidence = EvidenceBundle(
-            task_anchor=task_anchor,
-            checkpoint_event=context,
-            tool_evidence=str(payload.get("journal") or ""),
-        )
         request = ReviewRequest(
             schema_version=1,
             kind="strategy",
             reason=str(checkpoint.get("reason") or "strategy-review"),
             session=session,
-            evidence=evidence,
             source_packet=source_packet,
             source_fingerprint=str(checkpoint.get("fingerprint") or ""),
+            routing_evidence=context,
             source_event_seq=event_seq,
             trigger=str(checkpoint.get("trigger") or "strategy-review"),
         )
@@ -660,12 +650,6 @@ class CodexAdapter:
             kind="stop",
             reason="stop",
             session=event.session,
-            evidence=EvidenceBundle(
-                task_anchor=task_anchor,
-                assistant_claim=event.final_claim,
-                tool_evidence=tool_evidence,
-                agentcam_evidence=agentcam_evidence,
-            ),
             source_packet=source_packet,
             source_fingerprint=_fingerprint(source_packet),
             shadow_candidates=tuple(candidates),

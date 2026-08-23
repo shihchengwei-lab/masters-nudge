@@ -17,21 +17,15 @@ The product is plugin-only. Before treating the prerelease as ready for wider us
 
 ### 2. Natural-trace reaction quality and impact
 
-Synthetic workflow calibration is closed. It did not show a positive Phase B treatment effect, and its micro-repositories were too ceiling-saturated or overconstrained to justify more prompt tuning.
-
-The next valid experiment requires consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists.
+Design any future experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The closed synthetic calibration and its null result remain in [the evidence index](evaluation/README.md), not as active roadmap work.
 
 **Manual gate:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 
 ### 3. Cost-policy decision
 
-Content-free review telemetry and the bounded shadow window remain observational. Provider token fields, cache fields, latency, and estimated cost are not normalized across CLIs.
-
-**Manual gate:** Keep automatic skip enforcement off. Any live cost gate requires an explicit review of the completed window, adequate samples, false-skip risk, reaction-quality evidence, and user approval.
+**Manual gate:** Keep automatic skip enforcement off. Any live cost gate requires an explicit review of the content-free telemetry window, adequate samples, false-skip risk, reaction-quality evidence, provider-specific normalization, and user approval.
 
 ### 4. Optional reviewer quality
-
-The loopback-only Ollama interface and signed-in Grok CLI path are compatibility features, not endorsements of a model, license, price, or review quality.
 
 **Manual gate:** Publish model-specific recommendations only after a fixed-packet comparison with declared hardware, versions, latency, failures, and quality adjudication. Masters’ Nudge must not install, pull, or choose a local model for the user.
 
@@ -42,6 +36,6 @@ The following are deliberately outside the active product and should not return 
 - source/manual installers, hook snippets, shell wrappers, `BUDDY_*` aliases, and legacy runtime/data fallbacks;
 - stopped Phase B and lens-differentiation harnesses, raw workspaces, screenshots, and generated dashboards in the product branch;
 - retired domain-specialization runtimes, protocols, fixtures, and research artifacts;
-- a generic domain marketplace, persona merge system, or domain SDK;
+- a generic domain marketplace, named-reviewer prompt merge system, or domain SDK;
 - automatic cost-skip enforcement, automatic provider fallback, or automatic local-model installation;
 - claims that a Nudge improves coding outcomes or that observational response timing is causal.

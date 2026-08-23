@@ -1,6 +1,6 @@
 {
   "name": "masters-nudge",
-  "version": "0.2.0-dev.1+codex.20260823065941",
+  "version": "0.2.0-dev.1+codex.20260823074105",
   "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
   "author": {
     "name": "shihchengwei-lab",
@@ -34,9 +34,6 @@
       "Configure Masters’ Nudge for my local Ollama model.",
       "Open the Masters’ Nudge window."
     ],
-    "brandColor": "#665B8E",
-    "screenshots": [
-      "./assets/masters-nudge-six-lenses-hero.png"
-    ]
+    "brandColor": "#665B8E"
   }
 }

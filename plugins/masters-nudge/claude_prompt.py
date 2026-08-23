@@ -8,16 +8,11 @@ next prompt as additional context.
 
 import json
 import sys
-from pathlib import Path
 
-from masters_nudge import storage
+from masters_nudge import claude_adapter, storage
 from masters_nudge.contracts import SessionRef, find_git_root
 from masters_nudge.prompting import MAX_REACTION_CHARS
-from masters_nudge.runtime import RuntimeSettings, active_guard
-
-_RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent, host="claude_code")
-DATA_DIR = _RUNTIME.paths.data_dir
-
+from masters_nudge.runtime import active_guard
 
 def build_context_text(entry: dict, reaction: str) -> str:
     """Return the bounded Nudge without authority-signalling metadata."""
@@ -28,7 +23,7 @@ def build_context_text(entry: dict, reaction: str) -> str:
 
 
 def log_error(msg: str) -> None:
-    storage.append_error(_RUNTIME.paths.error_log, "claude-prompt", msg)
+    claude_adapter.log_error("claude-prompt", msg)
 
 
 def read_hook_input() -> dict:
@@ -50,6 +45,7 @@ def main() -> None:
     if active_guard():
         return
     hook = read_hook_input()
+    data_dir = claude_adapter.runtime_settings().paths.data_dir
     session_id = hook.get("session_id", "")
     if not session_id:
         log_error("no session_id in hook input, skipping")
@@ -67,7 +63,7 @@ def main() -> None:
     if prompt:
         try:
             storage.start_turn(
-                DATA_DIR,
+                data_dir,
                 session,
                 str(prompt),
                 transcript_path=str(hook.get("transcript_path") or ""),
@@ -75,7 +71,7 @@ def main() -> None:
         except Exception as e:
             log_error(f"turn state save failed: {e}")
 
-    latest = storage.latest_pending(DATA_DIR, session)
+    latest = storage.latest_pending(data_dir, session)
     if not latest:
         return
 
@@ -110,7 +106,7 @@ def main() -> None:
         log_error(f"printed plain {len(out_bytes)} bytes for ts={ts} session={session_id[:8]}")
 
     delivered_ts = str(latest.get("ts") or "")
-    storage.mark_delivered(DATA_DIR, session, delivered_ts)
+    storage.mark_delivered(data_dir, session, delivered_ts)
 
 
 if __name__ == "__main__":

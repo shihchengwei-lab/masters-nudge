@@ -56,23 +56,14 @@ NormalizedHookEvent: TypeAlias = PromptSubmitted | ToolCompleted | TurnStopped
 
 
 @dataclass(frozen=True)
-class EvidenceBundle:
-    task_anchor: str = ""
-    checkpoint_event: str = ""
-    assistant_claim: str = ""
-    tool_evidence: str = ""
-    agentcam_evidence: str = ""
-
-
-@dataclass(frozen=True)
 class ReviewRequest:
     schema_version: int
     kind: ReviewKind
     reason: str
     session: SessionRef
-    evidence: EvidenceBundle
     source_packet: str
     source_fingerprint: str
+    routing_evidence: str = ""
     shadow_candidates: tuple[str, ...] = ()
     source_event_seq: int = 0
     trigger: str = ""

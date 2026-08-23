@@ -112,9 +112,10 @@ def _print_migration(result: dict) -> None:
             print(f"legacy log: {item['source_name']} is {item['status']}{detail}")
 
     for item in result["environment"]:
+        note = f" ({item['note']})" if item.get("note") else ""
         print(
             f"environment: replace {item['legacy']} with {item['replacement']} "
-            "manually; no shell profile was changed"
+            f"manually{note}; no shell profile was changed"
         )
 
 

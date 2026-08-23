@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Callable
 
 import lens_router
@@ -59,9 +58,6 @@ class ReviewCore:
         self.persona_dir = settings.paths.runtime_dir / "personas"
         self.schema_path = settings.paths.runtime_dir / "reaction-schema.json"
 
-    def _route_dir(self) -> Path:
-        return self.settings.paths.data_dir
-
     def review(
         self,
         request: ReviewRequest,
@@ -79,12 +75,12 @@ class ReviewCore:
             for part in (
                 request.trigger,
                 request.reason,
-                request.evidence.checkpoint_event,
+                request.routing_evidence,
             )
             if part
         ) if checkpoint_routing else ""
         route = lens_router.resolve_review_route(
-            self._route_dir(),
+            self.settings.paths.data_dir,
             routing_evidence,
             checkpoint=checkpoint_routing,
             injected_personas=storage.read_recent_injected_personas(
@@ -96,7 +92,6 @@ class ReviewCore:
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
-            data_dir=self._route_dir(),
             route=route,
             log_error=self.log_error,
         )

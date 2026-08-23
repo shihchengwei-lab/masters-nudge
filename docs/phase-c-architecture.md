@@ -14,6 +14,12 @@ Phase C separates native host events from the review policy. Claude Code and Cod
 
 The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `ReviewRequest`, and `ReviewOutcome`.
 
+## Lifecycle selection and private attention cues
+
+`persona_config.resolve_stage()` is the single owner of public lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
+
+Public UI labels describe the engineering stage and practical focus. Internal persona slugs remain available for routing and telemetry, while the corresponding person name appears only in the provider prompt as a private attention cue. Direct reliability or performance evidence may select a specialist automatically; those specialists are not public stage settings.
+
 ## Host paths
 
 Claude Code uses three small native entry points:
@@ -72,6 +78,6 @@ The Codex journal is capped per turn and per tool record. Claude transcript evid
 
 The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `tools/build_plugin.py` generates and verifies its runtime copy; marketplace metadata points to that package rather than to the repository root.
 
-The retained [Codex smoke result](../evaluation/results/phase-c-codex-smoke-20260813/SMOKE_RESULT.md) records one dated platform observation, not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
+Historical host-smoke evidence is preserved in the verified evidence archive linked from `evaluation/README.md`; it is not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
 
 See the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) and [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks) for the current host contracts.

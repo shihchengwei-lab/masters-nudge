@@ -10,14 +10,13 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import dataclass
 from typing import Any
 
-import claude_stop
-import lens_router
 import source_context
-from masters_nudge import checkpoints as shared_checkpoints, storage
+from masters_nudge import claude_adapter, checkpoints as shared_checkpoints, storage
 from masters_nudge.contracts import (
-    EvidenceBundle,
+    ReviewOutcome,
     ReviewRequest,
     SessionRef,
     ToolCompleted,
@@ -25,7 +24,6 @@ from masters_nudge.contracts import (
 )
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
-
 
 MUTATING_TOOLS = {"Edit", "Write", "Bash", "PowerShell"}
 
@@ -59,15 +57,11 @@ def normalize_tool_event(hook: dict[str, Any]) -> ToolCompleted | None:
     )
 
 
-def generate_nudge(
+def review_checkpoint(
     hook: dict[str, Any],
     event: dict[str, str],
-    route: lens_router.ReviewRoute | None = None,
-) -> str:
-    settings = claude_stop._RUNTIME
-    route = route or lens_router.resolve_review_route(
-        settings.paths.data_dir, event["context"]
-    )
+) -> ReviewOutcome:
+    settings = claude_adapter.runtime_settings()
     session_id = str(hook.get("session_id") or "unknown")
     transcript_path = str(hook.get("transcript_path") or "")
     cwd = str(hook.get("cwd") or "")
@@ -79,7 +73,7 @@ def generate_nudge(
         repo_root=find_git_root(cwd),
     )
     state = storage.load_turn_state(settings.paths.data_dir, session)
-    assistant_context = claude_stop.read_latest_assistant_text(
+    assistant_context = claude_adapter.read_latest_assistant_text(
         transcript_path, int(state.get("transcript_offset") or 0)
     )
     source_packet = source_context.build_checkpoint_packet(
@@ -93,27 +87,30 @@ def generate_nudge(
         kind="checkpoint",
         reason=event["reason"],
         session=session,
-        evidence=EvidenceBundle(
-            task_anchor=str(state.get("task_anchor") or ""),
-            checkpoint_event=event["context"],
-            assistant_claim=assistant_context,
-        ),
         source_packet=source_packet,
         source_fingerprint=event["fingerprint"],
+        routing_evidence=event["context"],
     )
-    outcome = ReviewCore(settings, log_error=claude_stop.log_error).review(
+    return ReviewCore(
+        settings,
+        log_error=lambda message: claude_adapter.log_error(
+            "claude-checkpoint", message
+        ),
+    ).review(
         request,
         persist_reaction=True,
         timeout_sec=settings.checkpoint_timeout_sec,
     )
-    if outcome.status == "finding" and outcome.reaction_ts:
-        storage.mark_delivered(
-            settings.paths.data_dir,
-            session,
-            outcome.reaction_ts,
-            delivered_via="claude-checkpoint",
-        )
-    return outcome.finding
+
+
+@dataclass(frozen=True)
+class PreparedCheckpoint:
+    output: dict[str, Any]
+    session: SessionRef
+    fingerprint: str
+    reaction_ts: str
+    reason: str
+    tool_evidence: str
 
 
 def build_hook_output(
@@ -128,7 +125,7 @@ def build_hook_output(
     }
 
 
-def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
+def prepare_hook(hook: dict[str, Any]) -> PreparedCheckpoint | None:
     tool_event = normalize_tool_event(hook)
     if tool_event is None:
         return None
@@ -136,7 +133,7 @@ def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
     if event is None:
         return None
 
-    settings = claude_stop._RUNTIME
+    settings = claude_adapter.runtime_settings()
     session_id = str(hook.get("session_id") or "unknown")
     cwd = str(hook.get("cwd") or "")
     session = SessionRef(
@@ -151,39 +148,81 @@ def process_hook(hook: dict[str, Any]) -> dict[str, Any] | None:
     ):
         return None
     try:
-        route = lens_router.resolve_review_route(
-            settings.paths.data_dir, event["context"]
-        )
-        reaction = generate_nudge(hook, event, route)
-        if not reaction:
+        outcome = review_checkpoint(hook, event)
+        if outcome.status != "finding" or not outcome.finding:
             storage.release_checkpoint(
                 settings.paths.data_dir, session, event["fingerprint"]
             )
             return None
-        storage.complete_checkpoint(
-            settings.paths.data_dir, session, event["fingerprint"]
-        )
         turn_state = storage.load_turn_state(settings.paths.data_dir, session)
         transcript_path = str(hook.get("transcript_path") or "")
-        tool_evidence = claude_stop.read_recent_tool_evidence(
+        tool_evidence = claude_adapter.read_recent_tool_evidence(
             transcript_path, int(turn_state.get("transcript_offset") or 0)
         )
-        storage.mark_checkpoint_delivery(
-            settings.paths.data_dir,
-            session,
+        return PreparedCheckpoint(
+            output=build_hook_output(
+                str(hook.get("hook_event_name") or "PostToolUse"), outcome.finding
+            ),
+            session=session,
+            fingerprint=event["fingerprint"],
+            reaction_ts=outcome.reaction_ts,
             reason=event["reason"],
             tool_evidence=tool_evidence,
         )
-        return build_hook_output(
-            str(hook.get("hook_event_name") or "PostToolUse"),
-            reaction,
-        )
     except Exception as exc:
-        claude_stop.log_error(f"checkpoint processing failed: {exc}")
+        claude_adapter.log_error(
+            "claude-checkpoint", f"checkpoint processing failed: {exc}"
+        )
         storage.release_checkpoint(
             settings.paths.data_dir, session, event["fingerprint"]
         )
         return None
+
+
+def emit_prepared(
+    prepared: PreparedCheckpoint,
+    *,
+    stream: Any = None,
+) -> None:
+    """Write and flush the hook response before recording an injected receipt."""
+    target = stream if stream is not None else sys.stdout
+    settings = claude_adapter.runtime_settings()
+    try:
+        target.write(json.dumps(prepared.output, ensure_ascii=False) + "\n")
+        target.flush()
+    except Exception:
+        try:
+            if prepared.reaction_ts:
+                storage.mark_delivery(
+                    settings.paths.data_dir,
+                    prepared.session,
+                    prepared.reaction_ts,
+                    status="failed",
+                    delivered_via="claude-checkpoint",
+                )
+        finally:
+            storage.release_checkpoint(
+                settings.paths.data_dir, prepared.session, prepared.fingerprint
+            )
+        raise
+    # The host has received the bytes. Complete the de-duplication claim before
+    # receipt persistence so a local receipt failure cannot cause re-injection.
+    storage.complete_checkpoint(
+        settings.paths.data_dir, prepared.session, prepared.fingerprint
+    )
+    if prepared.reaction_ts:
+        storage.mark_delivered(
+            settings.paths.data_dir,
+            prepared.session,
+            prepared.reaction_ts,
+            delivered_via="claude-checkpoint",
+        )
+    storage.mark_checkpoint_delivery(
+        settings.paths.data_dir,
+        prepared.session,
+        reason=prepared.reason,
+        tool_evidence=prepared.tool_evidence,
+    )
 
 
 def main() -> None:
@@ -193,18 +232,22 @@ def main() -> None:
         raw = sys.stdin.read()
         hook = json.loads(raw) if raw.strip() else {}
     except (TypeError, ValueError) as exc:
-        claude_stop.log_error(f"checkpoint hook input parse failed: {exc}")
+        claude_adapter.log_error(
+            "claude-checkpoint", f"checkpoint hook input parse failed: {exc}"
+        )
         return
     if not isinstance(hook, dict):
         return
-    output = process_hook(hook)
-    if output is not None:
-        print(json.dumps(output, ensure_ascii=False))
+    prepared = prepare_hook(hook)
+    if prepared is not None:
+        emit_prepared(prepared)
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        claude_stop.log_error(f"checkpoint main failed: {exc}")
+        claude_adapter.log_error(
+            "claude-checkpoint", f"checkpoint main failed: {exc}"
+        )
         sys.exit(0)

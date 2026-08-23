@@ -46,7 +46,6 @@ LEGACY_ENVIRONMENT_MAPPINGS = {
     "BUDDY_CLAUDE_DIR": "MASTERS_NUDGE_DATA_DIR",
     "BUDDY_MODEL": "MASTERS_NUDGE_MODEL",
     "BUDDY_OLLAMA_URL": "MASTERS_NUDGE_OLLAMA_URL",
-    "BUDDY_PERSONA": "MASTERS_NUDGE_PERSONA",
     "BUDDY_PROVIDER": "MASTERS_NUDGE_PROVIDER",
     "BUDDY_SHADOW_EVALUATION_DAYS": "MASTERS_NUDGE_SHADOW_EVALUATION_DAYS",
     "BUDDY_SHADOW_TARGET_CALLS": "MASTERS_NUDGE_SHADOW_TARGET_CALLS",
@@ -518,11 +517,21 @@ def migrate_legacy_logs(environment: Mapping[str, str], *, apply: bool = False) 
 
 
 def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str, str]]:
-    return [
+    mappings = [
         {"legacy": legacy, "replacement": replacement}
         for legacy, replacement in sorted(LEGACY_ENVIRONMENT_MAPPINGS.items())
         if str(environment.get(legacy) or "").strip()
     ]
+    for legacy in ("BUDDY_PERSONA", "MASTERS_NUDGE_PERSONA"):
+        if str(environment.get(legacy) or "").strip():
+            mappings.append(
+                {
+                    "legacy": legacy,
+                    "replacement": "MASTERS_NUDGE_STAGE",
+                    "note": "choose design|build|evolve|review; do not copy the persona value",
+                }
+            )
+    return sorted(mappings, key=lambda item: item["legacy"])
 
 
 def migrate_legacy_config(path: Path, host: str, *, apply: bool = False) -> dict:

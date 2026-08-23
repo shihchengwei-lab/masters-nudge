@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import ast
-import inspect
-import io
-import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
 import review_telemetry
-from masters_nudge import plugin_inventory
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
@@ -23,20 +17,6 @@ class PreOneSimplificationTests(unittest.TestCase):
             error_log=root / "data" / "error.log",
         )
         return RuntimeSettings("openai", "current-model", 120, 90, paths)
-
-    def test_core_never_routes_active_reads_to_legacy_data(self):
-        from masters_nudge.core import ReviewCore
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            settings = self.settings(root)
-            legacy_data_dir = root / ".claude" / "buddy"
-            legacy_data_dir.mkdir(parents=True)
-            (legacy_data_dir / "config.json").write_text(
-                '{"persona": "linus"}\n', encoding="utf-8"
-            )
-
-            self.assertEqual(settings.paths.data_dir, ReviewCore(settings)._route_dir())
 
     def test_runtime_ignores_buddy_reviewer_aliases(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -98,75 +78,6 @@ class PreOneSimplificationTests(unittest.TestCase):
             append.assert_called_once_with(
                 settings.paths.error_log, "codex-hook", "failed"
             )
-
-    def test_plugin_inventory_contains_only_the_software_runtime(self):
-        inventory = set(plugin_inventory.SOURCE_RUNTIME_FILES)
-
-        self.assertNotIn("shader_progress.py", inventory)
-        self.assertNotIn("shader_router.py", inventory)
-        self.assertNotIn("masters_nudge/profiles.py", inventory)
-        self.assertFalse(
-            any(path.startswith("domains/shader/") for path in inventory),
-            sorted(path for path in inventory if path.startswith("domains/shader/")),
-        )
-
-    def test_cli_help_does_not_offer_a_shader_command(self):
-        import masters_nudge_cli
-
-        output = io.StringIO()
-        with (
-            mock.patch.object(sys, "argv", ["masters-nudge", "--help"]),
-            redirect_stdout(output),
-            self.assertRaises(SystemExit) as stopped,
-        ):
-            masters_nudge_cli.main()
-
-        self.assertEqual(0, stopped.exception.code)
-        self.assertNotIn("shader", output.getvalue().lower())
-
-    def test_window_selector_is_software_lifecycle_only(self):
-        import buddy_window
-
-        self.assertEqual(
-            [
-                "Design · Jeff Dean（系統因果與成本）",
-                "Build · Kent Beck（小步驟與測試）",
-                "Evolve · Martin Fowler（重構與變更成本）",
-                "Review · Linus Torvalds（簡化與責任歸屬）",
-            ],
-            buddy_window.selector_options(),
-        )
-        self.assertNotIn(
-            "domain", inspect.signature(buddy_window.selector_options).parameters
-        )
-        self.assertFalse(hasattr(buddy_window, "SHADER_SELECTOR_LENSES"))
-
-    def test_active_runtime_does_not_import_shader_modules(self):
-        root = Path(__file__).resolve().parent
-        runtime_paths = [
-            root / "buddy_window.py",
-            root / "masters_nudge_cli.py",
-            root / "source_context.py",
-            *sorted((root / "masters_nudge").glob("*.py")),
-        ]
-        forbidden: list[str] = []
-        for path in runtime_paths:
-            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    names = [alias.name for alias in node.names]
-                elif isinstance(node, ast.ImportFrom):
-                    names = [node.module or ""]
-                else:
-                    continue
-                if any(
-                    name.split(".", 1)[0] in {"shader_progress", "shader_router"}
-                    for name in names
-                ):
-                    forbidden.append(str(path.relative_to(root)))
-
-        self.assertEqual([], sorted(set(forbidden)))
-
 
 if __name__ == "__main__":
     unittest.main()

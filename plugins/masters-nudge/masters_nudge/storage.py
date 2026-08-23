@@ -331,21 +331,6 @@ def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str,
     return entries
 
 
-def read_recent_reactions(
-    data_dir: Path,
-    session: SessionRef,
-    max_count: int = 3,
-    max_chars: int = 200,
-) -> list[str]:
-    reactions = [
-        str(entry.get("reaction") or "").strip()
-        for entry in read_reaction_entries(data_dir, session)
-        if entry.get("kind", "review") == "review"
-    ]
-    reactions = [value for value in reactions if value]
-    return [value[:max_chars] for value in reactions[-max_count:]]
-
-
 def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     state = _read_json(
         state_path(data_dir, session, "delivery"),

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared persistent stage and legacy persona selection for Masters' Nudge."""
+"""Shared persistent lifecycle-stage selection for Masters' Nudge."""
 
 from __future__ import annotations
 
@@ -26,7 +26,6 @@ STAGE_LENSES = {
     "evolve": "fowler",
     "review": "linus",
 }
-LENS_STAGES = {lens: stage for stage, lens in STAGE_LENSES.items()}
 STAGE_NAMES = {
     "design": "Design",
     "build": "Build",
@@ -34,14 +33,20 @@ STAGE_NAMES = {
     "review": "Review",
 }
 PERSONA_NAMES = {"general": "General", **LENS_PERSONAS}
-PERSONA_FOCUS = {
-    "general": "工作流與證據",
-    "jeff": "系統因果與成本",
-    "linus": "簡化與責任歸屬",
-    "fowler": "重構與變更成本",
-    "beck": "小步驟與測試",
-    "lamport": "狀態、順序與失敗",
-    "carmack": "執行路徑與效能",
+STAGE_FOCUS = {
+    "design": "系統結構、因果與成本",
+    "build": "小步驟、測試與回饋",
+    "evolve": "重構與變更成本",
+    "review": "簡化與責任歸屬",
+}
+PERSONA_PUBLIC_LABELS = {
+    "general": "General · 工作流與證據",
+    "jeff": "Design · 系統結構、因果與成本",
+    "beck": "Build · 小步驟、測試與回饋",
+    "fowler": "Evolve · 重構與變更成本",
+    "linus": "Review · 簡化與責任歸屬",
+    "lamport": "Reliability · 狀態、順序與失敗",
+    "carmack": "Performance · 執行路徑與效能",
 }
 
 
@@ -57,34 +62,28 @@ def config_path(base_dir: Path) -> Path:
 
 
 def persona_label(persona: str) -> str:
+    """Return a user-facing work label without exposing persona identity."""
     key = str(persona or "").strip().lower()
-    if key not in PERSONA_NAMES:
-        key = "general"
-    return f"{PERSONA_NAMES[key]} lens（{PERSONA_FOCUS[key]}）"
+    return PERSONA_PUBLIC_LABELS.get(key, PERSONA_PUBLIC_LABELS["general"])
 
 
 def stage_label(stage: str) -> str:
     key = str(stage or "").strip().lower()
     if key not in STAGE_LENSES:
         key = "build"
-    persona = STAGE_LENSES[key]
-    return f"{STAGE_NAMES[key]} · {PERSONA_NAMES[persona]}（{PERSONA_FOCUS[persona]}）"
+    return f"{STAGE_NAMES[key]} · {STAGE_FOCUS[key]}"
 
 
 def resolve_stage(
     base_dir: Path, *, environ: Mapping[str, str] | None = None
 ) -> StageSelection:
-    """Resolve the environment override, stage config, then Build."""
+    """Resolve the public stage override, stage config, then Build."""
     environment = os.environ if environ is None else environ
-    env_persona = str(environment.get("MASTERS_NUDGE_PERSONA") or "").strip().lower()
-    if env_persona:
-        if env_persona == "general":
-            return StageSelection("build", "beck", "environment")
-        return StageSelection(
-            LENS_STAGES.get(env_persona, "forced"),
-            env_persona,
-            "environment",
-        )
+    env_stage = str(environment.get("MASTERS_NUDGE_STAGE") or "").strip().lower()
+    if env_stage:
+        if env_stage in STAGE_LENSES:
+            return StageSelection(env_stage, STAGE_LENSES[env_stage], "environment")
+        return StageSelection("build", "beck", "invalid_environment")
 
     try:
         payload = json.loads(config_path(base_dir).read_text(encoding="utf-8"))

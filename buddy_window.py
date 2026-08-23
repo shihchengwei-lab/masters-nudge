@@ -85,7 +85,7 @@ LENS_BACKGROUNDS = {
 
 
 def lens_badge(persona: str | None) -> tuple[str, str]:
-    """Return a color-plus-name badge, falling back for old or unknown logs."""
+    """Return a color-plus-work badge, falling back for old or unknown logs."""
     key = persona.strip().lower() if isinstance(persona, str) else "general"
     name, color = LENS_BADGES.get(key, LENS_BADGES["general"])
     return f"● {name}", color
@@ -100,12 +100,10 @@ SELECTOR_STAGES = {
     for key in persona_config.STAGE_LENSES
 }
 
+
 def stage_selection_label(selection: persona_config.StageSelection) -> str:
-    """Describe lifecycle, forced specialist, and legacy selections accurately."""
-    if selection.stage in persona_config.STAGE_LENSES:
-        return persona_config.stage_label(selection.stage)
-    prefix = "Forced" if selection.source == "environment" else "Legacy"
-    return f"{prefix} · {persona_config.persona_label(selection.persona)}"
+    """Describe the selected lifecycle stage without exposing persona identity."""
+    return persona_config.stage_label(selection.stage)
 
 
 def window_height_for_reaction(reaction: str) -> int:
@@ -406,7 +404,7 @@ class BuddyWindow:
         initial_text = "( . . . )"
         if self.stage_selection.source == "environment":
             initial_text = (
-                f"MASTERS_NUDGE_PERSONA 正在接管：{selected_label}。"
+                f"MASTERS_NUDGE_STAGE 正在接管：{selected_label}。"
             )
 
         self.bubble_label = tk.Label(
@@ -451,7 +449,7 @@ class BuddyWindow:
         self._set_lens_badge(persona)
         message = (
             f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
-            "若 coding agent 設有 MASTERS_NUDGE_PERSONA，仍以環境變數為準。"
+            "若 coding agent 設有 MASTERS_NUDGE_STAGE，仍以環境變數為準。"
         )
         self.last_reaction = message
         self.bubble_label.config(text=message)

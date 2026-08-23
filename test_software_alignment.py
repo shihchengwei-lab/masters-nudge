@@ -8,7 +8,7 @@ import lens_router
 import persona_config
 import source_context
 from masters_nudge import checkpoints, storage
-from masters_nudge.contracts import EvidenceBundle, ReviewRequest, SessionRef
+from masters_nudge.contracts import ReviewRequest, SessionRef
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
@@ -89,7 +89,6 @@ class SoftwareColdStartTests(unittest.TestCase):
                 kind="strategy",
                 reason="strategy-review",
                 session=session,
-                evidence=EvidenceBundle(task_anchor="只修登入失敗"),
                 source_packet="CURRENT SOFTWARE STATE",
                 source_fingerprint="state-current",
             )
@@ -263,9 +262,9 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                         kind=kind,
                         reason="test-fail" if kind == "checkpoint" else "strategy-review",
                         session=session,
-                        evidence=EvidenceBundle(checkpoint_event=kind),
                         source_packet=kind,
                         source_fingerprint=f"state-{kind}",
+                        routing_evidence=kind,
                     ),
                     persist_reaction=True,
                 )
@@ -294,9 +293,9 @@ class SoftwareTelemetrySeparationTests(unittest.TestCase):
                     kind="checkpoint",
                     reason="test-fail",
                     session=session,
-                    evidence=EvidenceBundle(checkpoint_event="benchmark latency 20 ms"),
                     source_packet="current packet",
                     source_fingerprint="current-state",
+                    routing_evidence="benchmark latency 20 ms",
                 ),
                 persist_reaction=True,
             )

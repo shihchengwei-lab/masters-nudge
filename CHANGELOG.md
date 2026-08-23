@@ -5,13 +5,17 @@
 Target package version: `0.2.0-dev.1`.
 
 - Claim each pending Codex finding atomically before hook output so duplicate or concurrent `PostToolUse` dispatches cannot inject the same Nudge or response observation twice; release the claim when stdout fails so delivery remains retryable.
+- Record Claude checkpoint delivery only after the hook response is written and flushed; failed output releases the checkpoint claim instead of leaving a false `injected` receipt.
+- Make `ReviewCore` the sole routing owner, keep the lifecycle filter when unrelated specialist evidence is absent, and avoid rotating filters merely because the primary is cooling down.
+- Present engineering stages and practical focus in public configuration and the floating window; keep person names only inside provider prompts as private attention cues.
+- Move Claude transcript parsing into the shared Claude adapter and remove the duplicate evidence carrier and unused storage seams.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, shell wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks.
 - Retire the former Shader, Three.js／WebGPU black-hole, and Riemann specializations from the product branch; their historical artifacts remain in the verified [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release and fixed tag.
-- Retain compact evidence summaries and a single `evaluation/README.md` index with explicit non-causal and non-generalization boundaries.
+- Replace stopped evaluation harnesses, fixtures, dated reports, screenshots, and an unused spritesheet builder with a single `evaluation/README.md` index that retains denominators, exclusions, null results, and explicit claim boundaries.
 - Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
 - Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
 - Record the first observable tool action or Stop claim after each injected question in its delivery receipt; this is temporal evidence only and does not attribute the action or result to the Nudge.
-- Align software reviews around one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route, provider, and delivery records.
+- Align software reviews around one unlabeled open question, cold current-state input, delivery-aware two-filter cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route, provider, and delivery records.
 - Terminate the full Grok reviewer process tree after a deadline, preventing timed-out Windows hook workers and their CLI descendants from lingering.
 - Add per-session strategy single-flight, source-aware delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
 - Expand mid-turn checkpoint input from one triggering event into a bounded current-state packet containing the task anchor, recurring workflow evidence, validation state, and open target/evidence tension; keep Stop input unchanged.
