@@ -72,7 +72,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 provider="grok",
                 model="",
                 reaction="Reviewer 逾時（120 秒）；本輪沒有 Nudge。",
-                route_metadata={"effective_lens": "karis"},
+                route_metadata={"effective_lens": "fowler"},
                 kind="review_status",
             )
 
@@ -117,11 +117,11 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 session,
                 provider="anthropic",
                 model="opus",
-                reaction="這個候選實際減少了哪一段 GPU 工作？",
+                reaction="這個修正實際改變了哪一段驗證流程？",
                 route_metadata={"effective_lens": "carmack"},
                 source_event_seq=3,
-                source_fingerprint="candidate-a",
-                finding_scope="candidate",
+                source_fingerprint="change-a",
+                finding_scope="local",
             )
             storage.mark_delivered(
                 root,
@@ -138,7 +138,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 observation_kind="tool",
                 observation={
                     "tool": "exec_command",
-                    "command_family": "node --test",
+                    "command_family": "python -m unittest",
                     "failed": False,
                     "mutating": False,
                 },
@@ -156,7 +156,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             self.assertEqual(receipt["response_observation"]["kind"], "tool")
             self.assertEqual(
                 receipt["response_observation"]["observation"]["command_family"],
-                "node --test",
+                "python -m unittest",
             )
             observations = [
                 value
@@ -229,7 +229,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 provider="anthropic",
                 model="opus",
                 reaction="第二個盲點。",
-                route_metadata={"effective_lens": "karis"},
+                route_metadata={"effective_lens": "fowler"},
             )
             storage.mark_delivered(root, session, injected["ts"])
             storage.mark_delivery(
@@ -247,7 +247,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
-            for persona in ("carmack", "karis", "quilez"):
+            for persona in ("beck", "fowler", "linus"):
                 entry = storage.append_reaction(
                     root,
                     session,
@@ -260,7 +260,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
 
             recent = storage.read_recent_injected_personas(root, session, limit=2)
 
-        self.assertEqual(("karis", "quilez"), recent)
+        self.assertEqual(("fowler", "linus"), recent)
 
     def test_strategy_single_flight_is_session_scoped_and_releasable(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -273,129 +273,6 @@ class DeliveryLifecycleTests(unittest.TestCase):
             self.assertTrue(storage.claim_strategy_run(root, other, "other"))
             storage.release_strategy_run(root, session)
             self.assertTrue(storage.claim_strategy_run(root, session, "third"))
-
-    def test_shader_pending_uses_source_freshness_instead_of_event_age(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "s")
-            entry = storage.append_reaction(
-                root,
-                session,
-                provider="grok",
-                model="",
-                reaction="新證據仍指向同一個成本轉移。",
-                route_metadata={"effective_lens": "carmack"},
-                reason="shader-research-change",
-                source_event_seq=1,
-                source_fingerprint="research-a",
-            )
-
-            pending = storage.latest_pending(
-                root,
-                session,
-                current_event_seq=20,
-                current_source_fingerprint="research-a",
-            )
-
-            self.assertEqual(pending["ts"], entry["ts"])
-
-    def test_shader_trajectory_finding_survives_research_source_change(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "s")
-            entry = storage.append_reaction(
-                root,
-                session,
-                provider="grok",
-                model="",
-                reaction="候選仍只消除抵達 sample 後的片元工作。",
-                route_metadata={"effective_lens": "akenine_moller"},
-                reason="shader-research-change",
-                source_fingerprint="research-old",
-                finding_scope="trajectory",
-            )
-
-            pending = storage.latest_pending(
-                root,
-                session,
-                current_event_seq=20,
-                current_source_fingerprint="research-new",
-            )
-
-            self.assertEqual(pending["ts"], entry["ts"])
-            self.assertEqual(pending["finding_scope"], "trajectory")
-            receipts = storage.load_delivery_state(root, session)["receipts"]
-            self.assertNotIn(entry["ts"], receipts)
-
-            storage.mark_delivered(
-                root,
-                session,
-                pending["ts"],
-                event_seq=21,
-                delivered_via="PostToolUse",
-            )
-
-            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
-            self.assertEqual(receipt["status"], "injected")
-            self.assertEqual(receipt["delivered_via"], "PostToolUse")
-
-    def test_shader_candidate_question_survives_recent_source_change(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "s")
-            entry = storage.append_reaction(
-                root,
-                session,
-                provider="grok",
-                model="",
-                reaction="這次變更是否仍保留相同的效能瓶頸？",
-                route_metadata={"effective_lens": "carmack"},
-                reason="shader-research-change",
-                source_event_seq=1,
-                source_fingerprint="research-old",
-                finding_scope="candidate",
-            )
-
-            pending = storage.latest_pending(
-                root,
-                session,
-                current_event_seq=4,
-                current_source_fingerprint="research-new",
-            )
-
-            self.assertEqual(pending["ts"], entry["ts"])
-            self.assertNotIn(
-                entry["ts"], storage.load_delivery_state(root, session)["receipts"]
-            )
-
-    def test_shader_candidate_question_expires_after_event_window(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "s")
-            entry = storage.append_reaction(
-                root,
-                session,
-                provider="anthropic",
-                model="opus",
-                reaction="這次變更是否仍保留相同的效能瓶頸？",
-                route_metadata={"effective_lens": "carmack"},
-                reason="shader-research-change",
-                source_event_seq=1,
-                source_fingerprint="research-old",
-                finding_scope="candidate",
-            )
-
-            pending = storage.latest_pending(
-                root,
-                session,
-                current_event_seq=8,
-                current_source_fingerprint="research-new",
-            )
-
-            self.assertIsNone(pending)
-            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
-            self.assertEqual(receipt["status"], "expired")
-
 
 class LongGoalReplayTests(unittest.TestCase):
     def test_repeated_command_family_schedules_one_detached_strategy_review(self):

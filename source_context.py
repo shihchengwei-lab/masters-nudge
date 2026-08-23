@@ -15,9 +15,6 @@ CHECKPOINT_BOTTLENECK_MAX_CHARS = 4300
 CHECKPOINT_WORKFLOW_MAX_CHARS = 1800
 CHECKPOINT_MECHANISM_MAX_CHARS = 3500
 CHECKPOINT_TENSION_MAX_CHARS = 2200
-SHADER_TASK_ANCHOR_MAX_CHARS = 1000
-SHADER_DECISION_MATERIAL_MAX_CHARS = 4200
-SHADER_DIRECT_EVIDENCE_MAX_CHARS = 2600
 STOP_ASSISTANT_MAX_CHARS = 2500
 TOOL_EVIDENCE_MAX_CHARS = 2000
 AGENTCAM_EVIDENCE_MAX_CHARS = 2000
@@ -101,31 +98,6 @@ def build_checkpoint_packet(
             "unresolved contradiction",
             "\n\n".join(tension_parts),
             CHECKPOINT_TENSION_MAX_CHARS,
-        ),
-    ]
-    return "\n\n".join(part for part in parts if part)
-
-
-def build_shader_research_packet(
-    change: str,
-    projection: str,
-    *,
-    task_anchor: str = "",
-    tool_evidence: str = "",
-) -> str:
-    """Present bounded decision material, not an undifferentiated tool journal."""
-    parts = [
-        _section("research target", task_anchor, SHADER_TASK_ANCHOR_MAX_CHARS),
-        _section("new research-state delta", change, 1600),
-        _section(
-            "candidate decision material",
-            projection,
-            SHADER_DECISION_MATERIAL_MAX_CHARS,
-        ),
-        _section(
-            "latest direct evidence",
-            tool_evidence,
-            SHADER_DIRECT_EVIDENCE_MAX_CHARS,
         ),
     ]
     return "\n\n".join(part for part in parts if part)

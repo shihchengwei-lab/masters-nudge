@@ -8,11 +8,10 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-import shader_progress
 import review_telemetry
 import source_context
 
-from . import checkpoints, profiles, storage
+from . import checkpoints, storage
 from .contracts import (
     EvidenceBundle,
     PromptSubmitted,
@@ -289,14 +288,6 @@ class CodexAdapter:
         self.data_dir = core.settings.paths.data_dir
         self.schedule_strategy = schedule_strategy
 
-    def _shader_research(self, session: SessionRef):
-        profile, _profile_error = profiles.load_workspace_profile(
-            self.data_dir, session
-        )
-        if profile.domain != "shader" or not session.cwd:
-            return None
-        return shader_progress.load_research_snapshot(session.cwd)
-
     def process(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         if active_guard():
             return None
@@ -329,12 +320,10 @@ class CodexAdapter:
             event.prompt,
             transcript_path=event.transcript_path,
         )
-        research = self._shader_research(event.session)
         output, _delivery_busy = _pending_output(
             self.data_dir,
             "UserPromptSubmit",
             event.session,
-            current_source_fingerprint=(research.fingerprint if research else ""),
         )
         return output
 
@@ -373,95 +362,12 @@ class CodexAdapter:
                 "goal_transition": transition,
             },
         )
-        research = self._shader_research(event.session)
         checkpoint = checkpoints.classify_tool(event, changed_lines)
         strategy = checkpoints.classify_strategy(
             progress, changed_line_count=changed_lines
         )
-        if research is not None and not (
-            strategy and strategy["reason"] == "goal-transition"
-        ):
-            previous_fingerprint = str(
-                progress.get("shader_research_fingerprint") or ""
-            )
-            previous_state = progress.get("shader_research_state")
-            if not previous_fingerprint:
-                storage.mark_shader_research_reviewed(
-                    self.data_dir,
-                    event.session,
-                    fingerprint=research.fingerprint,
-                    projection_state=research.state,
-                )
-                progress["shader_research_fingerprint"] = research.fingerprint
-                progress["shader_research_state"] = research.state
-                strategy = None
-            elif previous_fingerprint != research.fingerprint:
-                change = shader_progress.describe_change(
-                    previous_state, research.state
-                )
-                change_mode = shader_progress.classify_change(
-                    previous_state, research.state
-                )
-                review_metadata = shader_progress.research_review_metadata(
-                    previous_state, research.state
-                )
-                gap_key = str(review_metadata.get("gap_key") or "")
-                gap_evidence_fingerprint = str(
-                    review_metadata.get("gap_evidence_fingerprint") or ""
-                )
-                if storage.shader_research_gap_is_unchanged(
-                    self.data_dir,
-                    event.session,
-                    gap_key=gap_key,
-                    evidence_fingerprint=gap_evidence_fingerprint,
-                ):
-                    storage.mark_shader_research_reviewed(
-                        self.data_dir,
-                        event.session,
-                        fingerprint=research.fingerprint,
-                        projection_state=research.state,
-                    )
-                    storage.mark_shader_research_gap_suppressed(
-                        self.data_dir,
-                        event.session,
-                        gap_key=gap_key,
-                        evidence_fingerprint=gap_evidence_fingerprint,
-                        source_fingerprint=research.fingerprint,
-                    )
-                    progress["shader_research_fingerprint"] = research.fingerprint
-                    progress["shader_research_state"] = research.state
-                    strategy = None
-                else:
-                    task_anchor = str(
-                        progress.get("task_anchor")
-                        or storage.load_turn_state(
-                            self.data_dir, event.session
-                        ).get("task_anchor")
-                        or ""
-                    )
-                    strategy = {
-                        "reason": "shader-research-change",
-                        "trigger": f"shader-research-{change_mode}",
-                        "context": source_context.build_shader_research_packet(
-                            change,
-                            research.projection,
-                            task_anchor=task_anchor,
-                            tool_evidence=_tool_record(event),
-                        ),
-                        "fingerprint": f"shader-research-{research.fingerprint}",
-                        "research_fingerprint": research.fingerprint,
-                        "research_state": research.state,
-                        **review_metadata,
-                    }
-            else:
-                # Structured Shader state is preferred when it changes, but a
-                # temporarily stale ledger must not disable the long-goal
-                # workflow fallback (repetition, failures, or diff growth).
-                pass
-        current_source_fingerprint = (
-            research.fingerprint
-            if research is not None
-            else str((strategy or checkpoint or {}).get("fingerprint") or "")
+        current_source_fingerprint = str(
+            (strategy or checkpoint or {}).get("fingerprint") or ""
         )
         pending_output, delivery_busy = _pending_output(
             self.data_dir,
@@ -504,19 +410,6 @@ class CodexAdapter:
                             "progress": progress,
                             "task_anchor": str(progress.get("task_anchor") or storage.load_turn_state(self.data_dir, event.session).get("task_anchor") or ""),
                             "event_seq": event_seq,
-                            "research_fingerprint": str(
-                                strategy.get("research_fingerprint") or ""
-                            ),
-                            "research_state": strategy.get("research_state") or {},
-                            "route_signals": list(strategy.get("route_signals") or []),
-                            "route_basis": str(strategy.get("route_basis") or ""),
-                            "gap_key": str(strategy.get("gap_key") or ""),
-                            "gap_evidence_fingerprint": str(
-                                strategy.get("gap_evidence_fingerprint") or ""
-                            ),
-                            "material_completeness": float(
-                                strategy.get("material_completeness") or 0.0
-                            ),
                         }
                     )
                     if not scheduled:
@@ -554,19 +447,6 @@ class CodexAdapter:
                             "progress": progress,
                             "task_anchor": str(storage.load_turn_state(self.data_dir, event.session).get("task_anchor") or ""),
                             "event_seq": event_seq,
-                            "research_fingerprint": str(
-                                strategy.get("research_fingerprint") or ""
-                            ),
-                            "research_state": strategy.get("research_state") or {},
-                            "route_signals": list(strategy.get("route_signals") or []),
-                            "route_basis": str(strategy.get("route_basis") or ""),
-                            "gap_key": str(strategy.get("gap_key") or ""),
-                            "gap_evidence_fingerprint": str(
-                                strategy.get("gap_evidence_fingerprint") or ""
-                            ),
-                            "material_completeness": float(
-                                strategy.get("material_completeness") or 0.0
-                            ),
                         }
                     )
             else:
@@ -680,26 +560,21 @@ class CodexAdapter:
         task_anchor = str(payload.get("task_anchor") or "")
         event_seq = int(payload.get("event_seq") or 0)
         context = str(checkpoint.get("context") or "")
-        semantic_shader_review = (
-            str(checkpoint.get("reason") or "") == "shader-research-change"
+        source_packet = source_context.build_checkpoint_packet(
+            task_anchor=task_anchor,
+            event_context=context,
+            workflow_context=source_context.summarize_checkpoint_progress(
+                payload.get("progress")
+                if isinstance(payload.get("progress"), dict)
+                else {}
+            ),
+            tool_evidence=str(payload.get("journal") or ""),
         )
-        if semantic_shader_review:
-            source_packet = context
-            evidence = EvidenceBundle(checkpoint_event=context)
-        else:
-            source_packet = source_context.build_checkpoint_packet(
-                task_anchor=task_anchor,
-                event_context=context,
-                workflow_context=source_context.summarize_checkpoint_progress(
-                    payload.get("progress") if isinstance(payload.get("progress"), dict) else {}
-                ),
-                tool_evidence=str(payload.get("journal") or ""),
-            )
-            evidence = EvidenceBundle(
-                task_anchor=task_anchor,
-                checkpoint_event=context,
-                tool_evidence=str(payload.get("journal") or ""),
-            )
+        evidence = EvidenceBundle(
+            task_anchor=task_anchor,
+            checkpoint_event=context,
+            tool_evidence=str(payload.get("journal") or ""),
+        )
         request = ReviewRequest(
             schema_version=1,
             kind="strategy",
@@ -710,17 +585,6 @@ class CodexAdapter:
             source_fingerprint=str(checkpoint.get("fingerprint") or ""),
             source_event_seq=event_seq,
             trigger=str(checkpoint.get("trigger") or "strategy-review"),
-            route_signals=tuple(
-                str(item) for item in payload.get("route_signals", []) if str(item)
-            ),
-            route_basis=str(payload.get("route_basis") or ""),
-            gap_key=str(payload.get("gap_key") or ""),
-            gap_evidence_fingerprint=str(
-                payload.get("gap_evidence_fingerprint") or ""
-            ),
-            material_completeness=float(
-                payload.get("material_completeness") or 0.0
-            ),
         )
         try:
             outcome = self.core.review(
@@ -738,33 +602,10 @@ class CodexAdapter:
                 self.data_dir, session, request.source_fingerprint
             )
             return
-        accepted = outcome.status == "finding" and bool(outcome.finding)
-        if semantic_shader_review and outcome.status == "no_finding":
-            accepted = True
-        if accepted:
+        if outcome.status == "finding" and outcome.finding:
             storage.complete_checkpoint(
                 self.data_dir, session, request.source_fingerprint
             )
-            if semantic_shader_review:
-                storage.mark_shader_research_reviewed(
-                    self.data_dir,
-                    session,
-                    fingerprint=str(payload.get("research_fingerprint") or ""),
-                    projection_state=(
-                        payload.get("research_state")
-                        if isinstance(payload.get("research_state"), dict)
-                        else {}
-                    ),
-                )
-                storage.mark_shader_research_gap_reviewed(
-                    self.data_dir,
-                    session,
-                    gap_key=request.gap_key,
-                    evidence_fingerprint=request.gap_evidence_fingerprint,
-                    source_fingerprint=str(
-                        payload.get("research_fingerprint") or ""
-                    ),
-                )
         else:
             storage.release_checkpoint(
                 self.data_dir, session, request.source_fingerprint

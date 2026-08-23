@@ -30,11 +30,9 @@ Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry file
 |---|---|---|
 | Start turn | Save the task anchor and transcript offset | Save the task anchor; do not parse the Codex transcript |
 | Collect evidence | Bounded transcript/event evidence and optional Agentcam report | Bounded `PostToolUse` journal and optional Agentcam report |
-| Checkpoint | Tool failure or selected successful mutation | Delivered structured failure, test output, large diff, long-goal or semantic Shader change |
+| Checkpoint | Tool failure or selected successful mutation | Delivered structured failure, test output, large diff, or long-goal change |
 | End turn | Async native `Stop` worker | Detached Stop worker |
 | Deliver queued finding | Plain additional context at a later prompt | `hookSpecificOutput.additionalContext` at a later hook event |
-
-A structured Shader workspace reads its declared contract, experiment registry, and result files and renders a compact semantic projection. Generic journal volume does not replace those authoritative inputs.
 
 ## Output and delivery
 
@@ -58,7 +56,7 @@ reviewer.json
 review-telemetry.jsonl
 ```
 
-One `.turn.json` record owns the task anchor, evidence offset, and current-turn state. There is no second source-state file for the same turn. Workspace profiles and reviewer configuration are host-neutral.
+One `.turn.json` record owns the task anchor, evidence offset, and current-turn state. There is no second source-state file for the same turn. Reviewer configuration is host-neutral.
 
 The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, and does not delete original review data.
 

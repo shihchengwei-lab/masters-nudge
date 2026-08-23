@@ -499,14 +499,6 @@ class PluginPackagingTests(unittest.TestCase):
                 "0.1.0-dev.2",
                 (HERE / "CHANGELOG.md").read_text(encoding="utf-8"),
             )
-        self.assertIn(
-            "fixed visual and measurement contracts",
-            (HERE / "README.md").read_text(encoding="utf-8"),
-        )
-        self.assertIn(
-            "固定視覺與量測契約",
-            (HERE / "README.zh-TW.md").read_text(encoding="utf-8"),
-        )
         self.assertTrue((PLUGIN_ROOT / "skills" / "setup-local" / "SKILL.md").exists())
 
     def test_ci_smokes_the_plugin_package_without_legacy_installers(self):
@@ -1055,7 +1047,7 @@ class DoctorTests(unittest.TestCase):
     def test_window_launch_passes_explicit_workspace_to_child(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw) / "plugin"
-            workspace = Path(raw) / "shader-workspace"
+            workspace = Path(raw) / "software-workspace"
             root.mkdir()
             workspace.mkdir()
             (root / "buddy_window.py").write_text("pass\n", encoding="utf-8")
@@ -1081,7 +1073,7 @@ class DoctorTests(unittest.TestCase):
         self.assertEqual(popen.call_args.kwargs["cwd"], str(workspace.resolve()))
 
     def test_window_cli_forwards_explicit_workspace(self):
-        workspace = r"E:\projects\shader-nudge-lab"
+        workspace = r"E:\projects\software-review-app"
         with (
             patch.object(
                 sys,
@@ -1107,52 +1099,6 @@ class DoctorTests(unittest.TestCase):
             masters_nudge_cli.PLUGIN_ROOT,
             workspace=workspace,
         )
-
-    def test_shader_recommended_cli_saves_v12_profile_for_workspace(self):
-        workspace = r"E:\projects\shader-recommended"
-        settings = Mock()
-        settings.paths.data_dir = Path("data")
-        saved = {
-            "saved": True,
-            "path": "profile.json",
-            "domain": "shader",
-            "stage": "explore",
-            "provider": "anthropic",
-            "model": "opus",
-            "review_mode": "all",
-            "primary_lens": "",
-        }
-        with (
-            patch.object(
-                sys,
-                "argv",
-                [
-                    "masters-nudge",
-                    "shader",
-                    "configure-recommended",
-                    "--workspace",
-                    workspace,
-                    "--json",
-                ],
-            ),
-            patch.object(
-                masters_nudge_cli.RuntimeSettings,
-                "from_env",
-                return_value=settings,
-            ),
-            patch.object(
-                masters_nudge_cli.profiles,
-                "configure_recommended_shader_profile",
-                return_value=saved,
-            ) as configure,
-            redirect_stdout(io.StringIO()) as output,
-        ):
-            result = masters_nudge_cli.main()
-
-        self.assertEqual(result, 0)
-        configure.assert_called_once_with(Path("data"), workspace)
-        self.assertEqual(json.loads(output.getvalue()), saved)
-
 
 if __name__ == "__main__":
     unittest.main()

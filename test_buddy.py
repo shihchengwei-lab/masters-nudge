@@ -381,7 +381,10 @@ class TestSourceContext(unittest.TestCase):
         self.assertIn("[agent final claim]", packet)
         self.assertIn("[tool evidence]", packet)
         self.assertIn("[agentcam evidence]", packet)
-        self.assertLess(packet.index("[agent final claim]"), packet.index("[tool evidence]"))
+        self.assertLess(
+            packet.index("[agent final claim]"),
+            packet.index("[tool evidence]"),
+        )
 
     def test_agentcam_extractor_keeps_only_named_evidence_sections(self):
         report = """# Agent Run Report
@@ -1414,16 +1417,16 @@ class TestFloatingWindowLayout(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             plugin = root / "plugin"
-            shader = root / "shader"
+            workspace = root / "workspace"
             plugin.mkdir()
-            shader.mkdir()
+            workspace.mkdir()
 
             resolved = buddy_window.resolve_window_workspace(
-                environ={"MASTERS_NUDGE_WORKSPACE": str(shader)},
+                environ={"MASTERS_NUDGE_WORKSPACE": str(workspace)},
                 cwd=plugin,
             )
 
-        self.assertEqual(resolved, buddy_window.normalize_workspace(shader))
+        self.assertEqual(resolved, buddy_window.normalize_workspace(workspace))
 
     def test_window_skill_forwards_the_active_workspace(self):
         skill = (
@@ -1504,8 +1507,8 @@ class TestFloatingWindowLayout(unittest.TestCase):
                     {
                         "ts": "2026-08-16T10:00:00.123456",
                         "kind": "review",
-                        "reaction": "先量測透明 overdraw。",
-                        "persona": "akenine_moller",
+                        "reaction": "先確認失敗測試是否覆蓋原始需求。",
+                        "persona": "beck",
                         "delivery_status": "queued",
                     },
                     ensure_ascii=False,
@@ -1560,7 +1563,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
                         "ts": "2026-08-16T10:01:00.123456",
                         "kind": "review_status",
                         "reaction": timeout_message,
-                        "persona": "karis",
+                        "persona": "fowler",
                         "delivery_status": "queued",
                     },
                     ensure_ascii=False,
@@ -1603,80 +1606,6 @@ class TestFloatingWindowLayout(unittest.TestCase):
             ("design", "build", "evolve", "review"),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
-
-    def test_shader_selector_offers_six_master_lenses(self):
-        import buddy_window
-
-        options = buddy_window.selector_options(domain="shader")
-        self.assertEqual(
-            options,
-            [
-                "Tomas Akenine-Moller（幾何、可見性與 overdraw）",
-                "John Carmack（GPU 執行路徑與效能）",
-                "Brian Karis（URP 材質與渲染契約）",
-                "Timothy Lottes（畫質穩定與精度）",
-                "Inigo Quilez（程序化數學與 SDF）",
-                "Natalya Tatarchuk（跨硬體與上架驗證）",
-            ],
-        )
-        for label, lens in zip(
-            options,
-            (
-                "akenine_moller",
-                "carmack",
-                "karis",
-                "lottes",
-                "quilez",
-                "tatarchuk",
-            ),
-        ):
-            self.assertEqual(
-                buddy_window.selector_value_for_label(label, domain="shader"),
-                lens,
-            )
-
-    def test_shader_selector_saves_stop_primary_for_current_workspace(self):
-        import buddy_window
-        from masters_nudge import profiles
-        from masters_nudge.contracts import SessionRef
-
-        with tempfile.TemporaryDirectory() as raw:
-            data_dir = Path(raw) / "data"
-            workspace = Path(raw) / "shader-workspace"
-            profiles.configure_workspace_profile(
-                data_dir,
-                workspace,
-                domain="shader",
-                stage="frame",
-                provider="grok",
-                model="",
-                review_mode="all",
-            )
-            window = object.__new__(buddy_window.BuddyWindow)
-            window.domain = "shader"
-            window.workspace = profiles.normalize_workspace(workspace)
-            window.stage_var = mock.Mock(
-                get=mock.Mock(
-                    return_value="Timothy Lottes（畫質穩定與精度）"
-                )
-            )
-            window.bubble_label = mock.Mock()
-            window._set_lens_badge = mock.Mock()
-            window._resize_for_reaction = mock.Mock()
-
-            with mock.patch.object(buddy_window, "DATA_DIR", data_dir):
-                buddy_window.BuddyWindow._on_stage_selected(window)
-
-            profile, error = profiles.load_workspace_profile(
-                data_dir,
-                SessionRef("codex_cli", "session", cwd=str(workspace)),
-            )
-
-        self.assertEqual(error, "")
-        self.assertEqual(profile.primary_lens, "lottes")
-        window._set_lens_badge.assert_called_once_with("lottes")
-        self.assertIn("下一次 Stop 起使用", window.last_reaction)
-        self.assertIn("Checkpoint 仍可依證據暫時換濾鏡", window.last_reaction)
 
     def test_window_contains_persistent_lens_selector(self):
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
@@ -1938,25 +1867,6 @@ class TestInjectState(unittest.TestCase):
 
         self.assertEqual("完成判斷目前依據哪一項乾淨安裝證據？", context)
         self.assertNotIn("Linus", context)
-
-    def test_shader_context_is_the_unlabeled_finding_only(self):
-        reaction = "中位數改善與尾端變慢，分別對應哪一層工作轉移？"
-
-        context = self.inject.build_context_text(
-            {
-                "ts": "2026-08-20T05:00:00",
-                "kind": "review",
-                "domain": "shader",
-                "reason": "shader-research-change",
-                "effective_lens": "carmack",
-            },
-            reaction,
-        )
-
-        self.assertEqual(context, reaction)
-        self.assertNotIn("Masters", context)
-        self.assertNotIn("Carmack", context)
-        self.assertNotIn("第三方", context)
 
     def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
         from masters_nudge import storage

@@ -292,7 +292,7 @@ class CodexAdapterTests(unittest.TestCase):
                                 "type": "input_text",
                                 "text": (
                                     '<codex_internal_context source="goal">\n'
-                                    "<objective>\n改善黑洞特效的效能。\n</objective>\n"
+                                    "<objective>\n改善登入流程的可靠性。\n</objective>\n"
                                     "</codex_internal_context>"
                                 ),
                             }
@@ -325,8 +325,8 @@ class CodexAdapterTests(unittest.TestCase):
                     "turn_id": "goal-turn",
                     "cwd": str(self.root),
                     "tool_name": "Read",
-                    "tool_input": {"file_path": "blackhole-shader.js"},
-                    "tool_response": {"content": "shader"},
+                    "tool_input": {"file_path": "auth_service.py"},
+                    "tool_response": {"content": "authentication service"},
                 }
             )
 
@@ -337,7 +337,7 @@ class CodexAdapterTests(unittest.TestCase):
             storage.load_turn_state(self.settings.paths.data_dir, session)[
                 "task_anchor"
             ],
-            "改善黑洞特效的效能。",
+            "改善登入流程的可靠性。",
         )
         self.assertEqual(
             json.loads(
@@ -345,7 +345,7 @@ class CodexAdapterTests(unittest.TestCase):
                     self.settings.paths.data_dir, session, "progress"
                 ).read_text(encoding="utf-8")
             )["goal_objective"],
-            "改善黑洞特效的效能。",
+            "改善登入流程的可靠性。",
         )
 
     def test_first_tool_recovers_active_goal_when_prompt_hook_did_not_fire(self):
@@ -362,7 +362,7 @@ class CodexAdapterTests(unittest.TestCase):
                                 "type": "input_text",
                                 "text": (
                                     '<codex_internal_context source="goal">\n'
-                                    "<objective>\n改善黑洞特效的效能。\n</objective>\n"
+                                    "<objective>\n改善登入流程的可靠性。\n</objective>\n"
                                     "</codex_internal_context>"
                                 ),
                             }
@@ -387,8 +387,8 @@ class CodexAdapterTests(unittest.TestCase):
                     "cwd": str(self.root),
                     "transcript_path": str(transcript),
                     "tool_name": "Read",
-                    "tool_input": {"file_path": "blackhole-shader.js"},
-                    "tool_response": {"content": "shader"},
+                    "tool_input": {"file_path": "auth_service.py"},
+                    "tool_response": {"content": "authentication service"},
                 }
             )
 
@@ -401,9 +401,9 @@ class CodexAdapterTests(unittest.TestCase):
                 self.settings.paths.data_dir, session, "progress"
             ).read_text(encoding="utf-8")
         )
-        self.assertEqual(turn["task_anchor"], "改善黑洞特效的效能。")
+        self.assertEqual(turn["task_anchor"], "改善登入流程的可靠性。")
         self.assertGreater(turn["transcript_offset"], 0)
-        self.assertEqual(progress["goal_objective"], "改善黑洞特效的效能。")
+        self.assertEqual(progress["goal_objective"], "改善登入流程的可靠性。")
 
     def test_stop_review_uses_journal_not_transcript_contents(self):
         core = FakeCore(self.settings, ReviewOutcome("no_finding"))
@@ -512,7 +512,9 @@ class CodexAdapterTests(unittest.TestCase):
 
         request, _persist, _timeout = core.calls[-1]
         self.assertIn("[current bottleneck model]", request.source_packet)
-        self.assertIn("[repeated explanation and workflow evidence]", request.source_packet)
+        self.assertIn(
+            "[repeated explanation and workflow evidence]", request.source_packet
+        )
         self.assertIn("[failed or no-change mechanisms]", request.source_packet)
         self.assertIn("token check", request.source_packet)
         self.assertIn("1 failed", request.source_packet)

@@ -101,15 +101,16 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertNotIn("舊問題", seen["input"])
         self.assertNotIn("你最近說過", seen["input"])
 
-    def test_shader_packet_does_not_accept_previous_findings(self):
-        packet = source_context.build_shader_research_packet(
-            "candidate changed",
-            "current evidence",
-            task_anchor="fixed target",
-            tool_evidence="fresh measurement",
+    def test_checkpoint_packet_does_not_accept_previous_findings(self):
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="只修登入失敗",
+            event_context="failure: authentication timeout",
+            assistant_context="正在調整 auth_service.py",
+            tool_evidence="result: 1 failed",
         )
 
         self.assertNotIn("recent blind spots", packet)
+        self.assertNotIn("你最近說過", packet)
 
 
 class SoftwareDeliveryAwareRoutingTests(unittest.TestCase):

@@ -69,8 +69,6 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 
 未覆寫時，Claude Code 使用 Anthropic `sonnet`；Codex 使用 OpenAI `gpt-5.6-sol`。Reviewer 永遠是另一個模型呼叫，即使使用與 host 相同的 provider。
 
-Shader 研究採用以下目標契約：交付在固定視覺與量測契約下，經實證建立且可重現的最佳 Shader Pareto 前沿，並保留足以重現候選判定的研究紀錄。
-
 常用環境變數：
 
 | 變數 | 預設 | 用途 |
@@ -105,13 +103,12 @@ Reactions、任務摘要、受限 journal、投遞 receipts、注入後第一個
 
 ## 證據與限制
 
-保留的證據索引位於 [evaluation/README.md](evaluation/README.md)。歷史 raw runs、截圖與工作目錄封存於已驗證的 [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)；完整 Riemann 實驗仍可從固定的 [tagged source tree](https://github.com/shihchengwei-lab/masters-nudge/tree/evidence-archive-2026-08-22/experiment/riemann-domain) 取得。
+保留的證據索引位於 [evaluation/README.md](evaluation/README.md)。
 
 現有證據只支持以下有限結論：
 
 - 固定 synthetic packets 顯示濾鏡區分與 schema compliance；不能證明一般情境的可靠性。
 - Phase B synthetic tasks 沒有產生正向 treatment effect，實驗已停止。
-- 歷史 Riemann trace 早於問句限定契約，而且投遞 receipt 不完整；不能作為目前產品驗證，也不能證明因果或數學正確性。
 - 不同 provider 回報的 token、latency 與估計成本不是同一口徑，也不是帳單保證。
 - 若 host 沒有送出預期原生事件，hook 投遞只能 best-effort。
 

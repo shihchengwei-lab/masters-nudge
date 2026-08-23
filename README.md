@@ -69,8 +69,6 @@ Migration writes an adjacent timestamped backup before changing a host config. M
 
 Without an override, Claude Code uses Anthropic `sonnet`; Codex uses OpenAI `gpt-5.6-sol`. A reviewer is a separate model invocation, even when it uses the same provider as the host.
 
-For Shader research, use this goal contract: deliver a reproducible, evidence-backed best Shader Pareto frontier under fixed visual and measurement contracts, while retaining enough research records to reproduce each candidate decision.
-
 Common environment variables:
 
 | Variable | Default | Purpose |
@@ -105,13 +103,12 @@ Reactions, task anchors, bounded journals, delivery receipts, the first observab
 
 ## Evidence and limits
 
-The retained evidence index is [evaluation/README.md](evaluation/README.md). Historical raw runs, screenshots, and workspaces are preserved in the verified [evidence archive release](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22); the complete Riemann experiment remains available in its fixed [tagged source tree](https://github.com/shihchengwei-lab/masters-nudge/tree/evidence-archive-2026-08-22/experiment/riemann-domain).
+The retained evidence index is [evaluation/README.md](evaluation/README.md).
 
 Current evidence supports only bounded claims:
 
 - Fixed synthetic packets showed lens separation and schema compliance; they do not prove general reliability.
 - Phase B synthetic tasks produced no positive treatment effect and were stopped.
-- The historical Riemann trace predates the question-only contract and has incomplete delivery receipts; it is not current product validation and establishes neither causality nor mathematical correctness.
 - Provider-reported tokens, latency, and estimated cost are not normalized across providers and are not billing guarantees.
 - Hook delivery is best-effort when a host does not emit an expected native event.
 

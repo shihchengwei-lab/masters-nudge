@@ -6,38 +6,21 @@ Target package version: `0.2.0-dev.1`.
 
 - Claim each pending Codex finding atomically before hook output so duplicate or concurrent `PostToolUse` dispatches cannot inject the same Nudge or response observation twice; release the claim when stdout fails so delivery remains retryable.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, shell wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks.
-- Publish and verify the [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release before removing historical raw evaluations, screenshots, workspaces, and the full Riemann research/runtime snapshots from the product branch.
+- Retire the former Shader, Three.js／WebGPU black-hole, and Riemann specializations from the product branch; their historical artifacts remain in the verified [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release and fixed tag.
 - Retain compact evidence summaries and a single `evaluation/README.md` index with explicit non-causal and non-generalization boundaries.
-- Move the remaining Riemann domain, observational benchmark, and closure certificates out of the product branch after verifying that the fixed archive tag preserves the complete 102-file tree; label the run as pre-question-contract history with incomplete delivery receipts.
-- Keep the frozen Unity／URP Shader protocol unchanged and add a separate Three.js／WebGPU V2 draft with an unconfirmed domain-fit gate. Do not add a production adapter until an unchanged-domain smoke exposes a reproducible workspace evidence, routing, or prompt gap.
-- Move active Shader regression inputs into `tests/fixtures/shader/` so product tests no longer depend on historical evaluation directories.
-- Make the Nudge interaction generator refuse an existing output directory instead of overwriting earlier results.
 - Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
 - Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
-- Keep Shader candidate questions eligible for six subsequent tool events when source state changes, while retaining strict fingerprint invalidation for local findings and longer-lived trajectory questions.
 - Record the first observable tool action or Stop claim after each injected question in its delivery receipt; this is temporal evidence only and does not attribute the action or result to the Nudge.
-
-- Align software reviews with the Shader interaction contract: one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route/provider/delivery records.
-- Add a `shader configure-recommended` workspace preset that preserves the V12 Shader environment (`anthropic / opus / explore / review all`, automatic Persona routing), and keep Shader injection label-free on both Codex and Claude paths.
+- Align software reviews around one unlabeled open question, cold current-state input, delivery-aware two-Persona cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route, provider, and delivery records.
 - Terminate the full Grok reviewer process tree after a deadline, preventing timed-out Windows hook workers and their CLI descendants from lingering.
-- Add a two-injection Shader Persona cooldown: only successfully injected findings count, routing keeps the Provider cold, and the next eligible Persona follows the original evidence ranking.
-- Include live Shader candidate results from either `benchmark/candidate-results.json` or per-candidate `Evidence/LongTail/*/result.json` and `failure.json` files in the semantic research fingerprint and projection, focus the packet on the latest observed candidate, and retain generic long-goal checkpoints when structured evidence temporarily remains unchanged.
-- Enrich semantic Shader reviews with candidate decision material, the latest direct tool evidence, and explicit missing-field markers; route research changes from structured evidence dimensions, suppress only an unchanged evidence-gap pair, and record route basis, gap fingerprint, and material completeness in telemetry.
-- Trigger structured Shader strategy reviews from semantic changes in the architecture contract, experiment registry, and result files instead of the generic eight-event workflow budget; send a compact source projection without replaying the full tool journal.
-- Make Shader specialist routing prefer the strongest current evidence rather than balancing historical invocation counts.
-- Add per-session strategy single-flight, source-aware Shader delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
-- Record Shader `expand` / `deepen` / live-`guard` opportunities in telemetry as an observational metric, not a runtime quota.
-- Add Shader candidate-search governance where a configured numeric budget counts distinct bottleneck-hypothesis/work-elimination cells, while near-neighbor numeric and algebraic variants become separately budgeted refinements; allow an explicit unbounded mode whose stop is governed by observed search saturation.
-- Report nearest-rank observed p95 for all Shader replay attempts and successful responses separately, retaining timeout wall time in the operational tail while labeling three-sample persona p95 as descriptive only.
-- Expand mid-turn checkpoint input from one triggering event into a bounded research state containing the current bottleneck proxy, workflow recurrence, mechanism outcomes, and the still-open target/evidence tension; keep Stop input unchanged.
-- Show six Shader specialists in the Tk selector for Shader workspaces; persist a workspace-scoped Stop primary while retaining evidence-driven checkpoint switching.
+- Add per-session strategy single-flight, source-aware delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
+- Expand mid-turn checkpoint input from one triggering event into a bounded current-state packet containing the task anchor, recurring workflow evidence, validation state, and open target/evidence tension; keep Stop input unchanged.
 - Raise the default Stop reviewer timeout from 60 to 120 seconds, and keep timeout status entries visible in Tk without incorrectly labeling them as pending injection.
-- Pass the caller's workspace explicitly through the window launcher so Tk domain selectors no longer depend on the plugin script's working directory.
+- Pass the caller's workspace explicitly through the window launcher so workspace filtering no longer depends on the plugin script's working directory.
 - Reviewer provider CLIs now run without opening transient console windows on Windows.
 
 ## 0.1.0-dev.2 — Unreleased prerelease
 
-- Archive the complete domain-specialization experiment under `experiment/riemann-domain/`; keep the shipped runtime focused on software-engineering workflows.
 - Add an optional signed-in Grok CLI reviewer with schema-constrained single-turn output and web search, tools, memory, and subagents disabled; include persistent configure/reset commands and doctor detection.
 - Document that provider and CLI harness costs are not normalized, including one dated Grok CLI smoke as a clearly non-binding observation rather than a pricing claim.
 - Add delivery receipts with event sequence, injection channel, and queued/injected/expired/failed states; the Tk window now distinguishes reviewer generation from actual context injection.

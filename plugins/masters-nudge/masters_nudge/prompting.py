@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Callable, Mapping
+from typing import Callable
 
 import lens_router
 import persona_config
@@ -19,8 +19,6 @@ def build_system_prompt(
     persona_dir: Path,
     data_dir: Path,
     route: lens_router.ReviewRoute | None = None,
-    persona_names: Mapping[str, str] | None = None,
-    domain: str = "software",
     log_error: Callable[[str], None] | None = None,
 ) -> str:
     logger = log_error or (lambda _message: None)
@@ -31,7 +29,7 @@ def build_system_prompt(
         return ""
 
     route = route or lens_router.resolve_review_route(data_dir)
-    personas = persona_config.LENS_PERSONAS if persona_names is None else persona_names
+    personas = persona_config.LENS_PERSONAS
     persona = route.effective_lens
     if persona == "general":
         return base_prompt
@@ -46,9 +44,6 @@ def build_system_prompt(
     except Exception as exc:
         logger(f"persona prompt read failed ({persona}): {exc}")
         return ""
-
-    if domain == "shader":
-        return f"{base_prompt.rstrip()}\n\n{overlay}\n"
 
     heading = "工作流觀察鏡頭"
     first_paragraph = (
@@ -163,11 +158,9 @@ def sanitize_reaction(
     return _close_reaction(text, max_chars)
 
 
-def route_metadata(
-    route: lens_router.ReviewRoute, *, domain: str = "software"
-) -> dict[str, str]:
+def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
     return {
-        "domain": domain,
+        "domain": "software",
         "stage": route.stage,
         "primary_lens": route.primary_lens,
         "effective_lens": route.effective_lens,

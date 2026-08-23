@@ -267,7 +267,7 @@ def append_reaction(
     reason: str = "stop",
     source_event_seq: int = 0,
     source_fingerprint: str = "",
-    finding_scope: str = "candidate",
+    finding_scope: str = "local",
 ) -> dict[str, Any]:
     if not reaction.strip():
         return {}
@@ -275,7 +275,7 @@ def append_reaction(
     data_dir.mkdir(parents=True, exist_ok=True)
     normalized_scope = (
         finding_scope
-        if finding_scope in {"local", "candidate", "trajectory"}
+        if finding_scope in {"local", "trajectory"}
         else "local"
     )
     entry: dict[str, Any] = {
@@ -409,22 +409,6 @@ def latest_pending(
     if candidate_source and current_source_fingerprint:
         if candidate_source != current_source_fingerprint:
             if finding_scope == "trajectory":
-                return candidate
-            if finding_scope == "candidate":
-                if (
-                    current_event_seq
-                    and source_seq
-                    and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE
-                ):
-                    mark_delivery(
-                        data_dir,
-                        session,
-                        str(candidate.get("ts") or ""),
-                        status="expired",
-                        event_seq=current_event_seq,
-                        delivered_via="event-window-exhausted",
-                    )
-                    return None
                 return candidate
             mark_delivery(
                 data_dir,
@@ -669,93 +653,6 @@ def mark_strategy_reviewed(
     state["last_strategy_event_seq"] = int(event_seq or 0)
     if changed_lines is not None:
         state["changed_lines_at_strategy"] = int(changed_lines)
-    _atomic_write(path, state)
-
-
-def mark_shader_research_reviewed(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    fingerprint: str,
-    projection_state: dict[str, Any],
-) -> None:
-    """Cache only a rebuildable source fingerprint and its compact projection."""
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    state["shader_research_fingerprint"] = str(fingerprint or "")
-    state["shader_research_state"] = projection_state
-    _atomic_write(path, state)
-
-
-def shader_research_gap_is_unchanged(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    gap_key: str,
-    evidence_fingerprint: str,
-) -> bool:
-    if not gap_key or not evidence_fingerprint:
-        return False
-    state = _read_json(state_path(data_dir, session, "progress"), {})
-    gaps = state.get("shader_research_gaps")
-    if not isinstance(gaps, dict):
-        return False
-    entry = gaps.get(gap_key)
-    return bool(
-        isinstance(entry, dict)
-        and str(entry.get("evidence_fingerprint") or "") == evidence_fingerprint
-    )
-
-
-def mark_shader_research_gap_reviewed(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    gap_key: str,
-    evidence_fingerprint: str,
-    source_fingerprint: str,
-) -> None:
-    if not gap_key or not evidence_fingerprint:
-        return
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    gaps = state.get("shader_research_gaps")
-    if not isinstance(gaps, dict):
-        gaps = {}
-    gaps[str(gap_key)] = {
-        "evidence_fingerprint": str(evidence_fingerprint),
-        "source_fingerprint": str(source_fingerprint or ""),
-        "reviewed_at": datetime.now().isoformat(),
-    }
-    if len(gaps) > 32:
-        ordered = sorted(
-            gaps.items(), key=lambda item: str(item[1].get("reviewed_at") or "")
-        )
-        gaps = dict(ordered[-32:])
-    state["shader_research_gaps"] = gaps
-    _atomic_write(path, state)
-
-
-def mark_shader_research_gap_suppressed(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    gap_key: str,
-    evidence_fingerprint: str,
-    source_fingerprint: str,
-) -> None:
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    raw = state.get("shader_research_suppressions")
-    suppressions = raw if isinstance(raw, list) else []
-    suppressions.append({
-        "gap_key": str(gap_key or ""),
-        "evidence_fingerprint": str(evidence_fingerprint or ""),
-        "source_fingerprint": str(source_fingerprint or ""),
-        "reason": "unchanged-evidence-gap",
-        "suppressed_at": datetime.now().isoformat(),
-    })
-    state["shader_research_suppressions"] = suppressions[-24:]
     _atomic_write(path, state)
 
 

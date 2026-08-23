@@ -26,14 +26,7 @@ from tkinter import ttk
 from pathlib import Path
 
 import persona_config
-import shader_router
-from masters_nudge.contracts import SessionRef, find_git_root
-from masters_nudge.profiles import (
-    WorkspaceProfile,
-    load_workspace_profile,
-    session_workspace,
-    set_shader_primary_lens,
-)
+from masters_nudge.contracts import find_git_root
 from masters_nudge.runtime import RuntimeSettings
 
 try:
@@ -75,11 +68,6 @@ LENS_BADGES = {
     "beck": (persona_config.persona_label("beck"), "#80ED99"),
     "lamport": (persona_config.persona_label("lamport"), "#72A1FF"),
     "carmack": (persona_config.persona_label("carmack"), "#FFB86C"),
-    "akenine_moller": (shader_router.shader_persona_label("akenine_moller"), "#56CFE1"),
-    "karis": (shader_router.shader_persona_label("karis"), "#80ED99"),
-    "lottes": (shader_router.shader_persona_label("lottes"), "#72A1FF"),
-    "quilez": (shader_router.shader_persona_label("quilez"), "#C77DFF"),
-    "tatarchuk": (shader_router.shader_persona_label("tatarchuk"), "#FF6B6B"),
     "general": (persona_config.persona_label("general"), "#A0A0B8"),
     "evaluation": ("Shadow evaluation", "#FFD166"),
 }
@@ -91,11 +79,6 @@ LENS_BACKGROUNDS = {
     "beck": "#1D3528",
     "lamport": "#222B4A",
     "carmack": "#3A2E1D",
-    "akenine_moller": "#17343B",
-    "karis": "#1D3528",
-    "lottes": "#222B4A",
-    "quilez": "#30233D",
-    "tatarchuk": "#3A2228",
     "general": BG,
     "evaluation": "#3A321D",
 }
@@ -108,12 +91,7 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
     return f"● {name}", color
 
 
-def selector_options(domain: str = "software") -> list[str]:
-    if domain == "shader":
-        return [
-            shader_router.shader_persona_label(lens)
-            for lens in shader_router.SHADER_PERSONAS
-        ]
+def selector_options() -> list[str]:
     return [persona_config.stage_label(stage) for stage in persona_config.STAGE_LENSES]
 
 
@@ -121,17 +99,6 @@ SELECTOR_STAGES = {
     persona_config.stage_label(key): key
     for key in persona_config.STAGE_LENSES
 }
-
-SHADER_SELECTOR_LENSES = {
-    shader_router.shader_persona_label(lens): lens
-    for lens in shader_router.SHADER_PERSONAS
-}
-
-
-def selector_value_for_label(label: str, domain: str = "software") -> str | None:
-    mapping = SHADER_SELECTOR_LENSES if domain == "shader" else SELECTOR_STAGES
-    return mapping.get(label)
-
 
 def stage_selection_label(selection: persona_config.StageSelection) -> str:
     """Describe lifecycle, forced specialist, and legacy selections accurately."""
@@ -301,29 +268,8 @@ class BuddyWindow:
         self.last_offset = 0
         self.last_reaction = ""
         self.last_reaction_ts = ""
-        config_dir = DATA_DIR
-        workspace = resolve_window_workspace()
-        repo_root = find_git_root(workspace)
-        self.profile_session = SessionRef(
-            "codex_cli", "window", cwd=workspace, repo_root=repo_root
-        )
-        self.workspace = session_workspace(self.profile_session)
-        profile, profile_error = load_workspace_profile(DATA_DIR, self.profile_session)
-        self.workspace_profile = profile
-        self.profile_error = profile_error
-        self.domain = profile.domain
-        if profile.source == "workspace_profile" and profile.domain == "shader":
-            active_lens = (
-                profile.primary_lens
-                or shader_router.STAGE_PRIMARY_LENS[profile.stage]
-            )
-            self.stage_selection = persona_config.StageSelection(
-                profile.stage,
-                active_lens,
-                "workspace_profile",
-            )
-        else:
-            self.stage_selection = persona_config.resolve_stage(config_dir)
+        self.workspace = resolve_window_workspace()
+        self.stage_selection = persona_config.resolve_stage(DATA_DIR)
 
         # Load sprite
         self.idle_source_frames: list[Image.Image] = []
@@ -439,21 +385,17 @@ class BuddyWindow:
         )
         self.lens_label.pack(fill="x", pady=(4, 0))
 
-        selected_label = (
-            shader_router.shader_persona_label(active_persona)
-            if self.domain == "shader"
-            else stage_selection_label(self.stage_selection)
-        )
+        selected_label = stage_selection_label(self.stage_selection)
         self.stage_var = tk.StringVar(value=selected_label)
         selector_state = (
             "disabled"
-            if self.domain != "shader" and self.stage_selection.source == "environment"
+            if self.stage_selection.source == "environment"
             else "readonly"
         )
         self.stage_selector = ttk.Combobox(
             bubble,
             textvariable=self.stage_var,
-            values=selector_options(self.domain),
+            values=selector_options(),
             state=selector_state,
             width=34,
             font=("Microsoft JhengHei", 9),
@@ -462,12 +404,7 @@ class BuddyWindow:
         self.stage_selector.bind("<<ComboboxSelected>>", self._on_stage_selected)
 
         initial_text = "( . . . )"
-        if self.domain == "shader":
-            mode = "Stop 主濾鏡" if self.workspace_profile.primary_lens else "階段預設"
-            initial_text = f"Shader workspace：{mode} · {selected_label}。"
-        if self.profile_error:
-            initial_text = f"Workspace profile 無法讀取：{self.profile_error}"
-        if self.domain != "shader" and self.stage_selection.source == "environment":
+        if self.stage_selection.source == "environment":
             initial_text = (
                 f"MASTERS_NUDGE_PERSONA 正在接管：{selected_label}。"
             )
@@ -501,41 +438,7 @@ class BuddyWindow:
 
     def _on_stage_selected(self, _event=None):
         label = self.stage_var.get()
-        selected = selector_value_for_label(label, self.domain)
-        if self.domain == "shader":
-            if selected is None:
-                return
-            result = set_shader_primary_lens(DATA_DIR, self.workspace, selected)
-            if not result["saved"]:
-                self.bubble_label.config(
-                    text="Shader workspace 濾鏡無法儲存，仍使用原設定。"
-                )
-                return
-            self.workspace_profile = WorkspaceProfile(
-                domain=result["domain"],
-                stage=result["stage"],
-                provider=result["provider"],
-                model=result["model"],
-                review_mode=result["review_mode"],
-                primary_lens=result["primary_lens"],
-                workspace=result["workspace"],
-                source=result["source"],
-            )
-            self.stage_selection = persona_config.StageSelection(
-                self.workspace_profile.stage,
-                selected,
-                "workspace_profile",
-            )
-            self._set_lens_badge(selected)
-            message = (
-                f"下一次 Stop 起使用 {label}；Checkpoint 仍可依證據暫時換濾鏡。"
-                "設定只套用目前的 Shader workspace。"
-            )
-            self.last_reaction = message
-            self.bubble_label.config(text=message)
-            self._resize_for_reaction(message)
-            return
-        stage = selected
+        stage = SELECTOR_STAGES.get(label)
         if stage is None:
             return
         try:
