@@ -16,7 +16,7 @@ import sys
 
 import review_telemetry
 from masters_nudge import claude_adapter, evidence as shared_evidence, storage
-from masters_nudge.contracts import ReviewRequest, SessionRef, find_git_root
+from masters_nudge.contracts import ReviewRequest
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
 
@@ -41,15 +41,8 @@ def main() -> None:
         return
     hook = read_hook_input()
     settings = claude_adapter.runtime_settings()
-    session_id = hook.get("session_id", "unknown")
     cwd = hook.get("cwd") or os.getcwd()
-    session = SessionRef(
-        "claude_code",
-        str(session_id),
-        turn_id=str(hook.get("turn_id") or ""),
-        cwd=str(cwd),
-        repo_root=find_git_root(str(cwd)),
-    )
+    session = claude_adapter.session_from_hook(hook, default_cwd=str(cwd))
 
     report = shared_evidence.read_latest_agentcam_report(
         str(cwd), log_error=log_error
@@ -63,7 +56,9 @@ def main() -> None:
             settings.paths.data_dir, session, float(report["mtime"])
         )
 
-    source = claude_adapter.build_stop_source_context(hook, report_content)
+    source = claude_adapter.build_stop_source_context(
+        hook, report_content, session=session
+    )
     source_packet = str(source["packet"])
     if not source_packet:
         log_error("empty source packet, skipping")

@@ -18,65 +18,21 @@ if str(ROOT) not in sys.path:
 from masters_nudge.plugin_inventory import (  # noqa: E402
     INVENTORY_FILE,
     INVENTORY_SCHEMA_VERSION,
-    PLUGIN_RUNTIME_FILES,
-    SOURCE_RUNTIME_FILES,
+    package_files,
+    runtime_files,
 )
 
 
 PLUGIN_ROOT = ROOT / "plugins" / "masters-nudge"
 
-FILES = (
-    "LICENSE",
-    "buddy-prompt.txt",
-    "buddy_window.py",
-    "claude_checkpoint.py",
-    "claude_prompt.py",
-    "claude_stop.py",
-    "hook_entry.py",
-    "lens_router.py",
-    "masters_nudge_cli.py",
-    "persona_config.py",
-    "reaction-schema.json",
-    "review_telemetry.py",
-    "source_context.py",
-    "spritesheet.webp",
-)
-
-DIRECTORIES = ("masters_nudge", "personas")
-
-STATIC_FILES = (
-    *PLUGIN_RUNTIME_FILES,
-    "skills/doctor/SKILL.md",
-    "skills/migrate/SKILL.md",
-    "skills/setup-local/SKILL.md",
-    "skills/window/SKILL.md",
-)
+FILES = package_files(source="generated")
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 CODEX_VERSION_RE = re.compile(r"^(?P<base>[^+]+)\+codex\.(?P<token>[^+]+)$")
 
 
-def _source_files(directory: str) -> list[Path]:
-    root = ROOT / directory
-    return sorted(
-        path
-        for path in root.rglob("*")
-        if path.is_file() and "__pycache__" not in path.parts
-    )
-
-
-def _generated_targets() -> set[Path]:
-    targets = {Path(relative) for relative in FILES}
-    for directory in DIRECTORIES:
-        targets.update(
-            Path(directory) / path.relative_to(ROOT / directory)
-            for path in _source_files(directory)
-        )
-    return targets
-
-
 def expected_plugin_files() -> set[Path]:
-    return _generated_targets() | {
-        *(Path(relative) for relative in STATIC_FILES),
+    return {
+        *(Path(relative) for relative in package_files()),
         Path(INVENTORY_FILE),
     }
 
@@ -146,12 +102,8 @@ def _sync_versions() -> None:
 
 
 def _inventory_payload() -> dict:
-    runtime_files = {
-        *(Path(relative) for relative in SOURCE_RUNTIME_FILES),
-        *(Path(relative) for relative in PLUGIN_RUNTIME_FILES),
-        Path(INVENTORY_FILE),
-    }
-    unexpected_runtime = runtime_files - expected_plugin_files()
+    required_runtime = {Path(relative) for relative in runtime_files(installed=True)}
+    unexpected_runtime = required_runtime - expected_plugin_files()
     if unexpected_runtime:
         labels = ", ".join(sorted(path.as_posix() for path in unexpected_runtime))
         raise ValueError(f"runtime inventory is not packaged: {labels}")
@@ -159,7 +111,7 @@ def _inventory_payload() -> dict:
         "schema_version": INVENTORY_SCHEMA_VERSION,
         "base_version": _base_version(),
         "files": sorted(path.as_posix() for path in expected_plugin_files()),
-        "runtime_files": sorted(path.as_posix() for path in runtime_files),
+        "runtime_files": sorted(path.as_posix() for path in required_runtime),
     }
 
 
@@ -177,15 +129,6 @@ def write_plugin() -> None:
         destination = PLUGIN_ROOT / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / relative, destination)
-    for directory in DIRECTORIES:
-        destination = PLUGIN_ROOT / directory
-        if destination.exists():
-            shutil.rmtree(destination)
-        shutil.copytree(
-            ROOT / directory,
-            destination,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-        )
     _sync_versions()
     _write_inventory()
     expected = expected_plugin_files()
@@ -217,27 +160,6 @@ def check_plugin() -> list[str]:
             continue
         elif not filecmp.cmp(source, destination, shallow=False):
             errors.append(f"stale: {_label(Path(relative))}")
-    for directory in DIRECTORIES:
-        expected = {
-            path.relative_to(ROOT / directory) for path in _source_files(directory)
-        }
-        destination_root = PLUGIN_ROOT / directory
-        actual = (
-            {
-                path.relative_to(destination_root)
-                for path in destination_root.rglob("*")
-                if path.is_file() and "__pycache__" not in path.parts
-            }
-            if destination_root.exists()
-            else set()
-        )
-        for relative in sorted(expected & actual):
-            if not filecmp.cmp(
-                ROOT / directory / relative,
-                destination_root / relative,
-                shallow=False,
-            ):
-                errors.append(f"stale: {_label(Path(directory) / relative)}")
     try:
         base_version = _base_version()
         codex = _read_json(PLUGIN_ROOT / ".codex-plugin" / "plugin.json")

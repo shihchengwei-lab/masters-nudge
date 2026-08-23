@@ -10,7 +10,6 @@ import json
 import sys
 
 from masters_nudge import claude_adapter, storage
-from masters_nudge.contracts import SessionRef, find_git_root
 from masters_nudge.prompting import MAX_REACTION_CHARS
 from masters_nudge.runtime import active_guard
 
@@ -52,14 +51,7 @@ def main() -> None:
         return
 
     prompt = hook.get("prompt", "")
-    cwd = str(hook.get("cwd") or "")
-    session = SessionRef(
-        "claude_code",
-        str(session_id),
-        turn_id=str(hook.get("turn_id") or ""),
-        cwd=cwd,
-        repo_root=find_git_root(cwd),
-    )
+    session = claude_adapter.session_from_hook(hook)
     if prompt:
         try:
             storage.start_turn(

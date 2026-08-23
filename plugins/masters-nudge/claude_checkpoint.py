@@ -20,7 +20,6 @@ from masters_nudge.contracts import (
     ReviewRequest,
     SessionRef,
     ToolCompleted,
-    find_git_root,
 )
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
@@ -37,15 +36,8 @@ def normalize_tool_event(hook: dict[str, Any]) -> ToolCompleted | None:
         return None
     failed = event_name == "PostToolUseFailure"
     output = hook.get("error", "") if failed else hook.get("tool_response", "")
-    cwd = str(hook.get("cwd") or "")
     return ToolCompleted(
-        SessionRef(
-            "claude_code",
-            str(hook.get("session_id") or "unknown"),
-            turn_id=str(hook.get("turn_id") or ""),
-            cwd=cwd,
-            repo_root=find_git_root(cwd),
-        ),
+        claude_adapter.session_from_hook(hook),
         str(tool_name),
         tool_input=tool_input,
         tool_output=output,
@@ -60,18 +52,12 @@ def normalize_tool_event(hook: dict[str, Any]) -> ToolCompleted | None:
 def review_checkpoint(
     hook: dict[str, Any],
     event: dict[str, str],
+    *,
+    session: SessionRef | None = None,
 ) -> ReviewOutcome:
     settings = claude_adapter.runtime_settings()
-    session_id = str(hook.get("session_id") or "unknown")
     transcript_path = str(hook.get("transcript_path") or "")
-    cwd = str(hook.get("cwd") or "")
-    session = SessionRef(
-        "claude_code",
-        session_id,
-        turn_id=str(hook.get("turn_id") or ""),
-        cwd=cwd,
-        repo_root=find_git_root(cwd),
-    )
+    session = session or claude_adapter.session_from_hook(hook)
     state = storage.load_turn_state(settings.paths.data_dir, session)
     assistant_context = claude_adapter.read_latest_assistant_text(
         transcript_path, int(state.get("transcript_offset") or 0)
@@ -134,21 +120,13 @@ def prepare_hook(hook: dict[str, Any]) -> PreparedCheckpoint | None:
         return None
 
     settings = claude_adapter.runtime_settings()
-    session_id = str(hook.get("session_id") or "unknown")
-    cwd = str(hook.get("cwd") or "")
-    session = SessionRef(
-        "claude_code",
-        session_id,
-        turn_id=str(hook.get("turn_id") or ""),
-        cwd=cwd,
-        repo_root=find_git_root(cwd),
-    )
+    session = tool_event.session
     if not storage.claim_checkpoint(
         settings.paths.data_dir, session, event["fingerprint"]
     ):
         return None
     try:
-        outcome = review_checkpoint(hook, event)
+        outcome = review_checkpoint(hook, event, session=session)
         if outcome.status != "finding" or not outcome.finding:
             storage.release_checkpoint(
                 settings.paths.data_dir, session, event["fingerprint"]

@@ -33,6 +33,18 @@ def runtime_settings() -> RuntimeSettings:
     return RUNTIME
 
 
+def session_from_hook(hook: dict, *, default_cwd: str = "") -> SessionRef:
+    """Map one Claude hook payload to the host-neutral session identity."""
+    cwd = str(hook.get("cwd") or default_cwd)
+    return SessionRef(
+        "claude_code",
+        str(hook.get("session_id") or "unknown"),
+        turn_id=str(hook.get("turn_id") or ""),
+        cwd=cwd,
+        repo_root=find_git_root(cwd),
+    )
+
+
 def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
     typ = obj.get("type")
     if typ not in ("user", "assistant"):
@@ -152,17 +164,14 @@ def read_latest_assistant_text(transcript_path: str, start_offset: int = 0) -> s
     return ""
 
 
-def build_stop_source_context(hook: dict, agentcam_content: str = "") -> dict:
+def build_stop_source_context(
+    hook: dict,
+    agentcam_content: str = "",
+    *,
+    session: SessionRef | None = None,
+) -> dict:
     settings = runtime_settings()
-    session_id = str(hook.get("session_id") or "unknown")
-    cwd = str(hook.get("cwd") or "")
-    session = SessionRef(
-        "claude_code",
-        session_id,
-        turn_id=str(hook.get("turn_id") or ""),
-        cwd=cwd,
-        repo_root=find_git_root(cwd),
-    )
+    session = session or session_from_hook(hook)
     transcript_path = str(hook.get("transcript_path") or "")
     state = storage.load_turn_state(settings.paths.data_dir, session)
     offset = int(state.get("transcript_offset") or 0)

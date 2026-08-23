@@ -16,7 +16,7 @@ The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `Revie
 
 ## Lifecycle selection and private attention cues
 
-`persona_config.resolve_stage()` is the single owner of public lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
+`persona_config.STAGE_SPECS` owns each lifecycle stage's public name, practical focus, and private persona slug; compatibility views and window choices are derived from that registry. `persona_config.resolve_stage()` owns lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
 
 Public UI labels describe the engineering stage and practical focus. Internal persona slugs remain available for routing and telemetry, while the corresponding person name appears only in the provider prompt as a private attention cue. Direct reliability or performance evidence may select a specialist automatically; those specialists are not public stage settings.
 
@@ -27,6 +27,8 @@ Claude Code uses three small native entry points:
 - `claude_prompt.py` for `UserPromptSubmit`;
 - `claude_checkpoint.py` for successful mutating tools and `PostToolUseFailure`;
 - `claude_stop.py` for the async `Stop` review.
+
+`masters_nudge/claude_adapter.py` is the sole owner of mapping a Claude hook payload to `SessionRef`; each entry point reuses that identity throughout one event.
 
 Codex uses `hook_entry.py --host codex_cli` for prompt and tool events, plus `--detach-stop` for the fast Stop shim. `masters_nudge/codex_adapter.py` owns Codex payload normalization and its bounded per-turn tool journal.
 
@@ -76,7 +78,7 @@ The Codex journal is capped per turn and per tool record. Claude transcript evid
 
 ## Package and verification
 
-The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `tools/build_plugin.py` generates and verifies its runtime copy; marketplace metadata points to that package rather than to the repository root.
+The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `masters_nudge/plugin_inventory.py` owns one package manifest for generated files, static files, core runtime dependencies, and optional UI assets. `tools/build_plugin.py` and `doctor` derive their inventories from that manifest; marketplace metadata points to the generated package rather than to the repository root.
 
 Historical host-smoke evidence is preserved in the verified evidence archive linked from `evaluation/README.md`; it is not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
 

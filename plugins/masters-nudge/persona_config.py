@@ -12,6 +12,19 @@ from typing import Mapping
 
 
 CONFIG_FILE = "config.json"
+
+
+@dataclass(frozen=True)
+class StageSpec:
+    name: str
+    focus: str
+    persona: str
+
+    @property
+    def label(self) -> str:
+        return f"{self.name} · {self.focus}"
+
+
 LENS_PERSONAS = {
     "jeff": "Jeff Dean",
     "linus": "Linus Torvalds",
@@ -20,33 +33,18 @@ LENS_PERSONAS = {
     "lamport": "Leslie Lamport",
     "carmack": "John Carmack",
 }
-STAGE_LENSES = {
-    "design": "jeff",
-    "build": "beck",
-    "evolve": "fowler",
-    "review": "linus",
-}
-STAGE_NAMES = {
-    "design": "Design",
-    "build": "Build",
-    "evolve": "Evolve",
-    "review": "Review",
+STAGE_SPECS = {
+    "design": StageSpec("Design", "系統結構、因果與成本", "jeff"),
+    "build": StageSpec("Build", "小步驟、測試與回饋", "beck"),
+    "evolve": StageSpec("Evolve", "重構與變更成本", "fowler"),
+    "review": StageSpec("Review", "簡化與責任歸屬", "linus"),
 }
 PERSONA_NAMES = {"general": "General", **LENS_PERSONAS}
-STAGE_FOCUS = {
-    "design": "系統結構、因果與成本",
-    "build": "小步驟、測試與回饋",
-    "evolve": "重構與變更成本",
-    "review": "簡化與責任歸屬",
-}
 PERSONA_PUBLIC_LABELS = {
     "general": "General · 工作流與證據",
-    "jeff": "Design · 系統結構、因果與成本",
-    "beck": "Build · 小步驟、測試與回饋",
-    "fowler": "Evolve · 重構與變更成本",
-    "linus": "Review · 簡化與責任歸屬",
     "lamport": "Reliability · 狀態、順序與失敗",
     "carmack": "Performance · 執行路徑與效能",
+    **{spec.persona: spec.label for spec in STAGE_SPECS.values()},
 }
 
 
@@ -69,9 +67,9 @@ def persona_label(persona: str) -> str:
 
 def stage_label(stage: str) -> str:
     key = str(stage or "").strip().lower()
-    if key not in STAGE_LENSES:
+    if key not in STAGE_SPECS:
         key = "build"
-    return f"{STAGE_NAMES[key]} · {STAGE_FOCUS[key]}"
+    return STAGE_SPECS[key].label
 
 
 def resolve_stage(
@@ -81,8 +79,10 @@ def resolve_stage(
     environment = os.environ if environ is None else environ
     env_stage = str(environment.get("MASTERS_NUDGE_STAGE") or "").strip().lower()
     if env_stage:
-        if env_stage in STAGE_LENSES:
-            return StageSelection(env_stage, STAGE_LENSES[env_stage], "environment")
+        if env_stage in STAGE_SPECS:
+            return StageSelection(
+                env_stage, STAGE_SPECS[env_stage].persona, "environment"
+            )
         return StageSelection("build", "beck", "invalid_environment")
 
     try:
@@ -93,8 +93,10 @@ def resolve_stage(
         payload = {}
 
     config_stage = str(payload.get("stage") or "").strip().lower()
-    if config_stage in STAGE_LENSES:
-        return StageSelection(config_stage, STAGE_LENSES[config_stage], "config")
+    if config_stage in STAGE_SPECS:
+        return StageSelection(
+            config_stage, STAGE_SPECS[config_stage].persona, "config"
+        )
     return StageSelection("build", "beck", "default")
 
 
@@ -129,6 +131,6 @@ def _atomic_save(base_dir: Path, payload: dict[str, str], prefix: str) -> None:
 def save_stage(base_dir: Path, stage: str) -> None:
     """Atomically persist a valid lifecycle stage in the new config format."""
     key = str(stage or "").strip().lower()
-    if key not in STAGE_LENSES:
+    if key not in STAGE_SPECS:
         raise ValueError(f"unsupported stage: {stage!r}")
     _atomic_save(base_dir, {"stage": key}, "stage-")

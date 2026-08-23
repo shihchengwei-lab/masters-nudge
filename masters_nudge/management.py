@@ -24,9 +24,8 @@ from .local_ollama import (
 )
 from .plugin_inventory import (
     INVENTORY_FILE,
-    PLUGIN_RUNTIME_FILES,
-    SOURCE_RUNTIME_FILES,
     load_plugin_inventory,
+    runtime_files,
 )
 from .runtime import RuntimePaths, RuntimeSettings, reviewer_config_path
 
@@ -772,18 +771,16 @@ def doctor(
     is_plugin = (root / ".claude-plugin" / "plugin.json").exists() or (
         root / ".codex-plugin" / "plugin.json"
     ).exists()
-    required_runtime = SOURCE_RUNTIME_FILES
+    required_runtime = runtime_files(installed=False)
     inventory_error = ""
     if is_plugin:
         installed_files, inventory_error = load_plugin_inventory(root)
         if installed_files:
             required_runtime = installed_files
         else:
-            required_runtime = tuple(
-                dict.fromkeys((*SOURCE_RUNTIME_FILES, *PLUGIN_RUNTIME_FILES))
-            )
+            required_runtime = runtime_files(installed=True)
     missing_runtime = [name for name in required_runtime if not (root / name).exists()]
-    if inventory_error:
+    if inventory_error and INVENTORY_FILE not in missing_runtime:
         missing_runtime.append(INVENTORY_FILE)
     host_results = []
     for name in _selected_hosts(host, environment):

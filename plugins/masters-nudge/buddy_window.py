@@ -92,12 +92,12 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
 
 
 def selector_options() -> list[str]:
-    return [persona_config.stage_label(stage) for stage in persona_config.STAGE_LENSES]
+    return [spec.label for spec in persona_config.STAGE_SPECS.values()]
 
 
 SELECTOR_STAGES = {
-    persona_config.stage_label(key): key
-    for key in persona_config.STAGE_LENSES
+    spec.label: key
+    for key, spec in persona_config.STAGE_SPECS.items()
 }
 
 
@@ -444,7 +444,7 @@ class BuddyWindow:
         except (OSError, ValueError):
             self.bubble_label.config(text="階段設定無法儲存，仍使用原設定。")
             return
-        persona = persona_config.STAGE_LENSES[stage]
+        persona = persona_config.STAGE_SPECS[stage].persona
         self.stage_selection = persona_config.StageSelection(stage, persona, "config")
         self._set_lens_badge(persona)
         message = (
