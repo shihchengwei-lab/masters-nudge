@@ -13,7 +13,7 @@ from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[2]
 
 
 def settings_for(root: Path) -> RuntimeSettings:

@@ -11,7 +11,7 @@ from urllib.request import ProxyHandler
 from masters_nudge import local_ollama, providers
 
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[2]
 SCHEMA = HERE / "reaction-schema.json"
 
 

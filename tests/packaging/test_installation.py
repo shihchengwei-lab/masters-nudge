@@ -25,7 +25,7 @@ from masters_nudge.runtime import RuntimeSettings, reviewer_config_path
 from tools import build_plugin
 
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[2]
 PLUGIN_ROOT = HERE / "plugins" / "masters-nudge"
 
 

@@ -13,7 +13,7 @@ import persona_config
 from masters_nudge.prompting import build_system_prompt
 
 
-HERE = Path(__file__).resolve().parent
+HERE = Path(__file__).resolve().parents[2]
 PERSON_NAMES = tuple(persona_config.LENS_PERSONAS.values())
 
 
