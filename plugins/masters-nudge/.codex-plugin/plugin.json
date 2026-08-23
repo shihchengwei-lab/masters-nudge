@@ -18,7 +18,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Masters\u2019 Nudge",
+    "displayName": "Masters’ Nudge",
     "shortDescription": "Quiet workflow nudges",
     "longDescription": "Adds bounded, evidence-based nudges during and after agent work, with six software-engineering lenses and long-task checkpoints.",
     "developerName": "shihchengwei-lab",
@@ -30,9 +30,9 @@
     "websiteURL": "https://github.com/shihchengwei-lab/masters-nudge",
     "privacyPolicyURL": "https://github.com/shihchengwei-lab/masters-nudge#privacy",
     "defaultPrompt": [
-      "Check whether Masters\u2019 Nudge is ready.",
-      "Configure Masters\u2019 Nudge for my local Ollama model.",
-      "Open the Masters\u2019 Nudge window."
+      "Check whether Masters’ Nudge is ready.",
+      "Configure Masters’ Nudge for my local Ollama model.",
+      "Open the Masters’ Nudge window."
     ],
     "brandColor": "#665B8E"
   }

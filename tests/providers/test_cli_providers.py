@@ -65,6 +65,29 @@ class ReviewerProcessTests(unittest.TestCase):
 
 
 class ProviderErrorContractTests(unittest.TestCase):
+    def test_claude_places_evidence_in_the_positional_prompt(self):
+        completed = subprocess.CompletedProcess(
+            ["claude"],
+            0,
+            '{"structured_output":{"status":"no_finding","finding":""}}',
+            "",
+        )
+        with mock.patch.object(
+            providers, "_run_cli_process", return_value=completed
+        ) as run:
+            providers.call_claude_result(
+                "system",
+                "EVIDENCE-Q7K9",
+                "opus",
+                schema_path=SCHEMA,
+                timeout_sec=12,
+            )
+
+        argv = run.call_args.args[0]
+        prompt = argv[argv.index("-p") + 1]
+        self.assertIn("EVIDENCE-Q7K9", prompt)
+        self.assertIsNone(run.call_args.kwargs["input_text"])
+
     def test_claude_nonzero_and_invalid_output_are_distinct(self):
         with mock.patch.object(
             providers,

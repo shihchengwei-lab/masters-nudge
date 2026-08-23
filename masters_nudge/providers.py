@@ -223,7 +223,10 @@ def call_claude_result(
     timeout_sec: int,
     log_error: Logger = _noop,
 ) -> dict:
-    user_prompt = "請對 stdin 提供的對話片段寫一句簡短的旁觀者反應。"
+    user_prompt = (
+        "請對下方證據封包寫一句簡短的旁觀者反應。\n\n"
+        f"{transcript_text}"
+    )
     schema_json = load_output_schema_json(schema_path, log_error)
     if not schema_json:
         return call_result()
@@ -252,7 +255,7 @@ def call_claude_result(
                 "--json-schema",
                 schema_json,
             ],
-            input_text=transcript_text,
+            input_text=None,
             environment=reviewer_environment(),
             timeout_sec=timeout_sec,
             log_error=log_error,
