@@ -6,13 +6,14 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import source_context
 
-from . import checkpoints, storage
+from . import checkpoints, prompting, storage
 from .contracts import (
     PromptSubmitted,
+    ReviewKind,
     ReviewRequest,
     SessionRef,
     ToolCompleted,
@@ -101,43 +102,6 @@ def _with_delivery_marker(
             "claim_token": claim_token,
         }
     return output
-
-
-def _pending_output(
-    data_dir: Path,
-    event_name: str,
-    session: SessionRef,
-    *,
-    event_seq: int = 0,
-    current_source_fingerprint: str = "",
-) -> tuple[dict[str, Any] | None, bool]:
-    pending = storage.latest_pending(
-        data_dir,
-        session,
-        current_event_seq=event_seq,
-        current_source_fingerprint=current_source_fingerprint,
-    )
-    if not pending:
-        return None, False
-    text = str(pending.get("reaction") or "").strip()
-    timestamp = str(pending.get("ts") or "")
-    if not text or not timestamp:
-        return None, False
-    claim_token = storage.claim_delivery(data_dir, session, timestamp)
-    if not claim_token:
-        return None, True
-    output = build_hook_output(event_name, text)
-    return (
-        _with_delivery_marker(
-            output,
-            session,
-            timestamp,
-            event_seq=event_seq,
-            event_name=event_name,
-            claim_token=claim_token,
-        ),
-        False,
-    )
 
 
 def _session(payload: dict[str, Any]) -> SessionRef:
@@ -240,15 +204,6 @@ def normalize_event(payload: dict[str, Any]):
     return None
 
 
-def _tool_record(event: ToolCompleted) -> str:
-    state = "failure" if event.failure_known and event.failed else "result"
-    return (
-        f"[tool {event.tool_name}]\n"
-        f"input: {checkpoints.compact_json(event.tool_input)}\n"
-        f"{state}: {checkpoints.compact_json(event.tool_output)}"
-    )
-
-
 def _fingerprint(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:24]
 
@@ -260,21 +215,19 @@ def build_hook_output(
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": text,
+            "additionalContext": prompting.delivery_text(text),
         }
     }
 
 
+def build_stop_hook_output(text: str) -> dict[str, Any]:
+    return {"decision": "block", "reason": prompting.delivery_text(text)}
+
+
 class CodexAdapter:
-    def __init__(
-        self,
-        core: ReviewCore,
-        *,
-        schedule_strategy: Callable[[dict[str, Any]], bool] | None = None,
-    ) -> None:
+    def __init__(self, core: ReviewCore) -> None:
         self.core = core
         self.data_dir = core.settings.paths.data_dir
-        self.schedule_strategy = schedule_strategy
 
     def process(self, payload: dict[str, Any]) -> dict[str, Any] | None:
         if active_guard():
@@ -308,17 +261,28 @@ class CodexAdapter:
             event.prompt,
             transcript_path=event.transcript_path,
         )
-        output, _delivery_busy = _pending_output(
-            self.data_dir,
-            "UserPromptSubmit",
-            event.session,
-        )
-        return output
+        return None
 
     def _tool(self, event: ToolCompleted) -> dict[str, Any] | None:
-        journal = storage.append_tool_evidence(
-            self.data_dir, event.session, _tool_record(event)
-        )
+        turn_state = storage.load_turn_state(self.data_dir, event.session)
+        category = checkpoints.evidence_category(event)
+        task_source = None
+        if not category and not (event.failure_known and event.failed):
+            task_source = source_context.capture_referenced_task_source(
+                str(turn_state.get("task_anchor") or ""),
+                event.tool_input,
+                event.tool_output,
+            )
+        if category or task_source:
+            turn_state = storage.record_turn_evidence(
+                self.data_dir,
+                event.session,
+                record=(
+                    checkpoints.render_evidence_record(event) if category else ""
+                ),
+                category=category,
+                task_source=task_source,
+            )
         changed_lines = (
             checkpoints.get_changed_line_count(event.session.cwd)
             if event.mutating and event.session.cwd
@@ -335,6 +299,7 @@ class CodexAdapter:
             changed_lines=changed_lines,
             goal_transition=transition,
             goal_objective=objective,
+            evidence_category=category,
         )
         event_seq = int(progress.get("event_seq") or 0)
         storage.observe_injected_response(
@@ -354,113 +319,42 @@ class CodexAdapter:
         strategy = checkpoints.classify_strategy(
             progress, changed_line_count=changed_lines
         )
-        current_source_fingerprint = str(
-            (strategy or checkpoint or {}).get("fingerprint") or ""
-        )
-        pending_output, delivery_busy = _pending_output(
-            self.data_dir,
-            event.native_event_name,
-            event.session,
-            event_seq=event_seq,
-            current_source_fingerprint=current_source_fingerprint,
-        )
-        if delivery_busy:
-            return None
-        if strategy and strategy["reason"] == "goal-transition":
+        review_kind: ReviewKind = "checkpoint"
+        if strategy:
             checkpoint = strategy
+            review_kind = (
+                "goal_transition"
+                if strategy["reason"] == "goal-transition"
+                else "strategy"
+            )
             storage.mark_strategy_reviewed(
                 self.data_dir,
                 event.session,
                 event_seq=event_seq,
                 changed_lines=changed_lines,
             )
-        elif strategy:
-            if pending_output is not None:
-                return pending_output
-            fingerprint = strategy["fingerprint"]
-            if not storage.claim_strategy_run(
-                self.data_dir, event.session, fingerprint
-            ):
-                return None
-            if storage.claim_checkpoint(self.data_dir, event.session, fingerprint):
-                if self.schedule_strategy:
-                    scheduled = self.schedule_strategy(
-                        {
-                            "session": {
-                                "host": event.session.host,
-                                "session_id": event.session.session_id,
-                                "turn_id": event.session.turn_id,
-                                "cwd": event.session.cwd,
-                                "repo_root": event.session.repo_root,
-                            },
-                            "checkpoint": strategy,
-                            "journal": journal,
-                            "progress": progress,
-                            "task_anchor": str(progress.get("task_anchor") or storage.load_turn_state(self.data_dir, event.session).get("task_anchor") or ""),
-                            "event_seq": event_seq,
-                        }
-                    )
-                    if not scheduled:
-                        storage.release_checkpoint(
-                            self.data_dir, event.session, fingerprint
-                        )
-                        storage.release_strategy_run(
-                            self.data_dir, event.session, fingerprint
-                        )
-                        return pending_output
-                    storage.mark_strategy_reviewed(
-                        self.data_dir,
-                        event.session,
-                        event_seq=event_seq,
-                        changed_lines=changed_lines,
-                    )
-                else:
-                    storage.mark_strategy_reviewed(
-                        self.data_dir,
-                        event.session,
-                        event_seq=event_seq,
-                        changed_lines=changed_lines,
-                    )
-                    self._run_strategy_payload(
-                        {
-                            "session": {
-                                "host": event.session.host,
-                                "session_id": event.session.session_id,
-                                "turn_id": event.session.turn_id,
-                                "cwd": event.session.cwd,
-                                "repo_root": event.session.repo_root,
-                            },
-                            "checkpoint": strategy,
-                            "journal": journal,
-                            "progress": progress,
-                            "task_anchor": str(storage.load_turn_state(self.data_dir, event.session).get("task_anchor") or ""),
-                            "event_seq": event_seq,
-                        }
-                    )
-            else:
-                storage.release_strategy_run(
-                    self.data_dir, event.session, fingerprint
-                )
-            return None
         if not checkpoint:
-            return pending_output
+            return None
         fingerprint = checkpoint["fingerprint"]
-        if not storage.claim_checkpoint(self.data_dir, event.session, fingerprint):
-            return pending_output
-        state = storage.load_turn_state(self.data_dir, event.session)
+        if checkpoint["reason"] == "goal-transition":
+            review_kind = "goal_transition"
         source_packet = source_context.build_checkpoint_packet(
-            task_anchor=str(state.get("task_anchor") or ""),
+            task_anchor=str(turn_state.get("task_anchor") or ""),
             event_context=checkpoint["context"],
-            workflow_context=source_context.summarize_checkpoint_progress(progress),
-            tool_evidence=journal,
+            task_sources=turn_state.get("task_sources") or {},
+            change_evidence=str(turn_state.get("change_evidence") or ""),
+            verification_evidence=str(
+                turn_state.get("verification_evidence") or ""
+            ),
+            failure_history=(
+                ""
+                if review_kind == "checkpoint" and category == "failure"
+                else str(turn_state.get("failure_history") or "")
+            ),
         )
         request = ReviewRequest(
             schema_version=1,
-            kind=(
-                "goal_transition"
-                if checkpoint["reason"] == "goal-transition"
-                else "checkpoint"
-            ),
+            kind=review_kind,
             reason=checkpoint["reason"],
             session=event.session,
             source_packet=source_packet,
@@ -471,45 +365,23 @@ class CodexAdapter:
             routing_concern=str(checkpoint.get("routing_concern") or ""),
         )
         try:
-            outcome = self.core.review(
+            outcome = self.core.review_once(
                 request,
                 persist_reaction=True,
-                mark_delivered=False,
                 timeout_sec=self.core.settings.checkpoint_timeout_sec,
             )
         except Exception as exc:
             self.core.log_error(f"Codex checkpoint review failed: {exc}")
-            storage.release_checkpoint(self.data_dir, event.session, fingerprint)
-            return pending_output
-        if outcome.status != "finding" or not outcome.finding:
-            storage.release_checkpoint(self.data_dir, event.session, fingerprint)
-            return pending_output
-        if pending_output is not None:
-            old_delivery = pending_output.get(DELIVERY_MARKER_KEY)
-            if isinstance(old_delivery, dict):
-                storage.mark_delivery(
-                    self.data_dir,
-                    event.session,
-                    str(old_delivery.get("timestamp") or ""),
-                    status="expired",
-                    event_seq=event_seq,
-                    delivered_via="superseded-by-current-checkpoint",
-                )
-                storage.release_delivery_claim(
-                    self.data_dir,
-                    event.session,
-                    str(old_delivery.get("timestamp") or ""),
-                    str(old_delivery.get("claim_token") or ""),
-                )
-        storage.complete_checkpoint(self.data_dir, event.session, fingerprint)
+            return None
+        if outcome is None or outcome.status != "finding" or not outcome.finding:
+            return None
         output = build_hook_output(
             event.native_event_name,
             outcome.finding,
         )
         timestamp = outcome.reaction_ts
         if not timestamp:
-            pending = storage.latest_pending(self.data_dir, event.session)
-            timestamp = str((pending or {}).get("ts") or "")
+            return None
         claim_token = ""
         if timestamp:
             claim_token = storage.claim_delivery(
@@ -526,80 +398,19 @@ class CodexAdapter:
             claim_token=claim_token,
         )
 
-    def _run_strategy_payload(self, payload: dict[str, Any]) -> None:
-        raw_session = payload.get("session") or {}
-        session = SessionRef(
-            str(raw_session.get("host") or "codex_cli"),  # type: ignore[arg-type]
-            str(raw_session.get("session_id") or "unknown"),
-            turn_id=str(raw_session.get("turn_id") or ""),
-            cwd=str(raw_session.get("cwd") or ""),
-            repo_root=str(raw_session.get("repo_root") or ""),
-        )
-        checkpoint = payload.get("checkpoint") or {}
-        task_anchor = str(payload.get("task_anchor") or "")
-        event_seq = int(payload.get("event_seq") or 0)
-        context = str(checkpoint.get("context") or "")
-        source_packet = source_context.build_checkpoint_packet(
-            task_anchor=task_anchor,
-            event_context=context,
-            workflow_context=source_context.summarize_checkpoint_progress(
-                payload.get("progress")
-                if isinstance(payload.get("progress"), dict)
-                else {}
-            ),
-            tool_evidence=str(payload.get("journal") or ""),
-        )
-        request = ReviewRequest(
-            schema_version=1,
-            kind="strategy",
-            reason=str(checkpoint.get("reason") or "strategy-review"),
-            session=session,
-            source_packet=source_packet,
-            source_fingerprint=str(checkpoint.get("fingerprint") or ""),
-            routing_evidence=context,
-            source_event_seq=event_seq,
-            trigger=str(checkpoint.get("trigger") or "strategy-review"),
-            routing_concern=str(checkpoint.get("routing_concern") or ""),
-        )
-        try:
-            outcome = self.core.review(
-                request,
-                persist_reaction=True,
-                mark_delivered=False,
-                timeout_sec=self.core.settings.checkpoint_timeout_sec,
-            )
-        except Exception as exc:
-            self.core.log_error(f"Codex strategy review failed: {exc}")
-            storage.release_checkpoint(
-                self.data_dir, session, request.source_fingerprint
-            )
-            storage.release_strategy_run(
-                self.data_dir, session, request.source_fingerprint
-            )
-            return
-        if outcome.status == "finding" and outcome.finding:
-            storage.complete_checkpoint(
-                self.data_dir, session, request.source_fingerprint
-            )
-        else:
-            storage.release_checkpoint(
-                self.data_dir, session, request.source_fingerprint
-            )
-        storage.release_strategy_run(
-            self.data_dir, session, request.source_fingerprint
-        )
-
-    def _stop(self, event: TurnStopped) -> None:
-        if event.stop_hook_active:
-            return None
+    def _stop(self, event: TurnStopped) -> dict[str, Any] | None:
+        progress = storage.load_progress_state(self.data_dir, event.session)
+        event_seq = int(progress.get("event_seq") or 0)
         storage.observe_injected_response(
             self.data_dir,
             event.session,
+            event_seq=event_seq,
             observation_kind="stop",
             observation={"assistant_claim": event.final_claim},
         )
+        if event.stop_hook_active:
+            return None
         state = storage.load_turn_state(self.data_dir, event.session)
-        tool_evidence = str(state.get("tool_evidence") or "")
         agentcam_evidence = ""
         report = read_latest_agentcam_report(
             event.session.cwd, log_error=self.core.log_error
@@ -617,7 +428,12 @@ class CodexAdapter:
         source_packet = source_context.build_stop_packet(
             task_anchor=task_anchor,
             last_assistant_message=event.final_claim,
-            tool_evidence=tool_evidence,
+            task_sources=state.get("task_sources") or {},
+            change_evidence=str(state.get("change_evidence") or ""),
+            verification_evidence=str(
+                state.get("verification_evidence") or ""
+            ),
+            failure_history=str(state.get("failure_history") or ""),
             agentcam_evidence=agentcam_evidence,
         )
         if not source_packet:
@@ -631,7 +447,23 @@ class CodexAdapter:
             source_fingerprint=_fingerprint(source_packet),
         )
         try:
-            self.core.review(request, persist_reaction=True)
+            outcome = self.core.review_once(request, persist_reaction=True)
         except Exception as exc:
             self.core.log_error(f"Codex stop review failed: {exc}")
-        return None
+            return None
+        if outcome is None or outcome.status != "finding" or not outcome.finding:
+            return None
+        timestamp = outcome.reaction_ts
+        if not timestamp:
+            return None
+        claim_token = storage.claim_delivery(self.data_dir, event.session, timestamp)
+        if not claim_token:
+            return None
+        return _with_delivery_marker(
+            build_stop_hook_output(outcome.finding),
+            event.session,
+            timestamp,
+            event_seq=event_seq,
+            event_name="Stop",
+            claim_token=claim_token,
+        )

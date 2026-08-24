@@ -37,8 +37,34 @@ class FakeCore:
         self.calls.append(request)
         return ReviewOutcome("no_finding", effective_lens="beck")
 
+    def review_once(self, request, **kwargs):
+        return self.review(request, **kwargs)
+
 
 class DeliveryLifecycleTests(unittest.TestCase):
+    def test_stop_reviews_completion_without_detached_coordination(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            settings = settings_for(root)
+            core = FakeCore(settings)
+            adapter = CodexAdapter(core)
+            session = SessionRef("codex_cli", "stop-order", "turn", str(root))
+            storage.start_turn(settings.paths.data_dir, session, "修正完整行為")
+
+            adapter.process(
+                {
+                    "hook_event_name": "Stop",
+                    "session_id": session.session_id,
+                    "turn_id": session.turn_id,
+                    "cwd": session.cwd,
+                    "last_assistant_message": "已完成",
+                    "stop_hook_active": False,
+                }
+            )
+
+            self.assertFalse(hasattr(storage, "wait_for_strategy_idle"))
+            self.assertEqual([call.kind for call in core.calls], ["stop"])
+
     def test_back_to_back_reactions_have_distinct_sortable_ids(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -71,7 +97,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 session,
                 provider="grok",
                 model="",
-                reaction="Reviewer 逾時（120 秒）；本輪沒有 Nudge。",
+                reaction="Reviewer 逾時（90 秒）；本輪沒有 Nudge。",
                 route_metadata={"effective_lens": "fowler"},
                 kind="review_status",
             )
@@ -104,6 +130,17 @@ class DeliveryLifecycleTests(unittest.TestCase):
             receipt = storage.load_delivery_state(settings.paths.data_dir, session)[
                 "receipts"
             ][entry["ts"]]
+            self.assertEqual(receipt["status"], "emitted")
+            storage.observe_injected_response(
+                settings.paths.data_dir,
+                session,
+                event_seq=6,
+                observation_kind="tool",
+                observation={"tool": "exec_command"},
+            )
+            receipt = storage.load_delivery_state(settings.paths.data_dir, session)[
+                "receipts"
+            ][entry["ts"]]
             self.assertEqual(receipt["status"], "injected")
             self.assertEqual(receipt["event_seq"], 5)
             self.assertEqual(receipt["delivered_via"], "PostToolUse")
@@ -123,7 +160,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 source_fingerprint="change-a",
                 finding_scope="local",
             )
-            storage.mark_delivered(
+            storage.mark_emitted(
                 root,
                 session,
                 entry["ts"],
@@ -165,7 +202,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             ]
             self.assertEqual(len(observations), 1)
 
-    def test_stale_pending_nudge_expires_instead_of_being_injected_late(self):
+    def test_queued_nudge_is_never_selected_by_storage(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
@@ -178,13 +215,12 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 route_metadata={"effective_lens": "beck"},
                 source_event_seq=1,
             )
-            self.assertIsNone(
-                storage.latest_pending(root, session, current_event_seq=8)
+            self.assertFalse(hasattr(storage, "latest_pending"))
+            self.assertNotIn(
+                entry["ts"], storage.load_delivery_state(root, session)["receipts"]
             )
-            receipt = storage.load_delivery_state(root, session)["receipts"][entry["ts"]]
-            self.assertEqual(receipt["status"], "expired")
 
-    def test_delivering_newer_nudge_marks_older_pending_as_superseded(self):
+    def test_delivering_newer_nudge_does_not_reclassify_older_queue_entry(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
@@ -205,13 +241,20 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 route_metadata={"effective_lens": "beck"},
             )
 
-            storage.mark_delivered(root, session, newer["ts"], event_seq=4)
+            storage.mark_emitted(root, session, newer["ts"], event_seq=4)
+            storage.observe_injected_response(
+                root,
+                session,
+                event_seq=5,
+                observation_kind="tool",
+                observation={"tool": "exec_command"},
+            )
 
             receipts = storage.load_delivery_state(root, session)["receipts"]
-            self.assertEqual(receipts[older["ts"]]["status"], "superseded")
+            self.assertNotIn(older["ts"], receipts)
             self.assertEqual(receipts[newer["ts"]]["status"], "injected")
 
-    def test_recent_injected_personas_ignore_non_delivered_reviews(self):
+    def test_recent_injected_findings_ignore_non_delivered_reviews(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
@@ -223,7 +266,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 reaction="第一個盲點。",
                 route_metadata={"effective_lens": "carmack"},
             )
-            expired = storage.append_reaction(
+            failed = storage.append_reaction(
                 root,
                 session,
                 provider="anthropic",
@@ -231,19 +274,25 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 reaction="第二個盲點。",
                 route_metadata={"effective_lens": "fowler"},
             )
-            storage.mark_delivered(root, session, injected["ts"])
+            storage.mark_emitted(root, session, injected["ts"])
+            storage.observe_injected_response(
+                root,
+                session,
+                observation_kind="tool",
+                observation={"tool": "exec_command"},
+            )
             storage.mark_delivery(
                 root,
                 session,
-                expired["ts"],
-                status="expired",
+                failed["ts"],
+                status="failed",
             )
 
-            recent = storage.read_recent_injected_personas(root, session, limit=2)
+            recent = storage.read_recent_injected_findings(root, session, limit=3)
 
-        self.assertEqual(("carmack",), recent)
+        self.assertEqual(("第一個盲點。",), recent)
 
-    def test_recent_injected_personas_preserve_injection_order_and_limit(self):
+    def test_recent_injected_findings_preserve_injection_order_and_limit(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
@@ -256,33 +305,48 @@ class DeliveryLifecycleTests(unittest.TestCase):
                     reaction=f"{persona} 的盲點。",
                     route_metadata={"effective_lens": persona},
                 )
-                storage.mark_delivered(root, session, entry["ts"])
+                storage.mark_emitted(root, session, entry["ts"])
+                storage.observe_injected_response(
+                    root,
+                    session,
+                    observation_kind="tool",
+                    observation={"tool": "exec_command"},
+                )
 
-            recent = storage.read_recent_injected_personas(root, session, limit=2)
+            recent = storage.read_recent_injected_findings(root, session, limit=2)
 
-        self.assertEqual(("fowler", "linus"), recent)
+        self.assertEqual(("fowler 的盲點。", "linus 的盲點。"), recent)
 
-    def test_strategy_single_flight_is_session_scoped_and_releasable(self):
+    def test_review_attempt_identity_is_session_scoped_and_terminal(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "s")
             other = SessionRef("codex_cli", "other")
 
-            self.assertTrue(storage.claim_strategy_run(root, session, "first"))
-            self.assertFalse(storage.claim_strategy_run(root, session, "second"))
-            self.assertTrue(storage.claim_strategy_run(root, other, "other"))
-            storage.release_strategy_run(root, session)
-            self.assertTrue(storage.claim_strategy_run(root, session, "third"))
+            token = storage.claim_review_attempt(root, session, "strategy", "first")
+            self.assertTrue(token)
+            self.assertFalse(
+                storage.claim_review_attempt(root, session, "strategy", "first")
+            )
+            self.assertTrue(
+                storage.claim_review_attempt(root, session, "strategy", "second")
+            )
+            self.assertTrue(
+                storage.claim_review_attempt(root, other, "strategy", "first")
+            )
+            storage.finish_review_attempt(
+                root, session, "strategy", "first", token, "no_finding"
+            )
+            self.assertFalse(
+                storage.claim_review_attempt(root, session, "strategy", "first")
+            )
 
 class LongGoalReplayTests(unittest.TestCase):
-    def test_repeated_command_family_schedules_one_detached_strategy_review(self):
+    def test_repeated_command_family_runs_one_synchronous_strategy_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
-            scheduled = []
-            adapter = CodexAdapter(
-                core, schedule_strategy=lambda work: scheduled.append(work) or True
-            )
+            adapter = CodexAdapter(core)
             for index in range(3):
                 adapter.process(
                     {
@@ -295,23 +359,16 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"exit_code": 0, "output": f"pass {index}"},
                     }
                 )
-            self.assertEqual(len(scheduled), 1)
-            self.assertEqual(
-                scheduled[0]["checkpoint"]["trigger"], "repeated-command-family"
-            )
-            self.assertEqual(
-                scheduled[0]["checkpoint"]["routing_concern"], "feedback-loop"
-            )
-            self.assertEqual(core.calls, [])
+            self.assertEqual(len(core.calls), 1)
+            self.assertEqual(core.calls[0].kind, "strategy")
+            self.assertEqual(core.calls[0].trigger, "repeated-command-family")
+            self.assertEqual(core.calls[0].routing_concern, "feedback-loop")
 
     def test_second_failure_escalates_from_event_review_to_strategy_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
-            scheduled = []
-            adapter = CodexAdapter(
-                core, schedule_strategy=lambda work: scheduled.append(work) or True
-            )
+            adapter = CodexAdapter(core)
             for output in ("first failure", "different failure"):
                 adapter.process(
                     {
@@ -324,14 +381,9 @@ class LongGoalReplayTests(unittest.TestCase):
                         "error": output,
                     }
                 )
-            self.assertEqual(len(core.calls), 1)
-            self.assertEqual(len(scheduled), 1)
-            self.assertEqual(
-                scheduled[0]["checkpoint"]["trigger"], "repeated-failure-family"
-            )
-            self.assertEqual(
-                scheduled[0]["checkpoint"]["routing_concern"], "feedback-loop"
-            )
+            self.assertEqual([call.kind for call in core.calls], ["checkpoint", "strategy"])
+            self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
+            self.assertEqual(core.calls[-1].routing_concern, "feedback-loop")
 
     def test_goal_completion_is_reviewed_before_the_final_response(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -353,7 +405,7 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(core.calls[0].trigger, "goal-complete")
             self.assertEqual(core.calls[0].routing_concern, "completion-boundary")
 
-    def test_pending_nudge_does_not_hide_a_goal_transition_review(self):
+    def test_queued_nudge_is_not_delivered_during_goal_transition_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
@@ -379,18 +431,13 @@ class LongGoalReplayTests(unittest.TestCase):
                 }
             )
             self.assertEqual(core.calls[0].kind, "goal_transition")
-            self.assertIn(
-                "舊策略提醒", output["hookSpecificOutput"]["additionalContext"]
-            )
+            self.assertIsNone(output)
 
     def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
-            scheduled = []
-            adapter = CodexAdapter(
-                core, schedule_strategy=lambda work: scheduled.append(work) or True
-            )
+            adapter = CodexAdapter(core)
             for index in range(8):
                 adapter.process(
                     {
@@ -403,7 +450,7 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"success": True},
                     }
                 )
-            self.assertEqual(scheduled, [])
+            self.assertEqual(core.calls, [])
 
     def test_strategy_signals_route_to_distinct_existing_lenses(self):
         cases = (

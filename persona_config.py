@@ -39,9 +39,8 @@ STAGE_SPECS = {
     "evolve": StageSpec("Evolve", "重構與變更成本", "fowler"),
     "review": StageSpec("Review", "簡化與責任歸屬", "linus"),
 }
-PERSONA_NAMES = {"general": "General", **LENS_PERSONAS}
+PERSONA_NAMES = dict(LENS_PERSONAS)
 PERSONA_PUBLIC_LABELS = {
-    "general": "General · 工作流與證據",
     "lamport": "Reliability · 狀態、順序與失敗",
     "carmack": "Performance · 執行路徑與效能",
     **{spec.persona: spec.label for spec in STAGE_SPECS.values()},
@@ -62,7 +61,7 @@ def config_path(base_dir: Path) -> Path:
 def persona_label(persona: str) -> str:
     """Return a user-facing work label without exposing persona identity."""
     key = str(persona or "").strip().lower()
-    return PERSONA_PUBLIC_LABELS.get(key, PERSONA_PUBLIC_LABELS["general"])
+    return PERSONA_PUBLIC_LABELS.get(key, "未記錄")
 
 
 def stage_label(stage: str) -> str:

@@ -22,6 +22,8 @@ DEFAULT_MODELS = {
 REVIEWER_CONFIG_FILE = "reviewer.json"
 REVIEWER_CONFIG_KEYS = {"provider", "model", "ollama_url"}
 INVALID_CONFIG_PROVIDER = "configuration-error"
+REVIEW_TIMEOUT_SEC = 90
+HOOK_TIMEOUT_SEC = 120
 
 HOST_DEFAULT_PROVIDERS = {
     "claude": "anthropic",
@@ -174,17 +176,23 @@ class RuntimeSettings:
             or (configured.get("ollama_url") if source == "config" else "")
             or DEFAULT_OLLAMA_URL
         )
-        timeout = _positive_int(
-            _value(environment, "MASTERS_NUDGE_TIMEOUT", "120"),
-            120,
-        )
-        checkpoint_timeout = _positive_int(
-            _value(
-                environment,
-                "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
-                "90",
+        timeout = min(
+            _positive_int(
+                _value(environment, "MASTERS_NUDGE_TIMEOUT", str(REVIEW_TIMEOUT_SEC)),
+                REVIEW_TIMEOUT_SEC,
             ),
-            90,
+            REVIEW_TIMEOUT_SEC,
+        )
+        checkpoint_timeout = min(
+            _positive_int(
+                _value(
+                    environment,
+                    "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
+                    str(REVIEW_TIMEOUT_SEC),
+                ),
+                REVIEW_TIMEOUT_SEC,
+            ),
+            REVIEW_TIMEOUT_SEC,
         )
         return cls(
             provider,

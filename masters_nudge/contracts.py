@@ -70,7 +70,7 @@ class ReviewRequest:
 class ReviewOutcome:
     status: ReviewStatus
     finding: str = ""
-    effective_lens: str = "general"
+    effective_lens: str = ""
     provider: str = ""
     model: str = ""
     latency_ms: int = 0

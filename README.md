@@ -2,13 +2,15 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-Masters’ Nudge gives Claude Code or Codex one brief, evidence-grounded second opinion at selected checkpoints and at the end of a turn. The reviewer prompt asks for one short open question or permits silence; the coding agent remains responsible for every decision and change.
+Masters’ Nudge gives Claude Code or Codex one short, evidence-grounded second opinion at selected checkpoints and at the end of a turn. The reviewer may state a missed constraint, counterexample, alternative hypothesis, or direction, or remain silent. A delivered Nudge is identified as `Independent second opinion:`; the coding agent remains responsible for every decision and change.
 
 ## What it does
 
 Masters’ Nudge packages hooks, skills, reviewer prompts, six software-engineering lenses, and an optional floating window as one plugin. It looks for workflow tensions such as an untested assumption, expanding scope, weak feedback, fragile event order, or a completion claim that has moved ahead of its evidence.
 
 A Nudge is not a code review, an instruction, or proof that another model is more accurate. Findings are sanitized and capped at 52 characters. Selected tool failures, test failures, large changes, long-goal transitions, and end-of-turn events may each invoke a reviewer.
+
+Eligible checkpoint and Stop reviews are synchronous: the host waits for the reviewer and returns a finding in the same turn. Provider work is capped at 90 seconds inside a 120-second host-hook budget. This can add latency at an eligible event; an error or timeout produces no Nudge and does not trigger an automatic Provider retry or fallback.
 
 ## Install
 
@@ -74,8 +76,8 @@ Common environment variables:
 | `MASTERS_NUDGE_PROVIDER` | Host-aware | `anthropic`, `openai`, `grok`, or `ollama-local` |
 | `MASTERS_NUDGE_MODEL` | Host-aware | Exact reviewer model |
 | `MASTERS_NUDGE_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback Ollama endpoint |
-| `MASTERS_NUDGE_TIMEOUT` | `120` | End-of-turn reviewer timeout in seconds |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Mid-turn reviewer timeout in seconds |
+| `MASTERS_NUDGE_TIMEOUT` | `90` | End-of-turn reviewer timeout; values above 90 are clamped |
+| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Mid-turn reviewer timeout; values above 90 are clamped |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs, state, receipts, telemetry, and reviewer config |
 | `MASTERS_NUDGE_STAGE` | Unset | Select `design`, `build`, `evolve`, or `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | Bundled sprite | Optional floating-window spritesheet |
@@ -92,14 +94,14 @@ Default reviews send a bounded current-state packet to an external provider: Ant
 
 Depending on the event, the packet can contain:
 
-- the latest user task anchor;
-- the triggering tool input/output, errors, test output, or diff summary;
-- a bounded current-turn journal or Claude transcript slice;
-- the current final claim and verification evidence;
+- the latest user task request;
+- content read from local sources explicitly named in that request;
+- separate bounded evidence of material changes, verification, and failure history;
+- the triggering checkpoint, current final claim, or completion evidence;
 - optional agentcam evidence;
 - the reviewer prompt and selected lens.
 
-Reactions, task anchors, bounded journals, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. On Codex, a receipt may also record the first observable host action after an injection. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
+Routine navigation output, tool names and commands, the main model's running explanation, and full transcripts are not included in the reviewer packet. Semantic change, verification, and failure results remain available. The latest three injected Nudge texts may be included only to avoid repetition; the main model's reaction is not included. Reactions, task requests, layered evidence, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. A flushed hook response is recorded as `emitted`; only a later Claude or Codex host event that exposes the main model's response confirms it as `injected`. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 

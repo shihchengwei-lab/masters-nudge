@@ -9,7 +9,7 @@
             "type": "command",
             "command": "${user_config.python_command}",
             "args": ["${CLAUDE_PLUGIN_ROOT}/claude_checkpoint.py"],
-            "timeout": 20
+            "timeout": 120
           }
         ]
       }
@@ -22,7 +22,7 @@
             "type": "command",
             "command": "${user_config.python_command}",
             "args": ["${CLAUDE_PLUGIN_ROOT}/claude_checkpoint.py"],
-            "timeout": 20
+            "timeout": 120
           }
         ]
       }
@@ -34,8 +34,7 @@
             "type": "command",
             "command": "${user_config.python_command}",
             "args": ["${CLAUDE_PLUGIN_ROOT}/claude_stop.py"],
-            "timeout": 90,
-            "async": true
+            "timeout": 120
           }
         ]
       }

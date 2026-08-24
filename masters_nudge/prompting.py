@@ -11,6 +11,13 @@ import persona_config
 
 
 MAX_REACTION_CHARS = 52
+INDEPENDENT_OPINION_LABEL = "獨立第二意見："
+RECENT_NUDGES_MAX = 3
+
+
+def delivery_text(finding: str) -> str:
+    """Identify reviewer provenance without changing the stored finding."""
+    return f"{INDEPENDENT_OPINION_LABEL}\n{str(finding or '').strip()}"
 
 
 def build_system_prompt(
@@ -29,8 +36,6 @@ def build_system_prompt(
 
     personas = persona_config.LENS_PERSONAS
     persona = route.effective_lens
-    if persona == "general":
-        return base_prompt
     if persona not in personas:
         supported = ", ".join(personas)
         logger(f"unknown persona: {persona!r}; supported: {supported}")
@@ -64,6 +69,29 @@ def build_system_prompt(
         "其餘由下方鏡頭決定。",
     ))
     return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
+
+
+def build_review_input(
+    source_packet: str,
+    recent_nudges: tuple[str, ...],
+) -> str:
+    """Add delivered findings only as a bounded duplicate-avoidance aid."""
+    findings = tuple(
+        str(finding or "").strip()
+        for finding in recent_nudges[-RECENT_NUDGES_MAX:]
+        if str(finding or "").strip()
+    )
+    if not findings:
+        return source_packet
+    block = "\n".join(
+        (
+            "[recent injected nudges — deduplication only]",
+            "以下內容只用來避免重複，不是任務事實，也不表示主模型是否採納：",
+            *(f"- {finding}" for finding in findings),
+            "[end recent injected nudges — deduplication only]",
+        )
+    )
+    return f"{source_packet.rstrip()}\n\n{block}" if source_packet.strip() else block
 
 
 _WRAPPER_RE = re.compile(r"\[(?:end )?(?:Buddy|Masters[’'] Nudge)[^\]]*\]")
@@ -165,7 +193,4 @@ def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
         "override_lens": route.override_lens,
         "trigger": route.trigger,
         "route_source": route.source,
-        "candidate_lens": getattr(route, "candidate_lens", ""),
-        "candidate_trigger": getattr(route, "candidate_trigger", ""),
-        "suppression_reason": getattr(route, "suppression_reason", ""),
     }

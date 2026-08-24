@@ -82,7 +82,7 @@ class TestClaudeSessionOwner(unittest.TestCase):
                 claude_adapter, "session_from_hook", return_value=session
             ) as session_from_hook,
             mock.patch.object(
-                claude_checkpoint.ReviewCore, "review", return_value=outcome
+                claude_checkpoint.ReviewCore, "review_once", return_value=outcome
             ) as review,
         ):
             prepared = claude_checkpoint.prepare_hook(hook)
@@ -129,19 +129,22 @@ class TestClaudeSessionOwner(unittest.TestCase):
                 return_value={"task_anchor": "current task", "transcript_offset": offset},
             ),
             mock.patch.object(
-                claude_adapter, "read_recent_transcript"
-            ) as unbounded_fallback,
+                claude_adapter, "read_latest_assistant_text"
+            ) as current_turn_fallback,
         ):
             source = claude_adapter.build_stop_source_context(hook, session=session)
 
-        unbounded_fallback.assert_not_called()
-        self.assertNotIn("OLD TURN SECRET", source["packet"])
-        self.assertIn("current task", source["packet"])
+        current_turn_fallback.assert_called_once_with(str(transcript), offset)
+        self.assertNotIn("OLD TURN SECRET", source)
+        self.assertIn("current task", source)
 
     def test_internal_session_consumers_require_the_owned_session(self):
         checkpoint_session = inspect.signature(
             claude_checkpoint.review_checkpoint
         ).parameters["session"]
+        self.assertNotIn(
+            "hook", inspect.signature(claude_checkpoint.review_checkpoint).parameters
+        )
         stop_session = inspect.signature(
             claude_adapter.build_stop_source_context
         ).parameters["session"]

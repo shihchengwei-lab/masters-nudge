@@ -22,7 +22,7 @@
             "type": "command",
             "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
             "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli",
-            "timeout": 90,
+            "timeout": 120,
             "additionalContextLimit": 256
           }
         ]
@@ -33,9 +33,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli --detach-stop",
-            "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli --detach-stop",
-            "timeout": 5
+            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
+            "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli",
+            "timeout": 120
           }
         ]
       }

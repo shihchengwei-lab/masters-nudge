@@ -69,9 +69,9 @@ LENS_BADGES = {
     "beck": (persona_config.persona_label("beck"), "#80ED99"),
     "lamport": (persona_config.persona_label("lamport"), "#72A1FF"),
     "carmack": (persona_config.persona_label("carmack"), "#FFB86C"),
-    "general": (persona_config.persona_label("general"), "#A0A0B8"),
     "evaluation": ("Shadow evaluation", "#FFD166"),
 }
+UNKNOWN_LENS_BADGE = ("未記錄", "#A0A0B8")
 
 LENS_BACKGROUNDS = {
     "jeff": "#17343B",
@@ -80,15 +80,14 @@ LENS_BACKGROUNDS = {
     "beck": "#1D3528",
     "lamport": "#222B4A",
     "carmack": "#3A2E1D",
-    "general": BG,
     "evaluation": "#3A321D",
 }
 
 
 def lens_badge(persona: str | None) -> tuple[str, str]:
     """Return a color-plus-work badge, falling back for old or unknown logs."""
-    key = persona.strip().lower() if isinstance(persona, str) else "general"
-    name, color = LENS_BADGES.get(key, LENS_BADGES["general"])
+    key = persona.strip().lower() if isinstance(persona, str) else ""
+    name, color = LENS_BADGES.get(key, UNKNOWN_LENS_BADGE)
     return f"● {name}", color
 
 
@@ -185,7 +184,7 @@ def cut_and_scale(img: Image.Image, bboxes: list[tuple], target_h: int) -> list[
 
 def lens_background(persona: str | None) -> str:
     """Return a restrained outer-window color for the effective lens."""
-    key = persona.strip().lower() if isinstance(persona, str) else "general"
+    key = persona.strip().lower() if isinstance(persona, str) else ""
     return LENS_BACKGROUNDS.get(key, BG)
 
 
@@ -367,7 +366,7 @@ class BuddyWindow:
 
         active_persona = self.stage_selection.persona
         if active_persona not in LENS_BADGES:
-            active_persona = "general"
+            active_persona = ""
         badge_text, badge_color = lens_badge(active_persona)
         self.lens_label = tk.Label(
             bubble, text=badge_text, bg=BUBBLE_BG, fg=badge_color,
@@ -531,10 +530,11 @@ class BuddyWindow:
                     if str(entry.get("reaction_ts") or "") == self.last_reaction_ts:
                         status = str(entry.get("delivery_status") or "")
                         labels = {
+                            "emitted": "已送出，待確認",
                             "injected": "已注入",
                             "expired": "已過期（未注入）",
                             "superseded": "已被新狀態取代",
-                            "failed": "注入失敗，等待重試",
+                            "failed": "送出失敗",
                         }
                         ts = str(entry.get("delivered_at") or entry.get("ts") or "")
                         short_ts = ts[11:19] if len(ts) > 19 else ts
@@ -544,7 +544,7 @@ class BuddyWindow:
                     continue
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
-                persona = entry.get("persona", "general")
+                persona = entry.get("persona", "")
                 if reaction:
                     self.last_reaction_ts = str(ts or "")
                     self._set_lens_badge(persona)
@@ -556,7 +556,7 @@ class BuddyWindow:
                         short_ts = ts[11:19] if len(ts) > 19 else ts
                         delivery = str(entry.get("delivery_status") or "")
                         suffix = (
-                            " · 待注入"
+                            " · 待送出"
                             if delivery == "queued"
                             and entry.get("kind", "review") != "review_status"
                             else ""

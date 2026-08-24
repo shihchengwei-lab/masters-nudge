@@ -73,9 +73,6 @@ class ReviewRoute:
     override_lens: str
     trigger: str
     source: str
-    candidate_lens: str = ""
-    candidate_trigger: str = ""
-    suppression_reason: str = ""
 
 
 STRUCTURED_CONCERNS = {
@@ -119,7 +116,6 @@ def resolve_review_route(
     environ: Mapping[str, str] | None = None,
     checkpoint: bool = False,
     routing_concern: str = "",
-    injected_personas: tuple[str, ...] = (),
 ) -> ReviewRoute:
     selection = persona_config.resolve_stage(base_dir, environ=environ)
     primary = selection.persona
@@ -128,16 +124,11 @@ def resolve_review_route(
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
-    if primary == "general" or not checkpoint:
+    if not checkpoint:
         return ReviewRoute(
             selection.stage, primary, primary, "", "", selection.source
         )
 
-    cooldown = tuple(
-        lens for lens in injected_personas[-2:]
-        if lens in persona_config.LENS_PERSONAS
-    )
-    ineligible = set(cooldown)
     evidence_candidates = []
     structured_candidate = STRUCTURED_CONCERNS.get(str(routing_concern or ""))
     if structured_candidate is not None:
@@ -147,38 +138,16 @@ def resolve_review_route(
         for candidate in _specialist_candidates(evidence)
         if candidate not in evidence_candidates
     )
-    evidence_choice = next(
-        (candidate for candidate in evidence_candidates if candidate[0] not in ineligible),
-        None,
-    )
+    evidence_choice = evidence_candidates[0] if evidence_candidates else None
     if evidence_choice is not None:
         override, trigger = evidence_choice
-    elif primary not in ineligible:
-        override, trigger = primary, ""
     else:
-        override, trigger = "general", ""
-    suppression_reason = (
-        f"injected-persona-cooldown:{','.join(cooldown)}" if cooldown else ""
-    )
+        override, trigger = primary, ""
     source = (
         "software_evidence_override"
         if trigger
-        else "software_cooldown_general"
-        if override == "general"
         else selection.source
     )
-    if override == "general":
-        return ReviewRoute(
-            selection.stage,
-            primary,
-            "general",
-            "",
-            "",
-            source,
-            candidate_lens=(evidence_candidates[0][0] if evidence_candidates else ""),
-            candidate_trigger=(evidence_candidates[0][1] if evidence_candidates else ""),
-            suppression_reason=suppression_reason,
-        )
     if override == primary:
         return ReviewRoute(
             selection.stage,
@@ -187,9 +156,6 @@ def resolve_review_route(
             "",
             trigger,
             source,
-            candidate_lens=override if trigger else "",
-            candidate_trigger=trigger,
-            suppression_reason=suppression_reason,
         )
     return ReviewRoute(
         selection.stage,
@@ -198,7 +164,4 @@ def resolve_review_route(
         override,
         trigger,
         source,
-        candidate_lens=override,
-        candidate_trigger=trigger,
-        suppression_reason=suppression_reason,
     )

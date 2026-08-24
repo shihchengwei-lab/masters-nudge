@@ -4,21 +4,26 @@
 from __future__ import annotations
 
 import re
-from collections import Counter
-from typing import Any
+from typing import Any, Mapping
 
 
 TASK_ANCHOR_MAX_CHARS = 2000
+TASK_SOURCES_MAX_CHARS = 8000
+TASK_SOURCE_MAX_CHARS = 6000
 CHECKPOINT_EVENT_MAX_CHARS = 3000
-CHECKPOINT_AGENT_CONTEXT_MAX_CHARS = 1200
-CHECKPOINT_BOTTLENECK_MAX_CHARS = 4300
-CHECKPOINT_WORKFLOW_MAX_CHARS = 1800
-CHECKPOINT_MECHANISM_MAX_CHARS = 3500
-CHECKPOINT_TENSION_MAX_CHARS = 2200
+CHANGE_EVIDENCE_MAX_CHARS = 3000
+VERIFICATION_EVIDENCE_MAX_CHARS = 3500
+FAILURE_HISTORY_MAX_CHARS = 3500
 STOP_ASSISTANT_MAX_CHARS = 2500
-TOOL_EVIDENCE_MAX_CHARS = 2000
 AGENTCAM_EVIDENCE_MAX_CHARS = 2000
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
+
+_BACKTICK_REFERENCE_RE = re.compile(r"`([^`\r\n]+)`")
+_MARKDOWN_REFERENCE_RE = re.compile(r"\[[^\]]+\]\(([^)\r\n]+)\)")
+_PATHISH_REFERENCE_RE = re.compile(
+    r"(?:[/\\]|\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$)"
+)
+_CONTENT_READ_RE = re.compile(r"\b(?:get-content|cat|type|sed)\b", re.IGNORECASE)
 
 AGENTCAM_SECTION_NAMES = {
     "risk flags",
@@ -54,120 +59,158 @@ def _section(label: str, content: str, max_chars: int) -> str:
     return f"[{label}]\n{content}\n[end {label}]"
 
 
+def _compact(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    try:
+        import json
+
+        return json.dumps(value, ensure_ascii=False, sort_keys=True).strip()
+    except (TypeError, ValueError):
+        return str(value or "").strip()
+
+
+def _normalized_reference(value: str) -> str:
+    return str(value or "").strip().strip("<>").replace("\\", "/").lower()
+
+
+def _reads_reference(tool_input: Any, source: str) -> bool:
+    """Accept explicit content reads, not navigation that merely names a file."""
+    normalized_source = _normalized_reference(source)
+    if not normalized_source:
+        return False
+    if isinstance(tool_input, Mapping):
+        for key in ("file_path", "path"):
+            candidate = _normalized_reference(tool_input.get(key, ""))
+            if candidate == normalized_source or candidate.endswith(
+                f"/{normalized_source}"
+            ):
+                return True
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+    else:
+        command = str(tool_input or "")
+    source_token = re.compile(
+        rf"(?<![A-Za-z0-9._-]){re.escape(normalized_source)}(?![A-Za-z0-9._-])"
+    )
+    for segment in re.split(r"(?:&&|\|\||[;|])", command):
+        normalized_segment = _normalized_reference(segment)
+        if (
+            source_token.search(normalized_segment)
+            and _CONTENT_READ_RE.search(segment)
+        ):
+            return True
+    return False
+
+
+def referenced_task_sources(task_request: str) -> tuple[str, ...]:
+    """Return path-like sources the user explicitly named in the task request."""
+    candidates = [
+        *(_BACKTICK_REFERENCE_RE.findall(str(task_request or ""))),
+        *(_MARKDOWN_REFERENCE_RE.findall(str(task_request or ""))),
+    ]
+    sources: list[str] = []
+    seen: set[str] = set()
+    for raw in candidates:
+        source = str(raw or "").strip().strip("<>")
+        normalized = _normalized_reference(source)
+        if (
+            not normalized
+            or "://" in normalized
+            or not _PATHISH_REFERENCE_RE.search(source)
+            or normalized in seen
+        ):
+            continue
+        seen.add(normalized)
+        sources.append(source)
+    return tuple(sources)
+
+
+def capture_referenced_task_source(
+    task_request: str,
+    tool_input: Any,
+    tool_output: Any,
+) -> tuple[str, str] | None:
+    """Promote a successful read only when it names a task-referenced source."""
+    for source in referenced_task_sources(task_request):
+        if _reads_reference(tool_input, source):
+            content = head_tail(_compact(tool_output), TASK_SOURCE_MAX_CHARS)
+            if content:
+                return source, content
+    return None
+
+
+def render_task_sources(task_sources: Any) -> str:
+    if isinstance(task_sources, Mapping):
+        parts = [
+            f"source: {name}\n{content}"
+            for name, content in task_sources.items()
+            if str(name).strip() and str(content).strip()
+        ]
+        return head_tail("\n\n".join(parts), TASK_SOURCES_MAX_CHARS)
+    return head_tail(str(task_sources or ""), TASK_SOURCES_MAX_CHARS)
+
+
 def build_checkpoint_packet(
     task_anchor: str,
     event_context: str,
-    assistant_context: str = "",
-    workflow_context: str = "",
-    tool_evidence: str = "",
+    task_sources: Any = "",
+    change_evidence: str = "",
+    verification_evidence: str = "",
+    failure_history: str = "",
 ) -> str:
-    bounded_event = head_tail(event_context, CHECKPOINT_EVENT_MAX_CHARS)
-    bounded_agent = head_tail(
-        assistant_context, CHECKPOINT_AGENT_CONTEXT_MAX_CHARS
-    )
-    bottleneck_parts = []
-    if bounded_agent:
-        bottleneck_parts.append(f"visible agent explanation:\n{bounded_agent}")
-    if bounded_event:
-        bottleneck_parts.append(f"latest classified bottleneck:\n{bounded_event}")
-    tension_parts = []
-    if task_anchor:
-        tension_parts.append(f"target still in force:\n{task_anchor}")
-    if bounded_event:
-        tension_parts.append(
-            f"latest evidence not yet reconciled:\n{bounded_event}"
-        )
     parts = [
-        _section("task anchor", task_anchor, TASK_ANCHOR_MAX_CHARS),
+        _section("task request", task_anchor, TASK_ANCHOR_MAX_CHARS),
         _section(
-            "current bottleneck model",
-            "\n\n".join(bottleneck_parts),
-            CHECKPOINT_BOTTLENECK_MAX_CHARS,
+            "referenced task sources",
+            render_task_sources(task_sources),
+            TASK_SOURCES_MAX_CHARS,
+        ),
+        _section("checkpoint event", event_context, CHECKPOINT_EVENT_MAX_CHARS),
+        _section("change evidence", change_evidence, CHANGE_EVIDENCE_MAX_CHARS),
+        _section(
+            "verification evidence",
+            verification_evidence,
+            VERIFICATION_EVIDENCE_MAX_CHARS,
         ),
         _section(
-            "repeated explanation and workflow evidence",
-            workflow_context,
-            CHECKPOINT_WORKFLOW_MAX_CHARS,
-        ),
-        _section(
-            "failed or no-change mechanisms",
-            tool_evidence,
-            CHECKPOINT_MECHANISM_MAX_CHARS,
-        ),
-        _section(
-            "unresolved contradiction",
-            "\n\n".join(tension_parts),
-            CHECKPOINT_TENSION_MAX_CHARS,
+            "failure history",
+            failure_history,
+            FAILURE_HISTORY_MAX_CHARS,
         ),
     ]
     return "\n\n".join(part for part in parts if part)
 
 
-def summarize_checkpoint_progress(progress: dict[str, Any]) -> str:
-    """Render bounded, factual workflow recurrence without inferring intent."""
-    raw_recent = progress.get("recent")
-    recent = raw_recent[-8:] if isinstance(raw_recent, list) else []
-    recent = [item for item in recent if isinstance(item, dict)]
-    if not recent:
-        return ""
-
-    families = [
-        str(item.get("command_family") or item.get("tool") or "tool")
-        for item in recent
-    ]
-    counts = Counter(families)
-    repeated = [(family, count) for family, count in counts.items() if count >= 2]
-    failed = [item for item in recent if item.get("failed")]
-
-    stable_counts: list[tuple[dict[str, Any], int]] = []
-    previous_changed_lines: int | None = None
-    for item in recent:
-        value = item.get("changed_lines")
-        if not item.get("mutating") or not isinstance(value, int):
-            continue
-        if previous_changed_lines == value:
-            stable_counts.append((item, value))
-        previous_changed_lines = value
-
-    lines: list[str] = []
-    if repeated:
-        lines.append("repeated workflow families:")
-        lines.extend(f"- {family} ×{count}" for family, count in repeated)
-    if failed:
-        lines.append("failed events:")
-        for item in failed:
-            family = str(item.get("command_family") or item.get("tool") or "tool")
-            lines.append(f"- #{item.get('event_seq')} {family} (failed)")
-    if stable_counts:
-        lines.append("no changed-line movement (aggregate count only):")
-        for item, value in stable_counts:
-            family = str(item.get("command_family") or item.get("tool") or "tool")
-            lines.append(f"- #{item.get('event_seq')} {family}: {value} lines")
-    lines.append("recent workflow:")
-    for item, family in zip(recent, families):
-        flags = []
-        if item.get("failed"):
-            flags.append("failed")
-        if item.get("goal_transition"):
-            flags.append(f"goal={item['goal_transition']}")
-        lines.append(
-            f"- #{item.get('event_seq')} {family} {' '.join(flags)}".rstrip()
-        )
-    return head_tail("\n".join(lines), CHECKPOINT_WORKFLOW_MAX_CHARS)
-
-
 def build_stop_packet(
     task_anchor: str,
     last_assistant_message: str,
-    tool_evidence: str = "",
+    task_sources: Any = "",
+    change_evidence: str = "",
+    verification_evidence: str = "",
+    failure_history: str = "",
     agentcam_evidence: str = "",
 ) -> str:
     parts = [
-        _section("task anchor", task_anchor, TASK_ANCHOR_MAX_CHARS),
+        _section("task request", task_anchor, TASK_ANCHOR_MAX_CHARS),
+        _section(
+            "referenced task sources",
+            render_task_sources(task_sources),
+            TASK_SOURCES_MAX_CHARS,
+        ),
+        _section("change evidence", change_evidence, CHANGE_EVIDENCE_MAX_CHARS),
+        _section(
+            "verification evidence",
+            verification_evidence,
+            VERIFICATION_EVIDENCE_MAX_CHARS,
+        ),
+        _section(
+            "failure history",
+            failure_history,
+            FAILURE_HISTORY_MAX_CHARS,
+        ),
         _section(
             "agent final claim", last_assistant_message, STOP_ASSISTANT_MAX_CHARS
         ),
-        _section("tool evidence", tool_evidence, TOOL_EVIDENCE_MAX_CHARS),
         _section(
             "agentcam evidence", agentcam_evidence, AGENTCAM_EVIDENCE_MAX_CHARS
         ),

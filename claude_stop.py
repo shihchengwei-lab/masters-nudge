@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Masters' Nudge — Claude Stop hook worker.
 
-Reads the transcript path from the Stop-hook JSON on stdin, gathers the recent
-turns, dispatches to the configured provider's CLI (Anthropic by default for
-this Claude host; explicitly overridable), and appends the reaction to the
-host-namespaced local data log.
+Builds a bounded current-turn packet from Stop-hook JSON, dispatches to the
+configured Provider, and returns a finding as same-turn additional context.
+The reaction and its delivery state are stored in the host-namespaced log.
 
 Never raises out of main() — hook must not block on our errors.
 """
@@ -13,8 +12,14 @@ import hashlib
 import json
 import os
 import sys
+from typing import Any
 
-from masters_nudge import claude_adapter, evidence as shared_evidence, storage
+from masters_nudge import (
+    claude_adapter,
+    evidence as shared_evidence,
+    prompting,
+    storage,
+)
 from masters_nudge.contracts import ReviewRequest
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
@@ -35,13 +40,33 @@ def read_hook_input() -> dict:
         return {}
 
 
-def main() -> None:
-    if active_guard():
-        return
-    hook = read_hook_input()
+def build_hook_output(reaction: str) -> dict[str, Any]:
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "Stop",
+            "additionalContext": prompting.delivery_text(reaction),
+        }
+    }
+
+
+def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None:
+    if hook.get("hook_event_name") != "Stop":
+        return None
     settings = claude_adapter.runtime_settings()
     cwd = hook.get("cwd") or os.getcwd()
     session = claude_adapter.session_from_hook(hook, default_cwd=str(cwd))
+    state = storage.load_turn_state(settings.paths.data_dir, session)
+    storage.observe_injected_response(
+        settings.paths.data_dir,
+        session,
+        event_seq=int(state.get("evidence_seq") or 0),
+        observation_kind="stop",
+        observation={
+            "assistant_claim": str(hook.get("last_assistant_message") or "")
+        },
+    )
+    if bool(hook.get("stop_hook_active")):
+        return None
 
     report = shared_evidence.read_latest_agentcam_report(
         str(cwd), log_error=log_error
@@ -55,13 +80,12 @@ def main() -> None:
             settings.paths.data_dir, session, float(report["mtime"])
         )
 
-    source = claude_adapter.build_stop_source_context(
+    source_packet = claude_adapter.build_stop_source_context(
         hook, report_content, session=session
     )
-    source_packet = str(source["packet"])
     if not source_packet:
         log_error("empty source packet, skipping")
-        return
+        return None
 
     request = ReviewRequest(
         schema_version=1,
@@ -74,7 +98,31 @@ def main() -> None:
         ).hexdigest()[:24],
     )
 
-    ReviewCore(settings, log_error=log_error).review(request, persist_reaction=True)
+    outcome = ReviewCore(settings, log_error=log_error).review_once(
+        request, persist_reaction=True
+    )
+    if outcome is None or outcome.status != "finding" or not outcome.finding:
+        return None
+    claim_token = storage.claim_delivery(
+        settings.paths.data_dir, session, outcome.reaction_ts
+    )
+    if not claim_token:
+        return None
+    return claude_adapter.PreparedDelivery(
+        output=build_hook_output(outcome.finding),
+        session=session,
+        reaction_ts=outcome.reaction_ts,
+        claim_token=claim_token,
+    )
+
+
+def main() -> None:
+    if active_guard():
+        return
+    hook = read_hook_input()
+    prepared = prepare_hook(hook)
+    if prepared is not None:
+        claude_adapter.emit_json_delivery(prepared, delivered_via="claude-stop")
 
 
 if __name__ == "__main__":

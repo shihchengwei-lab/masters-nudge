@@ -7,22 +7,24 @@ import hashlib
 import os
 import tempfile
 import time
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import source_context
 
 from .contracts import SessionRef, safe_identifier
 
 
-TURN_JOURNAL_MAX_CHARS = 8000
-TOOL_RECORD_MAX_CHARS = 3000
+TURN_EVIDENCE_MAX_CHARS = 8000
+EVIDENCE_RECORD_MAX_CHARS = 3000
 PROGRESS_EVENT_LIMIT = 12
-PENDING_MAX_EVENT_AGE = 6
 ATOMIC_REPLACE_ATTEMPTS = 5
-STRATEGY_RUN_STALE_SEC = 300
 DELIVERY_CLAIM_STALE_SEC = 120
+REVIEW_ATTEMPT_STALE_SEC = 300
+SESSION_WRITE_LOCK_STALE_SEC = 30
+SESSION_WRITE_LOCK_WAIT_SEC = 5
 MAX_ERROR_LOG_BYTES = 256 * 1024
 
 
@@ -73,7 +75,12 @@ def _claim_path(
 
 
 def _claim_once(
-    data_dir: Path, session: SessionRef, namespace: str, key: str
+    data_dir: Path,
+    session: SessionRef,
+    namespace: str,
+    key: str,
+    *,
+    stale_sec: int = DELIVERY_CLAIM_STALE_SEC,
 ) -> str:
     """Atomically reserve one session-scoped side effect across hook processes."""
     if not key:
@@ -88,7 +95,7 @@ def _claim_once(
             return token
         except FileExistsError:
             try:
-                stale = time.time() - path.stat().st_mtime > DELIVERY_CLAIM_STALE_SEC
+                stale = time.time() - path.stat().st_mtime > stale_sec
             except OSError:
                 return ""
             if not stale:
@@ -132,6 +139,129 @@ def release_delivery_claim(
     data_dir: Path, session: SessionRef, timestamp: str, token: str
 ) -> None:
     _release_claim(data_dir, session, "delivery", timestamp, token)
+
+
+@contextmanager
+def _session_write_lock(data_dir: Path, session: SessionRef) -> Iterator[None]:
+    """Serialize short read-modify-write updates to one session's state."""
+    key = "delivery-state"
+    deadline = time.monotonic() + SESSION_WRITE_LOCK_WAIT_SEC
+    token = ""
+    while not token:
+        token = _claim_once(
+            data_dir,
+            session,
+            "state-write",
+            key,
+            stale_sec=SESSION_WRITE_LOCK_STALE_SEC,
+        )
+        if token:
+            break
+        if time.monotonic() >= deadline:
+            raise TimeoutError("timed out acquiring session delivery-state lock")
+        time.sleep(0.01)
+    try:
+        yield
+    finally:
+        _release_claim(data_dir, session, "state-write", key, token)
+
+
+def _review_attempt_path(
+    data_dir: Path,
+    session: SessionRef,
+    kind: str,
+    fingerprint: str,
+) -> Path:
+    identity = json.dumps(
+        {
+            "turn_id": session.turn_id,
+            "kind": str(kind or "review"),
+            "source_fingerprint": str(fingerprint or ""),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+    return Path(data_dir) / f"{session_stem(session)}.review-attempts" / f"{digest}.json"
+
+
+def claim_review_attempt(
+    data_dir: Path,
+    session: SessionRef,
+    kind: str,
+    fingerprint: str,
+) -> str:
+    """Claim one Provider call for a canonical session/turn/kind/source identity."""
+    path = _review_attempt_path(data_dir, session, kind, fingerprint)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    token = f"{os.getpid()}-{time.perf_counter_ns()}"
+    payload = {
+        "schema_version": 1,
+        "token": token,
+        "host": session.host,
+        "session_id": session.session_id,
+        "turn_id": session.turn_id,
+        "kind": str(kind or "review"),
+        "source_fingerprint": str(fingerprint or ""),
+        "status": "pending",
+        "started_at": time.time(),
+        "started_at_iso": datetime.now().isoformat(),
+    }
+    try:
+        with path.open("x", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False)
+            handle.write("\n")
+        return token
+    except FileExistsError:
+        existing = _read_json(path, {})
+        try:
+            started_at = float(existing.get("started_at") or 0.0)
+        except (TypeError, ValueError):
+            started_at = 0.0
+        if (
+            existing.get("status") == "pending"
+            and started_at
+            and time.time() - started_at > REVIEW_ATTEMPT_STALE_SEC
+        ):
+            existing["status"] = "abandoned"
+            existing["completed_at"] = datetime.now().isoformat()
+            _atomic_write(path, existing)
+        return ""
+    except OSError:
+        return ""
+
+
+def finish_review_attempt(
+    data_dir: Path,
+    session: SessionRef,
+    kind: str,
+    fingerprint: str,
+    token: str,
+    status: str,
+) -> None:
+    if status not in {"finding", "no_finding", "error"}:
+        raise ValueError(f"invalid review attempt status: {status}")
+    path = _review_attempt_path(data_dir, session, kind, fingerprint)
+    current = _read_json(path, {})
+    if current.get("token") != token or current.get("status") != "pending":
+        return
+    current["status"] = status
+    current["completed_at"] = datetime.now().isoformat()
+    _atomic_write(path, current)
+
+
+def read_review_attempts(
+    data_dir: Path, session: SessionRef
+) -> list[dict[str, Any]]:
+    directory = Path(data_dir) / f"{session_stem(session)}.review-attempts"
+    if not directory.exists():
+        return []
+    attempts: list[dict[str, Any]] = []
+    for path in sorted(directory.glob("*.json")):
+        value = _read_json(path, {})
+        if value:
+            attempts.append(value)
+    return attempts
 
 
 def _reaction_timestamp() -> str:
@@ -188,12 +318,16 @@ def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     return _read_json(
         state_path(data_dir, session, "turn"),
         {
-            "schema_version": 1,
+            "schema_version": 3,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id,
             "task_anchor": "",
-            "tool_evidence": "",
+            "task_sources": {},
+            "evidence_seq": 0,
+            "change_evidence": "",
+            "verification_evidence": "",
+            "failure_history": "",
         },
     )
 
@@ -214,7 +348,7 @@ def start_turn(
     _atomic_write(
         state_path(data_dir, session, "turn"),
         {
-            "schema_version": 1,
+            "schema_version": 3,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id,
@@ -223,36 +357,69 @@ def start_turn(
             "task_anchor": source_context.head_tail(
                 prompt, source_context.TASK_ANCHOR_MAX_CHARS
             ),
-            "tool_evidence": "",
+            "task_sources": {},
+            "evidence_seq": 0,
+            "change_evidence": "",
+            "verification_evidence": "",
+            "failure_history": "",
             "transcript_offset": transcript_offset,
         },
     )
 
 
-def append_tool_evidence(
+def record_turn_evidence(
     data_dir: Path,
     session: SessionRef,
-    record: str,
-) -> str:
+    *,
+    record: str = "",
+    category: str = "",
+    task_source: tuple[str, str] | None = None,
+) -> dict[str, Any]:
+    """Persist only decision-relevant evidence, separated by evidentiary role."""
     state = load_turn_state(data_dir, session)
-    bounded_record = source_context.head_tail(record, TOOL_RECORD_MAX_CHARS)
-    existing = str(state.get("tool_evidence") or "")
-    combined = "\n\n".join(part for part in (existing, bounded_record) if part)
+    task_sources = state.get("task_sources")
+    task_sources = dict(task_sources) if isinstance(task_sources, dict) else {}
+    if task_source:
+        source_name, source_content = task_source
+        if source_name and source_name not in task_sources and source_content:
+            task_sources[source_name] = source_context.head_tail(
+                source_content, source_context.TASK_SOURCE_MAX_CHARS
+            )
+
+    evidence_keys = {
+        "change": "change_evidence",
+        "verification": "verification_evidence",
+        "failure": "failure_history",
+    }
+    if category not in evidence_keys:
+        category = ""
+    evidence_key = evidence_keys.get(category, "")
+    evidence_seq = int(state.get("evidence_seq") or 0)
+    if evidence_key and record:
+        evidence_seq += 1
+        bounded_record = source_context.head_tail(record, EVIDENCE_RECORD_MAX_CHARS)
+        bounded_record = f"[evidence #{evidence_seq}]\n{bounded_record}"
+        existing = str(state.get(evidence_key) or "")
+        combined = "\n\n".join(
+            part for part in (existing, bounded_record) if part
+        )
+        state[evidence_key] = source_context.head_tail(
+            combined, TURN_EVIDENCE_MAX_CHARS
+        )
     state.update(
         {
-            "schema_version": 1,
+            "schema_version": 3,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id or str(state.get("turn_id") or ""),
             "cwd": session.cwd or str(state.get("cwd") or ""),
             "repo_root": session.repo_root or str(state.get("repo_root") or ""),
-            "tool_evidence": source_context.head_tail(
-                combined, TURN_JOURNAL_MAX_CHARS
-            ),
+            "task_sources": task_sources,
+            "evidence_seq": evidence_seq,
         }
     )
     _atomic_write(state_path(data_dir, session, "turn"), state)
-    return str(state["tool_evidence"])
+    return state
 
 
 def append_reaction(
@@ -289,7 +456,7 @@ def append_reaction(
         "reason": reason,
         "provider": provider,
         "model": model,
-        "persona": route_metadata.get("effective_lens", "general"),
+        "persona": route_metadata.get("effective_lens", ""),
         **route_metadata,
         "reaction": reaction,
         "source_event_seq": int(source_event_seq or 0),
@@ -345,26 +512,25 @@ def read_reaction_entries(data_dir: Path, session: SessionRef) -> list[dict[str,
 def load_delivery_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     state = _read_json(
         state_path(data_dir, session, "delivery"),
-        {"last_ts": "", "receipts": {}},
+        {"receipts": {}},
     )
     receipts = state.get("receipts")
     return {
-        "last_ts": str(state.get("last_ts") or ""),
         "receipts": receipts if isinstance(receipts, dict) else {},
     }
 
 
-def read_recent_injected_personas(
+def read_recent_injected_findings(
     data_dir: Path,
     session: SessionRef,
     *,
-    limit: int = 2,
+    limit: int = 3,
 ) -> tuple[str, ...]:
-    """Return personas for the latest successfully injected reviews."""
+    """Return findings for the latest successfully injected reviews."""
     if limit <= 0:
         return ()
-    personas_by_ts = {
-        str(entry.get("ts") or ""): str(entry.get("persona") or "").strip()
+    findings_by_ts = {
+        str(entry.get("ts") or ""): str(entry.get("reaction") or "").strip()
         for entry in read_reaction_entries(data_dir, session)
         if entry.get("kind", "review") == "review"
     }
@@ -373,60 +539,22 @@ def read_recent_injected_personas(
     for order, (reaction_ts, receipt) in enumerate(receipts.items()):
         if not isinstance(receipt, dict) or receipt.get("status") != "injected":
             continue
-        persona = personas_by_ts.get(str(reaction_ts), "")
-        if not persona:
+        finding = findings_by_ts.get(str(reaction_ts), "")
+        if not finding:
             continue
-        injected.append((str(receipt.get("delivered_at") or ""), order, persona))
-    injected.sort(key=lambda item: (item[0], item[1]))
-    return tuple(persona for _delivered_at, _order, persona in injected[-limit:])
-
-
-def latest_pending(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    current_event_seq: int = 0,
-    current_source_fingerprint: str = "",
-) -> dict[str, Any] | None:
-    delivery = load_delivery_state(data_dir, session)
-    last_ts = delivery["last_ts"]
-    pending = [
-        entry
-        for entry in read_reaction_entries(data_dir, session)
-        if entry.get("kind", "review") not in {"review_status", "delivery_receipt"}
-        if str(entry.get("ts") or "") > last_ts
-    ]
-    if not pending:
-        return None
-    candidate = pending[-1]
-    candidate_source = str(candidate.get("source_fingerprint") or "")
-    finding_scope = str(candidate.get("finding_scope") or "local")
-    source_seq = int(candidate.get("source_event_seq") or 0)
-    if candidate_source and current_source_fingerprint:
-        if candidate_source != current_source_fingerprint:
-            if finding_scope == "trajectory":
-                return candidate
-            mark_delivery(
-                data_dir,
-                session,
-                str(candidate.get("ts") or ""),
-                status="superseded",
-                event_seq=current_event_seq,
-                delivered_via="source-state-changed",
+        injected.append(
+            (
+                str(
+                    receipt.get("injected_at")
+                    or receipt.get("delivered_at")
+                    or ""
+                ),
+                order,
+                finding,
             )
-            return None
-        return candidate
-    if current_event_seq and source_seq and current_event_seq - source_seq > PENDING_MAX_EVENT_AGE:
-        mark_delivery(
-            data_dir,
-            session,
-            str(candidate.get("ts") or ""),
-            status="expired",
-            event_seq=current_event_seq,
-            delivered_via="",
         )
-        return None
-    return candidate
+    injected.sort(key=lambda item: (item[0], item[1]))
+    return tuple(finding for _injected_at, _order, finding in injected[-limit:])
 
 
 def mark_delivery(
@@ -440,55 +568,45 @@ def mark_delivery(
 ) -> None:
     if not timestamp:
         return
-    state = load_delivery_state(data_dir, session)
-    now = datetime.now().isoformat()
-    receipt = {
-        "status": status,
-        "event_seq": int(event_seq or 0),
-        "delivered_at": now,
-        "delivered_via": delivered_via,
-    }
-    superseded: list[tuple[str, dict[str, Any]]] = []
-    if status in {"injected", "expired", "superseded"}:
-        for entry in read_reaction_entries(data_dir, session):
-            entry_ts = str(entry.get("ts") or "")
-            if not entry_ts or not (state["last_ts"] < entry_ts < timestamp):
-                continue
-            if entry_ts in state["receipts"]:
-                continue
-            older_receipt = {
-                "status": "superseded",
-                "event_seq": int(event_seq or 0),
-                "delivered_at": now,
-                "delivered_via": "newer-nudge-selected",
-            }
-            state["receipts"][entry_ts] = older_receipt
-            superseded.append((entry_ts, older_receipt))
-    state["schema_version"] = 2
-    if status in {"injected", "expired", "superseded"}:
-        state["last_ts"] = timestamp
-    state["receipts"][timestamp] = receipt
-    _atomic_write(state_path(data_dir, session, "delivery"), state)
-    with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
-        for reaction_ts, value in [*superseded, (timestamp, receipt)]:
-            entry = {
-                "schema_version": 2,
-                "ts": value["delivered_at"],
-                "host": session.host,
-                "session_id": session.session_id,
-                "turn_id": session.turn_id,
-                "workspace": _normalized_workspace(session.repo_root or session.cwd),
-                "kind": "delivery_receipt",
-                "reaction_ts": reaction_ts,
-                "delivery_status": value["status"],
-                "delivery_event_seq": value["event_seq"],
-                "delivered_at": value["delivered_at"],
-                "delivered_via": value["delivered_via"],
-            }
-            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    with _session_write_lock(data_dir, session):
+        state = load_delivery_state(data_dir, session)
+        now = datetime.now().isoformat()
+        previous = state["receipts"].get(timestamp)
+        previous = previous if isinstance(previous, dict) else {}
+        receipt = {
+            **previous,
+            "status": status,
+            "event_seq": int(event_seq or 0),
+            "delivered_at": now,
+            "delivered_via": delivered_via,
+        }
+        if status == "emitted":
+            receipt["emitted_at"] = now
+        elif status == "injected":
+            receipt["injected_at"] = now
+        state["schema_version"] = 3
+        state["receipts"][timestamp] = receipt
+        _atomic_write(state_path(data_dir, session, "delivery"), state)
+        with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
+            for reaction_ts, value in [(timestamp, receipt)]:
+                entry = {
+                    "schema_version": 3,
+                    "ts": value["delivered_at"],
+                    "host": session.host,
+                    "session_id": session.session_id,
+                    "turn_id": session.turn_id,
+                    "workspace": _normalized_workspace(session.repo_root or session.cwd),
+                    "kind": "delivery_receipt",
+                    "reaction_ts": reaction_ts,
+                    "delivery_status": value["status"],
+                    "delivery_event_seq": value["event_seq"],
+                    "delivered_at": value["delivered_at"],
+                    "delivered_via": value["delivered_via"],
+                }
+                handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-def mark_delivered(
+def mark_emitted(
     data_dir: Path,
     session: SessionRef,
     timestamp: str,
@@ -500,7 +618,7 @@ def mark_delivered(
         data_dir,
         session,
         timestamp,
-        status="injected",
+        status="emitted",
         event_seq=event_seq,
         delivered_via=delivered_via,
     )
@@ -514,33 +632,7 @@ def observe_injected_response(
     observation_kind: str,
     observation: dict[str, Any],
 ) -> dict[str, Any]:
-    """Attach the first observable host action after an injected question."""
-    state = load_delivery_state(data_dir, session)
-    eligible: list[tuple[str, dict[str, Any]]] = []
-    for reaction_ts, receipt in state["receipts"].items():
-        if not isinstance(receipt, dict) or receipt.get("status") != "injected":
-            continue
-        if isinstance(receipt.get("response_observation"), dict):
-            continue
-        delivery_seq = int(receipt.get("event_seq") or 0)
-        if event_seq and delivery_seq and event_seq < delivery_seq:
-            continue
-        eligible.append((str(reaction_ts), receipt))
-    if not eligible:
-        return {}
-
-    reaction_ts, receipt = eligible[-1]
-    claim_token = _claim_once(data_dir, session, "response", reaction_ts)
-    if not claim_token:
-        return {}
-    state = load_delivery_state(data_dir, session)
-    current = state["receipts"].get(reaction_ts)
-    if not isinstance(current, dict) or isinstance(
-        current.get("response_observation"), dict
-    ):
-        _release_claim(data_dir, session, "response", reaction_ts, claim_token)
-        return {}
-    receipt = current
+    """Confirm delivery only when a later host event exposes the model's response."""
     normalized_observation = {
         str(key): (
             source_context.head_tail(value, 1000)
@@ -550,18 +642,54 @@ def observe_injected_response(
         for key, value in observation.items()
         if isinstance(value, (str, int, float, bool)) or value is None
     }
-    response = {
-        "event_seq": int(event_seq or receipt.get("event_seq") or 0),
-        "observed_at": datetime.now().isoformat(),
-        "kind": str(observation_kind or "host-event"),
-        "observation": normalized_observation,
-    }
-    try:
+    with _session_write_lock(data_dir, session):
+        state = load_delivery_state(data_dir, session)
+        eligible: list[tuple[str, dict[str, Any]]] = []
+        for reaction_ts, receipt in state["receipts"].items():
+            if not isinstance(receipt, dict) or receipt.get("status") not in {
+                "emitted",
+                "injected",
+            }:
+                continue
+            if isinstance(receipt.get("response_observation"), dict):
+                continue
+            delivery_seq = int(receipt.get("event_seq") or 0)
+            if event_seq and delivery_seq and event_seq < delivery_seq:
+                continue
+            eligible.append((str(reaction_ts), receipt))
+        if not eligible:
+            return {}
+
+        reaction_ts, receipt = eligible[-1]
+        observed_at = datetime.now().isoformat()
+        response = {
+            "event_seq": int(event_seq or receipt.get("event_seq") or 0),
+            "observed_at": observed_at,
+            "kind": str(observation_kind or "host-event"),
+            "observation": normalized_observation,
+        }
+        receipt["status"] = "injected"
+        receipt["injected_at"] = observed_at
+        receipt["delivered_at"] = observed_at
         receipt["response_observation"] = response
         state["receipts"][reaction_ts] = receipt
         _atomic_write(state_path(data_dir, session, "delivery"), state)
 
-        entry = {
+        delivery_entry = {
+            "schema_version": 3,
+            "ts": observed_at,
+            "host": session.host,
+            "session_id": session.session_id,
+            "turn_id": session.turn_id,
+            "workspace": _normalized_workspace(session.repo_root or session.cwd),
+            "kind": "delivery_receipt",
+            "reaction_ts": reaction_ts,
+            "delivery_status": "injected",
+            "delivery_event_seq": response["event_seq"],
+            "delivered_at": observed_at,
+            "delivered_via": str(receipt.get("delivered_via") or "host-event"),
+        }
+        response_entry = {
             "schema_version": 2,
             "ts": response["observed_at"],
             "host": session.host,
@@ -575,10 +703,23 @@ def observe_injected_response(
             "observation": normalized_observation,
         }
         with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            handle.write(json.dumps(delivery_entry, ensure_ascii=False) + "\n")
+            handle.write(json.dumps(response_entry, ensure_ascii=False) + "\n")
         return response
-    finally:
-        _release_claim(data_dir, session, "response", reaction_ts, claim_token)
+
+
+def load_progress_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
+    return _read_json(
+        state_path(data_dir, session, "progress"),
+        {
+            "schema_version": 1,
+            "event_seq": 0,
+            "last_strategy_event_seq": 0,
+            "changed_lines_at_strategy": 0,
+            "recent": [],
+            "goal_objective": "",
+        },
+    )
 
 
 def record_tool_progress(
@@ -592,26 +733,17 @@ def record_tool_progress(
     changed_lines: int | None = None,
     goal_transition: str = "",
     goal_objective: str = "",
+    evidence_category: str = "",
 ) -> dict[str, Any]:
     path = state_path(data_dir, session, "progress")
-    state = _read_json(
-        path,
-        {
-            "schema_version": 1,
-            "event_seq": 0,
-            "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
-            "recent": [],
-            "goal_objective": "",
-        },
-    )
+    state = load_progress_state(data_dir, session)
     if not state.get("goal_objective"):
         task_anchor = str(load_turn_state(data_dir, session).get("task_anchor") or "")
         if task_anchor:
             state["goal_objective"] = source_context.head_tail(task_anchor, 1000)
     event_seq = int(state.get("event_seq") or 0) + 1
     recent = state.get("recent") if isinstance(state.get("recent"), list) else []
-    meaningful = bool(mutating or command_family or goal_transition)
+    meaningful = bool(evidence_category or goal_transition)
     recent.append(
         {
             "event_seq": event_seq,
@@ -622,6 +754,7 @@ def record_tool_progress(
             "meaningful": meaningful,
             "changed_lines": changed_lines,
             "goal_transition": goal_transition,
+            "evidence_category": evidence_category,
         }
     )
     state.update(
@@ -650,93 +783,6 @@ def mark_strategy_reviewed(
     if changed_lines is not None:
         state["changed_lines_at_strategy"] = int(changed_lines)
     _atomic_write(path, state)
-
-
-def _strategy_run_path(data_dir: Path, session: SessionRef) -> Path:
-    return state_path(data_dir, session, "strategy-run")
-
-
-def claim_strategy_run(
-    data_dir: Path, session: SessionRef, fingerprint: str
-) -> bool:
-    """Allow at most one detached strategy provider call per session."""
-    path = _strategy_run_path(data_dir, session)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        existing = _read_json(path, {})
-        started_at = float(existing.get("started_at") or 0.0)
-    except (TypeError, ValueError):
-        started_at = 0.0
-    if started_at and time.time() - started_at > STRATEGY_RUN_STALE_SEC:
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            return False
-    payload = {
-        "schema_version": 1,
-        "fingerprint": str(fingerprint or ""),
-        "started_at": time.time(),
-    }
-    try:
-        with path.open("x", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=False)
-            handle.write("\n")
-        return True
-    except FileExistsError:
-        return False
-    except OSError:
-        return False
-
-
-def release_strategy_run(
-    data_dir: Path, session: SessionRef, fingerprint: str = ""
-) -> None:
-    path = _strategy_run_path(data_dir, session)
-    if fingerprint:
-        current = _read_json(path, {})
-        if str(current.get("fingerprint") or "") != str(fingerprint):
-            return
-    try:
-        path.unlink(missing_ok=True)
-    except OSError:
-        pass
-
-
-def _checkpoint_path(data_dir: Path, session: SessionRef, fingerprint: str) -> Path:
-    return (
-        Path(data_dir)
-        / f"{session_stem(session)}.checkpoints"
-        / safe_identifier(fingerprint, "checkpoint", 180)
-    )
-
-
-def claim_checkpoint(data_dir: Path, session: SessionRef, fingerprint: str) -> bool:
-    path = _checkpoint_path(data_dir, session, fingerprint)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("x", encoding="utf-8") as handle:
-            handle.write("pending\n")
-        return True
-    except FileExistsError:
-        return False
-    except OSError:
-        return False
-
-
-def release_checkpoint(data_dir: Path, session: SessionRef, fingerprint: str) -> None:
-    try:
-        _checkpoint_path(data_dir, session, fingerprint).unlink(missing_ok=True)
-    except OSError:
-        pass
-
-
-def complete_checkpoint(data_dir: Path, session: SessionRef, fingerprint: str) -> None:
-    try:
-        _checkpoint_path(data_dir, session, fingerprint).write_text(
-            "delivered\n", encoding="utf-8"
-        )
-    except OSError:
-        pass
 
 
 def load_agentcam_mtime(data_dir: Path, session: SessionRef) -> float:

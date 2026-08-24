@@ -10,8 +10,13 @@ import review_telemetry
 
 from . import providers, storage
 from .contracts import ReviewOutcome, ReviewRequest
-from .prompting import build_system_prompt, route_metadata, sanitize_reaction
-from .runtime import RuntimeSettings
+from .prompting import (
+    build_review_input,
+    build_system_prompt,
+    route_metadata,
+    sanitize_reaction,
+)
+from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
 
 CHECKPOINT_PROMPT = """
@@ -40,6 +45,16 @@ GOAL_TRANSITION_PROMPT = """
 路徑已耗盡，或完成依據不清。只在狀態與證據不一致時給一句 nudge。
 """
 
+STOP_PROMPT = """
+
+# 完成邊界 checkpoint
+
+把 Agent 最終宣告視為待核對的完成主張，不視為已證實事實。
+比較 task request、明示來源、變更、驗證與 failure history；
+依共用 evidence 編號判斷較晚證據是否已更新較早失敗；
+只在某個會改變正確性或完成判斷的假設仍未被證據區分時提問。
+"""
+
 ProviderDispatch = Callable[..., dict]
 
 
@@ -63,12 +78,12 @@ class ReviewCore:
         request: ReviewRequest,
         *,
         persist_reaction: bool,
-        mark_delivered: bool = False,
         timeout_sec: int | None = None,
     ) -> ReviewOutcome:
         provider = self.settings.provider
         model = self.settings.model
         configuration_source = self.settings.configuration_source
+        finding_scope = _finding_scope(request)
         checkpoint_routing = request.kind != "stop"
         routing_evidence = request.routing_evidence if checkpoint_routing else ""
         route = lens_router.resolve_review_route(
@@ -76,11 +91,6 @@ class ReviewCore:
             routing_evidence,
             checkpoint=checkpoint_routing,
             routing_concern=(request.routing_concern if checkpoint_routing else ""),
-            injected_personas=storage.read_recent_injected_personas(
-                self.settings.paths.data_dir,
-                request.session,
-                limit=2,
-            ),
         )
         route_fields = route_metadata(route)
         system_prompt = build_system_prompt(
@@ -102,10 +112,22 @@ class ReviewCore:
             system_prompt += STRATEGY_PROMPT
         elif request.kind == "goal_transition":
             system_prompt += GOAL_TRANSITION_PROMPT
+        elif request.kind == "stop":
+            system_prompt += STOP_PROMPT
 
-        review_input = request.source_packet
+        review_input = build_review_input(
+            request.source_packet,
+            storage.read_recent_injected_findings(
+                self.settings.paths.data_dir,
+                request.session,
+                limit=3,
+            ),
+        )
 
-        effective_timeout = timeout_sec or self.settings.timeout_sec
+        effective_timeout = min(
+            timeout_sec or self.settings.timeout_sec,
+            REVIEW_TIMEOUT_SEC,
+        )
         started = time.perf_counter()
         result = self.dispatch(
             provider,
@@ -128,7 +150,6 @@ class ReviewCore:
             status = "error"
         reaction_ts = ""
         if persist_reaction and status == "finding":
-            finding_scope = _finding_scope(request)
             entry = storage.append_reaction(
                 self.settings.paths.data_dir,
                 request.session,
@@ -152,17 +173,11 @@ class ReviewCore:
                 finding_scope=finding_scope,
             )
             reaction_ts = str((entry or {}).get("ts") or "")
-            if mark_delivered and entry:
-                storage.mark_delivered(
-                    self.settings.paths.data_dir,
-                    request.session,
-                    str(entry.get("ts") or ""),
-                )
         elif persist_reaction and status == "error":
             error_kind = str(result.get("error_kind") or "error")
             status_text = (
                 f"Reviewer 逾時（{effective_timeout} 秒）；本輪沒有 Nudge。"
-                if error_kind == "timeout"
+                if error_kind == "timeout" or error_kind.startswith("timeout_")
                 else "Reviewer 呼叫失敗；本輪沒有 Nudge。"
             )
             storage.append_reaction(
@@ -179,6 +194,7 @@ class ReviewCore:
                 reason=request.reason,
                 source_event_seq=request.source_event_seq,
                 source_fingerprint=request.source_fingerprint,
+                finding_scope=finding_scope,
             )
 
         try:
@@ -199,7 +215,7 @@ class ReviewCore:
                 "input_chars": len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
-                "finding_scope": _finding_scope(request),
+                "finding_scope": finding_scope,
                 "usage": result.get("usage") if isinstance(result, dict) else {},
             }
             review_telemetry.record_review(
@@ -219,6 +235,48 @@ class ReviewCore:
             usage=(result.get("usage") or {}) if isinstance(result, dict) else {},
             reaction_ts=reaction_ts,
         )
+
+    def review_once(
+        self,
+        request: ReviewRequest,
+        *,
+        persist_reaction: bool = True,
+        timeout_sec: int | None = None,
+    ) -> ReviewOutcome | None:
+        """Run exactly one Provider call for a canonical review identity."""
+        token = storage.claim_review_attempt(
+            self.settings.paths.data_dir,
+            request.session,
+            request.kind,
+            request.source_fingerprint,
+        )
+        if not token:
+            return None
+        try:
+            outcome = self.review(
+                request,
+                persist_reaction=persist_reaction,
+                timeout_sec=timeout_sec,
+            )
+        except Exception:
+            storage.finish_review_attempt(
+                self.settings.paths.data_dir,
+                request.session,
+                request.kind,
+                request.source_fingerprint,
+                token,
+                "error",
+            )
+            raise
+        storage.finish_review_attempt(
+            self.settings.paths.data_dir,
+            request.session,
+            request.kind,
+            request.source_fingerprint,
+            token,
+            outcome.status,
+        )
+        return outcome
 
 
 def _finding_scope(request: ReviewRequest) -> str:

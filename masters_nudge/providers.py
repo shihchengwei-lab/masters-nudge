@@ -55,7 +55,7 @@ def _terminate_process_tree(
     process: subprocess.Popen,
     *,
     log_error: Logger = _noop,
-) -> None:
+) -> tuple[str, str]:
     """Terminate a timed-out reviewer and every descendant it started."""
     try:
         if os.name == "nt":
@@ -78,12 +78,17 @@ def _terminate_process_tree(
         except OSError:
             pass
     try:
-        process.communicate(timeout=5)
+        stdout, stderr = process.communicate(timeout=5)
     except (OSError, subprocess.TimeoutExpired):
         try:
             process.kill()
         except OSError:
             pass
+        try:
+            stdout, stderr = process.communicate(timeout=1)
+        except (OSError, subprocess.TimeoutExpired):
+            return "", ""
+    return str(stdout or ""), str(stderr or "")
 
 
 def _run_cli_process(
@@ -112,8 +117,14 @@ def _run_cli_process(
     )
     try:
         stdout, stderr = process.communicate(input=input_text, timeout=timeout_sec)
-    except subprocess.TimeoutExpired:
-        _terminate_process_tree(process, log_error=log_error)
+    except subprocess.TimeoutExpired as exc:
+        collected = _terminate_process_tree(process, log_error=log_error)
+        if isinstance(collected, tuple) and len(collected) == 2:
+            stdout, stderr = collected
+            if stdout:
+                exc.output = stdout
+            if stderr:
+                exc.stderr = stderr
         raise
     return subprocess.CompletedProcess(
         command,
@@ -244,6 +255,9 @@ def call_claude_result(
                 user_prompt,
                 "--model",
                 model,
+                "--effort",
+                "medium",
+                "--no-session-persistence",
                 "--system-prompt-file",
                 handle.name,
                 "--tools",
@@ -261,16 +275,39 @@ def call_claude_result(
             log_error=log_error,
         )
         if result.returncode != 0:
-            log_error(f"claude CLI exit {result.returncode}: {result.stderr[:500]}")
+            detail = str(result.stderr or result.stdout or "")[:500]
+            log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
         parsed = parse_reaction_result(result.stdout)
         parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
-    except subprocess.TimeoutExpired:
-        log_error("claude CLI timeout")
-        return call_result(error_kind="timeout")
+    except subprocess.TimeoutExpired as exc:
+        partial_stdout = (
+            getattr(exc, "stdout", None) or getattr(exc, "output", None) or ""
+        )
+        partial_stderr = getattr(exc, "stderr", None) or ""
+        if isinstance(partial_stdout, bytes):
+            partial_stdout = partial_stdout.decode("utf-8", errors="replace")
+        if isinstance(partial_stderr, bytes):
+            partial_stderr = partial_stderr.decode("utf-8", errors="replace")
+        parsed = parse_reaction_result(str(partial_stdout))
+        if parsed.get("status") != "error":
+            parsed["usage"] = parse_usage(str(partial_stdout))
+            log_error("claude CLI timed out after complete structured output; recovered")
+            return parsed
+        error_kind = (
+            "timeout_after_partial_output"
+            if str(partial_stdout).strip()
+            else "timeout_before_output"
+        )
+        detail = str(partial_stderr).strip()[:500]
+        log_error(
+            f"claude CLI {error_kind}"
+            + (f": {detail}" if detail else "")
+        )
+        return call_result(error_kind=error_kind)
     except FileNotFoundError:
         log_error("claude CLI not found in PATH")
         return call_result(error_kind="not_found")

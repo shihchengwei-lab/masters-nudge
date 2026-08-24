@@ -2,13 +2,15 @@
 
 繁體中文 | [English](README.md)
 
-Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code 或 Codex 加入一個有證據依據的簡短第二意見。Reviewer prompt 會要求一個簡短的開放問句，或允許保持安靜；所有決策與修改仍由主要 coding agent 負責。
+Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code 或 Codex 加入一則簡短、以證據為錨點的獨立第二意見。Reviewer 可以指出被忽略的限制、反例、替代假設或方向，也可以保持安靜；實際送出的 Nudge 會標示為「獨立第二意見：」，所有決策與修改仍由主要 coding agent 負責。
 
 ## 功能
 
 Masters’ Nudge 把 hooks、skills、reviewer prompts、六種軟體工程濾鏡，以及選用的浮動視窗包成一個 plugin。它關注未驗證假設、範圍膨脹、回饋不足、脆弱的事件順序，以及證據尚未支持的完成宣告。
 
 Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 會清除多餘格式，最長 52 個字。工具失敗、測試失敗、大型變更、長期目標狀態轉換與回合結束，都可能觸發一次 reviewer。
+
+符合條件的 checkpoint 與 Stop review 會同步執行：host 等 reviewer 回覆，並在同一回合送出 finding。Provider 工作最多 90 秒，外層 host hook 預留 120 秒；符合條件的事件可能因此增加等待時間。錯誤或逾時不會產生 Nudge，也不會自動重試 Provider 或切換 provider。
 
 ## 安裝
 
@@ -74,8 +76,8 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 | `MASTERS_NUDGE_PROVIDER` | 依 host 決定 | `anthropic`、`openai`、`grok` 或 `ollama-local` |
 | `MASTERS_NUDGE_MODEL` | 依 host 決定 | Reviewer 的完整模型名 |
 | `MASTERS_NUDGE_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback Ollama endpoint |
-| `MASTERS_NUDGE_TIMEOUT` | `120` | 回合結束 reviewer 逾時秒數 |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 途中 reviewer 逾時秒數 |
+| `MASTERS_NUDGE_TIMEOUT` | `90` | 回合結束 reviewer 逾時；超過 90 會被限制為 90 |
+| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 途中 reviewer 逾時；超過 90 會被限制為 90 |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
 | `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `design`、`build`、`evolve` 或 `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗 spritesheet |
@@ -92,14 +94,14 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 
 依觸發事件不同，封包可能包含：
 
-- 最新使用者任務摘要；
-- 觸發事件的工具輸入／輸出、錯誤、測試結果或 diff 摘要；
-- 受長度限制的當回合 journal 或 Claude transcript 片段；
-- 當下最終宣告與驗證證據；
+- 最新使用者任務要求；
+- 從任務中明示的本機來源讀到的內容；
+- 分開且受長度限制的實質變更、驗證與失敗歷史；
+- 觸發 checkpoint、當下最終宣告或完成證據；
 - 選用的 agentcam evidence；
 - Reviewer prompt 與所選濾鏡。
 
-Reactions、任務摘要、受限 journal、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。在 Codex 上，receipt 也可能記錄注入後第一個可觀察的 host 動作。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；語意上的變更、驗證與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續 Claude 或 Codex host event 看見主模型回應，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 

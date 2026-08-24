@@ -5,10 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 from masters_nudge import storage
@@ -31,18 +28,8 @@ def _log_error(settings: RuntimeSettings, message: str) -> None:
     storage.append_error(settings.paths.error_log, "codex-hook", message)
 
 
-def _read_payload(payload_file: str = "") -> dict:
-    if payload_file:
-        path = Path(payload_file)
-        try:
-            raw = path.read_bytes()
-        finally:
-            try:
-                path.unlink(missing_ok=True)
-            except OSError:
-                pass
-    else:
-        raw = sys.stdin.buffer.read(MAX_STDIN_BYTES + 1)
+def _read_payload() -> dict:
+    raw = sys.stdin.buffer.read(MAX_STDIN_BYTES + 1)
     if len(raw) > MAX_STDIN_BYTES:
         raise ValueError("hook input exceeds 1 MiB")
     value = json.loads(raw.decode("utf-8")) if raw.strip() else {}
@@ -80,7 +67,7 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
         raise
     if isinstance(delivery, dict):
         try:
-            storage.mark_delivered(
+            storage.mark_emitted(
                 settings.paths.data_dir,
                 delivery["session"],
                 delivery["timestamp"],
@@ -96,105 +83,9 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
             )
 
 
-def _launch_detached_payload(
-    settings: RuntimeSettings,
-    payload: dict,
-    *,
-    prefix: str,
-    payload_flag: str,
-    failure_label: str,
-    log_error,
-) -> bool:
-    spool_dir = settings.paths.data_dir / "spool"
-    spool_dir.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".json",
-        prefix=prefix,
-        dir=spool_dir,
-        delete=False,
-        encoding="utf-8",
-    )
-    spool_path = Path(handle.name)
-    try:
-        json.dump(payload, handle, ensure_ascii=False)
-        handle.write("\n")
-        handle.close()
-        command = [
-            sys.executable,
-            str(Path(__file__).resolve()),
-            "--host",
-            "codex_cli",
-            payload_flag,
-            str(spool_path),
-        ]
-        kwargs = {
-            "stdin": subprocess.DEVNULL,
-            "stdout": subprocess.DEVNULL,
-            "stderr": subprocess.DEVNULL,
-            "close_fds": True,
-            "env": dict(os.environ),
-        }
-        if os.name == "nt":
-            kwargs["creationflags"] = (
-                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
-                | getattr(subprocess, "DETACHED_PROCESS", 0)
-                | getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            )
-        else:
-            kwargs["start_new_session"] = True
-        subprocess.Popen(command, **kwargs)
-        return True
-    except Exception as exc:
-        log_error(f"{failure_label}: {exc}")
-        try:
-            handle.close()
-        except Exception:
-            pass
-        try:
-            spool_path.unlink(missing_ok=True)
-        except OSError:
-            pass
-        return False
-
-
-def _schedule_strategy(settings: RuntimeSettings, payload: dict, log_error) -> bool:
-    return _launch_detached_payload(
-        settings,
-        payload,
-        prefix="codex-strategy-",
-        payload_flag="--strategy-payload-file",
-        failure_label="detached strategy launch failed",
-        log_error=log_error,
-    )
-
-
-def _detach_stop(
-    settings: RuntimeSettings, payload: dict, log_error
-) -> None:
-    """Spool one Stop payload and launch a detached worker.
-
-    Codex CLI 0.147 parses but skips native async hooks, so the registered Stop
-    hook stays synchronous only long enough to start this background process.
-    """
-    if payload.get("hook_event_name") != "Stop":
-        return
-    _launch_detached_payload(
-        settings,
-        payload,
-        prefix="codex-stop-",
-        payload_flag="--payload-file",
-        failure_label="detached Stop launch failed",
-        log_error=log_error,
-    )
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--host", default="codex_cli")
-    parser.add_argument("--detach-stop", action="store_true")
-    parser.add_argument("--payload-file", default="")
-    parser.add_argument("--strategy-payload-file", default="")
     args, _unknown = parser.parse_known_args()
     settings = _settings(args.host)
 
@@ -204,26 +95,12 @@ def main() -> int:
     if args.host != "codex_cli":
         log_error(f"unsupported hook host: {args.host}")
         return 0
+    if active_guard():
+        return 0
     try:
-        if args.strategy_payload_file:
-            strategy_payload = _read_payload(args.strategy_payload_file)
-            CodexAdapter(
-                ReviewCore(settings, log_error=log_error)
-            )._run_strategy_payload(strategy_payload)
-            return 0
-        payload = _read_payload(args.payload_file)
-        if args.detach_stop:
-            if active_guard():
-                return 0
-            _detach_stop(settings, payload, log_error)
-            return 0
+        payload = _read_payload()
         core = ReviewCore(settings, log_error=log_error)
-        adapter = CodexAdapter(
-            core,
-            schedule_strategy=lambda work: _schedule_strategy(
-                settings, work, log_error
-            ),
-        )
+        adapter = CodexAdapter(core)
         output = adapter.process(payload)
         if output is not None:
             _emit_output(output, settings)

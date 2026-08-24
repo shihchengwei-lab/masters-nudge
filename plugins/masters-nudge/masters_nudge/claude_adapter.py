@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import source_context
 
@@ -19,10 +22,13 @@ from .runtime import RuntimeSettings
 
 RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent.parent, host="claude_code")
 
-TRANSCRIPT_CHAR_BUDGET = 6000
-PER_MESSAGE_MAX_CHARS = 5000
-MIN_REMAINING_TO_INCLUDE = 400
-TOOL_OUTPUT_TAIL_CHARS = 2000
+
+@dataclass(frozen=True)
+class PreparedDelivery:
+    output: dict[str, Any]
+    session: SessionRef
+    reaction_ts: str
+    claim_token: str
 
 
 def log_error(component: str, message: str) -> None:
@@ -45,38 +51,27 @@ def session_from_hook(hook: dict, *, default_cwd: str = "") -> SessionRef:
     )
 
 
-def parse_transcript_entry(obj: dict) -> tuple[str, str, list[str]] | None:
+def parse_transcript_entry(obj: dict) -> tuple[str, str] | None:
     typ = obj.get("type")
     if typ not in ("user", "assistant"):
         return None
     prefix = "user" if typ == "user" else "claude"
     content = (obj.get("message", {}) or {}).get("content", "")
     text_parts: list[str] = []
-    tool_results: list[str] = []
     if isinstance(content, list):
         for block in content:
             if not isinstance(block, dict):
                 continue
             if block.get("type") == "text":
                 text_parts.append(block.get("text", ""))
-            elif block.get("type") == "tool_result":
-                raw = block.get("content", "")
-                if isinstance(raw, list):
-                    tool_results.append("\n".join(
-                        item.get("text", "")
-                        for item in raw
-                        if isinstance(item, dict) and item.get("type") == "text"
-                    ))
-                else:
-                    tool_results.append(str(raw))
     else:
         text_parts.append(str(content))
-    return prefix, "\n".join(part for part in text_parts if part).strip(), tool_results
+    return prefix, "\n".join(part for part in text_parts if part).strip()
 
 
 def _read_transcript_entries(
     transcript_path: str, start_offset: int | None = None
-) -> list[tuple[str, str, list[str]]]:
+) -> list[tuple[str, str]]:
     if not transcript_path or not os.path.exists(transcript_path):
         return []
     try:
@@ -93,7 +88,7 @@ def _read_transcript_entries(
     except Exception as exc:
         log_error("claude-transcript", f"transcript read failed: {exc}")
         return []
-    entries: list[tuple[str, str, list[str]]] = []
+    entries: list[tuple[str, str]] = []
     for line in lines:
         try:
             obj = json.loads(line.strip())
@@ -105,60 +100,11 @@ def _read_transcript_entries(
     return entries
 
 
-def read_recent_transcript(transcript_path: str) -> str:
-    selected: list[tuple[str, str, list[str]]] = []
-    remaining = TRANSCRIPT_CHAR_BUDGET
-    for prefix, text, tool_results in reversed(_read_transcript_entries(transcript_path)):
-        if not text:
-            selected.append((prefix, "", tool_results))
-            continue
-        snippet = "…" + text[-PER_MESSAGE_MAX_CHARS:] if len(text) > PER_MESSAGE_MAX_CHARS else text
-        if len(snippet) <= remaining:
-            selected.append((prefix, snippet, tool_results))
-            remaining -= len(snippet)
-            continue
-        if remaining >= MIN_REMAINING_TO_INCLUDE:
-            selected.append((prefix, "…" + text[-(remaining - 1):], tool_results))
-        break
-    selected.reverse()
-    transcript_lines: list[str] = []
-    tool_buffer: list[str] = []
-    for prefix, snippet, tool_results in selected:
-        if snippet:
-            transcript_lines.append(f"{prefix}: {snippet}")
-        tool_buffer.extend(tool_results)
-    out: list[str] = []
-    if transcript_lines:
-        out.append(
-            "[transcript — 從最新往回填，總長 ≤ "
-            f"{TRANSCRIPT_CHAR_BUDGET} 字；單則超過 {PER_MESSAGE_MAX_CHARS} 字者以…起頭]"
-        )
-        out.extend(transcript_lines)
-        out.append("[end transcript]")
-    if tool_buffer:
-        out.append(
-            "[tool output — 工具回傳合併後尾部 "
-            f"{TOOL_OUTPUT_TAIL_CHARS} 字；非對話本身]"
-        )
-        out.append("\n".join(tool_buffer)[-TOOL_OUTPUT_TAIL_CHARS:])
-        out.append("[end tool output]")
-    return "\n".join(out)
-
-
-def read_recent_tool_evidence(transcript_path: str, start_offset: int = 0) -> str:
-    entries = _read_transcript_entries(
-        transcript_path, start_offset if start_offset > 0 else None
-    )
-    return "\n".join(
-        result for _, _, results in entries for result in results if result
-    )
-
-
 def read_latest_assistant_text(transcript_path: str, start_offset: int = 0) -> str:
     entries = _read_transcript_entries(
         transcript_path, start_offset if start_offset > 0 else None
     )
-    for prefix, text, _ in reversed(entries):
+    for prefix, text in reversed(entries):
         if prefix == "claude" and text:
             return text
     return ""
@@ -169,7 +115,7 @@ def build_stop_source_context(
     agentcam_content: str = "",
     *,
     session: SessionRef,
-) -> dict:
+) -> str:
     settings = runtime_settings()
     transcript_path = str(hook.get("transcript_path") or "")
     state = storage.load_turn_state(settings.paths.data_dir, session)
@@ -177,19 +123,59 @@ def build_stop_source_context(
     last_assistant = str(hook.get("last_assistant_message") or "")
     if not last_assistant:
         last_assistant = read_latest_assistant_text(transcript_path, offset)
-    tool_evidence = read_recent_tool_evidence(transcript_path, offset)
     agentcam_evidence = source_context.extract_agentcam_evidence(agentcam_content)
 
-    packet = source_context.build_stop_packet(
+    return source_context.build_stop_packet(
         task_anchor=str(state.get("task_anchor") or ""),
         last_assistant_message=last_assistant,
-        tool_evidence=tool_evidence,
+        task_sources=state.get("task_sources") or {},
+        change_evidence=str(state.get("change_evidence") or ""),
+        verification_evidence=str(state.get("verification_evidence") or ""),
+        failure_history=str(state.get("failure_history") or ""),
         agentcam_evidence=agentcam_evidence,
     )
-    return {
-        "packet": packet,
-        "task_anchor": str(state.get("task_anchor") or ""),
-        "assistant_claim": last_assistant,
-        "tool_evidence": tool_evidence,
-        "agentcam_evidence": agentcam_evidence,
-    }
+
+
+def emit_json_delivery(
+    prepared: PreparedDelivery,
+    *,
+    delivered_via: str,
+    stream: Any = None,
+) -> None:
+    """Flush one Claude hook response, then record its terminal wire state."""
+    target = stream if stream is not None else sys.stdout
+    settings = runtime_settings()
+    try:
+        target.write(json.dumps(prepared.output, ensure_ascii=False) + "\n")
+        target.flush()
+    except Exception:
+        try:
+            storage.mark_delivery(
+                settings.paths.data_dir,
+                prepared.session,
+                prepared.reaction_ts,
+                status="failed",
+                delivered_via=delivered_via,
+            )
+        finally:
+            storage.release_delivery_claim(
+                settings.paths.data_dir,
+                prepared.session,
+                prepared.reaction_ts,
+                prepared.claim_token,
+            )
+        raise
+    try:
+        storage.mark_emitted(
+            settings.paths.data_dir,
+            prepared.session,
+            prepared.reaction_ts,
+            delivered_via=delivered_via,
+        )
+    finally:
+        storage.release_delivery_claim(
+            settings.paths.data_dir,
+            prepared.session,
+            prepared.reaction_ts,
+            prepared.claim_token,
+        )

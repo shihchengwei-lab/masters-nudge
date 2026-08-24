@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """Mid-work Masters' Nudge checkpoint hook.
 
-Classifies high-value PostToolUse/PostToolUseFailure events, calls the same
-side-review model as the Stop-hook worker, and returns a non-blocking
-additionalContext nudge directly to the main Claude agent.
+Classifies high-value PostToolUse/PostToolUseFailure events, waits for the same
+side-review model as the Stop hook, and returns additionalContext directly to
+the main Claude agent in that event.
 """
 
 from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass
 from typing import Any
 
 import source_context
-from masters_nudge import claude_adapter, checkpoints as shared_checkpoints, storage
+from masters_nudge import (
+    claude_adapter,
+    checkpoints as shared_checkpoints,
+    prompting,
+    storage,
+)
 from masters_nudge.contracts import (
     ReviewOutcome,
     ReviewRequest,
@@ -50,21 +54,23 @@ def normalize_tool_event(hook: dict[str, Any]) -> ToolCompleted | None:
 
 
 def review_checkpoint(
-    hook: dict[str, Any],
     event: dict[str, str],
     *,
     session: SessionRef,
-) -> ReviewOutcome:
+) -> ReviewOutcome | None:
     settings = claude_adapter.runtime_settings()
-    transcript_path = str(hook.get("transcript_path") or "")
     state = storage.load_turn_state(settings.paths.data_dir, session)
-    assistant_context = claude_adapter.read_latest_assistant_text(
-        transcript_path, int(state.get("transcript_offset") or 0)
-    )
     source_packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
         event_context=event["context"],
-        assistant_context=assistant_context,
+        task_sources=state.get("task_sources") or {},
+        change_evidence=str(state.get("change_evidence") or ""),
+        verification_evidence=str(state.get("verification_evidence") or ""),
+        failure_history=(
+            ""
+            if event["reason"] == "test-fail"
+            else str(state.get("failure_history") or "")
+        ),
     )
 
     request = ReviewRequest(
@@ -82,19 +88,11 @@ def review_checkpoint(
         log_error=lambda message: claude_adapter.log_error(
             "claude-checkpoint", message
         ),
-    ).review(
+    ).review_once(
         request,
         persist_reaction=True,
         timeout_sec=settings.checkpoint_timeout_sec,
     )
-
-
-@dataclass(frozen=True)
-class PreparedCheckpoint:
-    output: dict[str, Any]
-    session: SessionRef
-    fingerprint: str
-    reaction_ts: str
 
 
 def build_hook_output(
@@ -104,88 +102,76 @@ def build_hook_output(
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": reaction,
+            "additionalContext": prompting.delivery_text(reaction),
         }
     }
 
 
-def prepare_hook(hook: dict[str, Any]) -> PreparedCheckpoint | None:
+def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None:
     tool_event = normalize_tool_event(hook)
     if tool_event is None:
         return None
+    settings = claude_adapter.runtime_settings()
+    session = tool_event.session
+    state = storage.load_turn_state(settings.paths.data_dir, session)
+    category = shared_checkpoints.evidence_category(tool_event)
+    task_source = None
+    if not category and not (tool_event.failure_known and tool_event.failed):
+        task_source = source_context.capture_referenced_task_source(
+            str(state.get("task_anchor") or ""),
+            tool_event.tool_input,
+            tool_event.tool_output,
+        )
+    if category or task_source:
+        state = storage.record_turn_evidence(
+            settings.paths.data_dir,
+            session,
+            record=(
+                shared_checkpoints.render_evidence_record(tool_event)
+                if category
+                else ""
+            ),
+            category=category,
+            task_source=task_source,
+        )
+
+    storage.observe_injected_response(
+        settings.paths.data_dir,
+        session,
+        event_seq=int(state.get("evidence_seq") or 0),
+        observation_kind="tool",
+        observation={
+            "tool": tool_event.tool_name,
+            "failed": tool_event.failure_known and tool_event.failed,
+            "mutating": tool_event.mutating,
+        },
+    )
+
     event = shared_checkpoints.classify_tool(tool_event)
     if event is None:
         return None
-
-    settings = claude_adapter.runtime_settings()
-    session = tool_event.session
-    if not storage.claim_checkpoint(
-        settings.paths.data_dir, session, event["fingerprint"]
-    ):
-        return None
     try:
-        outcome = review_checkpoint(hook, event, session=session)
-        if outcome.status != "finding" or not outcome.finding:
-            storage.release_checkpoint(
-                settings.paths.data_dir, session, event["fingerprint"]
-            )
+        outcome = review_checkpoint(event, session=session)
+        if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None
-        return PreparedCheckpoint(
+        claim_token = storage.claim_delivery(
+            settings.paths.data_dir, session, outcome.reaction_ts
+        )
+        if not claim_token:
+            return None
+        return claude_adapter.PreparedDelivery(
             output=build_hook_output(
                 str(hook.get("hook_event_name") or "PostToolUse"), outcome.finding
             ),
             session=session,
-            fingerprint=event["fingerprint"],
             reaction_ts=outcome.reaction_ts,
+            claim_token=claim_token,
         )
     except Exception as exc:
         claude_adapter.log_error(
             "claude-checkpoint", f"checkpoint processing failed: {exc}"
         )
-        storage.release_checkpoint(
-            settings.paths.data_dir, session, event["fingerprint"]
-        )
         return None
-
-
-def emit_prepared(
-    prepared: PreparedCheckpoint,
-    *,
-    stream: Any = None,
-) -> None:
-    """Write and flush the hook response before recording an injected receipt."""
-    target = stream if stream is not None else sys.stdout
-    settings = claude_adapter.runtime_settings()
-    try:
-        target.write(json.dumps(prepared.output, ensure_ascii=False) + "\n")
-        target.flush()
-    except Exception:
-        try:
-            if prepared.reaction_ts:
-                storage.mark_delivery(
-                    settings.paths.data_dir,
-                    prepared.session,
-                    prepared.reaction_ts,
-                    status="failed",
-                    delivered_via="claude-checkpoint",
-                )
-        finally:
-            storage.release_checkpoint(
-                settings.paths.data_dir, prepared.session, prepared.fingerprint
-            )
-        raise
-    # The host has received the bytes. Complete the de-duplication claim before
-    # receipt persistence so a local receipt failure cannot cause re-injection.
-    storage.complete_checkpoint(
-        settings.paths.data_dir, prepared.session, prepared.fingerprint
-    )
-    if prepared.reaction_ts:
-        storage.mark_delivered(
-            settings.paths.data_dir,
-            prepared.session,
-            prepared.reaction_ts,
-            delivered_via="claude-checkpoint",
-        )
 
 
 def main() -> None:
@@ -203,7 +189,9 @@ def main() -> None:
         return
     prepared = prepare_hook(hook)
     if prepared is not None:
-        emit_prepared(prepared)
+        claude_adapter.emit_json_delivery(
+            prepared, delivered_via="claude-checkpoint"
+        )
 
 
 if __name__ == "__main__":

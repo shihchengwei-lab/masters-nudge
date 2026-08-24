@@ -4,28 +4,32 @@
 
 Target package version: `0.2.0-dev.1`.
 
-- Claim each pending Codex finding atomically before hook output so duplicate or concurrent `PostToolUse` dispatches cannot inject the same Nudge or response observation twice; release the claim when stdout fails so delivery remains retryable.
-- Record Claude checkpoint delivery only after the hook response is written and flushed; failed output releases the checkpoint claim instead of leaving a false `injected` receipt.
+- Deliver each finding only in the eligible event that produced it; record a successful flush as `emitted`, a wire failure as terminal `failed`, and require a later host event before confirming `injected`.
+- Use one canonical review-attempt identity across both hosts and every review kind; terminal `finding`, `no_finding`, and `error` attempts do not trigger automatic Provider retries.
+- Run eligible Claude and Codex checkpoint, strategy, goal-transition, and Stop reviews synchronously; a Stop finding continues the same turn instead of waiting for a later prompt or detached worker.
+- Cap Provider work at 90 seconds inside a 120-second host-hook timeout, while retaining lower explicit timeout settings.
+- Run Anthropic reviews at explicit medium effort without session persistence, retain bounded timeout diagnostics, and stop treating a single edit-to-validation cycle as a strategy checkpoint.
+- Present earlier failures as bounded history without repeating the current failed event, and remove the duplicate goal objective from strategy evidence.
 - Make `ReviewCore` the sole routing owner, keep the lifecycle filter when unrelated specialist evidence is absent, and avoid rotating filters merely because the primary is cooling down.
 - Present engineering stages and practical focus in public configuration and the floating window; keep person names only inside provider prompts as private attention cues.
-- Move Claude transcript parsing into the shared Claude adapter and remove the duplicate evidence carrier and unused storage seams.
+- Keep only Claude's current-turn final-claim fallback parser, share one checkpoint/Stop JSON emitter, and remove the dead transcript renderer and duplicate delivery seams.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, legacy source wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks while retaining the packaged host launchers.
 - Retire the former Shader, Three.js／WebGPU black-hole, and Riemann specializations from the product branch; their historical artifacts remain in the verified [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release and fixed tag.
 - Replace stopped evaluation harnesses, fixtures, dated reports, screenshots, and an unused spritesheet builder with a single `evaluation/README.md` index that retains denominators, exclusions, null results, and explicit claim boundaries.
-- Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, detached process launch, and runtime inventory around one owner for each behavior.
+- Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, and runtime inventory around one owner for each behavior; remove detached review launchers.
 - Derive package membership and doctor dependencies from one manifest, Claude session identity from one adapter helper, and public stage views from one `StageSpec` registry.
 - Align README claims with prompt-level question guidance and Codex-only response observations; remove test-only Claude session fallbacks and unused forwarding surfaces.
 - Shorten the public documentation to installation, use, migration, configuration, privacy, evidence limits, and current manual gates.
-- Record the first observable tool action or Stop claim after each injected question in its delivery receipt; this is temporal evidence only and does not attribute the action or result to the Nudge.
-- Align software reviews around one unlabeled open question, cold current-state input, delivery-aware two-filter cooldown, semantic evidence-cycle triggers, source-fresh pending delivery, local/trajectory scope, and separate route, provider, and delivery records.
+- Record the first observable tool action or Stop claim after each emitted question, then confirm its receipt as injected; this is temporal evidence only and does not attribute the action or result to the Nudge.
+- Align software reviews around one evidence-grounded second opinion, semantic result evidence without tool-operation details, the latest three injected findings for duplicate avoidance, semantic evidence-cycle triggers, same-event delivery, local/trajectory scope, and separate route, provider, and delivery records.
 - Keep review telemetry as content-free append-only diagnostics and remove the inactive shadow cost-evaluation state, reports, notices, and automatic candidate machinery.
 - Terminate the full Claude, Codex, and Grok reviewer process tree after a deadline, normalize provider failure categories, and avoid storing raw provider output.
 - Pass structured routing concerns instead of parsing classifier-generated marker text, and limit Claude Stop fallback evidence to the current turn.
 - Refuse legacy-config migration when its source changes after preflight, and derive doctor readiness from the code-owned package manifest instead of an installed self-report.
 - Rename the architecture document to describe its lasting responsibility rather than an old project phase.
-- Add per-session strategy single-flight, source-aware delivery freshness, explicit `superseded` receipts, and collision-resistant reaction identifiers.
+- Keep collision-resistant reaction identifiers and session-scoped write locking while removing cross-event freshness selection and automatic `superseded` receipts.
 - Expand mid-turn checkpoint input from one triggering event into a bounded current-state packet containing the task anchor, recurring workflow evidence, validation state, and open target/evidence tension; keep Stop input unchanged.
-- Raise the default Stop reviewer timeout from 60 to 120 seconds, and keep timeout status entries visible in Tk without incorrectly labeling them as pending injection.
+- Keep timeout status entries visible in Tk without incorrectly labeling them as pending delivery.
 - Pass the caller's workspace explicitly through the window launcher so workspace filtering no longer depends on the plugin script's working directory.
 - Reviewer provider CLIs now run without opening transient console windows on Windows.
 

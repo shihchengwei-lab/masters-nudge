@@ -1,6 +1,6 @@
 # Shared reviewer architecture
 
-Native host events are separate from review policy. Claude Code and Codex keep different adapters because their event payloads, journals, Stop timing, and delivery channels differ; both adapters construct the same bounded `ReviewRequest` and call the same `ReviewCore`.
+Native host events are separate from review policy. Claude Code and Codex keep different adapters because their event payloads, Stop timing, and delivery channels differ; both adapters construct the same bounded `ReviewRequest` and call the same `ReviewCore`.
 
 ## Ownership boundary
 
@@ -8,9 +8,9 @@ Native host events are separate from review policy. Claude Code and Codex keep d
 |---|---|---|
 | Host entry and adapter | Native JSON parsing, session/turn identity, evidence capture, checkpoint timing, delivery channel | Lens prompts, provider policy, output sanitation |
 | Shared checkpoints and evidence | Event classification, stable fingerprints, bounded packet construction | Host JSON or provider invocation |
-| `ReviewCore` | Routing, prompt composition, provider dispatch, sanitation, persistence, telemetry | Native transcript formats or hook stdout |
+| `ReviewCore` | Routing, prompt composition, single-attempt provider dispatch, sanitation, persistence, telemetry | Native transcript formats or hook stdout |
 | Provider adapter | CLI/HTTP invocation, schema parsing, usage extraction, recursion guard, transport checks | Hook semantics or delivery receipts |
-| Storage | Host-namespaced turn state, reactions, receipts, checkpoint claims | Routing, provider choice, or telemetry policy |
+| Storage | Host-namespaced turn state, reactions, receipts, and canonical review attempts | Routing, provider choice, or telemetry policy |
 | Diagnostic telemetry | Content-free route, status, latency, and provider-reported usage metadata | Review text, task content, cost policy, or automatic gates |
 
 The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `ReviewRequest`, and `ReviewOutcome`.
@@ -27,29 +27,31 @@ Claude Code uses three small native entry points:
 
 - `claude_prompt.py` for `UserPromptSubmit`;
 - `claude_checkpoint.py` for successful mutating tools and `PostToolUseFailure`;
-- `claude_stop.py` for the async `Stop` review.
+- `claude_stop.py` for the synchronous `Stop` review and same-turn continuation.
 
 `masters_nudge/claude_adapter.py` is the sole owner of mapping a Claude hook payload to `SessionRef`; each entry point reuses that identity throughout one event.
 
-Codex uses `hook_entry.py --host codex_cli` for prompt and tool events, plus `--detach-stop` for the fast Stop shim. `masters_nudge/codex_adapter.py` owns Codex payload normalization and its bounded per-turn tool journal.
+Codex uses `hook_entry.py --host codex_cli` for prompt, tool, and Stop events. `masters_nudge/codex_adapter.py` owns Codex payload normalization and its per-turn evidence capture.
 
 Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry files convert payloads and delivery behavior; they do not keep a second classifier or prompt/provider implementation.
 
 | Lifecycle | Claude Code | Codex |
 |---|---|---|
-| Start turn | Save the task anchor and transcript offset | Save the task anchor; do not parse the Codex transcript |
-| Collect evidence | Bounded transcript/event evidence and optional Agentcam report | Bounded `PostToolUse` journal and optional Agentcam report |
+| Start turn | Save the task request and final-claim fallback offset | Save the task request; do not parse the Codex transcript |
+| Collect evidence | Capture explicitly referenced task sources plus layered event evidence | Capture explicitly referenced task sources plus layered event evidence |
 | Checkpoint | Tool failure or selected successful mutation | Delivered structured failure, test output, large diff, or long-goal change |
-| End turn | Async native `Stop` worker | Detached Stop worker |
-| Deliver queued finding | Plain additional context at a later prompt | `hookSpecificOutput.additionalContext` at a later hook event |
+| End turn | Synchronous native `Stop`; a finding adds context and continues | Synchronous native `Stop`; a finding returns `decision: block` and continues |
+| Deliver finding | `hookSpecificOutput.additionalContext` on the eligible event, prefixed `獨立第二意見：` | `hookSpecificOutput.additionalContext`, or Stop `reason`, on the eligible event, prefixed `獨立第二意見：` |
 
 ## Output and delivery
 
-The provider is prompted to return one open question or silence. Runtime sanitation bounds any returned finding to 52 characters, but does not claim to mechanically enforce question quality. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
+The provider is prompted to return one evidence-grounded second opinion or silence. The opinion may be a statement or question that identifies one missed constraint, counterexample, alternative hypothesis, or direction. Runtime sanitation bounds any returned finding to 52 characters, but does not claim to mechanically enforce its quality. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
 
-The injected hook output contains the finding text. Effective lens, route source, trigger, and review reason belong to local reaction and telemetry records; callers must not assume those fields are present in the host wire output.
+The host hook output contains the finding text. Effective lens, route source, trigger, and review reason belong to local reaction and telemetry records; callers must not assume those fields are present in the host wire output.
 
-A generated reaction starts as `queued`. Successful insertion records an `injected` receipt with the receiving event; stale reactions become `expired`, skipped older reactions become `superseded`, and failed delivery remains inspectable. Detached strategy reviews are single-flight per session.
+A generated reaction starts as `queued`. The eligible hook either writes it in the same event, after which it becomes `emitted`, or records `failed` if wire output fails. Only a later host event exposing the main model's response confirms `injected`; later prompt or tool events never pick up an older queued reaction.
+
+`ReviewCore.review_once()` claims a canonical identity composed of host session, turn, review kind, and source fingerprint before invoking the Provider. The attempt ends as `finding`, `no_finding`, or `error`; the same identity is never retried automatically. Checkpoint, strategy, goal-transition, and Stop reviews use this one mechanism, so no detached single-flight coordinator or Stop/strategy race exists. Provider work is capped at 90 seconds inside the host hook's 120-second timeout. If a Provider process times out after already emitting one complete schema result, the Provider adapter may recover that result before cleaning up the process tree; there is no fallback to another Provider.
 
 ## State
 
@@ -60,22 +62,22 @@ claude_code--<session>.log
 codex_cli--<session>.log
 <host>--<session>.turn.json
 <host>--<session>.delivery.json
-<host>--<session>.checkpoints/
+<host>--<session>.review-attempts/
 reviewer.json
 review-telemetry.jsonl
 ```
 
-One `.turn.json` record owns the task anchor, evidence offset, and current-turn state. There is no second source-state file for the same turn. Reviewer configuration is host-neutral.
+One `.turn.json` record owns the task request, explicitly referenced sources, change evidence, verification evidence, failure history, and any final-claim fallback offset. There is no second source-state file for the same turn. Reviewer configuration is host-neutral.
 
 The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, refuses if the source changes after preflight, and does not delete original review data.
 
 ## Failure and privacy behavior
 
-Hooks fail open for the main coding agent: malformed native input, unavailable provider CLIs, timeouts, schema errors, and local write failures produce no Nudge and are logged locally.
+Hooks fail open on errors: malformed native input, unavailable Provider CLIs, timeouts, schema errors, and local write failures produce no Nudge and are logged locally. A valid Stop finding intentionally continues the same turn; it is not an error path.
 
 Provider selection does not fail over silently. The Ollama path additionally fails closed for network privacy: only loopback HTTP is accepted, proxies and redirects are disabled, cloud-disabled status is checked, and remote model metadata is rejected.
 
-The Codex journal is capped per turn and per tool record. Claude transcript evidence, current claims, tool evidence, and optional Agentcam evidence are also bounded before entering `ReviewCore`. Full transcripts are not copied into telemetry.
+Each evidence layer is capped per turn and per record. Routine navigation output, tool identity, commands, and the main model's running explanation are excluded; semantic change, verification, and failure results remain. `ReviewCore` appends at most the latest three injected Nudge texts as duplicate-avoidance context, without the main model's reaction. Current final claims and optional Agentcam evidence are separately bounded before entering `ReviewCore`. Full transcripts are not copied into reviewer packets or telemetry.
 
 ## Package and verification
 

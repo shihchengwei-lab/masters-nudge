@@ -9,7 +9,7 @@ This file lists unresolved work only. Shipped behavior belongs in [CHANGELOG.md]
 The product is plugin-only. Before treating the prerelease as ready for wider use:
 
 - perform a fresh Claude Code marketplace install and exercise prompt, checkpoint, Stop, doctor, migration, and optional window flows;
-- perform a fresh Codex marketplace install, review hook trust, and exercise prompt, tool, detached Stop, doctor, and migration flows;
+- perform a fresh Codex marketplace install, review hook trust, and exercise prompt, tool, synchronous Stop continuation, doctor, and migration flows;
 - run the generated-package check and the supported Python test matrix on Windows, Linux, and macOS;
 - record host versions, commands, exit status, and any unverified GUI or provider behavior.
 

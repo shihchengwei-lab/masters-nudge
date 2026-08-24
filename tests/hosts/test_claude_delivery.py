@@ -5,7 +5,7 @@ from unittest import mock
 
 import claude_checkpoint
 import claude_stop
-from masters_nudge import storage
+from masters_nudge import claude_adapter, storage
 from masters_nudge.contracts import ReviewOutcome, SessionRef
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
@@ -25,22 +25,27 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
             claude_checkpoint.claude_adapter, "RUNTIME", self.settings
         )
         self.runtime_patch.start()
+        self.stop_runtime_patch = mock.patch.object(
+            claude_stop.claude_adapter, "RUNTIME", self.settings
+        )
+        self.stop_runtime_patch.start()
 
     def tearDown(self):
+        self.stop_runtime_patch.stop()
         self.runtime_patch.stop()
         self.tmpdir.cleanup()
 
     def test_checkpoint_entry_does_not_own_routing(self):
         self.assertFalse(hasattr(claude_checkpoint, "lens_router"))
 
-    def test_transcript_helpers_have_one_shared_claude_owner(self):
+    def test_only_final_claim_fallback_remains_in_shared_claude_adapter(self):
         self.assertFalse(hasattr(claude_stop, "read_latest_assistant_text"))
         self.assertFalse(hasattr(claude_stop, "read_recent_tool_evidence"))
         self.assertTrue(
             callable(claude_checkpoint.claude_adapter.read_latest_assistant_text)
         )
-        self.assertTrue(
-            callable(claude_checkpoint.claude_adapter.read_recent_tool_evidence)
+        self.assertFalse(
+            hasattr(claude_checkpoint.claude_adapter, "read_recent_tool_evidence")
         )
 
     def test_reviewer_finding_stays_queued_until_wire_output_flushes(self):
@@ -57,7 +62,7 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
             reaction_ts="reaction-1",
         )
         with mock.patch.object(
-            claude_checkpoint.ReviewCore, "review", return_value=outcome
+            claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
             prepared = claude_checkpoint.prepare_hook(hook)
 
@@ -68,15 +73,67 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         )["receipts"], {})
 
         stream = mock.Mock()
-        claude_checkpoint.emit_prepared(prepared, stream=stream)
+        claude_adapter.emit_json_delivery(
+            prepared, delivered_via="claude-checkpoint", stream=stream
+        )
 
         receipt = storage.load_delivery_state(
             self.settings.paths.data_dir, session
         )["receipts"]["reaction-1"]
-        self.assertEqual(receipt["status"], "injected")
+        self.assertEqual(receipt["status"], "emitted")
         stream.flush.assert_called_once_with()
 
-    def test_wire_failure_records_failed_and_releases_checkpoint_claim(self):
+    def test_stop_finding_uses_non_error_feedback_and_active_stop_does_not_review_again(self):
+        hook = {
+            "session_id": "session-stop",
+            "turn_id": "turn-1",
+            "cwd": self.tmpdir.name,
+            "hook_event_name": "Stop",
+            "last_assistant_message": "已完成。",
+            "stop_hook_active": False,
+        }
+        session = SessionRef(
+            "claude_code", "session-stop", "turn-1", self.tmpdir.name
+        )
+        storage.start_turn(
+            self.settings.paths.data_dir, session, "完成可靠性修正"
+        )
+        outcome = ReviewOutcome(
+            status="finding",
+            finding="哪個完成條件仍缺少直接證據？",
+            reaction_ts="reaction-stop",
+        )
+        with mock.patch.object(
+            claude_stop.ReviewCore, "review_once", return_value=outcome
+        ) as review_once:
+            prepared = claude_stop.prepare_hook(hook)
+            stream = mock.Mock()
+            claude_adapter.emit_json_delivery(
+                prepared, delivered_via="claude-stop", stream=stream
+            )
+            active = claude_stop.prepare_hook({**hook, "stop_hook_active": True})
+
+        self.assertEqual(
+            prepared.output,
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "Stop",
+                    "additionalContext": "獨立第二意見：\n哪個完成條件仍缺少直接證據？",
+                }
+            },
+        )
+        self.assertIsNone(active)
+        review_once.assert_called_once()
+        receipt = storage.load_delivery_state(
+            self.settings.paths.data_dir, session
+        )["receipts"]["reaction-stop"]
+        self.assertEqual(receipt["status"], "injected")
+        self.assertEqual(
+            receipt["response_observation"]["observation"]["assistant_claim"],
+            "已完成。",
+        )
+
+    def test_wire_failure_records_failed_and_releases_delivery_claim(self):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
@@ -90,23 +147,32 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
             reaction_ts="reaction-2",
         )
         with mock.patch.object(
-            claude_checkpoint.ReviewCore, "review", return_value=outcome
+            claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
             prepared = claude_checkpoint.prepare_hook(hook)
 
         stream = mock.Mock()
         stream.flush.side_effect = OSError("broken pipe")
         with self.assertRaises(OSError):
-            claude_checkpoint.emit_prepared(prepared, stream=stream)
+            claude_adapter.emit_json_delivery(
+                prepared, delivered_via="claude-checkpoint", stream=stream
+            )
 
         session = SessionRef("claude_code", "session-1")
         receipt = storage.load_delivery_state(
             self.settings.paths.data_dir, session
         )["receipts"]["reaction-2"]
         self.assertEqual(receipt["status"], "failed")
-        self.assertTrue(storage.claim_checkpoint(
-            self.settings.paths.data_dir, session, prepared.fingerprint
-        ))
+        retry_claim = storage.claim_delivery(
+            self.settings.paths.data_dir, session, prepared.reaction_ts
+        )
+        self.assertTrue(retry_claim)
+        storage.release_delivery_claim(
+            self.settings.paths.data_dir,
+            session,
+            prepared.reaction_ts,
+            retry_claim,
+        )
 
 
 if __name__ == "__main__":

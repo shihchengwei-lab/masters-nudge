@@ -21,7 +21,12 @@ from masters_nudge.management import (
     migrate_legacy_config,
     reset_reviewer_config,
 )
-from masters_nudge.runtime import RuntimeSettings, reviewer_config_path
+from masters_nudge.runtime import (
+    HOOK_TIMEOUT_SEC,
+    REVIEW_TIMEOUT_SEC,
+    RuntimeSettings,
+    reviewer_config_path,
+)
 from tools import build_plugin
 
 
@@ -39,10 +44,10 @@ class HostDefaultTests(unittest.TestCase):
         self.assertEqual((claude.provider, claude.model), ("anthropic", "sonnet"))
         self.assertEqual((codex.provider, codex.model), ("openai", "gpt-5.6-sol"))
         self.assertEqual(legacy.provider, "openai")
-        self.assertEqual(claude.timeout_sec, 120)
-        self.assertEqual(codex.timeout_sec, 120)
-        self.assertEqual(claude.checkpoint_timeout_sec, 90)
-        self.assertEqual(codex.checkpoint_timeout_sec, 90)
+        self.assertEqual(claude.timeout_sec, REVIEW_TIMEOUT_SEC)
+        self.assertEqual(codex.timeout_sec, REVIEW_TIMEOUT_SEC)
+        self.assertEqual(claude.checkpoint_timeout_sec, REVIEW_TIMEOUT_SEC)
+        self.assertEqual(codex.checkpoint_timeout_sec, REVIEW_TIMEOUT_SEC)
 
     def test_grok_can_be_selected_without_changing_host_defaults(self):
         environment = {
@@ -51,6 +56,30 @@ class HostDefaultTests(unittest.TestCase):
         }
         settings = RuntimeSettings.from_env(environ=environment, host="codex_cli")
         self.assertEqual((settings.provider, settings.model), ("grok", ""))
+
+    def test_reviewer_timeout_can_be_shortened_but_not_exceed_hook_budget(self):
+        shortened = RuntimeSettings.from_env(
+            environ={
+                "HOME": "/tmp/masters-nudge-test",
+                "MASTERS_NUDGE_TIMEOUT": "30",
+                "MASTERS_NUDGE_CHECKPOINT_TIMEOUT": "45",
+            },
+            host="codex_cli",
+        )
+        clamped = RuntimeSettings.from_env(
+            environ={
+                "HOME": "/tmp/masters-nudge-test",
+                "MASTERS_NUDGE_TIMEOUT": "300",
+                "MASTERS_NUDGE_CHECKPOINT_TIMEOUT": "300",
+            },
+            host="codex_cli",
+        )
+
+        self.assertEqual((shortened.timeout_sec, shortened.checkpoint_timeout_sec), (30, 45))
+        self.assertEqual(
+            (clamped.timeout_sec, clamped.checkpoint_timeout_sec),
+            (REVIEW_TIMEOUT_SEC, REVIEW_TIMEOUT_SEC),
+        )
 
 
 class RuntimeConfigurationTests(unittest.TestCase):
@@ -499,7 +528,17 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertNotIn("${CLAUDE_PLUGIN_ROOT}/buddy.py", claude_text)
         post_tool_hook = codex["PostToolUse"][0]["hooks"][0]
         self.assertNotIn("async", post_tool_hook)
-        self.assertGreaterEqual(post_tool_hook["timeout"], 90)
+        self.assertEqual(post_tool_hook["timeout"], HOOK_TIMEOUT_SEC)
+        self.assertEqual(
+            codex["Stop"][0]["hooks"][0]["timeout"], HOOK_TIMEOUT_SEC
+        )
+        self.assertNotIn(
+            "--detach-stop", codex["Stop"][0]["hooks"][0]["command"]
+        )
+        for event_name in ("PostToolUse", "PostToolUseFailure", "Stop"):
+            handler = claude[event_name][0]["hooks"][0]
+            self.assertEqual(handler["timeout"], HOOK_TIMEOUT_SEC)
+            self.assertNotIn("async", handler)
 
     def test_codex_launchers_are_fail_open(self):
         windows = (PLUGIN_ROOT / "hooks" / "run_python.cmd").read_text(encoding="utf-8")

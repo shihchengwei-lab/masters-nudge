@@ -34,9 +34,13 @@ class ReviewerProcessTests(unittest.TestCase):
 
         with (
             mock.patch.object(providers.subprocess, "Popen", return_value=process),
-            mock.patch.object(providers, "_terminate_process_tree") as terminate,
+            mock.patch.object(
+                providers,
+                "_terminate_process_tree",
+                return_value=("partial stdout", "backend retry"),
+            ) as terminate,
         ):
-            with self.assertRaises(subprocess.TimeoutExpired):
+            with self.assertRaises(subprocess.TimeoutExpired) as caught:
                 providers._run_cli_process(
                     ["reviewer"],
                     input_text="packet",
@@ -45,6 +49,8 @@ class ReviewerProcessTests(unittest.TestCase):
                 )
 
         terminate.assert_called_once_with(process, log_error=providers._noop)
+        self.assertEqual(caught.exception.output, "partial stdout")
+        self.assertEqual(caught.exception.stderr, "backend retry")
 
     def test_posix_cli_starts_an_isolated_process_group(self):
         process = mock.Mock(returncode=0)
@@ -86,6 +92,8 @@ class ProviderErrorContractTests(unittest.TestCase):
         argv = run.call_args.args[0]
         prompt = argv[argv.index("-p") + 1]
         self.assertIn("EVIDENCE-Q7K9", prompt)
+        self.assertEqual(argv[argv.index("--effort") + 1], "medium")
+        self.assertIn("--no-session-persistence", argv)
         self.assertIsNone(run.call_args.kwargs["input_text"])
 
     def test_claude_nonzero_and_invalid_output_are_distinct(self):
@@ -118,6 +126,65 @@ class ProviderErrorContractTests(unittest.TestCase):
                 timeout_sec=12,
             )
         self.assertEqual(invalid["error_kind"], "invalid_output")
+
+    def test_claude_timeout_recovers_complete_structured_output(self):
+        payload = (
+            '{"structured_output":{"status":"finding",'
+            '"finding":"哪個觀察能區分修復與放寬判定？"},'
+            '"usage":{"input_tokens":7,"output_tokens":4}}'
+        )
+        with mock.patch.object(
+            providers,
+            "_run_cli_process",
+            side_effect=subprocess.TimeoutExpired(
+                cmd=["claude"],
+                timeout=12,
+                output=payload,
+                stderr="",
+            ),
+        ):
+            result = providers.call_claude_result(
+                "system",
+                "packet",
+                "opus",
+                schema_path=SCHEMA,
+                timeout_sec=12,
+            )
+
+        self.assertEqual(result["status"], "finding")
+        self.assertEqual(result["finding"], "哪個觀察能區分修復與放寬判定？")
+        self.assertEqual(result["usage"]["input_tokens"], 7)
+
+    def test_claude_timeout_distinguishes_before_and_after_stdout(self):
+        cases = [
+            ("", "backend retry", "timeout_before_output"),
+            ("partial model output", "", "timeout_after_partial_output"),
+        ]
+        for stdout, stderr, expected in cases:
+            with self.subTest(expected=expected):
+                errors = []
+                with mock.patch.object(
+                    providers,
+                    "_run_cli_process",
+                    side_effect=subprocess.TimeoutExpired(
+                        cmd=["claude"],
+                        timeout=12,
+                        output=stdout,
+                        stderr=stderr,
+                    ),
+                ):
+                    result = providers.call_claude_result(
+                        "system",
+                        "packet",
+                        "opus",
+                        schema_path=SCHEMA,
+                        timeout_sec=12,
+                        log_error=errors.append,
+                    )
+
+                self.assertEqual(result["error_kind"], expected)
+                if stderr:
+                    self.assertTrue(any("backend retry" in item for item in errors))
 
     def test_codex_timeout_and_not_found_are_machine_readable(self):
         with mock.patch.object(

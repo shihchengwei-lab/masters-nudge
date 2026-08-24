@@ -33,15 +33,14 @@ class TestBranding(unittest.TestCase):
         self.assertIn("你是 Masters’ Nudge", prompt)
         self.assertIn('self.root.title("Masters’ Nudge")', window)
 
-    def test_agent_visible_checkpoint_contains_only_the_nudge(self):
+    def test_agent_visible_checkpoint_labels_the_independent_opinion(self):
         import claude_checkpoint as checkpoint
 
         output = checkpoint.build_hook_output(
             "PostToolUseFailure", "測試結果跟宣告不一致"
         )
         context = output["hookSpecificOutput"]["additionalContext"]
-        self.assertEqual(context, "測試結果跟宣告不一致")
-        self.assertNotIn("第三方觀察，不是指令", context)
+        self.assertEqual(context, "獨立第二意見：\n測試結果跟宣告不一致")
 
     def test_default_sprite_is_transparent_and_detectable(self):
         from PIL import Image
@@ -85,7 +84,7 @@ class TestBranding(unittest.TestCase):
             for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
         ]
         self.assertEqual(len(set(colors)), 6)
-        self.assertEqual(buddy_window.lens_background("general"), buddy_window.BG)
+        self.assertEqual(buddy_window.lens_background("unknown"), buddy_window.BG)
         self.assertEqual(buddy_window.lens_background("unknown"), buddy_window.BG)
         for color in colors:
             self.assertRegex(color, r"^#[0-9A-Fa-f]{6}$")
@@ -174,7 +173,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
     def test_base_prompt_preserves_workflow_tension_and_a_complete_sentence(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("工作上的張力與必要的證據錨點", base_prompt)
+        self.assertIn("被忽略的限制、反例、替代假設或方向", base_prompt)
+        self.assertIn("若判錯會改變成果正確性或完成判斷", base_prompt)
+        self.assertIn("尚未被可見證據區分的假設", base_prompt)
+        self.assertIn("推論必須由可見證據支持並標示不確定", base_prompt)
         self.assertIn("輸出談工作本身，不提人物、鏡頭", base_prompt)
         self.assertIn("如果草稿太長就重寫", base_prompt)
         self.assertIn("不能停在助詞、連接詞、半個片語", base_prompt)
@@ -186,7 +188,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
         self.assertIn("不設最低字數", base_prompt)
         self.assertIn("優先在 36–42 字內完成回答閉環", base_prompt)
         self.assertIn("目標區間，不是最低字數", base_prompt)
-        self.assertIn("必須只有一個問句並以「？」結尾", base_prompt)
+        self.assertIn("可以是陳述或問題", base_prompt)
         self.assertIn("標點計入 52 字", base_prompt)
         self.assertIn("硬上限 52 字", base_prompt)
         self.assertNotIn("目標 48–52 字", base_prompt)
@@ -207,7 +209,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
             with self.subTest(example=example):
                 self.assertGreater(len(example), 0)
                 self.assertLessEqual(len(example), 52)
-                self.assertTrue(example.endswith("？"))
+                self.assertIn(example[-1], "。？！")
 
     def test_base_prompt_is_workflow_review_not_code_review(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -247,11 +249,14 @@ class TestPersonaPromptSelection(unittest.TestCase):
         packet = source_context.build_stop_packet(
             task_anchor="修正登入錯誤",
             last_assistant_message="已完成",
+            task_sources="ISSUE.md\n登入逾時時不得遺失 session",
             agentcam_evidence="## Risk Flags\n- HIGH",
         )
 
         self.assertIn("證據封包", base_prompt)
         self.assertNotIn("最近一小段對話", base_prompt)
+        self.assertIn("[task request]", packet)
+        self.assertIn("[referenced task sources]", packet)
         self.assertIn("[agentcam evidence]", base_prompt)
         self.assertNotIn("[agentcam report]", base_prompt)
         self.assertIn("[agentcam evidence]", packet)
@@ -301,79 +306,110 @@ class TestSourceContext(unittest.TestCase):
         self.assertIn("PROMPT_TAIL", state["task_anchor"])
         self.assertEqual(state["transcript_offset"], expected_offset)
 
+    def test_layered_evidence_uses_one_cross_section_chronology(self):
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            session = SessionRef("codex_cli", "chronology")
+            storage.start_turn(root, session, "修正目前失敗")
+            storage.record_turn_evidence(
+                root, session, category="failure", record="pytest: 1 failed"
+            )
+            storage.record_turn_evidence(
+                root, session, category="change", record="auth.py changed"
+            )
+            state = storage.record_turn_evidence(
+                root, session, category="verification", record="pytest: 8 passed"
+            )
+
+        self.assertEqual(state["evidence_seq"], 3)
+        self.assertIn("[evidence #1]", state["failure_history"])
+        self.assertIn("[evidence #2]", state["change_evidence"])
+        self.assertIn("[evidence #3]", state["verification_evidence"])
+
     def test_checkpoint_packet_carries_bounded_research_state(self):
         packet = self.source.build_checkpoint_packet(
             task_anchor="修正登入測試",
             event_context="reason: test-fail\nfailure: 2 failed",
-            assistant_context="正在調整 auth.py",
-            workflow_context="pytest ×3；同一個失敗解釋反覆出現",
-            tool_evidence="pytest: 2 failed；working tree 維持 14 行變動",
+            task_sources="ISSUE.md\n逾時時仍應保留 session",
+            change_evidence="auth.py 修改 14 行",
+            verification_evidence="pytest: 8 passed",
+            failure_history="pytest: 2 failed",
         )
 
-        self.assertIn("[task anchor]", packet)
+        self.assertIn("[task request]", packet)
         self.assertIn("修正登入測試", packet)
-        self.assertIn("[current bottleneck model]", packet)
-        self.assertIn("正在調整 auth.py", packet)
-        self.assertIn("[repeated explanation and workflow evidence]", packet)
-        self.assertIn("pytest ×3", packet)
-        self.assertIn("[failed or no-change mechanisms]", packet)
-        self.assertIn("維持 14 行變動", packet)
-        self.assertIn("[unresolved contradiction]", packet)
+        self.assertIn("[referenced task sources]", packet)
+        self.assertIn("逾時時仍應保留 session", packet)
+        self.assertIn("[checkpoint event]", packet)
+        self.assertNotIn("[workflow recurrence]", packet)
+        self.assertIn("[change evidence]", packet)
+        self.assertIn("auth.py 修改 14 行", packet)
+        self.assertIn("[verification evidence]", packet)
+        self.assertIn("8 passed", packet)
+        self.assertIn("[failure history]", packet)
         self.assertIn("2 failed", packet)
+        self.assertNotIn("正在調整 auth.py", packet)
         self.assertNotIn("[transcript", packet)
 
-    def test_checkpoint_progress_summary_marks_repetition_failure_and_no_change(self):
-        progress = {
-            "recent": [
-                {
-                    "event_seq": 1,
-                    "tool": "shell_command",
-                    "command_family": "python verify.py",
-                    "failed": False,
-                    "mutating": True,
-                    "changed_lines": 14,
-                },
-                {
-                    "event_seq": 2,
-                    "tool": "shell_command",
-                    "command_family": "python verify.py",
-                    "failed": True,
-                    "mutating": True,
-                    "changed_lines": 14,
-                },
-                {
-                    "event_seq": 3,
-                    "tool": "shell_command",
-                    "command_family": "python verify.py",
-                    "failed": False,
-                    "mutating": True,
-                    "changed_lines": 14,
-                },
-            ]
-        }
+    def test_explicit_referenced_task_source_is_promoted_without_navigation_noise(self):
+        captured = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"cmd": "sed -n '1,220p' ISSUE.md"},
+            {"content": "# Issue\nPreserve the old positional API."},
+        )
+        ignored = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"cmd": "rg -n BaseConstraint django"},
+            {"content": "django/core/constraints.py:10"},
+        )
+        poisoned_listing = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"cmd": "pwd; Get-ChildItem ISSUE.md"},
+            {"content": "C:/repo\nISSUE.md"},
+        )
+        similarly_named_file = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"cmd": "cat NOTISSUE.md"},
+            {"content": "unrelated"},
+        )
+        direct_read = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"file_path": "C:/repo/ISSUE.md"},
+            {"content": "# Issue\nPreserve the public contract."},
+        )
 
-        summary = self.source.summarize_checkpoint_progress(progress)
-
-        self.assertIn("python verify.py ×3", summary)
-        self.assertIn("#2", summary)
-        self.assertIn("failed", summary)
-        self.assertIn("no changed-line movement", summary)
+        self.assertEqual(captured[0], "ISSUE.md")
+        self.assertIn("Preserve the old positional API", captured[1])
+        self.assertIsNone(ignored)
+        self.assertIsNone(poisoned_listing)
+        self.assertIsNone(similarly_named_file)
+        self.assertEqual(direct_read[0], "ISSUE.md")
+        self.assertIn("Preserve the public contract", direct_read[1])
 
     def test_stop_packet_separates_claim_from_objective_evidence(self):
         packet = self.source.build_stop_packet(
             task_anchor="只修目前的 bug",
             last_assistant_message="已完成並通過測試",
-            tool_evidence="Exit code 1\n1 failed",
+            task_sources="ISSUE.md\n舊呼叫方式必須維持",
+            change_evidence="新增 violation_error_code",
+            verification_evidence="128 tests passed",
+            failure_history="舊位置參數尚未驗證",
             agentcam_evidence="## Risk Flags\n| HIGH | auth.py |",
         )
 
-        self.assertIn("[task anchor]", packet)
+        self.assertIn("[task request]", packet)
+        self.assertIn("[referenced task sources]", packet)
         self.assertIn("[agent final claim]", packet)
-        self.assertIn("[tool evidence]", packet)
+        self.assertIn("[change evidence]", packet)
+        self.assertIn("[verification evidence]", packet)
+        self.assertIn("[failure history]", packet)
         self.assertIn("[agentcam evidence]", packet)
         self.assertLess(
+            packet.index("[failure history]"),
             packet.index("[agent final claim]"),
-            packet.index("[tool evidence]"),
         )
 
     def test_agentcam_extractor_keeps_only_named_evidence_sections(self):
@@ -431,7 +467,7 @@ class TestCheckpointClassification(unittest.TestCase):
         result = self.classify(hook)
 
         self.assertEqual(result["reason"], "test-fail")
-        self.assertIn("python -m pytest", result["context"])
+        self.assertNotIn("python -m pytest", result["context"])
         self.assertIn("2 failed", result["context"])
 
     def test_test_failure_text_on_success_event_is_test_fail(self):
@@ -548,35 +584,45 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.runtime_patch.stop()
         self.tmpdir.cleanup()
 
-    def test_same_checkpoint_fingerprint_is_claimed_once(self):
+    def test_same_review_identity_is_claimed_once(self):
         from masters_nudge import storage
         from masters_nudge.contracts import SessionRef
 
         session = SessionRef("claude_code", "session-1")
-        claimed = storage.claim_checkpoint(
-            self.settings.paths.data_dir, session, "same-fingerprint"
+        claimed = storage.claim_review_attempt(
+            self.settings.paths.data_dir, session, "checkpoint", "same-fingerprint"
         )
-        claimed_again = storage.claim_checkpoint(
-            self.settings.paths.data_dir, session, "same-fingerprint"
+        claimed_again = storage.claim_review_attempt(
+            self.settings.paths.data_dir, session, "checkpoint", "same-fingerprint"
         )
 
         self.assertTrue(claimed)
         self.assertFalse(claimed_again)
 
-    def test_release_allows_retry_after_reviewer_failure(self):
+    def test_terminal_reviewer_failure_does_not_retry_automatically(self):
         from masters_nudge import storage
         from masters_nudge.contracts import SessionRef
 
         session = SessionRef("claude_code", "session-1")
-        self.assertTrue(
-            storage.claim_checkpoint(self.settings.paths.data_dir, session, "retry-me")
+        token = storage.claim_review_attempt(
+            self.settings.paths.data_dir, session, "checkpoint", "retry-me"
         )
-        storage.release_checkpoint(self.settings.paths.data_dir, session, "retry-me")
-        self.assertTrue(
-            storage.claim_checkpoint(self.settings.paths.data_dir, session, "retry-me")
+        storage.finish_review_attempt(
+            self.settings.paths.data_dir,
+            session,
+            "checkpoint",
+            "retry-me",
+            token,
+            "error",
+        )
+        retry = storage.claim_review_attempt(
+            self.settings.paths.data_dir, session, "checkpoint", "retry-me"
         )
 
-    def test_output_is_nudge_only_additional_context(self):
+        self.assertTrue(token)
+        self.assertFalse(retry)
+
+    def test_output_is_labeled_nudge_additional_context(self):
         result = self.checkpoint.build_hook_output(
             "PostToolUseFailure", "先確認失敗根因。"
         )
@@ -587,14 +633,14 @@ class TestCheckpointDelivery(unittest.TestCase):
         )
         self.assertEqual(
             result["hookSpecificOutput"]["additionalContext"],
-            "先確認失敗根因。",
+            "獨立第二意見：\n先確認失敗根因。",
         )
         serialized = json.dumps(result, ensure_ascii=False)
         self.assertNotIn('"decision"', serialized)
         self.assertNotIn('"continue"', serialized)
         self.assertNotIn('"systemMessage"', serialized)
 
-    def test_reviewer_failure_returns_no_output_and_releases_claim(self):
+    def test_reviewer_failure_returns_no_output_and_closes_attempt(self):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
@@ -619,10 +665,16 @@ class TestCheckpointDelivery(unittest.TestCase):
             self.checkpoint.normalize_tool_event(hook)
         )
 
-        self.assertTrue(
-            storage.claim_checkpoint(
+        session = SessionRef("claude_code", "session-1")
+        attempts = storage.read_review_attempts(
+            self.settings.paths.data_dir, session
+        )
+        self.assertEqual(attempts[0]["status"], "error")
+        self.assertFalse(
+            storage.claim_review_attempt(
                 self.settings.paths.data_dir,
-                SessionRef("claude_code", "session-1"),
+                session,
+                "checkpoint",
                 event["fingerprint"],
             )
         )
@@ -675,8 +727,8 @@ class TestCheckpointDelivery(unittest.TestCase):
             mock.patch.object(
                 self.checkpoint.claude_adapter,
                 "read_latest_assistant_text",
-                return_value="正在檢查路徑",
-            ),
+                side_effect=AssertionError("assistant feedback must stay out of provider input"),
+            ) as assistant_reader,
             mock.patch.object(
                 prompting,
                 "build_system_prompt",
@@ -694,7 +746,6 @@ class TestCheckpointDelivery(unittest.TestCase):
             mock.patch("masters_nudge.core.review_telemetry.record_review") as telemetry,
         ):
             result = self.checkpoint.review_checkpoint(
-                hook,
                 event,
                 session=self.checkpoint.claude_adapter.session_from_hook(hook),
             )
@@ -703,8 +754,9 @@ class TestCheckpointDelivery(unittest.TestCase):
         payload = dispatch.call_args.args[2]
         self.assertIn("只修路徑問題", payload)
         self.assertIn("missing file", payload)
-        self.assertIn("正在檢查路徑", payload)
+        self.assertNotIn("正在檢查路徑", payload)
         self.assertNotIn("[transcript", payload)
+        assistant_reader.assert_not_called()
         telemetry.assert_called_once()
         telemetry_record = telemetry.call_args.args[1]
         self.assertEqual(telemetry_record["kind"], "checkpoint")
@@ -735,282 +787,20 @@ class TestTranscriptParser(unittest.TestCase):
 
     def test_parse_user_string_content(self):
         result = self.buddy.parse_transcript_entry(FIXTURE_LINES[0])
-        self.assertEqual(result, ("user", "幫我修 bug", []))
+        self.assertEqual(result, ("user", "幫我修 bug"))
 
     def test_parse_assistant_drops_tool_use(self):
         # tool_use blocks are now silently dropped (not turned into [tool_use: X])
         result = self.buddy.parse_transcript_entry(FIXTURE_LINES[1])
-        self.assertEqual(result, ("claude", "我來看看程式碼", []))
+        self.assertEqual(result, ("claude", "我來看看程式碼"))
 
     def test_parse_assistant_string_content(self):
         result = self.buddy.parse_transcript_entry(FIXTURE_LINES[3])
-        self.assertEqual(result, ("claude", "修好了", []))
+        self.assertEqual(result, ("claude", "修好了"))
 
     def test_parse_system_returns_none(self):
         result = self.buddy.parse_transcript_entry(FIXTURE_LINES[2])
         self.assertIsNone(result)
-
-    # tool_result content is now extracted into the third tuple element,
-    # not merged into the text portion.
-
-    def _tool_result_entry(self, content):
-        block = {"type": "tool_result", "content": content}
-        return {
-            "type": "user",
-            "message": {"role": "user", "content": [block]},
-        }
-
-    def test_parse_tool_result_string_content(self):
-        prefix, text, tool_results = self.buddy.parse_transcript_entry(
-            self._tool_result_entry("OK done")
-        )
-        self.assertEqual(prefix, "user")
-        self.assertEqual(text, "")
-        self.assertEqual(tool_results, ["OK done"])
-
-    def test_parse_tool_result_list_of_text_blocks(self):
-        _, text, tool_results = self.buddy.parse_transcript_entry(
-            self._tool_result_entry([
-                {"type": "text", "text": "line one"},
-                {"type": "text", "text": "line two"},
-            ])
-        )
-        self.assertEqual(text, "")
-        self.assertEqual(tool_results, ["line one\nline two"])
-
-    def test_parse_text_and_tool_result_in_same_entry(self):
-        entry = {
-            "type": "user",
-            "message": {"role": "user", "content": [
-                {"type": "text", "text": "see below"},
-                {"type": "tool_result", "content": "RESULT"},
-            ]},
-        }
-        prefix, text, tool_results = self.buddy.parse_transcript_entry(entry)
-        self.assertEqual(prefix, "user")
-        self.assertEqual(text, "see below")
-        self.assertEqual(tool_results, ["RESULT"])
-
-    # ── read_recent_transcript ────────────────────────────────────────
-
-    def _write_jsonl(self, entries):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        for e in entries:
-            fd.write(json.dumps(e, ensure_ascii=False) + "\n")
-        fd.close()
-        return fd.name
-
-    def test_read_recent_transcript_uses_labeled_fallback_format(self):
-        path = self._write_jsonl(FIXTURE_LINES)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # New format: "user: ..." / "claude: ..." prefix, single newline join
-            self.assertIn("user: 幫我修 bug", result)
-            self.assertIn("claude: 我來看看程式碼", result)
-            self.assertIn("claude: 修好了", result)
-            # system entry should still be absent
-            self.assertNotIn("ignored", result)
-            # tool_use placeholder must be gone
-            self.assertNotIn("tool_use", result)
-            # Transcript section must be explicitly bounded for the reviewer.
-            # the boundary between conversation and other payload pieces.
-            self.assertIn("[transcript", result)
-            self.assertIn("[end transcript]", result)
-            # No tool_result in fixture, so no tool output block
-            self.assertNotIn("[tool output", result)
-            self.assertNotIn("[end tool output]", result)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_caps_at_char_budget(self):
-        # Five messages each filled to PER_MESSAGE_MAX_CHARS — the total
-        # comfortably exceeds TRANSCRIPT_CHAR_BUDGET so the budget walk
-        # must drop or partially truncate the oldest ones. Newest entries
-        # must be kept in full.
-        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
-        entries = [
-            {
-                "type": "user",
-                "message": {
-                    "role": "user",
-                    # Each message is uniquely tagged at head AND tail so we
-                    # can tell which ones survived and whether they were cut.
-                    "content": f"HEAD-{i:02d}-" + ("X" * (per_msg - 14)) + f"-TAIL-{i:02d}",
-                },
-            }
-            for i in range(5)
-        ]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # Newest message (i=4) must survive complete — TAIL-04 is the
-            # last 7 chars so it's always preserved.
-            self.assertIn("TAIL-04", result)
-            # Oldest message (i=0) cannot fit — its TAIL-00 must be absent.
-            self.assertNotIn("TAIL-00", result)
-            # Sum of kept user lines must respect the budget.
-            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
-            total = sum(len(line[len("user: "):]) for line in user_lines)
-            self.assertLessEqual(total, self.buddy.TRANSCRIPT_CHAR_BUDGET)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_per_message_cap(self):
-        # A single message longer than PER_MESSAGE_MAX_CHARS is tail-
-        # truncated and marked with "…". Short messages pass through
-        # untouched (covered by test_short_message_not_marked).
-        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
-        long_text = "HEAD" + ("A" * (per_msg + 200)) + "TAIL"
-        entries = [{"type": "user", "message": {"role": "user", "content": long_text}}]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # HEAD is at offset 0 of a >per_msg-char message — must be dropped.
-            self.assertNotIn("HEAD", result)
-            # TAIL is the last 4 chars — must survive.
-            self.assertIn("TAIL", result)
-            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
-            self.assertEqual(len(user_lines), 1)
-            payload = user_lines[0][len("user: "):]
-            self.assertTrue(
-                payload.startswith("…"),
-                f"expected '…' marker at start, got: {payload[:20]!r}",
-            )
-            # per_msg content chars + 1 marker char = per_msg + 1
-            self.assertLessEqual(len(payload), per_msg + 1)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_oldest_entry_partially_truncated(self):
-        # When the next-oldest entry doesn't fit whole but enough budget
-        # remains (>= MIN_REMAINING_TO_INCLUDE), it should be tail-cut into
-        # the leftover space rather than dropped outright.
-        budget = self.buddy.TRANSCRIPT_CHAR_BUDGET
-        per_msg = self.buddy.PER_MESSAGE_MAX_CHARS
-        # First entry fills most of the budget; second entry can't fit in
-        # full but should slot into the leftover slice.
-        big = "X" * per_msg            # will be kept whole (per_msg <= budget)
-        older = "OLDER_HEAD" + ("Y" * per_msg) + "OLDER_TAIL"
-        entries = [
-            {"type": "user", "message": {"role": "user", "content": older}},
-            {"type": "user", "message": {"role": "user", "content": big}},
-        ]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # Newest (big) survives intact.
-            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
-            self.assertEqual(len(user_lines), 2)
-            # Older entry should appear truncated: head dropped, tail kept,
-            # with the "…" marker.
-            older_line = user_lines[0][len("user: "):]
-            self.assertTrue(older_line.startswith("…"))
-            self.assertIn("OLDER_TAIL", older_line)
-            self.assertNotIn("OLDER_HEAD", older_line)
-            # Total transcript chars must still respect budget.
-            total = sum(len(line[len("user: "):]) for line in user_lines)
-            self.assertLessEqual(total, budget)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_short_message_not_marked(self):
-        # Messages that fit inside the cap should NOT get a "…" marker on
-        # their own line. (The framing header may legitimately mention "…",
-        # so check only the user/claude line itself.)
-        entries = [{"type": "user", "message": {"role": "user", "content": "短訊息"}}]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            user_lines = [line for line in result.splitlines() if line.startswith("user: ")]
-            self.assertEqual(user_lines, ["user: 短訊息"])
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_tool_output_concatenated(self):
-        # Two separate tool_results inside the legacy character-budget window.
-        entries = [
-            {"type": "user", "message": {"role": "user", "content": [
-                {"type": "tool_result", "content": "AAA"},
-            ]}},
-            {"type": "user", "message": {"role": "user", "content": [
-                {"type": "tool_result", "content": "BBB"},
-            ]}},
-        ]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # Tool output section is explicitly bounded.
-            self.assertIn("[tool output", result)
-            self.assertIn("[end tool output]", result)
-            self.assertIn("AAA", result)
-            self.assertIn("BBB", result)
-            # The closing [end tool output] tag goes last.
-            self.assertTrue(result.rstrip().endswith("[end tool output]"))
-            # AAA appears before BBB (encounter order preserved).
-            self.assertLess(result.index("AAA"), result.index("BBB"))
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_tool_output_tail_capped(self):
-        # Build a tool_result longer than TOOL_OUTPUT_TAIL_CHARS so the
-        # head is guaranteed to be cut off, then assert the payload between
-        # the framing tags doesn't exceed the cap. Reads the constant from
-        # buddy directly so this test tracks future cap changes.
-        cap = self.buddy.TOOL_OUTPUT_TAIL_CHARS
-        head = "HEAD_MARKER"
-        tail = "TAIL_MARKER"
-        # 500 chars past the cap is plenty to force truncation.
-        long = head + ("x" * (cap + 500)) + tail
-        entries = [{"type": "user", "message": {"role": "user", "content": [
-            {"type": "tool_result", "content": long},
-        ]}}]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            # Tail-truncation keeps the end, drops the head
-            self.assertIn(tail, result)
-            self.assertNotIn(head, result)
-            # The tool output payload (between the opening and closing tags)
-            # is at most TOOL_OUTPUT_TAIL_CHARS.
-            lines = result.splitlines()
-            opening_idx = next(
-                i for i, line in enumerate(lines) if line.startswith("[tool output")
-            )
-            closing_idx = lines.index("[end tool output]")
-            payload = "\n".join(lines[opening_idx + 1:closing_idx])
-            self.assertLessEqual(len(payload), cap)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_tool_evidence_respects_prompt_time_offset(self):
-        fd = tempfile.NamedTemporaryFile(
-            mode="w", suffix=".jsonl", delete=False, encoding="utf-8"
-        )
-        fd.write(json.dumps({
-            "type": "user",
-            "message": {"role": "user", "content": [
-                {"type": "tool_result", "content": "OLD_RESULT"},
-            ]},
-        }) + "\n")
-        fd.flush()
-        offset = fd.tell()
-        fd.write(json.dumps({
-            "type": "user",
-            "message": {"role": "user", "content": [
-                {"type": "tool_result", "content": "NEW_RESULT"},
-            ]},
-        }) + "\n")
-        fd.close()
-
-        try:
-            result = self.buddy.read_recent_tool_evidence(fd.name, offset)
-        finally:
-            os.unlink(fd.name)
-
-        self.assertIn("NEW_RESULT", result)
-        self.assertNotIn("OLD_RESULT", result)
 
     def test_stop_source_packet_uses_task_claim_and_current_turn_evidence(self):
         from masters_nudge import storage
@@ -1024,56 +814,36 @@ class TestTranscriptParser(unittest.TestCase):
             mock.patch.object(
                 storage,
                 "load_turn_state",
-                return_value={"task_anchor": "只修登入錯誤", "transcript_offset": 123},
+                return_value={
+                    "task_anchor": "只修登入錯誤",
+                    "transcript_offset": 123,
+                    "task_sources": {"ISSUE.md": "逾時時必須保留 session"},
+                    "change_evidence": "auth.py changed",
+                    "verification_evidence": "8 passed",
+                    "failure_history": "Exit code 1\n1 failed",
+                },
             ),
             mock.patch.object(
                 self.buddy,
-                "read_recent_tool_evidence",
-                return_value="Exit code 1\n1 failed",
-            ) as tool_evidence,
+                "_read_transcript_entries",
+                side_effect=AssertionError("tool transcript must stay out of packet"),
+            ) as transcript_reader,
         ):
             source = self.buddy.build_stop_source_context(
                 hook,
                 "## Risk Flags\n| HIGH | auth.py |\n\n## Summary\nignore me",
                 session=self.buddy.session_from_hook(hook),
             )
-            result = source["packet"]
+            result = source
 
-        tool_evidence.assert_called_once_with("/session.jsonl", 123)
+        transcript_reader.assert_not_called()
         self.assertIn("只修登入錯誤", result)
+        self.assertIn("逾時時必須保留 session", result)
         self.assertIn("已完成並通過測試", result)
+        self.assertIn("8 passed", result)
         self.assertIn("1 failed", result)
         self.assertIn("Risk Flags", result)
         self.assertNotIn("ignore me", result)
-
-    def test_read_recent_transcript_skips_empty_message_lines(self):
-        # A tool_result-only entry has empty text after parsing. Its
-        # `prefix:` line should be suppressed (no naked "user: " in output),
-        # but the tool_result content still flows into the tool output block.
-        entries = [
-            {"type": "user", "message": {"role": "user", "content": "real text"}},
-            {"type": "user", "message": {"role": "user", "content": [
-                {"type": "tool_result", "content": "TOOL_DATA"},
-            ]}},
-        ]
-        path = self._write_jsonl(entries)
-        try:
-            result = self.buddy.read_recent_transcript(path)
-            self.assertIn("user: real text", result)
-            # No naked "user: " line for the tool_result-only entry
-            self.assertNotIn("user: \n", result)
-            self.assertFalse(result.startswith("user: \n") or "\nuser: \n" in result)
-            # tool_result content still surfaces in the bounded tool output block
-            self.assertIn("[tool output", result)
-            self.assertIn("[end tool output]", result)
-            self.assertIn("TOOL_DATA", result)
-        finally:
-            os.unlink(path)
-
-    def test_read_recent_transcript_missing_file(self):
-        result = self.buddy.read_recent_transcript("/nonexistent/path.jsonl")
-        self.assertEqual(result, "")
-
 
 # ── 6. Sanitizer ─────────────────────────────────────────────────────
 
@@ -1390,25 +1160,23 @@ class TestLensRouter(unittest.TestCase):
         self.assertEqual(route.effective_lens, "beck")
         self.assertEqual(route.override_lens, "")
 
-    def test_recent_injected_personas_are_skipped_for_two_deliveries(self):
+    def test_route_keeps_the_best_specialist_across_repeated_calls(self):
         import lens_router
         import persona_config
 
         persona_config.save_stage(self.tmpdir, "build")
-        route = lens_router.resolve_review_route(
-            self.tmpdir,
-            "retry duplicate delivery; benchmark latency 20 ms",
-            environ={},
-            checkpoint=True,
-            injected_personas=("lamport",),
-        )
-        self.assertEqual(route.effective_lens, "carmack")
-        self.assertEqual(
-            route.suppression_reason,
-            "injected-persona-cooldown:lamport",
-        )
+        routes = [
+            lens_router.resolve_review_route(
+                self.tmpdir,
+                "retry duplicate delivery",
+                environ={},
+                checkpoint=True,
+            )
+            for _ in range(3)
+        ]
+        self.assertEqual([route.effective_lens for route in routes], ["lamport"] * 3)
 
-    def test_route_calls_without_successful_delivery_do_not_advance_cooldown(self):
+    def test_repeated_route_calls_keep_the_best_specialist(self):
         import persona_config
 
         persona_config.save_stage(self.tmpdir, "build")
@@ -1505,7 +1273,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertEqual(window.last_offset, 0)
         window._read_new.assert_called_once_with()
 
-    def test_window_shows_queued_then_injected_delivery_state(self):
+    def test_window_shows_queued_emitted_then_injected_delivery_state(self):
         import buddy_window
 
         with tempfile.TemporaryDirectory() as raw:
@@ -1538,7 +1306,27 @@ class TestFloatingWindowLayout(unittest.TestCase):
 
             buddy_window.BuddyWindow._read_new(window)
             self.assertEqual(window.last_reaction_ts, "2026-08-16T10:00:00.123456")
-            window.ts_label.config.assert_called_with(text="10:00:00 · 待注入")
+            window.ts_label.config.assert_called_with(text="10:00:00 · 待送出")
+
+            with log.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "ts": "2026-08-16T10:00:03.123456",
+                            "kind": "delivery_receipt",
+                            "reaction_ts": "2026-08-16T10:00:00.123456",
+                            "delivery_status": "emitted",
+                            "delivered_at": "2026-08-16T10:00:03.123456",
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+
+            buddy_window.BuddyWindow._read_new(window)
+            window.ts_label.config.assert_called_with(
+                text="10:00:03 · 已送出，待確認"
+            )
 
             with log.open("a", encoding="utf-8") as handle:
                 handle.write(
@@ -1564,7 +1352,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as raw:
             log = Path(raw) / "codex_cli--s.log"
-            timeout_message = "Reviewer 逾時（120 秒）；本輪沒有 Nudge。"
+            timeout_message = "Reviewer 逾時（90 秒）；本輪沒有 Nudge。"
             log.write_text(
                 json.dumps(
                     {
@@ -1628,7 +1416,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
             "self.review_frames_remaining = len(self.review_frames)", source
         )
 
-    def test_six_lenses_have_distinct_functional_badges_with_general_fallback(self):
+    def test_six_lenses_have_distinct_functional_badges_with_unknown_fallback(self):
         import buddy_window
 
         expected_names = {
@@ -1648,14 +1436,8 @@ class TestFloatingWindowLayout(unittest.TestCase):
                 colors.add(color.lower())
 
         self.assertEqual(len(colors), len(expected_names))
-        self.assertEqual(
-            buddy_window.lens_badge("unknown"),
-            buddy_window.lens_badge("general"),
-        )
-        self.assertEqual(
-            buddy_window.lens_badge(None)[0],
-            "● General · 工作流與證據",
-        )
+        self.assertEqual(buddy_window.lens_badge("unknown")[0], "● 未記錄")
+        self.assertEqual(buddy_window.lens_badge(None)[0], "● 未記錄")
 
     def test_window_grows_for_a_52_character_reaction(self):
         import buddy_window
@@ -1673,7 +1455,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
 
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
         self.assertGreaterEqual(buddy_window.BUBBLE_WRAP_LENGTH, 300)
-        self.assertIn('entry.get("persona", "general")', source)
+        self.assertIn('entry.get("persona", "")', source)
         self.assertIn("self._set_lens_badge(persona)", source)
         self.assertIn("self._resize_for_reaction(reaction)", source)
 
@@ -1706,35 +1488,6 @@ class TestInjectState(unittest.TestCase):
         self.runtime_patch.stop()
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def test_software_context_is_the_unlabeled_question_only(self):
-        reaction = "自動測試通過後，哪項證據仍缺少乾淨安裝驗證？"
-        context = self.inject.build_context_text(
-            {
-                "ts": "2026-08-13T12:00:00",
-                "kind": "review",
-                "reason": "stop",
-                "effective_lens": "fowler",
-            },
-            reaction,
-        )
-
-        self.assertEqual(context, reaction)
-        self.assertNotIn("Martin Fowler", context)
-        self.assertNotIn("Masters", context)
-
-    def test_legacy_persona_field_is_not_exposed_in_context(self):
-        context = self.inject.build_context_text(
-            {
-                "ts": "2026-08-13T12:00:00",
-                "kind": "review",
-                "persona": "linus",
-            },
-            "完成判斷目前依據哪一項乾淨安裝證據？",
-        )
-
-        self.assertEqual("完成判斷目前依據哪一項乾淨安裝證據？", context)
-        self.assertNotIn("Linus", context)
 
     def test_main_saves_task_anchor_even_when_no_buddy_reaction_is_pending(self):
         from masters_nudge import storage

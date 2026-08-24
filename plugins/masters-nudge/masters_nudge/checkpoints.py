@@ -40,9 +40,17 @@ GOAL_TOOLS = {"create_goal", "update_goal"}
 MEANINGFUL_TOOL_RE = re.compile(
     r"(?:apply_patch|write|edit|test|verify|benchmark|build|plan|goal)", re.IGNORECASE
 )
-SEMANTIC_MUTATION_RE = re.compile(r"(?:apply_patch|write|edit)", re.IGNORECASE)
+SEMANTIC_MUTATION_RE = re.compile(
+    r"(?:\bapply_patch\b|\bwrite\b|\bedit\b)", re.IGNORECASE
+)
 SEMANTIC_VALIDATION_RE = re.compile(
-    r"(?:test|verify|benchmark|build|pytest|unittest|vitest|jest|cargo|dotnet)",
+    r"\b(?:test|verify|benchmark|build|pytest|unittest|vitest|jest|cargo|dotnet)\b"
+    r"|(?<!\w)(?:test|verify|benchmark|build)(?=[_.-])",
+    re.IGNORECASE,
+)
+READ_NAVIGATION_RE = re.compile(
+    r"(?:^|\b)(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|"
+    r"read|open|view|search)(?:\b|$)",
     re.IGNORECASE,
 )
 
@@ -176,6 +184,43 @@ def goal_transition(event: ToolCompleted) -> tuple[str, str]:
     return (status if status in {"complete", "blocked"} else ""), ""
 
 
+def evidence_category(event: ToolCompleted) -> str:
+    """Classify durable evidence; routine navigation intentionally stays out."""
+    output = compact_json(event.tool_output)
+    command = _command(event)
+    semantic_text = f"{event.tool_name} {command}"
+    if (event.failure_known and event.failed) or TEST_FAILURE_RE.search(output):
+        return "failure"
+    if READ_NAVIGATION_RE.search(semantic_text):
+        return ""
+    if SEMANTIC_MUTATION_RE.search(semantic_text):
+        return "change"
+    if TEST_COMMAND_RE.search(command) or SEMANTIC_VALIDATION_RE.search(
+        semantic_text
+    ):
+        return "verification"
+    return ""
+
+
+def render_evidence_record(event: ToolCompleted) -> str:
+    """Render semantic evidence without exposing tool identity or commands."""
+    category = evidence_category(event)
+    output = compact_json(event.tool_output)
+    if category == "change":
+        change = ""
+        if "apply_patch" in event.tool_name.lower():
+            raw = _command(event).strip() or compact_json(event.tool_input)
+            marker = raw.find("*** Begin Patch")
+            if marker >= 0:
+                change = raw[marker:]
+        parts = [f"change:\n{change}"] if change else []
+        if output:
+            parts.append(f"result:\n{output}")
+        return "\n".join(parts)
+    label = "failure" if category == "failure" else "verification"
+    return f"{label}:\n{output}" if output else ""
+
+
 def classify_strategy(
     progress: dict[str, Any],
     *,
@@ -184,7 +229,11 @@ def classify_strategy(
     recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
     event_seq = int(progress.get("event_seq") or 0)
     last_seq = int(progress.get("last_strategy_event_seq") or 0)
-    since = [item for item in recent if int(item.get("event_seq") or 0) > last_seq]
+    since = [
+        item
+        for item in recent
+        if int(item.get("event_seq") or 0) > last_seq and item.get("meaningful")
+    ]
     if not since:
         return None
     latest_transition = str(since[-1].get("goal_transition") or "")
@@ -203,33 +252,12 @@ def classify_strategy(
             changed_line_count is not None
             and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
         )
-        mutation_indexes = [
-            index
-            for index, item in enumerate(since)
-            if SEMANTIC_MUTATION_RE.search(
-                f"{item.get('tool') or ''} {item.get('command_family') or ''}"
-            )
-        ]
-        validation_indexes = [
-            index
-            for index, item in enumerate(since)
-            if SEMANTIC_VALIDATION_RE.search(
-                f"{item.get('tool') or ''} {item.get('command_family') or ''}"
-            )
-        ]
-        evidence_cycle = any(
-            mutation_index < validation_index
-            for mutation_index in mutation_indexes
-            for validation_index in validation_indexes
-        )
         if repeated:
             reason, trigger = "strategy-review", "repeated-command-family"
         elif len(failures) >= 2:
             reason, trigger = "strategy-review", "repeated-failure-family"
         elif diff_growth:
             reason, trigger = "strategy-review", "diff-growth"
-        elif evidence_cycle:
-            reason, trigger = "strategy-review", "evidence-cycle-change"
         else:
             return None
     lines = [
@@ -237,18 +265,6 @@ def classify_strategy(
         f"trigger: {trigger}",
         f"event_seq: {event_seq}",
     ]
-    objective = str(progress.get("goal_objective") or "")
-    if objective:
-        lines.append(f"goal objective: {objective}")
-    lines.append("recent workflow:")
-    for item in since[-8:]:
-        summary = str(item.get("command_family") or item.get("tool") or "tool")
-        flags = []
-        if item.get("failed"):
-            flags.append("failed")
-        if item.get("goal_transition"):
-            flags.append(f"goal={item['goal_transition']}")
-        lines.append(f"- #{item.get('event_seq')} {summary} {' '.join(flags)}".rstrip())
     return {
         "reason": reason,
         "trigger": trigger,
@@ -270,8 +286,6 @@ def _failure_checkpoint(
         "reason": reason,
         "context": (
             f"reason: {reason}\n"
-            f"tool: {event.tool_name}\n"
-            f"input: {compact_json(event.tool_input)}\n"
             f"{evidence_label}: {output}"
         ),
         "fingerprint": stable_fingerprint(reason, payload),
@@ -315,8 +329,6 @@ def classify_tool(
         "reason": reason,
         "context": (
             f"reason: {reason}\n"
-            f"tool: {event.tool_name}\n"
-            f"input: {compact_json(event.tool_input)}\n"
             f"working tree: 偵測到至少 {changed_line_count} 行變動"
         ),
         "fingerprint": stable_fingerprint(reason, {}),
