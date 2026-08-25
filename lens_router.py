@@ -49,9 +49,19 @@ BECK_WORKFLOW_RE = re.compile(
     r"重複(?:測試|驗證|命令)|沒有新回饋|回饋迴路",
     re.IGNORECASE,
 )
-JEFF_GOAL_RE = re.compile(
-    r"local proxy|acceptance criteria|goal alignment|局部(?:代理|指標|成果)|"
-    r"驗收條件|使用者結果|目標對齊",
+JEFF_CAUSE_RE = re.compile(
+    r"source of truth|ownership|upstream constraint|system boundary|"
+    r"資料來源|狀態擁有者|上游限制|系統邊界",
+    re.IGNORECASE,
+)
+JEFF_COMPENSATION_RE = re.compile(
+    r"downstream|fallback|bypass|compensation|synchroni[sz]|"
+    r"下游|備援|旁路|補償|同步層",
+    re.IGNORECASE,
+)
+LINUS_DIRECT_RE = re.compile(
+    r"compatibility wrapper|pass[- ]through|forwarding layer|delegate\(\)|"
+    r"相容包裝|轉交層|只轉交|委派層",
     re.IGNORECASE,
 )
 LINUS_COMPLETION_RE = re.compile(
@@ -77,7 +87,7 @@ class ReviewRoute:
 
 STRUCTURED_CONCERNS = {
     "feedback-loop": ("beck", "feedback-loop-evidence"),
-    "goal-alignment": ("jeff", "goal-alignment-evidence"),
+    "system-causality": ("jeff", "system-causality-evidence"),
     "completion-boundary": ("linus", "completion-boundary-evidence"),
     "knowledge-boundary": ("fowler", "knowledge-boundary-evidence"),
     "state-ordering": ("lamport", "state-ordering-evidence"),
@@ -85,9 +95,9 @@ STRUCTURED_CONCERNS = {
 }
 
 
-def _specialist_candidates(evidence: str) -> list[tuple[str, str]]:
+def _specialist_concerns(evidence: str) -> list[str]:
     text = str(evidence or "")
-    candidates: list[tuple[str, str]] = []
+    concerns: list[str] = []
     lamport = bool(LAMPORT_STRONG_RE.search(text)) or bool(
         LAMPORT_MECHANISM_RE.search(text) and LAMPORT_FAILURE_RE.search(text)
     )
@@ -95,18 +105,24 @@ def _specialist_candidates(evidence: str) -> list[tuple[str, str]]:
         MEASUREMENT_RE.search(text) and CARMACK_COST_RE.search(text)
     )
     if lamport:
-        candidates.append(("lamport", "state-ordering-evidence"))
+        concerns.append("state-ordering")
     if carmack:
-        candidates.append(("carmack", "measured-performance-evidence"))
-    if LINUS_COMPLETION_RE.search(text):
-        candidates.append(("linus", "completion-boundary-evidence"))
-    if JEFF_GOAL_RE.search(text):
-        candidates.append(("jeff", "goal-alignment-evidence"))
+        concerns.append("measured-performance")
+    if LINUS_COMPLETION_RE.search(text) or LINUS_DIRECT_RE.search(text):
+        concerns.append("completion-boundary")
+    if JEFF_CAUSE_RE.search(text) and JEFF_COMPENSATION_RE.search(text):
+        concerns.append("system-causality")
     if FOWLER_GROWTH_RE.search(text):
-        candidates.append(("fowler", "knowledge-boundary-evidence"))
+        concerns.append("knowledge-boundary")
     if BECK_WORKFLOW_RE.search(text):
-        candidates.append(("beck", "feedback-loop-evidence"))
-    return candidates
+        concerns.append("feedback-loop")
+    return concerns
+
+
+def structured_concern_for_evidence(evidence: str) -> str:
+    """Return the first evidence-backed lens concern, if any."""
+    concerns = _specialist_concerns(evidence)
+    return concerns[0] if concerns else ""
 
 
 def resolve_review_route(
@@ -133,11 +149,10 @@ def resolve_review_route(
     structured_candidate = STRUCTURED_CONCERNS.get(str(routing_concern or ""))
     if structured_candidate is not None:
         evidence_candidates.append(structured_candidate)
-    evidence_candidates.extend(
-        candidate
-        for candidate in _specialist_candidates(evidence)
-        if candidate not in evidence_candidates
-    )
+    for concern in _specialist_concerns(evidence):
+        candidate = STRUCTURED_CONCERNS[concern]
+        if candidate not in evidence_candidates:
+            evidence_candidates.append(candidate)
     evidence_choice = evidence_candidates[0] if evidence_candidates else None
     if evidence_choice is not None:
         override, trigger = evidence_choice

@@ -14,6 +14,69 @@ MAX_REACTION_CHARS = 52
 INDEPENDENT_OPINION_LABEL = "獨立第二意見："
 RECENT_NUDGES_MAX = 3
 
+LENS_FOCUS = {
+    "jeff": "Trace upstream constraints, ownership, and downstream cost.",
+    "linus": "Trace the direct control flow, ownership, and necessary complexity.",
+    "fowler": "Trace duplicated knowledge, change spread, and its proper home.",
+    "beck": "Trace the shortest feedback path, observable behavior, and stop condition.",
+    "lamport": "Trace state, event order, invariants, and partial failure.",
+    "carmack": "Trace measured execution cost and work the machine need not do.",
+}
+
+SOFTWARE_EVIDENCE_ORDER = {
+    "jeff": (
+        "relevant_sources",
+        "relevant_changes",
+        "active_failures",
+        "verification",
+        "external_runtime_evidence",
+    ),
+    "linus": (
+        "relevant_changes",
+        "relevant_sources",
+        "active_failures",
+        "verification",
+        "external_runtime_evidence",
+    ),
+    "fowler": (
+        "relevant_sources",
+        "relevant_changes",
+        "verification",
+        "active_failures",
+        "external_runtime_evidence",
+    ),
+    "beck": (
+        "verification",
+        "active_failures",
+        "relevant_changes",
+        "relevant_sources",
+        "external_runtime_evidence",
+    ),
+    "lamport": (
+        "active_failures",
+        "verification",
+        "relevant_changes",
+        "relevant_sources",
+        "external_runtime_evidence",
+    ),
+    "carmack": (
+        "external_runtime_evidence",
+        "verification",
+        "relevant_changes",
+        "active_failures",
+        "relevant_sources",
+    ),
+}
+
+_SOFTWARE_SECTION_RE = re.compile(
+    r"(?ms)^\[software engineering evidence\]\n(.*?)\n"
+    r"\[end software engineering evidence\]"
+)
+_SOFTWARE_FIELD_RE = re.compile(
+    r"(?m)^(relevant_sources|relevant_changes|external_runtime_evidence|"
+    r"verification|active_failures):\s*$"
+)
+
 
 def delivery_text(finding: str) -> str:
     """Identify reviewer provenance without changing the stored finding."""
@@ -48,34 +111,67 @@ def build_system_prompt(
         logger(f"persona prompt read failed ({persona}): {exc}")
         return ""
 
-    heading = "工作流觀察鏡頭"
-    first_paragraph = (
-        f"這一輪借用 {personas[persona]} 的核心概念、"
-        "觀察方法與關注面向，決定如何整理證據、從哪裡看這段工作。\n"
+    persona_header = (
+        "# ATTENTION LENS\n\n"
+        f"Use {personas[persona]} only as an attention cue for selecting where to look. "
+        "The lens is not evidence, authority, role-play, or a reason to force a finding."
     )
-    final_line = "不是扮演或模仿人物，也不是增加一份 code review。\n"
-    persona_header = "".join((
-        f"# {heading}\n\n",
-        first_paragraph,
-        "下方場景中的小動作只用來啟動思考，不表示人物真的如此行動，"
-        "也不能補足 packet 缺少的證據。輸出仍只談工作，不提人物或場景。\n",
-        "觀察場景不是裝飾：先完整執行它指定的證據操作。若 packet 直接支持"
-        "該場景的專屬張力，優先由它形成 Nudge，不要改談相鄰鏡頭也能提出的"
-        "泛用問題。\n",
-        "場景只決定選哪一件事，不提供輸出素材；不要重述人物、動作或推理過程，"
-        "也不要因此增加 Nudge 字數。\n",
-        final_line,
-        "共同的證據邊界、可靠沉默、單一 Nudge 與字數規則仍然優先；"
-        "其餘由下方鏡頭決定。",
-    ))
     return f"{base_prompt.rstrip()}\n\n{persona_header}\n\n{overlay}\n"
+
+
+def lens_focus_prompt(effective_lens: str) -> str:
+    focus = LENS_FOCUS.get(str(effective_lens or "").strip().lower(), "")
+    if not focus:
+        return ""
+    return (
+        f"\n\n# LENS FOCUS\n\n{focus}\n\n"
+        "When several candidates pass the finding gate, select the one "
+        "that best matches this focus.\n"
+    )
+
+
+def _prioritize_software_evidence(source_packet: str, effective_lens: str) -> str:
+    order = SOFTWARE_EVIDENCE_ORDER.get(
+        str(effective_lens or "").strip().lower()
+    )
+    section = _SOFTWARE_SECTION_RE.search(source_packet)
+    if not order or not section:
+        return source_packet
+
+    content = section.group(1)
+    matches = list(_SOFTWARE_FIELD_RE.finditer(content))
+    if not matches:
+        return source_packet
+    blocks = {
+        match.group(1): content[
+            match.start() : matches[index + 1].start()
+            if index + 1 < len(matches)
+            else len(content)
+        ].strip()
+        for index, match in enumerate(matches)
+    }
+    ordered = [blocks[label] for label in order if label in blocks]
+    ordered.extend(
+        blocks[match.group(1)]
+        for match in matches
+        if match.group(1) not in order
+    )
+    replacement = (
+        "[software engineering evidence]\n"
+        + "\n\n".join(ordered)
+        + "\n[end software engineering evidence]"
+    )
+    return source_packet[: section.start()] + replacement + source_packet[section.end() :]
 
 
 def build_review_input(
     source_packet: str,
     recent_nudges: tuple[str, ...],
+    *,
+    effective_lens: str = "",
 ) -> str:
     """Add delivered findings only as a bounded duplicate-avoidance aid."""
+    source_packet = _prioritize_software_evidence(source_packet, effective_lens)
     findings = tuple(
         str(finding or "").strip()
         for finding in recent_nudges[-RECENT_NUDGES_MAX:]

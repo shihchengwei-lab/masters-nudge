@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -13,6 +15,17 @@ SCHEMA = HERE / "reaction-schema.json"
 
 
 class ReviewerProcessTests(unittest.TestCase):
+    def test_cli_process_delivers_input_text_to_stdin(self):
+        completed = providers._run_cli_process(
+            [sys.executable, "-c", "import sys; print(sys.stdin.read())"],
+            input_text="fixed-packet-marker",
+            environment=dict(os.environ),
+            timeout_sec=12,
+        )
+
+        self.assertEqual(0, completed.returncode)
+        self.assertEqual("fixed-packet-marker", completed.stdout.strip())
+
     def test_cleanup_does_not_skip_descendants_when_parent_just_exited(self):
         process = mock.Mock(pid=4321)
         process.poll.return_value = 1

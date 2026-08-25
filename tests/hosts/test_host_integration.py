@@ -494,8 +494,8 @@ class CodexAdapterTests(unittest.TestCase):
         request, persist, _timeout = core.calls[-1]
         self.assertTrue(persist)
         self.assertIn("token check", request.source_packet)
-        self.assertIn("[referenced task sources]", request.source_packet)
-        self.assertIn("[failure history]", request.source_packet)
+        self.assertIn("referenced_sources:", request.source_packet)
+        self.assertIn("active_failures:", request.source_packet)
         self.assertIn("已完成登入修正", request.source_packet)
         self.assertNotIn("does-not-exist", request.source_packet)
 
@@ -528,8 +528,9 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIn("失敗已證明", output["hookSpecificOutput"]["additionalContext"])
         request, persist, timeout = core.calls[0]
         self.assertEqual(request.reason, "test-fail")
-        self.assertIn("[checkpoint event]", request.source_packet)
-        self.assertNotIn("[failure history]", request.source_packet)
+        self.assertIn("review_event:", request.source_packet)
+        self.assertIn("active_failures:", request.source_packet)
+        self.assertIn("1 failed", request.source_packet)
         self.assertTrue(persist)
         self.assertEqual(timeout, 15)
 
@@ -570,11 +571,10 @@ class CodexAdapterTests(unittest.TestCase):
             )
 
         request, _persist, _timeout = core.calls[-1]
-        self.assertIn("[checkpoint event]", request.source_packet)
-        self.assertNotIn("[workflow recurrence]", request.source_packet)
-        self.assertIn("[referenced task sources]", request.source_packet)
+        self.assertIn("review_event:", request.source_packet)
+        self.assertIn("referenced_sources:", request.source_packet)
         self.assertIn("token check", request.source_packet)
-        self.assertNotIn("[failure history]", request.source_packet)
+        self.assertIn("active_failures:", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
         self.assertIn("讓登入流程通過完整驗收", request.source_packet)
 
@@ -980,8 +980,8 @@ class SharedCoreTests(unittest.TestCase):
                 persist_reaction=False,
             )
 
-            self.assertIn("# 完成邊界 checkpoint", prompts[0])
-            self.assertIn("Kent Beck", prompts[0])
+            self.assertIn("# COMPLETION BOUNDARY", prompts[0])
+            self.assertIn("Linus Torvalds", prompts[0])
             self.assertIn("Kent Beck", prompts[1])
             self.assertIn("Leslie Lamport", prompts[2])
             self.assertIn("Martin Fowler", prompts[3])

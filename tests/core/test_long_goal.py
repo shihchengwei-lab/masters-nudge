@@ -7,6 +7,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import hook_entry
 import lens_router
@@ -342,7 +343,32 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
 
 class LongGoalReplayTests(unittest.TestCase):
-    def test_repeated_command_family_runs_one_synchronous_strategy_review(self):
+    def test_large_diff_review_is_edge_triggered_across_later_edits(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = FakeCore(settings_for(root))
+            adapter = CodexAdapter(core)
+            event = {
+                "hook_event_name": "PostToolUse",
+                "session_id": "large-diff",
+                "turn_id": "t",
+                "cwd": str(root),
+                "tool_name": "apply_patch",
+                "tool_input": {"command": "*** Begin Patch\n+change\n*** End Patch"},
+                "tool_response": {"success": True},
+            }
+
+            with mock.patch(
+                "masters_nudge.checkpoints.get_changed_line_count",
+                return_value=100,
+            ):
+                adapter.process(event)
+                adapter.process(event)
+
+            self.assertEqual(len(core.calls), 1)
+            self.assertEqual(core.calls[0].trigger, "diff-growth")
+
+    def test_repeated_command_family_without_state_change_does_not_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -359,10 +385,7 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"exit_code": 0, "output": f"pass {index}"},
                     }
                 )
-            self.assertEqual(len(core.calls), 1)
-            self.assertEqual(core.calls[0].kind, "strategy")
-            self.assertEqual(core.calls[0].trigger, "repeated-command-family")
-            self.assertEqual(core.calls[0].routing_concern, "feedback-loop")
+            self.assertEqual(core.calls, [])
 
     def test_second_failure_escalates_from_event_review_to_strategy_review(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -455,7 +478,7 @@ class LongGoalReplayTests(unittest.TestCase):
     def test_strategy_signals_route_to_distinct_existing_lenses(self):
         cases = (
             ("ordinary workflow", "feedback-loop", "beck"),
-            ("local proxy improved but acceptance criteria did not", "", "jeff"),
+            ("local proxy improved but acceptance criteria did not", "", "beck"),
             ("ordinary completion record", "completion-boundary", "linus"),
             ("ordinary diff record", "knowledge-boundary", "fowler"),
             ("duplicate delivery after retry", "", "lamport"),

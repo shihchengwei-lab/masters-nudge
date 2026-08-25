@@ -2,15 +2,172 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import source_context
 
-from .contracts import find_git_root
+from . import checkpoints, storage
+from .contracts import ReviewKind, ToolCompleted, find_git_root
 
 
 AGENTCAM_REPORT_READ_CHARS = 65536
+
+
+@dataclass(frozen=True)
+class ToolReviewState:
+    turn_state: dict[str, Any]
+    checkpoint: dict[str, str] | None
+    review_kind: ReviewKind
+    event_seq: int
+    changed_lines: int | None
+
+
+def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
+    """Record one host-neutral tool event and select any due review."""
+    turn_state = storage.load_turn_state(data_dir, event.session)
+    event_fingerprint = checkpoints.tool_event_fingerprint(event)
+    prior_progress = storage.load_progress_state(data_dir, event.session)
+    recent = (
+        prior_progress.get("recent")
+        if isinstance(prior_progress.get("recent"), list)
+        else []
+    )
+    if recent and recent[-1].get("event_fingerprint") == event_fingerprint:
+        return ToolReviewState(
+            turn_state=turn_state,
+            checkpoint=None,
+            review_kind="checkpoint",
+            event_seq=int(prior_progress.get("event_seq") or 0),
+            changed_lines=recent[-1].get("changed_lines"),
+        )
+    category = checkpoints.evidence_category(event)
+    task_source = None
+    inspection = ""
+    if not category and not (event.failure_known and event.failed):
+        task_source = source_context.capture_referenced_task_source(
+            str(turn_state.get("task_anchor") or ""),
+            event.tool_input,
+            event.tool_output,
+        )
+        if not task_source:
+            inspection = source_context.capture_inspection_evidence(
+                event.tool_name,
+                event.tool_input,
+                event.tool_output,
+            )
+            if inspection:
+                category = "inspection"
+    if category or task_source:
+        turn_state = storage.record_turn_evidence(
+            data_dir,
+            event.session,
+            record=(
+                inspection
+                if category == "inspection"
+                else checkpoints.render_evidence_record(event)
+                if category
+                else ""
+            ),
+            category=category,
+            scope=checkpoints.evidence_scope(event),
+            task_source=task_source,
+        )
+
+    changed_lines = (
+        checkpoints.get_changed_line_count(event.session.cwd)
+        if event.mutating and event.session.cwd
+        else None
+    )
+    transition, objective = checkpoints.goal_transition(event)
+    progress = storage.record_tool_progress(
+        data_dir,
+        event.session,
+        tool_name=event.tool_name,
+        command_family=checkpoints.command_family(event),
+        failed=event.failure_known and event.failed,
+        mutating=event.mutating,
+        changed_lines=changed_lines,
+        goal_transition=transition,
+        goal_objective=objective,
+        evidence_category=category,
+        event_fingerprint=event_fingerprint,
+    )
+    event_seq = int(progress.get("event_seq") or 0)
+    storage.observe_injected_response(
+        data_dir,
+        event.session,
+        event_seq=event_seq,
+        observation_kind="tool",
+        observation={
+            "tool": event.tool_name,
+            "command_family": checkpoints.command_family(event),
+            "failed": event.failure_known and event.failed,
+            "mutating": event.mutating,
+            "goal_transition": transition,
+        },
+    )
+
+    checkpoint = checkpoints.classify_tool(event, changed_lines)
+    strategy = checkpoints.classify_strategy(
+        progress, changed_line_count=changed_lines
+    )
+    review_kind: ReviewKind = "checkpoint"
+    if strategy:
+        checkpoint = strategy
+        review_kind = (
+            "goal_transition"
+            if strategy["reason"] == "goal-transition"
+            else "strategy"
+        )
+        storage.mark_strategy_reviewed(
+            data_dir,
+            event.session,
+            event_seq=event_seq,
+            changed_lines=changed_lines,
+        )
+        if strategy.get("trigger") == "diff-growth":
+            storage.mark_large_diff_reviewed(
+                data_dir,
+                event.session,
+                changed_lines=changed_lines,
+            )
+    if (
+        checkpoint
+        and checkpoint["reason"] == "large-diff"
+        and not checkpoints.large_diff_review_due(progress, changed_lines)
+    ):
+        checkpoint = None
+    if checkpoint and checkpoint["reason"] == "goal-transition":
+        review_kind = "goal_transition"
+    return ToolReviewState(
+        turn_state=turn_state,
+        checkpoint=checkpoint,
+        review_kind=review_kind,
+        event_seq=event_seq,
+        changed_lines=changed_lines,
+    )
+
+
+def finish_tool_review(
+    data_dir: Path,
+    event: ToolCompleted,
+    observed: ToolReviewState,
+    *,
+    review_ran: bool,
+) -> None:
+    """Advance an edge-trigger only after its provider review actually ran."""
+    if (
+        review_ran
+        and observed.checkpoint
+        and observed.checkpoint["reason"] == "large-diff"
+    ):
+        storage.mark_large_diff_reviewed(
+            data_dir,
+            event.session,
+            changed_lines=observed.changed_lines,
+        )
 
 
 def read_latest_agentcam_report(

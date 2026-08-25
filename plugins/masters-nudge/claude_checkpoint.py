@@ -9,13 +9,14 @@ the main Claude agent in that event.
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 from typing import Any
 
 import source_context
 from masters_nudge import (
     claude_adapter,
-    checkpoints as shared_checkpoints,
+    evidence as shared_evidence,
     prompting,
     storage,
 )
@@ -57,6 +58,8 @@ def review_checkpoint(
     event: dict[str, str],
     *,
     session: SessionRef,
+    review_kind: str = "checkpoint",
+    source_event_seq: int = 0,
 ) -> ReviewOutcome | None:
     settings = claude_adapter.runtime_settings()
     state = storage.load_turn_state(settings.paths.data_dir, session)
@@ -64,23 +67,28 @@ def review_checkpoint(
         task_anchor=str(state.get("task_anchor") or ""),
         event_context=event["context"],
         task_sources=state.get("task_sources") or {},
-        change_evidence=str(state.get("change_evidence") or ""),
-        verification_evidence=str(state.get("verification_evidence") or ""),
-        failure_history=(
-            ""
-            if event["reason"] == "test-fail"
-            else str(state.get("failure_history") or "")
+        evidence_records=(
+            state.get("evidence_records")
+            if isinstance(state.get("evidence_records"), list)
+            else []
         ),
     )
 
     request = ReviewRequest(
         schema_version=1,
-        kind="checkpoint",
+        kind=review_kind,
         reason=event["reason"],
         session=session,
         source_packet=source_packet,
-        source_fingerprint=event["fingerprint"],
+        source_fingerprint=hashlib.sha256(
+            (
+                f"{review_kind}:{event.get('trigger') or event['reason']}\n"
+                f"{source_packet}"
+            ).encode("utf-8")
+        ).hexdigest(),
         routing_evidence=event["context"],
+        source_event_seq=source_event_seq,
+        trigger=str(event.get("trigger") or event["reason"]),
         routing_concern=event.get("routing_concern", ""),
     )
     return ReviewCore(
@@ -113,45 +121,23 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         return None
     settings = claude_adapter.runtime_settings()
     session = tool_event.session
-    state = storage.load_turn_state(settings.paths.data_dir, session)
-    category = shared_checkpoints.evidence_category(tool_event)
-    task_source = None
-    if not category and not (tool_event.failure_known and tool_event.failed):
-        task_source = source_context.capture_referenced_task_source(
-            str(state.get("task_anchor") or ""),
-            tool_event.tool_input,
-            tool_event.tool_output,
-        )
-    if category or task_source:
-        state = storage.record_turn_evidence(
-            settings.paths.data_dir,
-            session,
-            record=(
-                shared_checkpoints.render_evidence_record(tool_event)
-                if category
-                else ""
-            ),
-            category=category,
-            task_source=task_source,
-        )
-
-    storage.observe_injected_response(
-        settings.paths.data_dir,
-        session,
-        event_seq=int(state.get("evidence_seq") or 0),
-        observation_kind="tool",
-        observation={
-            "tool": tool_event.tool_name,
-            "failed": tool_event.failure_known and tool_event.failed,
-            "mutating": tool_event.mutating,
-        },
-    )
-
-    event = shared_checkpoints.classify_tool(tool_event)
+    observed = shared_evidence.observe_tool_event(settings.paths.data_dir, tool_event)
+    event = observed.checkpoint
     if event is None:
         return None
     try:
-        outcome = review_checkpoint(event, session=session)
+        outcome = review_checkpoint(
+            event,
+            session=session,
+            review_kind=observed.review_kind,
+            source_event_seq=observed.event_seq,
+        )
+        shared_evidence.finish_tool_review(
+            settings.paths.data_dir,
+            tool_event,
+            observed,
+            review_ran=outcome is not None,
+        )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None
         claim_token = storage.claim_delivery(

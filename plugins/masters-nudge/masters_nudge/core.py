@@ -13,6 +13,7 @@ from .contracts import ReviewOutcome, ReviewRequest
 from .prompting import (
     build_review_input,
     build_system_prompt,
+    lens_focus_prompt,
     route_metadata,
     sanitize_reaction,
 )
@@ -21,38 +22,32 @@ from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
 CHECKPOINT_PROMPT = """
 
-# 工作途中 checkpoint
+# CURRENT STATE CHECKPOINT
 
-輸入末尾是截至目前的有限研究狀態，不只是一個工具事件。
-workflow 是行為證據，不等於主 Agent 已明說的理由。
-finding 落在目前瓶頸解釋仍未消解、且跨數分鐘仍成立的一個關係；
-證據不足時可以不反應。
+Review only the state slice named by the review event. Do not infer a problem
+from the existence or number of operations.
 """
 
 STRATEGY_PROMPT = """
 
-# 長流程策略 checkpoint
+# TRAJECTORY CHECKPOINT
 
-檢視近期 workflow 是否實際縮短任務驗收條件，而非只讓局部 proxy 更漂亮。
-若有漂移，只指出一個最值得改變後續工作方向的觀察；證據不足時不反應。
+Check whether the current state has moved toward the observable task contract.
 """
 
 GOAL_TRANSITION_PROMPT = """
 
-# Goal 轉場 checkpoint
+# GOAL TRANSITION
 
-檢查 Goal 的狀態變更究竟代表：原始 objective 已達成、僅完成子成果、
-路徑已耗盡，或完成依據不清。只在狀態與證據不一致時給一句 nudge。
+Treat a goal transition as a claim. Compare it with the current open issues.
 """
 
 STOP_PROMPT = """
 
-# 完成邊界 checkpoint
+# COMPLETION BOUNDARY
 
-把 Agent 最終宣告視為待核對的完成主張，不視為已證實事實。
-比較 task request、明示來源、變更、驗證與 failure history；
-依共用 evidence 編號判斷較晚證據是否已更新較早失敗；
-只在某個會改變正確性或完成判斷的假設仍未被證據區分時提問。
+Treat the completion claim as unverified. Compare it with the universal task
+state and active software-engineering evidence.
 """
 
 ProviderDispatch = Callable[..., dict]
@@ -84,13 +79,14 @@ class ReviewCore:
         model = self.settings.model
         configuration_source = self.settings.configuration_source
         finding_scope = _finding_scope(request)
-        checkpoint_routing = request.kind != "stop"
-        routing_evidence = request.routing_evidence if checkpoint_routing else ""
+        routing_concern = request.routing_concern
+        if request.kind == "stop" and not routing_concern:
+            routing_concern = "completion-boundary"
         route = lens_router.resolve_review_route(
             self.settings.paths.data_dir,
-            routing_evidence,
-            checkpoint=checkpoint_routing,
-            routing_concern=(request.routing_concern if checkpoint_routing else ""),
+            request.routing_evidence,
+            checkpoint=True,
+            routing_concern=routing_concern,
         )
         route_fields = route_metadata(route)
         system_prompt = build_system_prompt(
@@ -114,6 +110,7 @@ class ReviewCore:
             system_prompt += GOAL_TRANSITION_PROMPT
         elif request.kind == "stop":
             system_prompt += STOP_PROMPT
+        system_prompt += lens_focus_prompt(route.effective_lens)
 
         review_input = build_review_input(
             request.source_packet,
@@ -122,6 +119,7 @@ class ReviewCore:
                 request.session,
                 limit=3,
             ),
+            effective_lens=route.effective_lens,
         )
 
         effective_timeout = min(

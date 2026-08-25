@@ -10,10 +10,9 @@ from typing import Any
 
 import source_context
 
-from . import checkpoints, prompting, storage
+from . import prompting, storage
 from .contracts import (
     PromptSubmitted,
-    ReviewKind,
     ReviewRequest,
     SessionRef,
     ToolCompleted,
@@ -21,7 +20,11 @@ from .contracts import (
     find_git_root,
 )
 from .core import ReviewCore
-from .evidence import read_latest_agentcam_report
+from .evidence import (
+    finish_tool_review,
+    observe_tool_event,
+    read_latest_agentcam_report,
+)
 from .runtime import active_guard
 
 
@@ -264,103 +267,32 @@ class CodexAdapter:
         return None
 
     def _tool(self, event: ToolCompleted) -> dict[str, Any] | None:
-        turn_state = storage.load_turn_state(self.data_dir, event.session)
-        category = checkpoints.evidence_category(event)
-        task_source = None
-        if not category and not (event.failure_known and event.failed):
-            task_source = source_context.capture_referenced_task_source(
-                str(turn_state.get("task_anchor") or ""),
-                event.tool_input,
-                event.tool_output,
-            )
-        if category or task_source:
-            turn_state = storage.record_turn_evidence(
-                self.data_dir,
-                event.session,
-                record=(
-                    checkpoints.render_evidence_record(event) if category else ""
-                ),
-                category=category,
-                task_source=task_source,
-            )
-        changed_lines = (
-            checkpoints.get_changed_line_count(event.session.cwd)
-            if event.mutating and event.session.cwd
-            else None
-        )
-        transition, objective = checkpoints.goal_transition(event)
-        progress = storage.record_tool_progress(
-            self.data_dir,
-            event.session,
-            tool_name=event.tool_name,
-            command_family=checkpoints.command_family(event),
-            failed=event.failure_known and event.failed,
-            mutating=event.mutating,
-            changed_lines=changed_lines,
-            goal_transition=transition,
-            goal_objective=objective,
-            evidence_category=category,
-        )
-        event_seq = int(progress.get("event_seq") or 0)
-        storage.observe_injected_response(
-            self.data_dir,
-            event.session,
-            event_seq=event_seq,
-            observation_kind="tool",
-            observation={
-                "tool": event.tool_name,
-                "command_family": checkpoints.command_family(event),
-                "failed": event.failure_known and event.failed,
-                "mutating": event.mutating,
-                "goal_transition": transition,
-            },
-        )
-        checkpoint = checkpoints.classify_tool(event, changed_lines)
-        strategy = checkpoints.classify_strategy(
-            progress, changed_line_count=changed_lines
-        )
-        review_kind: ReviewKind = "checkpoint"
-        if strategy:
-            checkpoint = strategy
-            review_kind = (
-                "goal_transition"
-                if strategy["reason"] == "goal-transition"
-                else "strategy"
-            )
-            storage.mark_strategy_reviewed(
-                self.data_dir,
-                event.session,
-                event_seq=event_seq,
-                changed_lines=changed_lines,
-            )
+        observed = observe_tool_event(self.data_dir, event)
+        checkpoint = observed.checkpoint
         if not checkpoint:
             return None
-        fingerprint = checkpoint["fingerprint"]
-        if checkpoint["reason"] == "goal-transition":
-            review_kind = "goal_transition"
         source_packet = source_context.build_checkpoint_packet(
-            task_anchor=str(turn_state.get("task_anchor") or ""),
+            task_anchor=str(observed.turn_state.get("task_anchor") or ""),
             event_context=checkpoint["context"],
-            task_sources=turn_state.get("task_sources") or {},
-            change_evidence=str(turn_state.get("change_evidence") or ""),
-            verification_evidence=str(
-                turn_state.get("verification_evidence") or ""
-            ),
-            failure_history=(
-                ""
-                if review_kind == "checkpoint" and category == "failure"
-                else str(turn_state.get("failure_history") or "")
+            task_sources=observed.turn_state.get("task_sources") or {},
+            evidence_records=(
+                observed.turn_state.get("evidence_records")
+                if isinstance(observed.turn_state.get("evidence_records"), list)
+                else []
             ),
         )
         request = ReviewRequest(
             schema_version=1,
-            kind=review_kind,
+            kind=observed.review_kind,
             reason=checkpoint["reason"],
             session=event.session,
             source_packet=source_packet,
-            source_fingerprint=fingerprint,
+            source_fingerprint=_fingerprint(
+                f"{observed.review_kind}:{checkpoint.get('trigger') or checkpoint['reason']}\n"
+                f"{source_packet}"
+            ),
             routing_evidence=checkpoint["context"],
-            source_event_seq=event_seq,
+            source_event_seq=observed.event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
             routing_concern=str(checkpoint.get("routing_concern") or ""),
         )
@@ -373,6 +305,12 @@ class CodexAdapter:
         except Exception as exc:
             self.core.log_error(f"Codex checkpoint review failed: {exc}")
             return None
+        finish_tool_review(
+            self.data_dir,
+            event,
+            observed,
+            review_ran=outcome is not None,
+        )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None
         output = build_hook_output(
@@ -393,7 +331,7 @@ class CodexAdapter:
             output,
             event.session,
             timestamp,
-            event_seq=event_seq,
+            event_seq=observed.event_seq,
             event_name=event.native_event_name,
             claim_token=claim_token,
         )
@@ -429,11 +367,11 @@ class CodexAdapter:
             task_anchor=task_anchor,
             last_assistant_message=event.final_claim,
             task_sources=state.get("task_sources") or {},
-            change_evidence=str(state.get("change_evidence") or ""),
-            verification_evidence=str(
-                state.get("verification_evidence") or ""
+            evidence_records=(
+                state.get("evidence_records")
+                if isinstance(state.get("evidence_records"), list)
+                else []
             ),
-            failure_history=str(state.get("failure_history") or ""),
             agentcam_evidence=agentcam_evidence,
         )
         if not source_packet:

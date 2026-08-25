@@ -30,7 +30,7 @@ class TestBranding(unittest.TestCase):
 
         self.assertTrue(readme.startswith("# Masters’ Nudge"))
         self.assertTrue(readme_zh.startswith("# Masters’ Nudge"))
-        self.assertIn("你是 Masters’ Nudge", prompt)
+        self.assertIn("You are Masters’ Nudge", prompt)
         self.assertIn('self.root.title("Masters’ Nudge")', window)
 
     def test_agent_visible_checkpoint_labels_the_independent_opinion(self):
@@ -161,72 +161,11 @@ class TestPersonaPromptSelection(unittest.TestCase):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
         self.assertEqual(files, set(self.PERSONAS))
 
-    def test_base_prompt_delegates_attention_without_safety_or_authority_scope(self):
-        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
-
-        self.assertIn("直接由它決定這輪值得重看的面向", base_prompt)
-        self.assertIn("不要先做一輪通用挑錯", base_prompt)
-        self.assertIn("未使用鏡頭時", base_prompt)
-        self.assertNotIn("敏感資訊或安全邊界", base_prompt)
-        self.assertNotIn("使用者授權", base_prompt)
-
-    def test_base_prompt_preserves_workflow_tension_and_a_complete_sentence(self):
-        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
-
-        self.assertIn("被忽略的限制、反例、替代假設或方向", base_prompt)
-        self.assertIn("若判錯會改變成果正確性或完成判斷", base_prompt)
-        self.assertIn("尚未被可見證據區分的假設", base_prompt)
-        self.assertIn("推論必須由可見證據支持並標示不確定", base_prompt)
-        self.assertIn("輸出談工作本身，不提人物、鏡頭", base_prompt)
-        self.assertIn("如果草稿太長就重寫", base_prompt)
-        self.assertIn("不能停在助詞、連接詞、半個片語", base_prompt)
-        self.assertNotIn("優先保留問題與位置", base_prompt)
-
-    def test_base_prompt_has_no_minimum_and_examples_fit_the_hard_cap(self):
-        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
-
-        self.assertIn("不設最低字數", base_prompt)
-        self.assertIn("優先在 36–42 字內完成回答閉環", base_prompt)
-        self.assertIn("目標區間，不是最低字數", base_prompt)
-        self.assertIn("可以是陳述或問題", base_prompt)
-        self.assertIn("標點計入 52 字", base_prompt)
-        self.assertIn("硬上限 52 字", base_prompt)
-        self.assertNotIn("目標 48–52 字", base_prompt)
-        self.assertIn("客套話", base_prompt)
-        self.assertIn("角色自介", base_prompt)
-        self.assertNotIn("28 字", base_prompt)
-
-        examples = base_prompt.split("# 可以參考的語氣", 1)[1].split(
-            "# 送出前確認", 1
-        )[0]
-        finding_examples = [
-            line.strip()
-            for line in examples.splitlines()
-            if line.strip()
-        ]
-        self.assertTrue(finding_examples)
-        for example in finding_examples:
-            with self.subTest(example=example):
-                self.assertGreater(len(example), 0)
-                self.assertLessEqual(len(example), 52)
-                self.assertIn(example[-1], "。？！")
-
-    def test_base_prompt_is_workflow_review_not_code_review(self):
-        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
-
-        self.assertIn("檢視主模型如何推進工作", base_prompt)
-        self.assertIn("不替它重做一輪產物審查", base_prompt)
-        self.assertIn("不要把封包預設成 PR、diff", base_prompt)
-        self.assertIn("內容是一則 workflow Nudge", base_prompt)
-        self.assertNotIn("只找一個最有用的 review finding", base_prompt)
-        self.assertNotIn("把可見內容當成一小段 PR / diff", base_prompt)
-
     def test_base_prompt_matches_structured_output_contract(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("status=finding", base_prompt)
-        self.assertIn("status=no_finding", base_prompt)
-        self.assertIn("finding 留空", base_prompt)
+        self.assertIn('{"status":"finding"', base_prompt)
+        self.assertIn('{"status":"no_finding","finding":""}', base_prompt)
         self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
 
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
@@ -253,13 +192,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
             agentcam_evidence="## Risk Flags\n- HIGH",
         )
 
-        self.assertIn("證據封包", base_prompt)
-        self.assertNotIn("最近一小段對話", base_prompt)
-        self.assertIn("[task request]", packet)
-        self.assertIn("[referenced task sources]", packet)
-        self.assertIn("[agentcam evidence]", base_prompt)
-        self.assertNotIn("[agentcam report]", base_prompt)
-        self.assertIn("[agentcam evidence]", packet)
+        self.assertIn("Use only the supplied packet", base_prompt)
+        self.assertIn("[universal task state]", packet)
+        self.assertIn("referenced_sources:", packet)
+        self.assertIn("external_runtime_evidence:", packet)
 
 
 # ── 3. Source evidence packets ───────────────────────────────────────
@@ -325,31 +261,77 @@ class TestSourceContext(unittest.TestCase):
             )
 
         self.assertEqual(state["evidence_seq"], 3)
-        self.assertIn("[evidence #1]", state["failure_history"])
-        self.assertIn("[evidence #2]", state["change_evidence"])
-        self.assertIn("[evidence #3]", state["verification_evidence"])
+        self.assertEqual(
+            [
+                {"seq": 1, "category": "failure", "scope": "", "content": "pytest: 1 failed"},
+                {"seq": 2, "category": "change", "scope": "", "content": "auth.py changed"},
+                {"seq": 3, "category": "verification", "scope": "", "content": "pytest: 8 passed"},
+            ],
+            state["evidence_records"],
+        )
+        self.assertNotIn("change_evidence", state)
+        self.assertNotIn("verification_evidence", state)
+        self.assertNotIn("failure_history", state)
+
+    def test_packet_keeps_newest_evidence_records_with_bounded_excerpts(self):
+        records = [
+            {"seq": 1, "category": "change", "content": "OLD\n" + "a" * 1500},
+            {"seq": 2, "category": "change", "content": "CORE\n" + "b" * 1500},
+            {"seq": 3, "category": "change", "content": "LATEST\n" + "c" * 1500},
+        ]
+
+        packet = self.source.build_checkpoint_packet(
+            task_anchor="修正行為",
+            event_context="reason: review",
+            evidence_records=records,
+        )
+
+        self.assertNotIn("OLD", packet)
+        self.assertIn("CORE", packet)
+        self.assertIn("LATEST", packet)
+        self.assertIn(self.source.TRUNCATION_MARKER, packet)
+
+    def test_turn_state_accepts_inspection_as_decision_evidence(self):
+        from masters_nudge.contracts import SessionRef
+        from masters_nudge import storage
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "inspection")
+            storage.start_turn(root, session, "修正公開行為")
+            state = storage.record_turn_evidence(
+                root,
+                session,
+                category="inspection",
+                record="inspection:\nassert public_order == [C, A, B]",
+            )
+
+        self.assertEqual("inspection", state["evidence_records"][0]["category"])
+        self.assertIn("public_order", state["evidence_records"][0]["content"])
 
     def test_checkpoint_packet_carries_bounded_research_state(self):
         packet = self.source.build_checkpoint_packet(
             task_anchor="修正登入測試",
             event_context="reason: test-fail\nfailure: 2 failed",
             task_sources="ISSUE.md\n逾時時仍應保留 session",
-            change_evidence="auth.py 修改 14 行",
-            verification_evidence="pytest: 8 passed",
-            failure_history="pytest: 2 failed",
+            evidence_records=[
+                {"seq": 1, "category": "change", "content": "auth.py 修改 14 行"},
+                {"seq": 2, "category": "verification", "content": "pytest: 8 passed"},
+                {"seq": 3, "category": "failure", "content": "pytest: 2 failed"},
+            ],
         )
 
-        self.assertIn("[task request]", packet)
+        self.assertIn("[universal task state]", packet)
         self.assertIn("修正登入測試", packet)
-        self.assertIn("[referenced task sources]", packet)
+        self.assertIn("referenced_sources:", packet)
         self.assertIn("逾時時仍應保留 session", packet)
-        self.assertIn("[checkpoint event]", packet)
-        self.assertNotIn("[workflow recurrence]", packet)
-        self.assertIn("[change evidence]", packet)
+        self.assertIn("review_event:", packet)
+        self.assertIn("[software engineering evidence]", packet)
+        self.assertIn("relevant_changes:", packet)
         self.assertIn("auth.py 修改 14 行", packet)
-        self.assertIn("[verification evidence]", packet)
+        self.assertIn("verification:", packet)
         self.assertIn("8 passed", packet)
-        self.assertIn("[failure history]", packet)
+        self.assertIn("active_failures:", packet)
         self.assertIn("2 failed", packet)
         self.assertNotIn("正在調整 auth.py", packet)
         self.assertNotIn("[transcript", packet)
@@ -394,22 +376,24 @@ class TestSourceContext(unittest.TestCase):
             task_anchor="只修目前的 bug",
             last_assistant_message="已完成並通過測試",
             task_sources="ISSUE.md\n舊呼叫方式必須維持",
-            change_evidence="新增 violation_error_code",
-            verification_evidence="128 tests passed",
-            failure_history="舊位置參數尚未驗證",
+            evidence_records=[
+                {"seq": 1, "category": "change", "content": "新增 violation_error_code"},
+                {"seq": 2, "category": "verification", "content": "128 tests passed"},
+                {"seq": 3, "category": "failure", "content": "舊位置參數尚未驗證"},
+            ],
             agentcam_evidence="## Risk Flags\n| HIGH | auth.py |",
         )
 
-        self.assertIn("[task request]", packet)
-        self.assertIn("[referenced task sources]", packet)
-        self.assertIn("[agent final claim]", packet)
-        self.assertIn("[change evidence]", packet)
-        self.assertIn("[verification evidence]", packet)
-        self.assertIn("[failure history]", packet)
-        self.assertIn("[agentcam evidence]", packet)
+        self.assertIn("[universal task state]", packet)
+        self.assertIn("referenced_sources:", packet)
+        self.assertIn("completion_claim:", packet)
+        self.assertIn("relevant_changes:", packet)
+        self.assertIn("verification:", packet)
+        self.assertIn("active_failures:", packet)
+        self.assertIn("external_runtime_evidence:", packet)
         self.assertLess(
-            packet.index("[failure history]"),
-            packet.index("[agent final claim]"),
+            packet.index("[universal task state]"),
+            packet.index("[software engineering evidence]"),
         )
 
     def test_agentcam_extractor_keeps_only_named_evidence_sections(self):
@@ -468,7 +452,7 @@ class TestCheckpointClassification(unittest.TestCase):
 
         self.assertEqual(result["reason"], "test-fail")
         self.assertNotIn("python -m pytest", result["context"])
-        self.assertIn("2 failed", result["context"])
+        self.assertEqual(result["context"], "reason: test-fail")
 
     def test_test_failure_text_on_success_event_is_test_fail(self):
         hook = {
@@ -658,26 +642,15 @@ class TestCheckpointDelivery(unittest.TestCase):
             result = self.checkpoint.prepare_hook(hook)
 
         self.assertIsNone(result)
-        from masters_nudge import checkpoints, storage
+        from masters_nudge import storage
         from masters_nudge.contracts import SessionRef
-
-        event = checkpoints.classify_tool(
-            self.checkpoint.normalize_tool_event(hook)
-        )
 
         session = SessionRef("claude_code", "session-1")
         attempts = storage.read_review_attempts(
             self.settings.paths.data_dir, session
         )
+        self.assertEqual(1, len(attempts))
         self.assertEqual(attempts[0]["status"], "error")
-        self.assertFalse(
-            storage.claim_review_attempt(
-                self.settings.paths.data_dir,
-                session,
-                "checkpoint",
-                event["fingerprint"],
-            )
-        )
 
     def test_successful_nudge_is_deduplicated(self):
         hook = {
@@ -705,6 +678,44 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIsNone(second)
         review.assert_called_once()
 
+    def test_claude_uses_shared_verification_gap_timing(self):
+        from masters_nudge import storage
+        from masters_nudge.contracts import ReviewOutcome, SessionRef
+
+        session = SessionRef("claude_code", "strategy", cwd=self.tmpdir.name)
+        storage.start_turn(
+            self.settings.paths.data_dir,
+            session,
+            "完成兩次變更後取得驗證回饋",
+        )
+        hook = {
+            "session_id": "strategy",
+            "cwd": self.tmpdir.name,
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "app.py"},
+            "tool_response": {"success": True},
+        }
+
+        with mock.patch.object(
+            self.checkpoint,
+            "review_checkpoint",
+            return_value=ReviewOutcome("no_finding"),
+        ) as review:
+            self.checkpoint.prepare_hook(hook)
+            self.checkpoint.prepare_hook(
+                {**hook, "tool_input": {"file_path": "second.py"}}
+            )
+
+        review.assert_called_once()
+        event = review.call_args.args[0]
+        self.assertEqual("verification-gap", event["trigger"])
+        self.assertEqual("strategy", review.call_args.kwargs["review_kind"])
+        progress = storage.load_progress_state(
+            self.settings.paths.data_dir, session
+        )
+        self.assertEqual(2, progress["event_seq"])
+
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
         from masters_nudge import prompting, providers, storage
 
@@ -715,14 +726,25 @@ class TestCheckpointDelivery(unittest.TestCase):
         }
         event = {
             "reason": "error",
-            "context": "reason: error\nfailure: missing file",
+            "context": "reason: error",
             "fingerprint": "error-1",
         }
         with (
             mock.patch.object(
                 storage,
                 "load_turn_state",
-                return_value={"task_anchor": "只修路徑問題", "transcript_offset": 42},
+                return_value={
+                    "task_anchor": "只修路徑問題",
+                    "transcript_offset": 42,
+                    "evidence_records": [
+                        {
+                            "seq": 1,
+                            "category": "failure",
+                            "scope": "path-check",
+                            "content": "failure:\nmissing file",
+                        }
+                    ],
+                },
             ),
             mock.patch.object(
                 self.checkpoint.claude_adapter,
@@ -818,9 +840,15 @@ class TestTranscriptParser(unittest.TestCase):
                     "task_anchor": "只修登入錯誤",
                     "transcript_offset": 123,
                     "task_sources": {"ISSUE.md": "逾時時必須保留 session"},
-                    "change_evidence": "auth.py changed",
-                    "verification_evidence": "8 passed",
-                    "failure_history": "Exit code 1\n1 failed",
+                    "evidence_records": [
+                        {"seq": 1, "category": "change", "content": "auth.py changed"},
+                        {"seq": 2, "category": "verification", "content": "8 passed"},
+                        {
+                            "seq": 3,
+                            "category": "failure",
+                            "content": "Exit code 1\n1 failed",
+                        },
+                    ],
                 },
             ),
             mock.patch.object(

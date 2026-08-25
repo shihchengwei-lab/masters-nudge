@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+import lens_router
 import source_context
 
 from .contracts import ToolCompleted
@@ -55,6 +56,7 @@ READ_NAVIGATION_RE = re.compile(
 )
 
 TRIGGER_ROUTING_CONCERNS = {
+    "verification-gap": "feedback-loop",
     "repeated-command-family": "feedback-loop",
     "repeated-failure-family": "feedback-loop",
     "diff-growth": "knowledge-boundary",
@@ -89,6 +91,21 @@ def stable_fingerprint(reason: str, payload: dict[str, Any]) -> str:
         default=str,
     )
     return f"{reason}-{hashlib.sha256(raw.encode('utf-8')).hexdigest()[:24]}"
+
+
+def tool_event_fingerprint(event: ToolCompleted) -> str:
+    """Identify an exact consecutive native event replay."""
+    return stable_fingerprint(
+        "tool-event",
+        {
+            "tool_name": event.tool_name,
+            "tool_input": event.tool_input,
+            "tool_output": event.tool_output,
+            "failed": event.failed,
+            "failure_known": event.failure_known,
+            "mutating": event.mutating,
+        },
+    )
 
 
 def _git_output(args: list[str], cwd: str) -> str | None:
@@ -154,6 +171,16 @@ def get_changed_line_count(cwd: str) -> int | None:
     return total
 
 
+def large_diff_review_due(
+    progress: dict[str, Any], changed_line_count: int | None
+) -> bool:
+    """Trigger on new diff growth, not every edit above the same threshold."""
+    if changed_line_count is None:
+        return False
+    baseline = int(progress.get("changed_lines_at_checkpoint") or 0)
+    return changed_line_count - baseline > LARGE_DIFF_THRESHOLD
+
+
 def _command(event: ToolCompleted) -> str:
     value = event.tool_input
     if isinstance(value, dict):
@@ -202,18 +229,41 @@ def evidence_category(event: ToolCompleted) -> str:
     return ""
 
 
+def evidence_scope(event: ToolCompleted) -> str:
+    """Identify the validated surface without putting commands in the packet."""
+    category = evidence_category(event)
+    if category not in {"verification", "failure"}:
+        return ""
+    command = _command(event).strip()
+    command = re.sub(
+        r"^(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)+", "", command
+    )
+    if not command:
+        return ""
+    normalized = re.sub(r"\s+", " ", command).strip().lower()
+    return f"validation-{hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:16]}"
+
+
 def render_evidence_record(event: ToolCompleted) -> str:
     """Render semantic evidence without exposing tool identity or commands."""
     category = evidence_category(event)
     output = compact_json(event.tool_output)
     if category == "change":
-        change = ""
+        changed_paths: list[str] = []
         if "apply_patch" in event.tool_name.lower():
             raw = _command(event).strip() or compact_json(event.tool_input)
-            marker = raw.find("*** Begin Patch")
-            if marker >= 0:
-                change = raw[marker:]
-        parts = [f"change:\n{change}"] if change else []
+            for path in re.findall(
+                r"^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$|"
+                r"^\*\*\* Move to:\s*(.+?)\s*$",
+                raw,
+                re.MULTILINE,
+            ):
+                value = next((item.strip() for item in path if item.strip()), "")
+                if value and value not in changed_paths:
+                    changed_paths.append(value)
+        parts = []
+        if changed_paths:
+            parts.append("changed_paths:\n" + "\n".join(f"- {path}" for path in changed_paths))
         if output:
             parts.append(f"result:\n{output}")
         return "\n".join(parts)
@@ -227,7 +277,6 @@ def classify_strategy(
     changed_line_count: int | None,
 ) -> dict[str, str] | None:
     recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
-    event_seq = int(progress.get("event_seq") or 0)
     last_seq = int(progress.get("last_strategy_event_seq") or 0)
     since = [
         item
@@ -241,19 +290,28 @@ def classify_strategy(
         reason = "goal-transition"
         trigger = f"goal-{latest_transition}"
     else:
-        families = [str(item.get("command_family") or "") for item in since]
-        repeated = next(
-            (family for family in reversed(families) if family and families.count(family) >= 3),
-            "",
-        )
         failures = [item for item in since if item.get("failed")]
+        categories = [str(item.get("evidence_category") or "") for item in since]
+        last_verification = max(
+            (
+                index
+                for index, category in enumerate(categories)
+                if category == "verification"
+            ),
+            default=-1,
+        )
+        unverified_changes = sum(
+            1
+            for category in categories[last_verification + 1 :]
+            if category == "change"
+        )
         baseline = int(progress.get("changed_lines_at_strategy") or 0)
         diff_growth = (
             changed_line_count is not None
             and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
         )
-        if repeated:
-            reason, trigger = "strategy-review", "repeated-command-family"
+        if unverified_changes >= 2:
+            reason, trigger = "strategy-review", "verification-gap"
         elif len(failures) >= 2:
             reason, trigger = "strategy-review", "repeated-failure-family"
         elif diff_growth:
@@ -263,33 +321,35 @@ def classify_strategy(
     lines = [
         f"reason: {reason}",
         f"trigger: {trigger}",
-        f"event_seq: {event_seq}",
     ]
     return {
         "reason": reason,
         "trigger": trigger,
         "routing_concern": routing_concern_for_trigger(trigger),
         "context": "\n".join(lines),
-        "fingerprint": f"{reason}-{trigger}-{event_seq}",
+        "fingerprint": f"{reason}-{trigger}",
     }
 
 
 def _failure_checkpoint(
-    event: ToolCompleted, *, reason: str, output: str, evidence_label: str
+    event: ToolCompleted, *, reason: str, output: str
 ) -> dict[str, str]:
     payload = {
         "tool_name": event.tool_name,
         "tool_input": event.tool_input,
         "tool_output": output,
     }
-    return {
+    routing_concern = lens_router.structured_concern_for_evidence(
+        f"{_command(event)}\n{output}"
+    )
+    result = {
         "reason": reason,
-        "context": (
-            f"reason: {reason}\n"
-            f"{evidence_label}: {output}"
-        ),
+        "context": f"reason: {reason}",
         "fingerprint": stable_fingerprint(reason, payload),
     }
+    if routing_concern:
+        result["routing_concern"] = routing_concern
+    return result
 
 
 def classify_tool(
@@ -309,14 +369,41 @@ def classify_tool(
             or TEST_FAILURE_RE.search(output)
             else "error"
         )
-        return _failure_checkpoint(
-            event, reason=reason, output=output, evidence_label="failure"
-        )
+        return _failure_checkpoint(event, reason=reason, output=output)
 
     if is_shell and TEST_FAILURE_RE.search(output):
-        return _failure_checkpoint(
-            event, reason="test-fail", output=output, evidence_label="result"
-        )
+        return _failure_checkpoint(event, reason="test-fail", output=output)
+
+    category = evidence_category(event)
+    routing_concern = lens_router.structured_concern_for_evidence(
+        f"{_command(event)}\n{compact_json(event.tool_input)}\n{output}"
+    )
+    eligible_concerns = {
+        "system-causality",
+        "completion-boundary",
+        "knowledge-boundary",
+        "state-ordering",
+        "measured-performance",
+    }
+    if routing_concern in eligible_concerns and category in {
+        "change",
+        "verification",
+    }:
+        reason = "specialist-state-change"
+        return {
+            "reason": reason,
+            "trigger": routing_concern,
+            "routing_concern": routing_concern,
+            "context": f"reason: {reason}\nstate slice: {routing_concern}",
+            "fingerprint": stable_fingerprint(
+                reason,
+                {
+                    "concern": routing_concern,
+                    "scope": evidence_scope(event),
+                    "evidence": output,
+                },
+            ),
+        }
 
     if not event.mutating:
         return None

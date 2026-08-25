@@ -129,9 +129,11 @@ def build_stop_source_context(
         task_anchor=str(state.get("task_anchor") or ""),
         last_assistant_message=last_assistant,
         task_sources=state.get("task_sources") or {},
-        change_evidence=str(state.get("change_evidence") or ""),
-        verification_evidence=str(state.get("verification_evidence") or ""),
-        failure_history=str(state.get("failure_history") or ""),
+        evidence_records=(
+            state.get("evidence_records")
+            if isinstance(state.get("evidence_records"), list)
+            else []
+        ),
         agentcam_evidence=agentcam_evidence,
     )
 

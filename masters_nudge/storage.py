@@ -17,8 +17,14 @@ import source_context
 from .contracts import SessionRef, safe_identifier
 
 
-TURN_EVIDENCE_MAX_CHARS = 8000
 EVIDENCE_RECORD_MAX_CHARS = 3000
+EVIDENCE_RECORDS_MAX = 24
+EVIDENCE_CATEGORY_LIMITS = {
+    "inspection": 4,
+    "change": 6,
+    "verification": 6,
+    "failure": 8,
+}
 PROGRESS_EVENT_LIMIT = 12
 ATOMIC_REPLACE_ATTEMPTS = 5
 DELIVERY_CLAIM_STALE_SEC = 120
@@ -318,16 +324,14 @@ def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     return _read_json(
         state_path(data_dir, session, "turn"),
         {
-            "schema_version": 3,
+            "schema_version": 4,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id,
             "task_anchor": "",
             "task_sources": {},
             "evidence_seq": 0,
-            "change_evidence": "",
-            "verification_evidence": "",
-            "failure_history": "",
+            "evidence_records": [],
         },
     )
 
@@ -348,7 +352,7 @@ def start_turn(
     _atomic_write(
         state_path(data_dir, session, "turn"),
         {
-            "schema_version": 3,
+            "schema_version": 4,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id,
@@ -359,9 +363,7 @@ def start_turn(
             ),
             "task_sources": {},
             "evidence_seq": 0,
-            "change_evidence": "",
-            "verification_evidence": "",
-            "failure_history": "",
+            "evidence_records": [],
             "transcript_offset": transcript_offset,
         },
     )
@@ -373,6 +375,7 @@ def record_turn_evidence(
     *,
     record: str = "",
     category: str = "",
+    scope: str = "",
     task_source: tuple[str, str] | None = None,
 ) -> dict[str, Any]:
     """Persist only decision-relevant evidence, separated by evidentiary role."""
@@ -386,29 +389,40 @@ def record_turn_evidence(
                 source_content, source_context.TASK_SOURCE_MAX_CHARS
             )
 
-    evidence_keys = {
-        "change": "change_evidence",
-        "verification": "verification_evidence",
-        "failure": "failure_history",
-    }
-    if category not in evidence_keys:
+    evidence_categories = {"inspection", "change", "verification", "failure"}
+    if category not in evidence_categories:
         category = ""
-    evidence_key = evidence_keys.get(category, "")
     evidence_seq = int(state.get("evidence_seq") or 0)
-    if evidence_key and record:
+    records = state.get("evidence_records")
+    records = list(records) if isinstance(records, list) else []
+    if category and record:
         evidence_seq += 1
-        bounded_record = source_context.head_tail(record, EVIDENCE_RECORD_MAX_CHARS)
-        bounded_record = f"[evidence #{evidence_seq}]\n{bounded_record}"
-        existing = str(state.get(evidence_key) or "")
-        combined = "\n\n".join(
-            part for part in (existing, bounded_record) if part
+        records.append(
+            {
+                "seq": evidence_seq,
+                "category": category,
+                "scope": source_context.head_tail(scope, 160),
+                "content": source_context.head_tail(
+                    record, EVIDENCE_RECORD_MAX_CHARS
+                ),
+            }
         )
-        state[evidence_key] = source_context.head_tail(
-            combined, TURN_EVIDENCE_MAX_CHARS
-        )
+        retained: list[dict[str, Any]] = []
+        for evidence_category, limit in EVIDENCE_CATEGORY_LIMITS.items():
+            category_records = [
+                item
+                for item in records
+                if isinstance(item, dict)
+                and item.get("category") == evidence_category
+            ]
+            retained.extend(category_records[-limit:])
+        records = sorted(
+            retained,
+            key=lambda item: int(item.get("seq") or 0),
+        )[-EVIDENCE_RECORDS_MAX:]
     state.update(
         {
-            "schema_version": 3,
+            "schema_version": 4,
             "host": session.host,
             "session_id": session.session_id,
             "turn_id": session.turn_id or str(state.get("turn_id") or ""),
@@ -416,8 +430,12 @@ def record_turn_evidence(
             "repo_root": session.repo_root or str(state.get("repo_root") or ""),
             "task_sources": task_sources,
             "evidence_seq": evidence_seq,
+            "evidence_records": records,
         }
     )
+    state.pop("change_evidence", None)
+    state.pop("verification_evidence", None)
+    state.pop("failure_history", None)
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 
@@ -734,6 +752,7 @@ def record_tool_progress(
     goal_transition: str = "",
     goal_objective: str = "",
     evidence_category: str = "",
+    event_fingerprint: str = "",
 ) -> dict[str, Any]:
     path = state_path(data_dir, session, "progress")
     state = load_progress_state(data_dir, session)
@@ -755,6 +774,7 @@ def record_tool_progress(
             "changed_lines": changed_lines,
             "goal_transition": goal_transition,
             "evidence_category": evidence_category,
+            "event_fingerprint": event_fingerprint,
         }
     )
     state.update(
@@ -782,6 +802,20 @@ def mark_strategy_reviewed(
     state["last_strategy_event_seq"] = int(event_seq or 0)
     if changed_lines is not None:
         state["changed_lines_at_strategy"] = int(changed_lines)
+    _atomic_write(path, state)
+
+
+def mark_large_diff_reviewed(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    changed_lines: int | None,
+) -> None:
+    if changed_lines is None:
+        return
+    path = state_path(data_dir, session, "progress")
+    state = _read_json(path, {})
+    state["changed_lines_at_checkpoint"] = int(changed_lines)
     _atomic_write(path, state)
 
 

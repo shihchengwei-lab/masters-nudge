@@ -106,6 +106,7 @@ def _run_cli_process(
         kwargs["start_new_session"] = True
     process = subprocess.Popen(
         command,
+        stdin=subprocess.PIPE if input_text is not None else None,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
