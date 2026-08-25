@@ -109,7 +109,7 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 
 現有證據只支持以下有限結論：
 
-- 最新固定順序 benchmark 中，Arm A 與 Arm B 都在四題額外且先前未使用的 SWE-bench Verified 任務通過 3/4；T03 的結果不同，T04 則兩組都失敗。
+- 最新固定順序 benchmark 使用四題額外且先前未使用的 SWE-bench Verified 任務；Arm A 通過 2/4，Arm B 通過 3/4。T03 的結果不同，T04 則兩組都失敗。
 - Arm B 產生六則 finding，六則都已注入並各有後續 response observation；這只證明投遞順序，不代表 Nudge 造成後續動作或結果。
 - 不同 provider 回報的 token、latency 與估計成本不是同一口徑，也不是帳單保證。
 - 若 host 沒有送出預期原生事件，hook 投遞只能 best-effort。

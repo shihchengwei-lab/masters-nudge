@@ -15,14 +15,14 @@
     "arm_b_runs": 4
   },
   "summary": {
-    "arm_a_passed": 3,
+    "arm_a_passed": 2,
     "arm_b_passed": 3,
-    "arm_a_failed": 1,
+    "arm_a_failed": 2,
     "arm_b_failed": 1,
     "arm_b_reviewer_findings": 6,
     "arm_b_injected_receipts": 6,
     "arm_b_response_observations": 6,
-    "observed_outcome_difference": 0,
+    "observed_outcome_difference": 1,
     "lenses_observed": [
       "beck",
       "lamport",
@@ -148,5 +148,5 @@
       "in_denominator": false
     }
   ],
-  "claim_boundary": "Arm A and Arm B each passed three of four tasks. T03 differed by arm while T04 failed in both arms. This single fixed-order sample is descriptive only: it does not establish a stable effect, prove generalization, or attribute any result or later action to a Nudge."
+  "claim_boundary": "Arm A passed two of four tasks and Arm B passed three of four. T03 differed by arm while T04 failed in both arms. This single fixed-order sample is descriptive only: it does not establish a stable effect, prove generalization, or attribute any result or later action to a Nudge."
 }

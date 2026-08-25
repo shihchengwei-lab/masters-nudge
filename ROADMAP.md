@@ -17,7 +17,7 @@ The product is plugin-only. Before treating the prerelease as ready for wider us
 
 ### 2. Natural-trace reaction quality and impact
 
-Design any future experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The latest four-task descriptive A/B benchmark remains in [the evidence index](evaluation/README.md); both arms passed 3/4, so it supplies no aggregate outcome difference or effect claim.
+Design any future experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The latest four-task descriptive A/B benchmark remains in [the evidence index](evaluation/README.md); Arm A passed 2/4 and Arm B passed 3/4, a one-task descriptive difference that does not establish an effect.
 
 **Manual gate:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 

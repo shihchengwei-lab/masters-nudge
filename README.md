@@ -109,7 +109,7 @@ The retained evidence index is [evaluation/README.md](evaluation/README.md).
 
 Current evidence supports only bounded claims:
 
-- In the latest fixed-order benchmark, Arm A and Arm B each passed 3/4 additional, previously unused SWE-bench Verified tasks. T03 differed by arm; T04 failed in both arms.
+- In the latest fixed-order benchmark, Arm A passed 2/4 and Arm B passed 3/4 additional, previously unused SWE-bench Verified tasks. T03 differed by arm; T04 failed in both arms.
 - Arm B produced six injected findings with six later response observations; this proves delivery order only, not that a Nudge caused an action or result.
 - Provider-reported tokens, latency, and estimated cost are not normalized across providers and are not billing guarantees.
 - Hook delivery is best-effort when a host does not emit an expected native event.
