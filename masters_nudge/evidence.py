@@ -21,7 +21,6 @@ class ToolReviewState:
     checkpoint: dict[str, str] | None
     review_kind: ReviewKind
     event_seq: int
-    changed_lines: int | None
 
 
 def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
@@ -40,7 +39,6 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             checkpoint=None,
             review_kind="checkpoint",
             event_seq=int(prior_progress.get("event_seq") or 0),
-            changed_lines=recent[-1].get("changed_lines"),
         )
     category = checkpoints.evidence_category(event)
     task_source = None
@@ -75,11 +73,6 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             task_source=task_source,
         )
 
-    changed_lines = (
-        checkpoints.get_changed_line_count(event.session.cwd)
-        if event.mutating and event.session.cwd
-        else None
-    )
     transition, objective = checkpoints.goal_transition(event)
     progress = storage.record_tool_progress(
         data_dir,
@@ -88,7 +81,6 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
         command_family=checkpoints.command_family(event),
         failed=category == "failure",
         mutating=event.mutating,
-        changed_lines=changed_lines,
         goal_transition=transition,
         goal_objective=objective,
         evidence_category=category,
@@ -107,15 +99,12 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
                 "evidence_category": category,
                 "evidence_scope": checkpoints.evidence_scope(event),
                 "failed": category == "failure",
-                "changed_lines": changed_lines,
                 "goal_transition": transition,
             },
         )
 
-    checkpoint = checkpoints.classify_tool(event, changed_lines)
-    strategy = checkpoints.classify_strategy(
-        progress, changed_line_count=changed_lines
-    )
+    strategy = checkpoints.classify_strategy(progress)
+    checkpoint = strategy
     review_kind: ReviewKind = "checkpoint"
     if strategy:
         checkpoint = strategy
@@ -140,20 +129,7 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             data_dir,
             event.session,
             event_seq=event_seq,
-            changed_lines=changed_lines,
         )
-        if strategy.get("trigger") == "diff-growth":
-            storage.mark_large_diff_reviewed(
-                data_dir,
-                event.session,
-                changed_lines=changed_lines,
-            )
-    if (
-        checkpoint
-        and checkpoint["reason"] == "large-diff"
-        and not checkpoints.large_diff_review_due(progress, changed_lines)
-    ):
-        checkpoint = None
     if checkpoint and checkpoint["reason"] == "goal-transition":
         review_kind = "goal_transition"
     return ToolReviewState(
@@ -161,28 +137,7 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
         checkpoint=checkpoint,
         review_kind=review_kind,
         event_seq=event_seq,
-        changed_lines=changed_lines,
     )
-
-
-def finish_tool_review(
-    data_dir: Path,
-    event: ToolCompleted,
-    observed: ToolReviewState,
-    *,
-    review_ran: bool,
-) -> None:
-    """Advance an edge-trigger only after its provider review actually ran."""
-    if (
-        review_ran
-        and observed.checkpoint
-        and observed.checkpoint["reason"] == "large-diff"
-    ):
-        storage.mark_large_diff_reviewed(
-            data_dir,
-            event.session,
-            changed_lines=observed.changed_lines,
-        )
 
 
 def read_latest_agentcam_report(

@@ -4,23 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import subprocess
-from pathlib import Path
 from typing import Any
 
-import lens_router
 import source_context
 
 from .contracts import ToolCompleted
 
 
-LARGE_DIFF_THRESHOLD = 80
 MAX_EVENT_CONTEXT_CHARS = 5000
 SEMANTIC_CHANGE_MAX_CHARS = 1800
-SHELL_TOOLS = {"Bash", "PowerShell", "shell_command", "exec_command"}
-
 TEST_FAILURE_RE = re.compile(
     r"\b[1-9]\d*\s+(?:failed|failing)\b"
     r"|\btests?\s+failed\b"
@@ -57,10 +51,6 @@ READ_NAVIGATION_RE = re.compile(
 )
 
 TRIGGER_ROUTING_CONCERNS = {
-    "verification-gap": "feedback-loop",
-    "repeated-command-family": "feedback-loop",
-    "repeated-failure-family": "feedback-loop",
-    "diff-growth": "knowledge-boundary",
     "goal-complete": "completion-boundary",
     "goal-blocked": "completion-boundary",
 }
@@ -83,8 +73,6 @@ def compact_json(value: Any) -> str:
 
 
 def stable_fingerprint(reason: str, payload: dict[str, Any]) -> str:
-    if reason == "large-diff":
-        return f"large-diff-over-{LARGE_DIFF_THRESHOLD}"
     raw = json.dumps(
         {"reason": reason, "payload": payload},
         ensure_ascii=False,
@@ -123,63 +111,6 @@ def _git_output(args: list[str], cwd: str) -> str | None:
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
         return None
     return result.stdout if result.returncode == 0 else None
-
-
-def _parse_numstat(text: str) -> int:
-    total = 0
-    for line in text.splitlines():
-        parts = line.split("\t", 2)
-        if len(parts) < 2 or parts[0] == "-" or parts[1] == "-":
-            continue
-        try:
-            total += int(parts[0]) + int(parts[1])
-        except ValueError:
-            continue
-    return total
-
-
-def _count_text_lines(path: Path) -> int:
-    try:
-        with path.open("rb") as handle:
-            data = handle.read(1024 * 1024)
-    except OSError:
-        return 0
-    if b"\x00" in data:
-        return 0
-    count = data.count(b"\n") + int(bool(data and not data.endswith(b"\n")))
-    return min(count, LARGE_DIFF_THRESHOLD + 1)
-
-
-def get_changed_line_count(cwd: str) -> int | None:
-    tracked = _git_output(["diff", "--numstat", "HEAD", "--"], cwd)
-    if tracked is None:
-        tracked = _git_output(["diff", "--numstat", "--cached", "--"], cwd)
-    untracked = _git_output(["ls-files", "--others", "--exclude-standard", "-z"], cwd)
-    if tracked is None or untracked is None:
-        return None
-    total = _parse_numstat(tracked)
-    root = Path(cwd).resolve()
-    for relative in untracked.split("\0"):
-        if not relative:
-            continue
-        try:
-            candidate = (root / relative).resolve()
-            if not candidate.is_relative_to(root) or not candidate.is_file():
-                continue
-        except (OSError, ValueError):
-            continue
-        total += _count_text_lines(candidate)
-    return total
-
-
-def large_diff_review_due(
-    progress: dict[str, Any], changed_line_count: int | None
-) -> bool:
-    """Trigger on new diff growth, not every edit above the same threshold."""
-    if changed_line_count is None:
-        return False
-    baseline = int(progress.get("changed_lines_at_checkpoint") or 0)
-    return changed_line_count - baseline > LARGE_DIFF_THRESHOLD
 
 
 def _command(event: ToolCompleted) -> str:
@@ -326,8 +257,6 @@ def render_evidence_record(event: ToolCompleted) -> str:
 
 def classify_strategy(
     progress: dict[str, Any],
-    *,
-    changed_line_count: int | None,
 ) -> dict[str, str] | None:
     recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
     last_seq = int(progress.get("last_strategy_event_seq") or 0)
@@ -344,37 +273,14 @@ def classify_strategy(
         trigger = f"goal-{latest_transition}"
     else:
         failures = [item for item in since if item.get("failed")]
-        categories = [str(item.get("evidence_category") or "") for item in since]
-        last_verification = max(
-            (
-                index
-                for index, category in enumerate(categories)
-                if category == "verification"
-            ),
-            default=-1,
-        )
-        unverified_changes = sum(
-            1
-            for category in categories[last_verification + 1 :]
-            if category == "change"
-        )
-        baseline = int(progress.get("changed_lines_at_strategy") or 0)
-        diff_growth = (
-            changed_line_count is not None
-            and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
-        )
         failure_counts: dict[str, int] = {}
         for item in failures:
             family = str(item.get("failure_family") or "")
             if family:
                 failure_counts[family] = failure_counts.get(family, 0) + 1
         repeated_failure = any(count >= 2 for count in failure_counts.values())
-        if unverified_changes >= 2:
-            reason, trigger = "strategy-review", "verification-gap"
-        elif repeated_failure:
+        if repeated_failure:
             reason, trigger = "strategy-review", "repeated-failure-family"
-        elif diff_growth:
-            reason, trigger = "strategy-review", "diff-growth"
         else:
             return None
     lines = [
@@ -387,69 +293,6 @@ def classify_strategy(
         "routing_concern": routing_concern_for_trigger(trigger),
         "context": "\n".join(lines),
         "fingerprint": f"{reason}-{trigger}",
-    }
-
-
-def classify_tool(
-    event: ToolCompleted,
-    changed_line_count: int | None = None,
-) -> dict[str, str] | None:
-    if event.interrupted:
-        return None
-    output = compact_json(event.tool_output)
-    command = _command(event)
-    is_shell = event.tool_name in SHELL_TOOLS
-
-    if (event.failure_known and event.failed) or (
-        is_shell and TEST_FAILURE_RE.search(output)
-    ):
-        return None
-
-    category = evidence_category(event)
-    routing_concern = lens_router.structured_concern_for_evidence(
-        f"{_command(event)}\n{compact_json(event.tool_input)}\n{output}"
-    )
-    eligible_concerns = {
-        "system-causality",
-        "completion-boundary",
-        "knowledge-boundary",
-        "state-ordering",
-        "measured-performance",
-    }
-    if routing_concern in eligible_concerns and category in {
-        "change",
-        "verification",
-    }:
-        reason = "specialist-state-change"
-        return {
-            "reason": reason,
-            "trigger": routing_concern,
-            "routing_concern": routing_concern,
-            "context": f"reason: {reason}\nstate slice: {routing_concern}",
-            "fingerprint": stable_fingerprint(
-                reason,
-                {
-                    "concern": routing_concern,
-                    "scope": evidence_scope(event),
-                    "evidence": output,
-                },
-            ),
-        }
-
-    if not event.mutating:
-        return None
-    if changed_line_count is None:
-        changed_line_count = get_changed_line_count(event.session.cwd or os.getcwd())
-    if changed_line_count is None or changed_line_count <= LARGE_DIFF_THRESHOLD:
-        return None
-    reason = "large-diff"
-    return {
-        "reason": reason,
-        "context": (
-            f"reason: {reason}\n"
-            f"working tree: 偵測到至少 {changed_line_count} 行變動"
-        ),
-        "fingerprint": stable_fingerprint(reason, {}),
     }
 
 

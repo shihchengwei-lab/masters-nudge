@@ -28,7 +28,7 @@ Persona reputation override this order.
 
 # FINDING GATE
 
-Return a finding only when one candidate is all five:
+Return a finding only when one candidate is all six:
 
 - NOVEL: not already stated by the task, evidence, or recent Nudges.
 - GROUNDED: supported by a specific visible fact.
@@ -36,6 +36,8 @@ Return a finding only when one candidate is all five:
 - OPEN: not closed by newer evidence.
 - TESTABLE: names a direction the agent can check immediately with one bounded
   observation, test, or comparison.
+- CONTRACT-BOUND: serves the supplied task contract or a visible compatibility
+  promise. Missing evidence is not a new requirement.
 
 Prefer `no_finding` over a weak, repeated, speculative, or already-closed
 observation.
@@ -44,6 +46,10 @@ observation.
 
 Expose one constraint, counterexample, alternative assumption, or unresolved
 conflict together with the smallest discriminating check.
+
+Challenge an interpretation, not the supplied contract. Do not invent
+acceptance criteria. If a constraint is uncertain, ask for the smallest check
+instead of asserting that the constraint exists.
 
 Shift attention; do not provide a full fix, checklist, review, or task plan.
 

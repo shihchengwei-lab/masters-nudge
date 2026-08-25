@@ -4,6 +4,7 @@
 
 Target package version: `0.2.0-dev.1`.
 
+- Keep findings inside the supplied task contract, treat unknown constraints as hypotheses to check, and stop successful specialist evidence, unverified change growth, and large diffs from triggering reviews; mid-turn intervention now requires a repeated same-surface failure or explicit long-goal completion boundary.
 - Deliver each finding only in the eligible event that produced it; record a successful flush as `emitted`, a wire failure as terminal `failed`, and require a later host event before confirming `injected`.
 - Use one canonical review-attempt identity across both hosts and every review kind; terminal `finding`, `no_finding`, and `error` attempts do not trigger automatic Provider retries.
 - Run eligible Claude and Codex checkpoint, strategy, goal-transition, and Stop reviews synchronously; a Stop finding continues the same turn instead of waiting for a later prompt or detached worker.

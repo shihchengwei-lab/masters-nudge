@@ -40,9 +40,18 @@ class SoftwareNudgeContractTests(unittest.TestCase):
 
         for heading in ("# ROLE", "# EVIDENCE", "# FINDING GATE", "# NUDGE", "# OUTPUT"):
             self.assertIn(heading, prompt)
-        for gate in ("NOVEL", "GROUNDED", "CONSEQUENTIAL", "OPEN", "TESTABLE"):
+        for gate in (
+            "NOVEL",
+            "GROUNDED",
+            "CONSEQUENTIAL",
+            "OPEN",
+            "TESTABLE",
+            "CONTRACT-BOUND",
+        ):
             self.assertIn(gate, prompt)
         self.assertIn("Missing evidence means unknown, not undone", prompt)
+        self.assertIn("Do not invent", prompt)
+        self.assertIn("acceptance criteria", prompt)
         self.assertIn("Prefer `no_finding`", prompt)
         self.assertNotIn("具體型別、順序、重複與是否延遲求值", prompt)
         self.assertNotIn("新接受案例與一個相鄰拒絕案例", prompt)
@@ -164,7 +173,7 @@ class SoftwareColdStartTests(unittest.TestCase):
     def test_packet_separates_universal_state_from_software_evidence(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正設定解析並保留既有相容性",
-            event_context="reason: verification-gap",
+            event_context="reason: strategy-review",
             task_sources={"ISSUE.md": "原始輸入不得崩潰"},
             evidence_records=[
                 {"seq": 1, "category": "change", "content": "change:\nparser updated"},
@@ -536,7 +545,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",
-                    reason="large-diff",
+                    reason="strategy-review",
                     session=SessionRef("codex_cli", "lens-position"),
                     source_packet="packet-marker",
                     source_fingerprint="packet-marker",
@@ -616,35 +625,8 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
 
         self.assertEqual("jeff", route.effective_lens)
 
-    def test_successful_measurement_is_a_carmack_checkpoint(self):
-        from masters_nudge.contracts import ToolCompleted
-
-        event = ToolCompleted(
-            SessionRef("codex_cli", "perf"),
-            "exec_command",
-            {"cmd": "python benchmark.py"},
-            "baseline latency 18ms, candidate latency 12ms",
-            mutating=False,
-        )
-
-        checkpoint = checkpoints.classify_tool(event)
-
-        self.assertEqual("measured-performance", checkpoint["routing_concern"])
-
-    def test_new_forwarding_layer_is_a_linus_checkpoint(self):
-        from masters_nudge.contracts import ToolCompleted
-
-        event = ToolCompleted(
-            SessionRef("codex_cli", "directness"),
-            "apply_patch",
-            {"cmd": "*** Begin Patch\n+def compatibility_wrapper():\n+    return delegate()\n*** End Patch"},
-            "Success",
-            mutating=True,
-        )
-
-        checkpoint = checkpoints.classify_tool(event, changed_line_count=12)
-
-        self.assertEqual("completion-boundary", checkpoint["routing_concern"])
+    def test_routing_does_not_own_a_standalone_intervention_classifier(self):
+        self.assertFalse(hasattr(checkpoints, "classify_tool"))
 
 
 class SoftwareSemanticStateTests(unittest.TestCase):
@@ -671,23 +653,19 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         self.assertIn("tests/test_contract.py::test_public", checkpoints.evidence_scope(first))
 
     def test_one_failure_is_evidence_but_not_an_immediate_interruption(self):
-        from masters_nudge.contracts import ToolCompleted
+        progress = {
+            "last_strategy_event_seq": 0,
+            "recent": [
+                {"event_seq": 1, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+            ],
+        }
 
-        event = ToolCompleted(
-            SessionRef("codex_cli", "one-failure"),
-            "exec_command",
-            {"cmd": "pytest tests/test_a.py"},
-            "1 failed",
-            failed=True,
-            failure_known=True,
-        )
-
-        self.assertIsNone(checkpoints.classify_tool(event))
+        self.assertIsNone(checkpoints.classify_strategy(progress))
 
     def test_unrelated_failures_do_not_form_a_repeated_failure_family(self):
         progress = {
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "recent": [
                 {"event_seq": 1, "meaningful": True, "failed": True,
                  "evidence_category": "failure", "failure_family": "tests/a.py"},
@@ -696,12 +674,11 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             ],
         }
 
-        self.assertIsNone(checkpoints.classify_strategy(progress, changed_line_count=0))
+        self.assertIsNone(checkpoints.classify_strategy(progress))
 
     def test_same_failure_family_triggers_after_repetition(self):
         progress = {
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "recent": [
                 {"event_seq": 1, "meaningful": True, "failed": True,
                  "evidence_category": "failure", "failure_family": "tests/a.py"},
@@ -710,7 +687,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             ],
         }
 
-        review = checkpoints.classify_strategy(progress, changed_line_count=0)
+        review = checkpoints.classify_strategy(progress)
         self.assertEqual("repeated-failure-family", review["trigger"])
 
     def test_injected_nudge_waits_for_a_complete_semantic_cycle(self):
@@ -730,7 +707,6 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         progress = {
             "event_seq": 8,
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "recent": [
                 {
                     "event_seq": index,
@@ -745,14 +721,13 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         }
 
         self.assertIsNone(
-            checkpoints.classify_strategy(progress, changed_line_count=0)
+            checkpoints.classify_strategy(progress)
         )
 
     def test_one_edit_validation_cycle_does_not_trigger_strategy_review(self):
         progress = {
             "event_seq": 2,
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "recent": [
                 {
                     "event_seq": 1,
@@ -774,14 +749,13 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         }
 
         self.assertIsNone(
-            checkpoints.classify_strategy(progress, changed_line_count=12)
+            checkpoints.classify_strategy(progress)
         )
 
     def test_repeated_command_does_not_trigger_without_state_change(self):
         progress = {
             "event_seq": 3,
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "goal_objective": "只修登入失敗",
             "recent": [
                 {
@@ -797,10 +771,10 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         }
 
         self.assertIsNone(
-            checkpoints.classify_strategy(progress, changed_line_count=12)
+            checkpoints.classify_strategy(progress)
         )
 
-    def test_unverified_change_growth_routes_to_feedback_loop_once(self):
+    def test_unverified_change_growth_does_not_trigger_without_a_failure(self):
         recent = [
             {
                 "event_seq": index,
@@ -815,7 +789,6 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         progress = {
             "event_seq": 13,
             "last_strategy_event_seq": 10,
-            "changed_lines_at_strategy": 0,
             "recent": recent,
         }
 
@@ -837,10 +810,9 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         ]
         progress["event_seq"] = 12
 
-        review = checkpoints.classify_strategy(progress, changed_line_count=12)
-
-        self.assertEqual("verification-gap", review["trigger"])
-        self.assertEqual("feedback-loop", review["routing_concern"])
+        self.assertIsNone(
+            checkpoints.classify_strategy(progress)
+        )
 
     def test_stop_review_uses_completion_boundary_route(self):
         with tempfile.TemporaryDirectory() as raw:

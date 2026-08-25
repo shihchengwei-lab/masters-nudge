@@ -8,7 +8,7 @@ Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code
 
 Masters’ Nudge 把 hooks、skills、reviewer prompts、六種軟體工程濾鏡，以及選用的浮動視窗包成一個 plugin。它關注未驗證假設、範圍膨脹、回饋不足、脆弱的事件順序，以及證據尚未支持的完成宣告。
 
-Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 必須符合結構化輸出契約且最長 52 個字；不合格輸出會被拒絕，不會由程式改寫。相同可觀察範圍的重複失敗、未驗證變更累積、特定專科狀態變更、長期目標狀態轉換與回合結束，都可能觸發 reviewer。單次一般失敗只會留下證據，不會立刻打斷主要 agent。
+Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 必須留在既有任務契約內、指出一個有限檢查、符合結構化輸出契約且最長 52 個字；不合格輸出會被拒絕，不會由程式改寫。相同可觀察範圍第二次失敗、長期目標明確轉成 `complete` 或 `blocked`，以及回合結束，都可能觸發 reviewer。一般變更、成功的專科證據、大型 diff 與單次失敗只會留下證據，不會打斷主要 agent。
 
 符合條件的 checkpoint 與 Stop review 會同步執行：host 等 reviewer 回覆，並在同一回合送出 finding。Provider 工作最多 90 秒，外層 host hook 預留 120 秒；符合條件的事件可能因此增加等待時間。錯誤或逾時不會產生 Nudge，也不會自動重試 Provider 或切換 provider。
 
@@ -84,7 +84,7 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 
 Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
 
-浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。當 evidence packet 有直接的專科證據時，Reliability 或 Performance 可以自動單次接手；兩者不是手動階段設定。
+浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。Review 已到期後，直接的可靠性或效能證據可以選擇對應 specialist；專科證據本身不會觸發 review，兩者也不是手動階段設定。
 
 本機模式只接受 loopback HTTP、停用 client proxy 與 redirect、要求 Ollama 回報 cloud 功能已關閉，並拒絕 remote model metadata。Masters’ Nudge 不會安裝或下載模型，也不會失敗後改用雲端 provider。Grok 則會透過已登入的 Grok CLI 使用 xAI 雲端服務。
 

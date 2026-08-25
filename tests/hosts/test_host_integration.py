@@ -996,7 +996,7 @@ class SharedCoreTests(unittest.TestCase):
                     source_packet="ordinary workflow",
                     source_fingerprint="structured-route",
                     routing_evidence="ordinary workflow",
-                    trigger="diff-growth",
+                    trigger="manual-route",
                     routing_concern="knowledge-boundary",
                 ),
                 persist_reaction=False,
@@ -1010,7 +1010,7 @@ class SharedCoreTests(unittest.TestCase):
                     source_packet="ordinary workflow",
                     source_fingerprint="machine-text-only",
                     routing_evidence="ordinary workflow",
-                    trigger="diff-growth",
+                    trigger="manual-route",
                 ),
                 persist_reaction=False,
             )

@@ -20,11 +20,7 @@ from .contracts import (
     find_git_root,
 )
 from .core import ReviewCore
-from .evidence import (
-    finish_tool_review,
-    observe_tool_event,
-    read_latest_agentcam_report,
-)
+from .evidence import observe_tool_event, read_latest_agentcam_report
 from .runtime import active_guard
 
 
@@ -291,7 +287,7 @@ class CodexAdapter:
                 f"{observed.review_kind}:{checkpoint.get('trigger') or checkpoint['reason']}\n"
                 f"{source_packet}"
             ),
-            routing_evidence=checkpoint["context"],
+            routing_evidence=source_packet,
             source_event_seq=observed.event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
             routing_concern=str(checkpoint.get("routing_concern") or ""),
@@ -305,12 +301,6 @@ class CodexAdapter:
         except Exception as exc:
             self.core.log_error(f"Codex checkpoint review failed: {exc}")
             return None
-        finish_tool_review(
-            self.data_dir,
-            event,
-            observed,
-            review_ran=outcome is not None,
-        )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None
         output = build_hook_output(

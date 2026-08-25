@@ -8,7 +8,7 @@ Masters’ Nudge gives Claude Code or Codex one short, evidence-grounded second 
 
 Masters’ Nudge packages hooks, skills, reviewer prompts, six software-engineering lenses, and an optional floating window as one plugin. It looks for workflow tensions such as an untested assumption, expanding scope, weak feedback, fragile event order, or a completion claim that has moved ahead of its evidence.
 
-A Nudge is not a code review, an instruction, or proof that another model is more accurate. Findings must satisfy the structured output contract and stay within 52 characters; invalid output is rejected rather than rewritten. Repeated failures on the same observable surface, unverified change growth, selected specialist state changes, long-goal transitions, and end-of-turn events may invoke a reviewer. One ordinary failure is recorded as evidence without immediately interrupting the agent.
+A Nudge is not a code review, an instruction, or proof that another model is more accurate. Findings must stay within the supplied task contract, identify a bounded check, satisfy the structured output contract, and remain within 52 characters; invalid output is rejected rather than rewritten. A second failure on the same observable surface, an explicit long-goal `complete` or `blocked` transition, and the end of a turn may invoke a reviewer. Ordinary changes, successful specialist evidence, large diffs, and one failure are recorded as evidence without interrupting the agent.
 
 Eligible checkpoint and Stop reviews are synchronous: the host waits for the reviewer and returns a finding in the same turn. Provider work is capped at 90 seconds inside a 120-second host-hook budget. This can add latency at an eligible event; an error or timeout produces no Nudge and does not trigger an automatic Provider retry or fallback.
 
@@ -84,7 +84,7 @@ Common environment variables:
 
 Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
 
-The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. Reliability and Performance may take over automatically when the packet contains direct specialist evidence; they are not manual stage settings.
+The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. Once a review is due, direct reliability or performance evidence may select a specialist; specialist evidence does not itself trigger a review, and those specialists are not manual stage settings.
 
 Local-only mode accepts only loopback HTTP, disables client proxy use and redirects, requires Ollama to report cloud features disabled, and rejects remote model metadata. It never installs or pulls a model and never falls back to a cloud provider. Grok remains a cloud provider through the signed-in Grok CLI.
 

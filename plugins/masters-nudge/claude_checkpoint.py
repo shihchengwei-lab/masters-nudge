@@ -86,7 +86,7 @@ def review_checkpoint(
                 f"{source_packet}"
             ).encode("utf-8")
         ).hexdigest(),
-        routing_evidence=event["context"],
+        routing_evidence=source_packet,
         source_event_seq=source_event_seq,
         trigger=str(event.get("trigger") or event["reason"]),
         routing_concern=event.get("routing_concern", ""),
@@ -131,12 +131,6 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
             session=session,
             review_kind=observed.review_kind,
             source_event_seq=observed.event_seq,
-        )
-        shared_evidence.finish_tool_review(
-            settings.paths.data_dir,
-            tool_event,
-            observed,
-            review_ran=outcome is not None,
         )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None

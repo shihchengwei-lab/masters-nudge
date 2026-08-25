@@ -14,9 +14,6 @@ from masters_nudge import checkpoints
 class RoutingSimplificationTests(unittest.TestCase):
     def test_classifier_emits_structured_concerns_for_known_triggers(self):
         cases = {
-            "repeated-command-family": "feedback-loop",
-            "repeated-failure-family": "feedback-loop",
-            "diff-growth": "knowledge-boundary",
             "goal-complete": "completion-boundary",
             "goal-blocked": "completion-boundary",
         }
@@ -26,6 +23,11 @@ class RoutingSimplificationTests(unittest.TestCase):
                 self.assertEqual(
                     checkpoints.routing_concern_for_trigger(trigger), expected
                 )
+
+        self.assertEqual(
+            checkpoints.routing_concern_for_trigger("repeated-failure-family"),
+            "",
+        )
 
     def test_structured_concern_routes_without_machine_trigger_text(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -51,7 +53,7 @@ class RoutingSimplificationTests(unittest.TestCase):
 
             route = lens_router.resolve_review_route(
                 data_dir,
-                "trigger: diff-growth",
+                "trigger: ordinary-policy-event",
                 checkpoint=True,
             )
 

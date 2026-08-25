@@ -759,7 +759,6 @@ def load_progress_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
             "schema_version": 1,
             "event_seq": 0,
             "last_strategy_event_seq": 0,
-            "changed_lines_at_strategy": 0,
             "recent": [],
             "goal_objective": "",
         },
@@ -774,7 +773,6 @@ def record_tool_progress(
     command_family: str,
     failed: bool,
     mutating: bool,
-    changed_lines: int | None = None,
     goal_transition: str = "",
     goal_objective: str = "",
     evidence_category: str = "",
@@ -799,7 +797,6 @@ def record_tool_progress(
             "failed": bool(failed),
             "mutating": bool(mutating),
             "meaningful": meaningful,
-            "changed_lines": changed_lines,
             "goal_transition": goal_transition,
             "evidence_category": evidence_category,
             "evidence_scope": evidence_scope,
@@ -825,27 +822,10 @@ def mark_strategy_reviewed(
     session: SessionRef,
     *,
     event_seq: int,
-    changed_lines: int | None,
 ) -> None:
     path = state_path(data_dir, session, "progress")
     state = _read_json(path, {})
     state["last_strategy_event_seq"] = int(event_seq or 0)
-    if changed_lines is not None:
-        state["changed_lines_at_strategy"] = int(changed_lines)
-    _atomic_write(path, state)
-
-
-def mark_large_diff_reviewed(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    changed_lines: int | None,
-) -> None:
-    if changed_lines is None:
-        return
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    state["changed_lines_at_checkpoint"] = int(changed_lines)
     _atomic_write(path, state)
 
 

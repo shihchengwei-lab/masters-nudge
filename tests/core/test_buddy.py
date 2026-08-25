@@ -425,122 +425,6 @@ pytest: 1
 
 # ── 4. Checkpoint nudge hooks ────────────────────────────────────────
 
-class TestCheckpointClassification(unittest.TestCase):
-
-    def setUp(self):
-        import claude_checkpoint as checkpoint
-        from masters_nudge import checkpoints
-
-        self.checkpoint = checkpoint
-        self.classifier = checkpoints
-
-    def classify(self, hook, changed_line_count=None):
-        event = self.checkpoint.normalize_tool_event(hook)
-        if event is None:
-            return None
-        return self.classifier.classify_tool(event, changed_line_count)
-
-    def test_failed_test_command_is_evidence_not_an_immediate_checkpoint(self):
-        hook = {
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "python -m pytest"},
-            "error": "Exit code 1\n2 failed, 8 passed",
-        }
-
-        result = self.classify(hook)
-
-        self.assertIsNone(result)
-
-    def test_test_failure_text_on_success_event_is_not_an_immediate_checkpoint(self):
-        hook = {
-            "hook_event_name": "PostToolUse",
-            "tool_name": "Bash",
-            "tool_input": {"command": "custom-test-wrapper"},
-            "tool_response": {
-                "stdout": "Tests: 1 failed, 9 passed",
-                "stderr": "",
-            },
-        }
-
-        result = self.classify(hook, changed_line_count=0)
-
-        self.assertIsNone(result)
-
-    def test_non_test_tool_failure_is_not_an_immediate_checkpoint(self):
-        hook = {
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
-        }
-
-        result = self.classify(hook)
-
-        self.assertIsNone(result)
-
-    def test_interrupted_tool_is_not_a_checkpoint(self):
-        hook = {
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest"},
-            "error": "Interrupted",
-            "is_interrupt": True,
-        }
-
-        self.assertIsNone(self.classify(hook))
-
-    def test_large_diff_triggers_only_above_original_threshold(self):
-        hook = {
-            "hook_event_name": "PostToolUse",
-            "tool_name": "Edit",
-            "tool_input": {"file_path": "/project/app.py"},
-            "tool_response": {"success": True},
-        }
-
-        self.assertIsNone(
-            self.classify(hook, changed_line_count=80)
-        )
-        result = self.classify(hook, changed_line_count=81)
-        self.assertEqual(result["reason"], "large-diff")
-        self.assertIn("81", result["context"])
-        later = self.classify(hook, changed_line_count=120)
-        self.assertEqual(result["fingerprint"], later["fingerprint"])
-
-    def test_changed_line_count_includes_tracked_and_untracked_text(self):
-        from masters_nudge import checkpoints as shared_checkpoints
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            Path(tmpdir, "new.py").write_text(
-                "\n".join(f"line {i}" for i in range(70)) + "\n",
-                encoding="utf-8",
-            )
-
-            def fake_git(args, _cwd):
-                if args[:2] == ["diff", "--numstat"]:
-                    return "10\t5\tapp.py\n-\t-\timage.png\n"
-                if args[:3] == ["ls-files", "--others", "--exclude-standard"]:
-                    return "new.py\0"
-                return ""
-
-            with mock.patch.object(
-                shared_checkpoints, "_git_output", side_effect=fake_git
-            ):
-                result = shared_checkpoints.get_changed_line_count(tmpdir)
-
-        self.assertEqual(result, 85)
-
-    def test_unrelated_success_does_not_trigger(self):
-        hook = {
-            "hook_event_name": "PostToolUse",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/project/app.py"},
-            "tool_response": {"success": True},
-        }
-
-        self.assertIsNone(self.classify(hook))
-
-
 class TestCheckpointDelivery(unittest.TestCase):
 
     def setUp(self):
@@ -678,7 +562,7 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIsNone(second)
         review.assert_called_once()
 
-    def test_claude_uses_shared_verification_gap_timing(self):
+    def test_claude_does_not_review_unverified_changes_alone(self):
         from masters_nudge import storage
         from masters_nudge.contracts import ReviewOutcome, SessionRef
 
@@ -707,10 +591,7 @@ class TestCheckpointDelivery(unittest.TestCase):
                 {**hook, "tool_input": {"file_path": "second.py"}}
             )
 
-        review.assert_called_once()
-        event = review.call_args.args[0]
-        self.assertEqual("verification-gap", event["trigger"])
-        self.assertEqual("strategy", review.call_args.kwargs["review_kind"])
+        review.assert_not_called()
         progress = storage.load_progress_state(
             self.settings.paths.data_dir, session
         )

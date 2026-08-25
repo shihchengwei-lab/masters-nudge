@@ -343,14 +343,14 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
 
 class LongGoalReplayTests(unittest.TestCase):
-    def test_large_diff_review_is_edge_triggered_across_later_edits(self):
+    def test_large_diff_does_not_create_a_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
             adapter = CodexAdapter(core)
             event = {
                 "hook_event_name": "PostToolUse",
-                "session_id": "large-diff",
+                "session_id": "normal-change",
                 "turn_id": "t",
                 "cwd": str(root),
                 "tool_name": "apply_patch",
@@ -358,15 +358,10 @@ class LongGoalReplayTests(unittest.TestCase):
                 "tool_response": {"success": True},
             }
 
-            with mock.patch(
-                "masters_nudge.checkpoints.get_changed_line_count",
-                return_value=100,
-            ):
-                adapter.process(event)
-                adapter.process(event)
+            adapter.process(event)
+            adapter.process(event)
 
-            self.assertEqual(len(core.calls), 1)
-            self.assertEqual(core.calls[0].trigger, "diff-growth")
+            self.assertEqual(core.calls, [])
 
     def test_repeated_command_family_without_state_change_does_not_review(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -406,7 +401,7 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual([call.kind for call in core.calls], ["strategy"])
             self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
-            self.assertEqual(core.calls[-1].routing_concern, "feedback-loop")
+            self.assertEqual(core.calls[-1].routing_concern, "")
 
     def test_goal_completion_is_reviewed_before_the_final_response(self):
         with tempfile.TemporaryDirectory() as raw:
