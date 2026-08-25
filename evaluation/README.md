@@ -1,39 +1,41 @@
-# Evaluation evidence index
+# Final benchmark evidence
 
-Historical protocols, raw rows, workspaces, screenshots, and dated reports are
-preserved in the verified
-[`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22)
-release. They are not active product code.
+This directory intentionally retains only the final benchmark result:
+[`final01.json`](final01.json).
 
-## Retained conclusions
+## Result
 
-- Workflow Holdout V2 R2 used 18 synthetic packets and two repeats: 36 baseline,
-  36 routed, and 12 specialist-primary calls (84 total). The routed condition
-  passed its eight pilot gates, but the evidence used one author-rater and does
-  not establish field reliability or downstream task impact. The first 84-row
-  batch was excluded in full because the harness selected an incompatible Codex
-  CLI and exited before generation.
-- The lens-differentiation run transported 18/18 calls. Five of six lenses were
-  stable in 3/3 repeats; the alternate lens was stable in 1/3. A later 18-call observation
-  run reached 18/18 aligned, complete delivered findings, still without an
-  independent holdout reliability claim.
-- Phase B sensitivity calibration had 18 control and 18 positive-control runs;
-  all 36 transports and graders were valid, but 0/6 task patterns met the
-  preregistered sensitivity gate. The instrument was therefore stopped.
-- The Phase B impact pilot had 18 matched pairs and 36/36 valid rows. Treatment
-  and control both passed 13/18 tasks; one treatment win and one loss produced
-  net zero. This is a null pilot, not evidence that injection improves outcomes.
-- An earlier six-call treatment-generation batch was infrastructure-invalid:
-  generation completed, but a wrong field name prevented result serialization.
-  No output from that batch was inspected, selected, or reused.
-- The dated Codex Phase C smoke was one Windows/Codex 0.147.0 observation. Its
-  host behavior is not a guarantee for later versions.
+`final01` is a fixed-order, descriptive A/B run over four previously unused
+SWE-bench Verified tasks. Both arms used `gpt-5.6-sol` at medium reasoning in
+fresh workspaces from the same frozen task trees. Arm A disabled plugin hooks;
+Arm B enabled the plugin snapshot built from commit `e1a35d4` with Anthropic
+`claude-opus-5` as reviewer.
 
-## Claim boundaries
+| Task | Arm A | Arm B | B findings / injected / observed |
+|---|---:|---:|---:|
+| `pytest-dev__pytest-10051` | pass | pass | 1 / 1 / 1 |
+| `django__django-17084` | pass | pass | 2 / 2 / 2 |
+| `sphinx-doc__sphinx-9591` | pass | pass | 1 / 1 / 1 |
+| `sympy__sympy-17630` | pass | pass | 1 / 1 / 1 |
 
-- Synthetic fixtures test fixed inputs; they do not establish field reliability.
-- Human adjudication was limited and was not independent multi-rater validation.
-- A generated finding, an injection receipt, and a later response are different
-  events. Temporal association is not a causal effect size.
-- Provider-reported usage and latency describe only the archived harness and
-  versions; they are not normalized cost or future-performance estimates.
+Arm A passed 4/4 and Arm B passed 4/4. Five Arm B reviewer findings were
+generated, injected, and followed by a recorded response observation. Only the
+Beck and Linus lenses appeared, so the preregistered six-lens condition for a
+hero image was not met and no hero was created.
+
+## Exclusions
+
+- `astropy__astropy-13579` failed preflight because the retained runtime lacked
+  required in-place compiled extensions. No main-model run started, and the
+  candidate is outside the denominator.
+- The first T03/T04 attempts used each task's `ISSUE.md` directly instead of the
+  frozen common task prompt. All four attempts were excluded before analysis;
+  official T03/T04 runs were repeated from exactly rematerialized baseline
+  commits with the frozen prompt.
+
+## Claim boundary
+
+This sample shows no outcome difference between arms. It is not a concurrent
+randomized trial and does not establish a stable effect size, prove
+generalization, or causally attribute any result or later action to a Nudge.
+The injected receipts and response observations establish delivery order only.

@@ -109,8 +109,9 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 
 現有證據只支持以下有限結論：
 
-- 固定 synthetic packets 顯示濾鏡區分與 schema compliance；不能證明一般情境的可靠性。
-- Phase B synthetic tasks 沒有產生正向 treatment effect，實驗已停止。
+- 最終固定順序 benchmark 中，Arm A 與 Arm B 都在四題先前未使用的 SWE-bench Verified 任務通過 4/4；這個樣本沒有顯示 outcome 差異。
+- Arm B 產生五則 finding，五則都已注入並各有後續 response observation；這只證明投遞順序，不代表 Nudge 造成後續動作或結果。
+- 實際只出現 Beck 與 Linus 濾鏡，未達六濾鏡 benchmark hero 圖條件，因此沒有製作 hero 圖。
 - 不同 provider 回報的 token、latency 與估計成本不是同一口徑，也不是帳單保證。
 - 若 host 沒有送出預期原生事件，hook 投遞只能 best-effort。
 

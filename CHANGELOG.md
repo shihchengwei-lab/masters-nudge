@@ -16,7 +16,7 @@ Target package version: `0.2.0-dev.1`.
 - Keep only Claude's current-turn final-claim fallback parser, share one checkpoint/Stop JSON emitter, and remove the dead transcript renderer and duplicate delivery seams.
 - Make native plugin marketplaces the only supported installation path; remove manual installers, hook snippets, legacy source wrappers, legacy `BUDDY_*` configuration aliases, and legacy runtime/data fallbacks while retaining the packaged host launchers.
 - Retire the former Shader, Three.js／WebGPU black-hole, and Riemann specializations from the product branch; their historical artifacts remain in the verified [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22) release and fixed tag.
-- Replace stopped evaluation harnesses, fixtures, dated reports, screenshots, and an unused spritesheet builder with a single `evaluation/README.md` index that retains denominators, exclusions, null results, and explicit claim boundaries.
+- Retain only the final four-task descriptive A/B benchmark in the product branch: both arms passed 4/4; Arm B recorded five injected findings with five later response observations; only Beck and Linus appeared, so no benchmark hero image was created. Exclude one failed preflight candidate and four prompt-contract-deviating attempts from the denominator, and make no effect claim.
 - Consolidate Claude hook entry points, checkpoint classification, turn state, Agentcam discovery, logging, and runtime inventory around one owner for each behavior; remove detached review launchers.
 - Derive package membership and doctor dependencies from one manifest, Claude session identity from one adapter helper, and public stage views from one `StageSpec` registry.
 - Align README claims with prompt-level question guidance and Codex-only response observations; remove test-only Claude session fallbacks and unused forwarding surfaces.
@@ -49,10 +49,8 @@ Target package version: `0.2.0-dev.1`.
 - Read a newly active session log from its first entry so the Tk window no longer skips that session's initial Nudge.
 - Tag reactions with normalized workspace identity and make the Tk window ignore logs from other workspaces, preventing research and plugin-development sessions from nudging the same display.
 - Add six distinct, evidence-bounded workflow observation scenes that guide lens-specific candidate selection without leaking persona role-play into Nudge text.
-- Improve fixed-packet semantic lens differentiation from 5/6 to 6/6 in the scene follow-up; retain the holdout requirement before making a general reliability claim.
 - Target a complete 36–42-character Nudge ending in terminal punctuation while retaining the 52-character hard cap and accepting shorter complete answers.
 - Close an unpunctuated hard-cap finding locally at its last complete clause, preserving delivery without another reviewer call.
-- Replace the original 5/6 README hero with six real Tk captures from the 6/6-aligned, 18/18-complete local-closure run.
 - Add an experimental BYOM `ollama-local` reviewer shared by Claude Code and Codex.
 - Require loopback HTTP, disabled proxies and redirects, Ollama cloud-disabled status, and local model metadata before every generation.
 - Persist an explicitly configured local reviewer while keeping environment variables as the highest-priority override.

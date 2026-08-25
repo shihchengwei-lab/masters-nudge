@@ -109,8 +109,9 @@ The retained evidence index is [evaluation/README.md](evaluation/README.md).
 
 Current evidence supports only bounded claims:
 
-- Fixed synthetic packets showed lens separation and schema compliance; they do not prove general reliability.
-- Phase B synthetic tasks produced no positive treatment effect and were stopped.
+- In the final fixed-order benchmark, Arm A and Arm B each passed 4/4 previously unused SWE-bench Verified tasks. This sample showed no outcome difference.
+- Arm B produced five injected findings with five later response observations; this proves delivery order only, not that a Nudge caused an action or result.
+- Only the Beck and Linus lenses appeared, so the six-lens condition for a benchmark hero image was not met.
 - Provider-reported tokens, latency, and estimated cost are not normalized across providers and are not billing guarantees.
 - Hook delivery is best-effort when a host does not emit an expected native event.
 

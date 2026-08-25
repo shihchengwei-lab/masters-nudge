@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-08-26T03:48:16+08:00",
+  "design": "fresh_fixed_order_descriptive_ab",
+  "dataset": {
+    "name": "princeton-nlp/SWE-bench_Verified",
+    "revision": "78f471bf655a3137b2e8a75af1501690ec009ec3",
+    "previously_unused_tasks": true,
+    "hidden_tests_withheld_from_main_model": true
+  },
+  "denominator": {
+    "tasks": 4,
+    "runs": 8,
+    "arm_a_runs": 4,
+    "arm_b_runs": 4
+  },
+  "summary": {
+    "arm_a_passed": 4,
+    "arm_b_passed": 4,
+    "arm_a_failed": 0,
+    "arm_b_failed": 0,
+    "arm_b_reviewer_findings": 5,
+    "arm_b_injected_receipts": 5,
+    "arm_b_response_observations": 5,
+    "observed_outcome_difference": 0,
+    "lenses_observed": [
+      "beck",
+      "linus"
+    ],
+    "all_six_lenses_observed": false,
+    "hero_created": false
+  },
+  "tasks": [
+    {
+      "task_key": "t01",
+      "instance_id": "pytest-dev__pytest-10051",
+      "baseline_tree": "9317db57b5e6080f84c755e6616059e413f4a00d",
+      "arm_a": {
+        "run_id": "final01-t01-a",
+        "passed": true,
+        "wall_time_sec": 594.865,
+        "score_sha256": "8593c45f66df9a13b50c3c2fe8d94581893f4512a93b021b0c659830adfcdcab"
+      },
+      "arm_b": {
+        "run_id": "final01-t01-b",
+        "passed": true,
+        "wall_time_sec": 655.438,
+        "score_sha256": "daade585feda91e41a7c73b95c15b71a7cd2529307b9443aca7560ceb0fc9e01",
+        "findings": 1,
+        "injected": 1,
+        "response_observations": 1,
+        "lenses": ["linus"],
+        "nudges": ["grep reset() 是否仍有呼叫者，否則新增 clear() 只是重複層"]
+      }
+    },
+    {
+      "task_key": "t02",
+      "instance_id": "django__django-17084",
+      "baseline_tree": "5335a7bf43ce5e755610455017fca379967ab81f",
+      "arm_a": {
+        "run_id": "final01-t02-a",
+        "passed": true,
+        "wall_time_sec": 209.613,
+        "score_sha256": "31702c658d9613bdb605148f581586fdf0ba81ef9a88095a410192839c83abaf"
+      },
+      "arm_b": {
+        "run_id": "final01-t02-b",
+        "passed": true,
+        "wall_time_sec": 240.836,
+        "score_sha256": "90916febc3f8d3ca8edbd2f9170d3aa5281082733b98fd2159e5fb1fac6738e6",
+        "findings": 2,
+        "injected": 2,
+        "response_observations": 2,
+        "lenses": ["beck", "linus"],
+        "nudges": [
+          "#9 已是預期重現，下一步該改 production 編譯層，而非再調測試",
+          "getattr 預設 True，會不會讓一般 annotation 也被迫走子查詢？"
+        ]
+      }
+    },
+    {
+      "task_key": "t03",
+      "instance_id": "sphinx-doc__sphinx-9591",
+      "baseline_tree": "50a2710a88d65da8659884991babb33d74aa21a6",
+      "arm_a": {
+        "run_id": "final01-t03-a",
+        "passed": true,
+        "wall_time_sec": 216.592,
+        "score_sha256": "99a2d6aeb7250ed5e5f01210bcea5ab14b9e0ef2f5f4fdb098e15827acd13bf9"
+      },
+      "arm_b": {
+        "run_id": "final01-t03-b",
+        "passed": true,
+        "wall_time_sec": 346.337,
+        "score_sha256": "631288f361807ce5ba88c42f9ec094f9ce26fb1d7419e3905ef59969d61cbf6f",
+        "findings": 1,
+        "injected": 1,
+        "response_observations": 1,
+        "lenses": ["linus"],
+        "nudges": ["請比對 PyProperty 與 PyAttribute 的註解處理是否已完全重複可合併"]
+      }
+    },
+    {
+      "task_key": "t04",
+      "instance_id": "sympy__sympy-17630",
+      "baseline_tree": "e371953779c56cb6bbcecaa28e5f9e5d94eefcfc",
+      "arm_a": {
+        "run_id": "final01-t04-a",
+        "passed": true,
+        "wall_time_sec": 288.868,
+        "score_sha256": "6f0037cf8871b9d7aa51c8407c19658f1647e4587bdf7e81c5c21fc5bffc1f22"
+      },
+      "arm_b": {
+        "run_id": "final01-t04-b",
+        "passed": true,
+        "wall_time_sec": 408.579,
+        "score_sha256": "4b99bbc11837bfb5bd77071022aedb9d8aa1ae2b02f3067f4c67f37329bfe272",
+        "findings": 1,
+        "injected": 1,
+        "response_observations": 1,
+        "lenses": ["linus"],
+        "nudges": ["改 dense.py 通用乘法像替 _blockmul 擦屁股，試改 blockmatrix 比較"]
+      }
+    }
+  ],
+  "apparatus": {
+    "main_model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "reviewer_provider": "anthropic",
+    "reviewer_model": "claude-opus-5",
+    "configuration_source": "environment",
+    "plugin_source_commit": "e1a35d4b0ad348dd8323291cedff2c5efe797b0c",
+    "plugin_tree_sha256": "5116c9ef03a9d69e97ed58e7e8117f433b9e47dd457c55009b617f4b8caaf9a6",
+    "task_prompt_sha256": "5f06800bac378f497c2aa098bb873ec36ac398531d86e936f9a02e4619615c7d",
+    "offline": true,
+    "approval_policy": "never",
+    "sandbox": "workspace-write"
+  },
+  "exclusions": [
+    {
+      "kind": "preflight_runtime_infrastructure_failure",
+      "instance_id": "astropy__astropy-13579",
+      "main_model_run_started": false,
+      "in_denominator": false
+    },
+    {
+      "kind": "prompt_contract_deviation",
+      "affected_tasks": ["t03", "t04"],
+      "excluded_attempts": 4,
+      "official_runs_repeated_from_exact_baselines": true,
+      "in_denominator": false
+    }
+  ],
+  "claim_boundary": "All eight valid runs passed, so this sample shows no outcome difference between arms. The observations are descriptive only: they do not establish a stable effect, prove generalization, or attribute any result or later action to a Nudge."
+}
