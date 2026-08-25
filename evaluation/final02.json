@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-08-26T07:34:44+08:00",
+  "design": "fresh_fixed_order_descriptive_ab",
+  "dataset": {
+    "name": "SWE-bench/SWE-bench_Verified",
+    "revision": "78f471bf655a3137b2e8a75af1501690ec009ec3",
+    "previously_unused_tasks": true,
+    "hidden_tests_withheld_from_main_model": true
+  },
+  "denominator": {
+    "tasks": 4,
+    "runs": 8,
+    "arm_a_runs": 4,
+    "arm_b_runs": 4
+  },
+  "summary": {
+    "arm_a_passed": 3,
+    "arm_b_passed": 3,
+    "arm_a_failed": 1,
+    "arm_b_failed": 1,
+    "arm_b_reviewer_findings": 6,
+    "arm_b_injected_receipts": 6,
+    "arm_b_response_observations": 6,
+    "observed_outcome_difference": 0,
+    "lenses_observed": [
+      "beck",
+      "lamport",
+      "linus"
+    ]
+  },
+  "tasks": [
+    {
+      "task_key": "t01",
+      "instance_id": "django__django-16631",
+      "baseline_tree": "75afd384323b4e50c1ddc2dd1f93f3f1736be539",
+      "arm_a": {
+        "run_id": "final02-t01-a",
+        "passed": true,
+        "wall_time_sec": 852.372,
+        "score_sha256": "43a036aaa539c4c381b58bc95f3f5834c172dbe94ca11e63a7eb4afed805a5f8"
+      },
+      "arm_b": {
+        "run_id": "final02-t01-b",
+        "passed": true,
+        "wall_time_sec": 1099.222,
+        "score_sha256": "aead3263dbaac748b5ab4b2053a51298b4bce67fd1f1efcd38f3697a68c3d140",
+        "findings": 2,
+        "injected": 2,
+        "response_observations": 2,
+        "lenses": ["beck", "linus"],
+        "nudges": [
+          "兩次只改測試斷言仍失敗；請先驗 auth.get_user 是否真的 flush。",
+          "login() 仍單一 hash 比對，請查它在舊金鑰下是否也會 flush。"
+        ]
+      }
+    },
+    {
+      "task_key": "t02",
+      "instance_id": "pytest-dev__pytest-6197",
+      "baseline_tree": "6bee0cf56f65ee124dcbf385c64d1884173ff7ec",
+      "arm_a": {
+        "run_id": "final02-t02-a",
+        "passed": true,
+        "wall_time_sec": 1298.012,
+        "score_sha256": "67ac48ad66636acd9695ace7ef912cee012a72e80132f180be91da3ecde07d97"
+      },
+      "arm_b": {
+        "run_id": "final02-t02-b",
+        "passed": true,
+        "wall_time_sec": 1175.779,
+        "score_sha256": "0b9db89dc6996dd37ec0d4a37aaafafb71716e1818e2e4cf1ab3cea11bac3d22",
+        "findings": 2,
+        "injected": 2,
+        "response_observations": 2,
+        "lenses": ["lamport", "linus"],
+        "nudges": [
+          "套件內若另有 test_x.py，壞掉的 __init__.py 是否仍被匯入？",
+          "只有子套件含測試時，外層 __init__.py 是否仍被匯入？"
+        ]
+      }
+    },
+    {
+      "task_key": "t03",
+      "instance_id": "sphinx-doc__sphinx-9229",
+      "baseline_tree": "4cd6ca65ae586916af1c372ff4fc07911b92593d",
+      "arm_a": {
+        "run_id": "final02-t03-a",
+        "passed": false,
+        "wall_time_sec": 791.146,
+        "score_sha256": "b793a4c1db5e37a3f4920414333bdaca082b1eee5d1b835d47f6cd26d0bef97a"
+      },
+      "arm_b": {
+        "run_id": "final02-t03-b",
+        "passed": true,
+        "wall_time_sec": 731.177,
+        "score_sha256": "d82744f37fa3943be01b6ac998354474ca02eeb71fe6378fdc988c7a773169b9",
+        "findings": 1,
+        "injected": 1,
+        "response_observations": 1,
+        "lenses": ["linus"],
+        "nudges": ["修的是 class 別名，但 issue 是 Dict/Union 泛型別名；請直接跑原重現檔驗證"]
+      }
+    },
+    {
+      "task_key": "t04",
+      "instance_id": "sympy__sympy-18199",
+      "baseline_tree": "c05f86793ea661753fbbe2ec06662f5db1c9c864",
+      "arm_a": {
+        "run_id": "final02-t04-a",
+        "passed": false,
+        "wall_time_sec": 319.024,
+        "score_sha256": "f560ae016920bf87768aec955840264fcaa1b3a495a88a8882f219d5ca3f0270"
+      },
+      "arm_b": {
+        "run_id": "final02-t04-b",
+        "passed": false,
+        "wall_time_sec": 342.714,
+        "score_sha256": "838eefd1488f919157664211cebc26b131a218c40abd00bf60b3c6040773b697",
+        "findings": 1,
+        "injected": 1,
+        "response_observations": 1,
+        "lenses": ["linus"],
+        "nudges": ["早退是否跳過原有參數與質數檢查？試 nthroot_mod(0,3,8) 及 n<=0"]
+      }
+    }
+  ],
+  "apparatus": {
+    "main_model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "reviewer_provider": "anthropic",
+    "reviewer_model": "claude-opus-5",
+    "configuration_source": "environment",
+    "plugin_source_commit": "ac090a9f34ff76b826ceedb10361f7d7a3bd4ed3",
+    "plugin_tree_sha256": "5116c9ef03a9d69e97ed58e7e8117f433b9e47dd457c55009b617f4b8caaf9a6",
+    "task_prompt_sha256": "5f06800bac378f497c2aa098bb873ec36ac398531d86e936f9a02e4619615c7d",
+    "offline": true,
+    "approval_policy": "never",
+    "sandbox": "workspace-write"
+  },
+  "exclusions": [
+    {
+      "kind": "evaluator_invocation_error",
+      "affected_task": "t04",
+      "affected_runs": 2,
+      "main_model_runs_repeated": false,
+      "official_scores_recomputed_from_unchanged_outputs": true,
+      "in_denominator": false
+    }
+  ],
+  "claim_boundary": "Arm A and Arm B each passed three of four tasks. T03 differed by arm while T04 failed in both arms. This single fixed-order sample is descriptive only: it does not establish a stable effect, prove generalization, or attribute any result or later action to a Nudge."
+}
