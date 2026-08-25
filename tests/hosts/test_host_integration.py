@@ -499,7 +499,7 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIn("已完成登入修正", request.source_packet)
         self.assertNotIn("does-not-exist", request.source_packet)
 
-    def test_failed_test_checkpoint_returns_immediate_additional_context(self):
+    def test_repeated_test_failure_returns_additional_context(self):
         core = FakeCore(
             self.settings,
             ReviewOutcome(
@@ -511,6 +511,17 @@ class CodexAdapterTests(unittest.TestCase):
         )
         adapter = CodexAdapter(core)  # type: ignore[arg-type]
         with mock.patch.dict(os.environ, {}, clear=True):
+            first = adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "s",
+                    "turn_id": "t",
+                    "cwd": str(self.root),
+                    "tool_name": "shell_command",
+                    "tool_input": {"command": "pytest tests/test_login.py"},
+                    "tool_response": {"exit_code": 1, "output": "1 failed"},
+                }
+            )
             output = adapter.process(
                 {
                     "hook_event_name": "PostToolUse",
@@ -518,16 +529,18 @@ class CodexAdapterTests(unittest.TestCase):
                     "turn_id": "t",
                     "cwd": str(self.root),
                     "tool_name": "shell_command",
-                    "tool_input": {"command": "pytest"},
-                    "tool_response": {"exit_code": 1, "output": "1 failed"},
+                    "tool_input": {"command": "pytest -vv tests/test_login.py"},
+                    "tool_response": {"exit_code": 1, "output": "2 failed"},
                 }
             )
+        self.assertIsNone(first)
         self.assertEqual(
             output["hookSpecificOutput"]["hookEventName"], "PostToolUse"
         )
         self.assertIn("失敗已證明", output["hookSpecificOutput"]["additionalContext"])
         request, persist, timeout = core.calls[0]
-        self.assertEqual(request.reason, "test-fail")
+        self.assertEqual(request.reason, "strategy-review")
+        self.assertEqual(request.trigger, "repeated-failure-family")
         self.assertIn("review_event:", request.source_packet)
         self.assertIn("active_failures:", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
@@ -565,8 +578,19 @@ class CodexAdapterTests(unittest.TestCase):
                     "turn_id": "t",
                     "cwd": str(self.root),
                     "tool_name": "shell_command",
-                    "tool_input": {"command": "pytest"},
+                    "tool_input": {"command": "pytest tests/test_auth.py"},
                     "tool_response": {"exit_code": 1, "output": "1 failed"},
+                }
+            )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "research-state",
+                    "turn_id": "t",
+                    "cwd": str(self.root),
+                    "tool_name": "shell_command",
+                    "tool_input": {"command": "pytest -vv tests/test_auth.py"},
+                    "tool_response": {"exit_code": 1, "output": "2 failed"},
                 }
             )
 
@@ -594,11 +618,16 @@ class CodexAdapterTests(unittest.TestCase):
             "turn_id": "t",
             "cwd": str(self.root),
             "tool_name": "shell_command",
-            "tool_input": {"command": "pytest"},
+            "tool_input": {"command": "pytest tests/test_math.py"},
             "tool_response": {"exit_code": 1, "output": "1 failed"},
         }
         with mock.patch.dict(os.environ, {}, clear=True):
-            output = adapter.process(payload)
+            self.assertIsNone(adapter.process(payload))
+            output = adapter.process({
+                **payload,
+                "tool_input": {"command": "pytest -vv tests/test_math.py"},
+                "tool_response": {"exit_code": 1, "output": "2 failed"},
+            })
         session = SessionRef("codex_cli", "s", "t", str(self.root))
         self.assertEqual(
             {}, storage.load_delivery_state(self.settings.paths.data_dir, session)["receipts"]
@@ -618,9 +647,10 @@ class CodexAdapterTests(unittest.TestCase):
             adapter.process(followup_payload)
         delivery = storage.load_delivery_state(self.settings.paths.data_dir, session)
         receipt = next(iter(delivery["receipts"].values()))
-        self.assertEqual(receipt["response_observation"]["kind"], "tool")
+        self.assertEqual(receipt["response_observation"]["kind"], "semantic-event")
         self.assertEqual(
-            receipt["response_observation"]["observation"]["tool"], "Read"
+            receipt["response_observation"]["observation"]["evidence_category"],
+            "inspection",
         )
 
     def test_queued_finding_is_not_delivered_on_later_prompt(self):
@@ -708,12 +738,17 @@ class CodexAdapterTests(unittest.TestCase):
             "turn_id": "new-turn",
             "cwd": str(self.root),
             "tool_name": "shell_command",
-            "tool_input": {"command": "pytest"},
+            "tool_input": {"command": "pytest tests/test_retry.py"},
             "tool_response": {"exit_code": 1, "output": "1 failed"},
         }
 
         with mock.patch.dict(os.environ, {}, clear=True):
-            first = adapter.process(payload)
+            self.assertIsNone(adapter.process(payload))
+            first = adapter.process({
+                **payload,
+                "tool_input": {"command": "pytest -vv tests/test_retry.py"},
+                "tool_response": {"exit_code": 1, "output": "2 failed"},
+            })
             with self.assertRaises(OSError):
                 hook_entry._emit_output(first, self.settings, BrokenStream())
             later = adapter.process({
@@ -1163,7 +1198,7 @@ class GrokProviderTests(unittest.TestCase):
             stderr="Error: max turns reached",
         )
         with mock.patch(
-            "masters_nudge.providers._run_grok_process", return_value=completed
+            "masters_nudge.providers._run_cli_process", return_value=completed
         ):
             result = providers.call_grok_result(
                 "system",
@@ -1196,7 +1231,7 @@ class GrokProviderTests(unittest.TestCase):
             return completed
 
         with tempfile.TemporaryDirectory() as raw, mock.patch(
-            "masters_nudge.providers._run_grok_process", side_effect=fake_run
+            "masters_nudge.providers._run_cli_process", side_effect=fake_run
         ):
             schema = Path(raw) / "schema.json"
             schema.write_text(
@@ -1245,7 +1280,7 @@ class GrokProviderTests(unittest.TestCase):
             stderr="",
         )
         with mock.patch(
-            "masters_nudge.providers._run_grok_process", return_value=completed
+            "masters_nudge.providers._run_cli_process", return_value=completed
         ) as run:
             providers.call_grok_result(
                 "system",
@@ -1264,7 +1299,7 @@ class GrokProviderTests(unittest.TestCase):
             stderr="",
         )
         with mock.patch(
-            "masters_nudge.providers._run_grok_process", return_value=completed
+            "masters_nudge.providers._run_cli_process", return_value=completed
         ) as run:
             providers.call_grok_result(
                 "system",
@@ -1306,7 +1341,7 @@ class GrokProviderTests(unittest.TestCase):
             stderr="",
         )
         with mock.patch.dict(os.environ, {"XAI_API_KEY": "must-not-be-used"}), mock.patch(
-            "masters_nudge.providers._run_grok_process", return_value=completed
+            "masters_nudge.providers._run_cli_process", return_value=completed
         ) as run:
             providers.call_grok_result(
                 "system",

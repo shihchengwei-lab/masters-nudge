@@ -86,28 +86,31 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
         event.session,
         tool_name=event.tool_name,
         command_family=checkpoints.command_family(event),
-        failed=event.failure_known and event.failed,
+        failed=category == "failure",
         mutating=event.mutating,
         changed_lines=changed_lines,
         goal_transition=transition,
         goal_objective=objective,
         evidence_category=category,
+        evidence_scope=checkpoints.evidence_scope(event),
+        failure_family=checkpoints.failure_family(event),
         event_fingerprint=event_fingerprint,
     )
     event_seq = int(progress.get("event_seq") or 0)
-    storage.observe_injected_response(
-        data_dir,
-        event.session,
-        event_seq=event_seq,
-        observation_kind="tool",
-        observation={
-            "tool": event.tool_name,
-            "command_family": checkpoints.command_family(event),
-            "failed": event.failure_known and event.failed,
-            "mutating": event.mutating,
-            "goal_transition": transition,
-        },
-    )
+    if category or transition:
+        storage.observe_injected_response(
+            data_dir,
+            event.session,
+            event_seq=event_seq,
+            observation_kind="semantic-event",
+            observation={
+                "evidence_category": category,
+                "evidence_scope": checkpoints.evidence_scope(event),
+                "failed": category == "failure",
+                "changed_lines": changed_lines,
+                "goal_transition": transition,
+            },
+        )
 
     checkpoint = checkpoints.classify_tool(event, changed_lines)
     strategy = checkpoints.classify_strategy(
@@ -121,6 +124,18 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             if strategy["reason"] == "goal-transition"
             else "strategy"
         )
+    intervention_status, barrier_seq = storage.latest_intervention_state(
+        data_dir, event.session
+    )
+    if checkpoint and intervention_status in {"queued", "emitted"}:
+        checkpoint = None
+    elif (
+        checkpoint
+        and intervention_status == "injected"
+        and not checkpoints.semantic_cycle_after(progress, barrier_seq)
+    ):
+        checkpoint = None
+    if strategy and checkpoint:
         storage.mark_strategy_reviewed(
             data_dir,
             event.session,

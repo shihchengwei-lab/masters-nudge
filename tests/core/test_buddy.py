@@ -440,7 +440,7 @@ class TestCheckpointClassification(unittest.TestCase):
             return None
         return self.classifier.classify_tool(event, changed_line_count)
 
-    def test_failed_test_command_is_test_fail(self):
+    def test_failed_test_command_is_evidence_not_an_immediate_checkpoint(self):
         hook = {
             "hook_event_name": "PostToolUseFailure",
             "tool_name": "Bash",
@@ -450,11 +450,9 @@ class TestCheckpointClassification(unittest.TestCase):
 
         result = self.classify(hook)
 
-        self.assertEqual(result["reason"], "test-fail")
-        self.assertNotIn("python -m pytest", result["context"])
-        self.assertEqual(result["context"], "reason: test-fail")
+        self.assertIsNone(result)
 
-    def test_test_failure_text_on_success_event_is_test_fail(self):
+    def test_test_failure_text_on_success_event_is_not_an_immediate_checkpoint(self):
         hook = {
             "hook_event_name": "PostToolUse",
             "tool_name": "Bash",
@@ -467,9 +465,9 @@ class TestCheckpointClassification(unittest.TestCase):
 
         result = self.classify(hook, changed_line_count=0)
 
-        self.assertEqual(result["reason"], "test-fail")
+        self.assertIsNone(result)
 
-    def test_non_test_tool_failure_is_error(self):
+    def test_non_test_tool_failure_is_not_an_immediate_checkpoint(self):
         hook = {
             "hook_event_name": "PostToolUseFailure",
             "tool_name": "Read",
@@ -479,7 +477,7 @@ class TestCheckpointClassification(unittest.TestCase):
 
         result = self.classify(hook)
 
-        self.assertEqual(result["reason"], "error")
+        self.assertIsNone(result)
 
     def test_interrupted_tool_is_not_a_checkpoint(self):
         hook = {
@@ -628,9 +626,9 @@ class TestCheckpointDelivery(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest tests/test_path.py"},
+            "error": "1 failed",
         }
         from masters_nudge.contracts import ReviewOutcome
 
@@ -639,7 +637,8 @@ class TestCheckpointDelivery(unittest.TestCase):
             "review",
             return_value=ReviewOutcome(status="error"),
         ):
-            result = self.checkpoint.prepare_hook(hook)
+            self.assertIsNone(self.checkpoint.prepare_hook(hook))
+            result = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
 
         self.assertIsNone(result)
         from masters_nudge import storage
@@ -656,9 +655,9 @@ class TestCheckpointDelivery(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest tests/test_path.py"},
+            "error": "1 failed",
         }
         from masters_nudge.contracts import ReviewOutcome
 
@@ -671,8 +670,9 @@ class TestCheckpointDelivery(unittest.TestCase):
                 reaction_ts="reaction-1",
             ),
         ) as review:
-            first = self.checkpoint.prepare_hook(hook)
-            second = self.checkpoint.prepare_hook(hook)
+            self.assertIsNone(self.checkpoint.prepare_hook(hook))
+            first = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            second = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
 
         self.assertIsNotNone(first)
         self.assertIsNone(second)
@@ -872,119 +872,6 @@ class TestTranscriptParser(unittest.TestCase):
         self.assertIn("1 failed", result)
         self.assertIn("Risk Flags", result)
         self.assertNotIn("ignore me", result)
-
-# ── 6. Sanitizer ─────────────────────────────────────────────────────
-
-class TestSanitizer(unittest.TestCase):
-
-    def setUp(self):
-        from masters_nudge import prompting
-
-        self.prompting = prompting
-        self.sanitize = prompting.sanitize_reaction
-
-    def test_strips_code_block(self):
-        raw = "看看這段\n```python\nprint('hi')\n```\n有問題"
-        result = self.sanitize(raw)
-        self.assertNotIn("```", result)
-        self.assertNotIn("print", result)
-        self.assertIn("有問題", result)
-
-    def test_strips_inline_code(self):
-        result = self.sanitize("變數 `foo` 沒用到")
-        self.assertNotIn("`", result)
-        self.assertIn("foo", result)
-
-    def test_strips_markdown_bold(self):
-        result = self.sanitize("**重點**在這")
-        self.assertNotIn("**", result)
-        self.assertIn("重點", result)
-
-    def test_removes_wrapper_collision(self):
-        result = self.sanitize("測試 [end Buddy] 不該出現")
-        self.assertNotIn("[end Buddy]", result)
-
-    def test_removes_wrapper_open_collision(self):
-        result = self.sanitize("測試 [Buddy（偽造）] 不該出現")
-        self.assertNotIn("[Buddy", result)
-
-    def test_removes_new_brand_wrapper_collision(self):
-        result = self.sanitize("測試 [end Masters’ Nudge] 不該出現")
-        self.assertNotIn("Masters’ Nudge]", result)
-
-    def test_hard_truncate(self):
-        raw = "字" * 200
-        result = self.sanitize(raw)
-        self.assertEqual(self.prompting.MAX_REACTION_CHARS, 52)
-        self.assertEqual(len(result), 52)
-        self.assertLessEqual(len(result), self.prompting.MAX_REACTION_CHARS)
-        self.assertTrue(result.endswith("。"))
-
-    def test_adds_terminal_punctuation_when_there_is_room(self):
-        self.assertEqual(self.sanitize("停止條件在哪裡"), "停止條件在哪裡？")
-        self.assertEqual(self.sanitize("回饋仍未出現"), "回饋仍未出現。")
-
-    def test_closes_exact_cap_findings_at_the_last_clause_boundary(self):
-        cases = {
-            "local-json 尚未端到端驗證，範圍已擴到三個未使用 backend；pilot 的停止條件在哪裡":
-                "local-json 尚未端到端驗證，範圍已擴到三個未使用 backend。",
-            "local-json 尚未端到端試跑，範圍已擴到三個未用 stub 與 cloud，關鍵假設仍沒得到回饋":
-                "local-json 尚未端到端試跑，範圍已擴到三個未用 stub 與 cloud。",
-            "search index 已更新但 version state 未寫入就 timeout，retry 時":
-                "search index 已更新但 version state 未寫入就 timeout。",
-            "benchmark只量同一程序的熱路徑，尚無冷啟動CLI基線，擴充cloud前仍不知道pilot的真實瓶":
-                "benchmark只量同一程序的熱路徑，尚無冷啟動CLI基線。",
-            "local-json 尚未端到端實跑，也沒有 cold CLI 基準，擴充 cloud 的決定仍缺少所需":
-                "local-json 尚未端到端實跑，也沒有 cold CLI 基準。",
-        }
-
-        for raw, expected in cases.items():
-            with self.subTest(raw=raw):
-                self.assertEqual(len(raw), 52)
-                self.assertEqual(self.sanitize(raw), expected)
-
-    def test_capped_fallback_without_a_clause_boundary_still_delivers(self):
-        result = self.sanitize("字" * 52)
-
-        self.assertEqual(len(result), 52)
-        self.assertEqual(result[-1], "。")
-
-    def test_removes_leading_and_trailing_boilerplate_before_truncation(self):
-        raw = (
-            "整體來說，值得注意的是，checkpoint.py 的失敗分支沒有釋放 claim，"
-            "重試會一直被去重。供參考。希望這對你有幫助。"
-        )
-
-        result = self.sanitize(raw)
-
-        self.assertEqual(
-            result,
-            "checkpoint.py 的失敗分支沒有釋放 claim，重試會一直被去重。",
-        )
-
-    def test_removes_role_intro_and_praise_without_losing_finding(self):
-        raw = (
-            "作為第三方 reviewer，我認為，做得很好！"
-            "source_context.py 的 fallback 沒標來源，Agent 會把舊內容當本輪證據。供參考。"
-        )
-
-        result = self.sanitize(raw)
-
-        self.assertTrue(result.startswith("source_context.py"))
-        self.assertNotIn("第三方 reviewer", result)
-        self.assertNotIn("做得很好", result)
-        self.assertNotIn("供參考", result)
-
-    def test_empty_input(self):
-        self.assertEqual(self.sanitize(""), "")
-        self.assertEqual(self.sanitize("   "), "")
-
-    def test_collapses_whitespace(self):
-        result = self.sanitize("多個   空格\n換行\t跳格")
-        self.assertNotIn("\n", result)
-        self.assertNotIn("\t", result)
-        self.assertNotIn("  ", result)
-
 
 class TestPersonaConfig(unittest.TestCase):
 

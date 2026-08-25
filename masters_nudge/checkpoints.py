@@ -18,6 +18,7 @@ from .contracts import ToolCompleted
 
 LARGE_DIFF_THRESHOLD = 80
 MAX_EVENT_CONTEXT_CHARS = 5000
+SEMANTIC_CHANGE_MAX_CHARS = 1800
 SHELL_TOOLS = {"Bash", "PowerShell", "shell_command", "exec_command"}
 
 TEST_FAILURE_RE = re.compile(
@@ -240,8 +241,57 @@ def evidence_scope(event: ToolCompleted) -> str:
     )
     if not command:
         return ""
-    normalized = re.sub(r"\s+", " ", command).strip().lower()
-    return f"validation-{hashlib.sha256(normalized.encode('utf-8')).hexdigest()[:16]}"
+    tokens = re.findall(r"[^\s'\"]+", command)
+    targets: list[str] = []
+    for token in tokens:
+        value = token.strip(" ,;()[]{}")
+        if not value or value.startswith("-"):
+            continue
+        normalized = value.replace("\\", "/").lower()
+        if (
+            "::" in normalized
+            or "/test" in normalized
+            or normalized.startswith(("test", "tests/", "testing/"))
+            or re.search(r"\.(?:py|js|jsx|ts|tsx|go|rs|java|rb)(?:::\S+)?$", normalized)
+        ):
+            if normalized not in targets:
+                targets.append(normalized)
+    if targets:
+        semantic = "|".join(targets[:4])
+        return source_context.head_tail(f"validation:{semantic}", 160)
+    family = command_family(event)
+    if not family:
+        return ""
+    runner = re.search(
+        r"\b(pytest|py\.test|unittest|vitest|jest|mocha|rspec|cargo\s+test|"
+        r"go\s+test|dotnet\s+test|flutter\s+test)\b",
+        command,
+        re.IGNORECASE,
+    )
+    return f"validation-suite:{runner.group(1).lower()}" if runner else f"validation-family:{family}"
+
+
+def failure_family(event: ToolCompleted) -> str:
+    """Group retries by the observable surface, not by incidental CLI flags."""
+    return evidence_scope(event) if evidence_category(event) == "failure" else ""
+
+
+def _semantic_change_excerpt(event: ToolCompleted) -> str:
+    raw = _command(event).strip()
+    if "apply_patch" in event.tool_name.lower() and raw:
+        lines = []
+        for line in raw.splitlines():
+            if line.startswith(("*** Begin Patch", "*** End Patch", "*** Add File:",
+                                "*** Update File:", "*** Delete File:", "*** Move to:")):
+                continue
+            if line.startswith(("@@", "+", "-")):
+                lines.append(line)
+        return source_context.head_tail("\n".join(lines), SEMANTIC_CHANGE_MAX_CHARS)
+    if event.session.cwd:
+        diff = _git_output(["diff", "--unified=1", "HEAD", "--"], event.session.cwd)
+        if diff:
+            return source_context.head_tail(diff, SEMANTIC_CHANGE_MAX_CHARS)
+    return ""
 
 
 def render_evidence_record(event: ToolCompleted) -> str:
@@ -264,6 +314,9 @@ def render_evidence_record(event: ToolCompleted) -> str:
         parts = []
         if changed_paths:
             parts.append("changed_paths:\n" + "\n".join(f"- {path}" for path in changed_paths))
+        semantic_change = _semantic_change_excerpt(event)
+        if semantic_change:
+            parts.append(f"semantic_change:\n{semantic_change}")
         if output:
             parts.append(f"result:\n{output}")
         return "\n".join(parts)
@@ -310,9 +363,15 @@ def classify_strategy(
             changed_line_count is not None
             and changed_line_count - baseline >= LARGE_DIFF_THRESHOLD
         )
+        failure_counts: dict[str, int] = {}
+        for item in failures:
+            family = str(item.get("failure_family") or "")
+            if family:
+                failure_counts[family] = failure_counts.get(family, 0) + 1
+        repeated_failure = any(count >= 2 for count in failure_counts.values())
         if unverified_changes >= 2:
             reason, trigger = "strategy-review", "verification-gap"
-        elif len(failures) >= 2:
+        elif repeated_failure:
             reason, trigger = "strategy-review", "repeated-failure-family"
         elif diff_growth:
             reason, trigger = "strategy-review", "diff-growth"
@@ -331,27 +390,6 @@ def classify_strategy(
     }
 
 
-def _failure_checkpoint(
-    event: ToolCompleted, *, reason: str, output: str
-) -> dict[str, str]:
-    payload = {
-        "tool_name": event.tool_name,
-        "tool_input": event.tool_input,
-        "tool_output": output,
-    }
-    routing_concern = lens_router.structured_concern_for_evidence(
-        f"{_command(event)}\n{output}"
-    )
-    result = {
-        "reason": reason,
-        "context": f"reason: {reason}",
-        "fingerprint": stable_fingerprint(reason, payload),
-    }
-    if routing_concern:
-        result["routing_concern"] = routing_concern
-    return result
-
-
 def classify_tool(
     event: ToolCompleted,
     changed_line_count: int | None = None,
@@ -362,17 +400,10 @@ def classify_tool(
     command = _command(event)
     is_shell = event.tool_name in SHELL_TOOLS
 
-    if event.failure_known and event.failed:
-        reason = (
-            "test-fail"
-            if (is_shell and TEST_COMMAND_RE.search(command))
-            or TEST_FAILURE_RE.search(output)
-            else "error"
-        )
-        return _failure_checkpoint(event, reason=reason, output=output)
-
-    if is_shell and TEST_FAILURE_RE.search(output):
-        return _failure_checkpoint(event, reason="test-fail", output=output)
+    if (event.failure_known and event.failed) or (
+        is_shell and TEST_FAILURE_RE.search(output)
+    ):
+        return None
 
     category = evidence_category(event)
     routing_concern = lens_router.structured_concern_for_evidence(
@@ -420,3 +451,20 @@ def classify_tool(
         ),
         "fingerprint": stable_fingerprint(reason, {}),
     }
+
+
+def semantic_cycle_after(progress: dict[str, Any], event_seq: int) -> bool:
+    """Wait for one post-Nudge change and one resulting validation boundary."""
+    recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
+    categories = [
+        str(item.get("evidence_category") or "")
+        for item in recent
+        if int(item.get("event_seq") or 0) > int(event_seq or 0)
+    ]
+    if "change" not in categories:
+        return False
+    first_change = categories.index("change")
+    return any(
+        category in {"verification", "failure"}
+        for category in categories[first_change + 1 :]
+    )

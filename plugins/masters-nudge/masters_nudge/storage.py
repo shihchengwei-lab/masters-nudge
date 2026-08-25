@@ -575,6 +575,32 @@ def read_recent_injected_findings(
     return tuple(finding for _injected_at, _order, finding in injected[-limit:])
 
 
+def latest_intervention_state(
+    data_dir: Path, session: SessionRef
+) -> tuple[str, int]:
+    """Return the newest finding's delivery state and response boundary."""
+    entries = [
+        entry
+        for entry in read_reaction_entries(data_dir, session)
+        if entry.get("kind", "review") == "review"
+    ]
+    if not entries:
+        return "", 0
+    latest = entries[-1]
+    reaction_ts = str(latest.get("ts") or "")
+    receipt = load_delivery_state(data_dir, session)["receipts"].get(reaction_ts)
+    if not isinstance(receipt, dict):
+        return "queued", int(latest.get("source_event_seq") or 0)
+    status = str(receipt.get("status") or "")
+    if status != "injected":
+        return status, int(receipt.get("event_seq") or 0)
+    response = receipt.get("response_observation")
+    response_seq = (
+        int(response.get("event_seq") or 0) if isinstance(response, dict) else 0
+    )
+    return status, response_seq or int(receipt.get("event_seq") or 0)
+
+
 def mark_delivery(
     data_dir: Path,
     session: SessionRef,
@@ -752,6 +778,8 @@ def record_tool_progress(
     goal_transition: str = "",
     goal_objective: str = "",
     evidence_category: str = "",
+    evidence_scope: str = "",
+    failure_family: str = "",
     event_fingerprint: str = "",
 ) -> dict[str, Any]:
     path = state_path(data_dir, session, "progress")
@@ -774,6 +802,8 @@ def record_tool_progress(
             "changed_lines": changed_lines,
             "goal_transition": goal_transition,
             "evidence_category": evidence_category,
+            "evidence_scope": evidence_scope,
+            "failure_family": failure_family,
             "event_fingerprint": event_fingerprint,
         }
     )

@@ -15,7 +15,6 @@ from .prompting import (
     build_system_prompt,
     lens_focus_prompt,
     route_metadata,
-    sanitize_reaction,
 )
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
@@ -119,7 +118,6 @@ class ReviewCore:
                 request.session,
                 limit=3,
             ),
-            effective_lens=route.effective_lens,
         )
 
         effective_timeout = min(
@@ -140,7 +138,7 @@ class ReviewCore:
         if not isinstance(result, dict):
             result = {"status": "error", "finding": "", "usage": {}}
         latency_ms = round((time.perf_counter() - started) * 1000)
-        finding = sanitize_reaction(str(result.get("finding") or ""))
+        finding = str(result.get("finding") or "").strip()
         status = str(result.get("status") or "error")
         if status not in {"finding", "no_finding", "error"}:
             status = "error"

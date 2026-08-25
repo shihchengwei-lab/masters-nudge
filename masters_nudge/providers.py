@@ -135,24 +135,6 @@ def _run_cli_process(
     )
 
 
-def _run_grok_process(
-    command: list[str],
-    *,
-    cwd: str,
-    environment: dict[str, str],
-    timeout_sec: int,
-    log_error: Logger = _noop,
-) -> subprocess.CompletedProcess:
-    """Compatibility seam for tests and Grok-specific call inspection."""
-    return _run_cli_process(
-        command,
-        cwd=cwd,
-        environment=environment,
-        timeout_sec=timeout_sec,
-        log_error=log_error,
-    )
-
-
 def grok_subscription_environment() -> dict[str, str]:
     """Use Grok Build's signed-in subscription session, not API-key billing."""
     environment = reviewer_environment()
@@ -236,7 +218,7 @@ def call_claude_result(
     log_error: Logger = _noop,
 ) -> dict:
     user_prompt = (
-        "請對下方證據封包寫一句簡短的旁觀者反應。\n\n"
+        "只輸出一個由證據支持、主模型可能忽略且可立即驗證的高價值 Nudge。\n\n"
         f"{transcript_text}"
     )
     schema_json = load_output_schema_json(schema_path, log_error)
@@ -439,7 +421,7 @@ def call_grok_result(
             command.extend(
                 ["--reasoning-effort", str(reasoning_effort).strip()]
             )
-        result = _run_grok_process(
+        result = _run_cli_process(
             command,
             cwd=isolated_cwd,
             environment=grok_subscription_environment(),

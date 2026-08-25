@@ -6,7 +6,7 @@ Native host events are separate from review policy. Claude Code and Codex keep d
 
 | Layer | Owns | Does not own |
 |---|---|---|
-| Host entry and adapter | Native JSON parsing, session/turn identity, evidence capture, checkpoint timing, delivery channel | Lens prompts, provider policy, output sanitation |
+| Host entry and adapter | Native JSON parsing, session/turn identity, evidence capture, checkpoint timing, delivery channel | Lens prompts, provider policy, output validation |
 | Shared checkpoints and evidence | Event classification, stable fingerprints, bounded packet construction | Host JSON or provider invocation |
 | `ReviewCore` | Routing, prompt composition, single-attempt provider dispatch, sanitation, persistence, telemetry | Native transcript formats or hook stdout |
 | Provider adapter | CLI/HTTP invocation, schema parsing, usage extraction, recursion guard, transport checks | Hook semantics or delivery receipts |
@@ -39,13 +39,13 @@ Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry file
 |---|---|---|
 | Start turn | Save the task request and final-claim fallback offset | Save the task request; do not parse the Codex transcript |
 | Collect evidence | Capture explicitly referenced task sources plus layered event evidence | Capture explicitly referenced task sources plus layered event evidence |
-| Checkpoint | Tool failure or selected successful mutation | Delivered structured failure, test output, large diff, or long-goal change |
+| Checkpoint | Repeated same-surface failure or selected successful mutation | Delivered semantic change, scoped test output, large diff, or long-goal change |
 | End turn | Synchronous native `Stop`; a finding adds context and continues | Synchronous native `Stop`; a finding returns `decision: block` and continues |
 | Deliver finding | `hookSpecificOutput.additionalContext` on the eligible event, prefixed `獨立第二意見：` | `hookSpecificOutput.additionalContext`, or Stop `reason`, on the eligible event, prefixed `獨立第二意見：` |
 
 ## Output and delivery
 
-The provider is prompted to return one evidence-grounded second opinion or silence. The opinion may be a statement or question that identifies one missed constraint, counterexample, alternative hypothesis, or direction. Runtime sanitation bounds any returned finding to 52 characters, but does not claim to mechanically enforce its quality. If a result reaches the cap without terminal punctuation, sanitation closes it at the last available clause; it does not make another provider call.
+The provider is prompted to return one evidence-grounded, immediately testable second opinion or silence. The opinion may be a statement or question that identifies one missed constraint, counterexample, alternative hypothesis, or direction plus the smallest discriminating check. The structured output contract rejects malformed or over-length findings; runtime code does not rewrite reviewer text.
 
 The host hook output contains the finding text. Effective lens, route source, trigger, and review reason belong to local reaction and telemetry records; callers must not assume those fields are present in the host wire output.
 
@@ -77,7 +77,7 @@ Hooks fail open on errors: malformed native input, unavailable Provider CLIs, ti
 
 Provider selection does not fail over silently. The Ollama path additionally fails closed for network privacy: only loopback HTTP is accepted, proxies and redirects are disabled, cloud-disabled status is checked, and remote model metadata is rejected.
 
-Each evidence layer is capped per turn and per record. Routine navigation output, tool identity, commands, and the main model's running explanation are excluded; semantic change, verification, and failure results remain. `ReviewCore` appends at most the latest three injected Nudge texts as duplicate-avoidance context, without the main model's reaction. Current final claims and optional Agentcam evidence are separately bounded before entering `ReviewCore`. Full transcripts are not copied into reviewer packets or telemetry.
+Each evidence layer is capped per turn and per record. Routine navigation output, tool identity, commands, and the main model's running explanation are excluded; bounded semantic diffs, semantic validation scopes, and failure results remain. A single failure is evidence, not an intervention trigger. After an injected Nudge, another tool-time review waits until a new semantic change reaches a later verification or failure boundary. `ReviewCore` appends at most the latest three injected Nudge texts as duplicate-avoidance context, without the main model's reaction. Current final claims and optional Agentcam evidence are separately bounded before entering `ReviewCore`. Full transcripts are not copied into reviewer packets or telemetry.
 
 ## Package and verification
 

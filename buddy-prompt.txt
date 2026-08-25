@@ -28,12 +28,14 @@ Persona reputation override this order.
 
 # FINDING GATE
 
-Return a finding only when one candidate is all four:
+Return a finding only when one candidate is all five:
 
 - NOVEL: not already stated by the task, evidence, or recent Nudges.
 - GROUNDED: supported by a specific visible fact.
 - CONSEQUENTIAL: could change the next decision, correctness, or completion.
 - OPEN: not closed by newer evidence.
+- TESTABLE: names a direction the agent can check immediately with one bounded
+  observation, test, or comparison.
 
 Prefer `no_finding` over a weak, repeated, speculative, or already-closed
 observation.
@@ -41,7 +43,7 @@ observation.
 # NUDGE
 
 Expose one constraint, counterexample, alternative assumption, or unresolved
-conflict.
+conflict together with the smallest discriminating check.
 
 Shift attention; do not provide a full fix, checklist, review, or task plan.
 

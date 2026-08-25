@@ -387,7 +387,7 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual(core.calls, [])
 
-    def test_second_failure_escalates_from_event_review_to_strategy_review(self):
+    def test_second_same_surface_failure_triggers_one_strategy_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -404,7 +404,7 @@ class LongGoalReplayTests(unittest.TestCase):
                         "error": output,
                     }
                 )
-            self.assertEqual([call.kind for call in core.calls], ["checkpoint", "strategy"])
+            self.assertEqual([call.kind for call in core.calls], ["strategy"])
             self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
             self.assertEqual(core.calls[-1].routing_concern, "feedback-loop")
 
@@ -453,7 +453,7 @@ class LongGoalReplayTests(unittest.TestCase):
                     "tool_response": {"success": True},
                 }
             )
-            self.assertEqual(core.calls[0].kind, "goal_transition")
+            self.assertEqual(core.calls, [])
             self.assertIsNone(output)
 
     def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):

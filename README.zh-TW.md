@@ -8,7 +8,7 @@ Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code
 
 Masters’ Nudge 把 hooks、skills、reviewer prompts、六種軟體工程濾鏡，以及選用的浮動視窗包成一個 plugin。它關注未驗證假設、範圍膨脹、回饋不足、脆弱的事件順序，以及證據尚未支持的完成宣告。
 
-Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 會清除多餘格式，最長 52 個字。工具失敗、測試失敗、大型變更、長期目標狀態轉換與回合結束，都可能觸發一次 reviewer。
+Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 必須符合結構化輸出契約且最長 52 個字；不合格輸出會被拒絕，不會由程式改寫。相同可觀察範圍的重複失敗、未驗證變更累積、特定專科狀態變更、長期目標狀態轉換與回合結束，都可能觸發 reviewer。單次一般失敗只會留下證據，不會立刻打斷主要 agent。
 
 符合條件的 checkpoint 與 Stop review 會同步執行：host 等 reviewer 回覆，並在同一回合送出 finding。Provider 工作最多 90 秒，外層 host hook 預留 120 秒；符合條件的事件可能因此增加等待時間。錯誤或逾時不會產生 Nudge，也不會自動重試 Provider 或切換 provider。
 
@@ -101,7 +101,7 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 - 選用的 agentcam evidence；
 - Reviewer prompt 與所選濾鏡。
 
-一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；語意上的變更、驗證與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續 Claude 或 Codex host event 看見主模型回應，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；有長度上限的語意 diff、驗證目標與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。注入後，下一次工具階段 review 會等待新的語意變更及其後續驗證或失敗。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續有語意證據的 Claude 或 Codex host event，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 

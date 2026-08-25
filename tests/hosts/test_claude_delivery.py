@@ -52,9 +52,9 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest tests/test_path.py"},
+            "error": "1 failed",
         }
         outcome = ReviewOutcome(
             status="finding",
@@ -64,7 +64,8 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         with mock.patch.object(
             claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
-            prepared = claude_checkpoint.prepare_hook(hook)
+            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
+            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
 
         self.assertIsNotNone(prepared)
         session = SessionRef("claude_code", "session-1")
@@ -137,9 +138,9 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest tests/test_path.py"},
+            "error": "1 failed",
         }
         outcome = ReviewOutcome(
             status="finding",
@@ -149,7 +150,8 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         with mock.patch.object(
             claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
-            prepared = claude_checkpoint.prepare_hook(hook)
+            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
+            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
 
         stream = mock.Mock()
         stream.flush.side_effect = OSError("broken pipe")

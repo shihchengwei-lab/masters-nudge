@@ -67,9 +67,9 @@ class TestClaudeSessionOwner(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Read",
-            "tool_input": {"file_path": "/missing.txt"},
-            "error": "File does not exist",
+            "tool_name": "Bash",
+            "tool_input": {"command": "pytest tests/test_path.py"},
+            "error": "1 failed",
         }
         session = SessionRef("claude_code", "session-1")
         outcome = ReviewOutcome(
@@ -85,11 +85,13 @@ class TestClaudeSessionOwner(unittest.TestCase):
                 claude_checkpoint.ReviewCore, "review_once", return_value=outcome
             ) as review,
         ):
-            prepared = claude_checkpoint.prepare_hook(hook)
+            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
+            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
 
         self.assertIs(prepared.session, session)
         self.assertIs(review.call_args.args[0].session, session)
-        session_from_hook.assert_called_once_with(hook)
+        self.assertEqual(session_from_hook.call_count, 2)
+        self.assertEqual(session_from_hook.call_args_list[0].args[0], hook)
 
     def test_stop_source_context_accepts_the_callers_session(self):
         hook = {"session_id": "session-1", "transcript_path": ""}

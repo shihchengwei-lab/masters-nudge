@@ -40,7 +40,7 @@ class SoftwareNudgeContractTests(unittest.TestCase):
 
         for heading in ("# ROLE", "# EVIDENCE", "# FINDING GATE", "# NUDGE", "# OUTPUT"):
             self.assertIn(heading, prompt)
-        for gate in ("NOVEL", "GROUNDED", "CONSEQUENTIAL", "OPEN"):
+        for gate in ("NOVEL", "GROUNDED", "CONSEQUENTIAL", "OPEN", "TESTABLE"):
             self.assertIn(gate, prompt)
         self.assertIn("Missing evidence means unknown, not undone", prompt)
         self.assertIn("Prefer `no_finding`", prompt)
@@ -78,8 +78,8 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         english = (HERE / "README.md").read_text(encoding="utf-8")
         chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
-        self.assertIn("only a later Claude or Codex host event", english)
-        self.assertIn("後續 Claude 或 Codex host event", chinese)
+        self.assertIn("only a later semantic Claude or Codex host event", english)
+        self.assertIn("後續有語意證據的 Claude 或 Codex host event", chinese)
 
     def test_readmes_do_not_duplicate_the_manifest_version_or_a_cost_experiment(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
@@ -367,7 +367,8 @@ class SoftwareColdStartTests(unittest.TestCase):
         )
 
         self.assertIn("changed_paths:\n- src/contract.py", change)
-        self.assertNotIn("return preserved", change)
+        self.assertIn("semantic_change:", change)
+        self.assertIn("+return preserved", change)
         self.assertIn("12 passed, 1 failed", verification)
         self.assertIn("updated x.py", shell_change)
         for packet in (change, verification, shell_change):
@@ -487,7 +488,7 @@ class SoftwareColdStartTests(unittest.TestCase):
 
 
 class SoftwareEvidenceRoutingTests(unittest.TestCase):
-    def test_same_packet_is_reordered_for_each_lens_without_losing_evidence(self):
+    def test_same_packet_keeps_one_canonical_order_for_every_lens(self):
         packet = source_context.build_stop_packet(
             task_anchor="Preserve the public contract.",
             last_assistant_message="The work is complete.",
@@ -499,14 +500,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 {"seq": 4, "category": "failure", "content": "failure-marker"},
             ],
         )
-        expected_first = {
-            "jeff": "relevant_sources:",
-            "linus": "relevant_changes:",
-            "fowler": "relevant_sources:",
-            "beck": "verification:",
-            "lamport": "active_failures:",
-            "carmack": "external_runtime_evidence:",
-        }
+        lenses = ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
         markers = (
             "source-marker",
             "change-marker",
@@ -516,20 +510,15 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
         )
 
         ordered_packets = {
-            lens: build_review_input(packet, (), effective_lens=lens)
-            for lens in expected_first
+            lens: build_review_input(packet, ())
+            for lens in lenses
         }
 
         for lens, ordered in ordered_packets.items():
             with self.subTest(lens=lens):
-                software = ordered.split("[software engineering evidence]", 1)[1]
-                first_label = next(
-                    line for line in software.splitlines() if line.endswith(":")
-                )
-                self.assertEqual(expected_first[lens], first_label)
                 for marker in markers:
                     self.assertEqual(1, ordered.count(marker))
-        self.assertEqual(6, len(set(ordered_packets.values())))
+        self.assertEqual(1, len(set(ordered_packets.values())))
 
     def test_lens_focus_is_the_last_system_instruction_before_evidence(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -556,6 +545,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             )
 
         self.assertIn("# CURRENT STATE CHECKPOINT", seen["system_prompt"])
+        self.assertNotIn("# ATTENTION LENS", seen["system_prompt"])
         self.assertGreater(
             seen["system_prompt"].rfind("# LENS FOCUS"),
             seen["system_prompt"].rfind("# CURRENT STATE CHECKPOINT"),
@@ -658,6 +648,84 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
 
 
 class SoftwareSemanticStateTests(unittest.TestCase):
+    def test_validation_scope_tracks_target_not_incidental_flags(self):
+        from masters_nudge.contracts import ToolCompleted
+
+        session = SessionRef("codex_cli", "scope")
+        first = ToolCompleted(
+            session,
+            "exec_command",
+            {"cmd": "python -m pytest -q tests/test_contract.py::test_public"},
+            "1 failed",
+            failed=True,
+            failure_known=True,
+        )
+        second = ToolCompleted(
+            session,
+            "exec_command",
+            {"cmd": "python -m pytest -vv tests/test_contract.py::test_public"},
+            "1 passed",
+        )
+
+        self.assertEqual(checkpoints.evidence_scope(first), checkpoints.evidence_scope(second))
+        self.assertIn("tests/test_contract.py::test_public", checkpoints.evidence_scope(first))
+
+    def test_one_failure_is_evidence_but_not_an_immediate_interruption(self):
+        from masters_nudge.contracts import ToolCompleted
+
+        event = ToolCompleted(
+            SessionRef("codex_cli", "one-failure"),
+            "exec_command",
+            {"cmd": "pytest tests/test_a.py"},
+            "1 failed",
+            failed=True,
+            failure_known=True,
+        )
+
+        self.assertIsNone(checkpoints.classify_tool(event))
+
+    def test_unrelated_failures_do_not_form_a_repeated_failure_family(self):
+        progress = {
+            "last_strategy_event_seq": 0,
+            "changed_lines_at_strategy": 0,
+            "recent": [
+                {"event_seq": 1, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+                {"event_seq": 2, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/b.py"},
+            ],
+        }
+
+        self.assertIsNone(checkpoints.classify_strategy(progress, changed_line_count=0))
+
+    def test_same_failure_family_triggers_after_repetition(self):
+        progress = {
+            "last_strategy_event_seq": 0,
+            "changed_lines_at_strategy": 0,
+            "recent": [
+                {"event_seq": 1, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+                {"event_seq": 2, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+            ],
+        }
+
+        review = checkpoints.classify_strategy(progress, changed_line_count=0)
+        self.assertEqual("repeated-failure-family", review["trigger"])
+
+    def test_injected_nudge_waits_for_a_complete_semantic_cycle(self):
+        progress = {
+            "recent": [
+                {"event_seq": 11, "evidence_category": "change"},
+                {"event_seq": 12, "evidence_category": "inspection"},
+            ]
+        }
+        self.assertFalse(checkpoints.semantic_cycle_after(progress, 10))
+        progress["recent"].append(
+            {"event_seq": 13, "evidence_category": "verification"}
+        )
+        self.assertTrue(checkpoints.semantic_cycle_after(progress, 10))
+
     def test_tool_count_alone_does_not_trigger_a_strategy_review(self):
         progress = {
             "event_seq": 8,
