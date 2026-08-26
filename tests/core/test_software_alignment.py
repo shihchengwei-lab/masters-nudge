@@ -724,10 +724,11 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             checkpoints.classify_strategy(progress)
         )
 
-    def test_one_edit_validation_cycle_does_not_trigger_strategy_review(self):
+    def test_first_complete_semantic_cycle_triggers_validated_progress(self):
         progress = {
             "event_seq": 2,
             "last_strategy_event_seq": 0,
+            "midturn_review_attempts": 0,
             "recent": [
                 {
                     "event_seq": 1,
@@ -736,6 +737,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                     "meaningful": True,
                     "failed": False,
                     "mutating": True,
+                    "evidence_category": "change",
                 },
                 {
                     "event_seq": 2,
@@ -744,12 +746,89 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                     "meaningful": True,
                     "failed": False,
                     "mutating": True,
+                    "evidence_category": "verification",
                 },
             ],
         }
 
-        self.assertIsNone(
-            checkpoints.classify_strategy(progress)
+        review = checkpoints.classify_strategy(progress)
+
+        self.assertEqual(review["trigger"], "validated-progress")
+        self.assertEqual(review["routing_concern"], "")
+
+    def test_later_validated_progress_requires_two_new_semantic_cycles(self):
+        progress = {
+            "last_strategy_event_seq": 2,
+            "midturn_review_attempts": 1,
+            "recent": [
+                {"event_seq": 3, "meaningful": True,
+                 "evidence_category": "change"},
+                {"event_seq": 4, "meaningful": True,
+                 "evidence_category": "verification"},
+            ],
+        }
+
+        self.assertIsNone(checkpoints.classify_strategy(progress))
+        progress["recent"].extend(
+            [
+                {"event_seq": 5, "meaningful": True,
+                 "evidence_category": "change"},
+                {"event_seq": 6, "meaningful": True,
+                 "evidence_category": "failure"},
+            ]
+        )
+
+        review = checkpoints.classify_strategy(progress)
+
+        self.assertEqual(review["trigger"], "validated-progress")
+
+    def test_three_midturn_attempts_exhaust_the_shared_budget(self):
+        progress = {
+            "last_strategy_event_seq": 0,
+            "midturn_review_attempts": 3,
+            "recent": [
+                {"event_seq": 1, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+                {"event_seq": 2, "meaningful": True, "failed": True,
+                 "evidence_category": "failure", "failure_family": "tests/a.py"},
+                {"event_seq": 3, "meaningful": True,
+                 "evidence_category": "change"},
+                {"event_seq": 4, "meaningful": True,
+                 "evidence_category": "verification"},
+            ],
+        }
+
+        self.assertIsNone(checkpoints.classify_strategy(progress))
+
+    def test_goal_transition_remains_eligible_after_midturn_budget(self):
+        progress = {
+            "last_strategy_event_seq": 0,
+            "midturn_review_attempts": 3,
+            "recent": [
+                {"event_seq": 1, "meaningful": True,
+                 "goal_transition": "complete"},
+            ],
+        }
+
+        review = checkpoints.classify_strategy(progress)
+
+        self.assertEqual(review["trigger"], "goal-complete")
+
+    def test_semantic_cycle_counter_ignores_inspection_and_extra_validation(self):
+        progress = {
+            "recent": [
+                {"event_seq": 1, "evidence_category": "verification"},
+                {"event_seq": 2, "evidence_category": "change"},
+                {"event_seq": 3, "evidence_category": "inspection"},
+                {"event_seq": 4, "evidence_category": "verification"},
+                {"event_seq": 5, "evidence_category": "verification"},
+                {"event_seq": 6, "evidence_category": "change"},
+                {"event_seq": 7, "evidence_category": "failure"},
+            ]
+        }
+
+        self.assertEqual(
+            checkpoints.completed_semantic_cycles_after(progress, 0), 2
         )
 
     def test_repeated_command_does_not_trigger_without_state_change(self):

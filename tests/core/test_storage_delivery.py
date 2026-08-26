@@ -12,6 +12,75 @@ from masters_nudge.contracts import SessionRef
 
 
 class StorageDeliveryTests(unittest.TestCase):
+    def test_start_turn_resets_progress_without_deleting_reaction_history(self):
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw)
+            old = SessionRef("codex_cli", "same-session", "old-turn")
+            new = SessionRef("codex_cli", "same-session", "new-turn")
+            storage.start_turn(data_dir, old, "old task")
+            storage.record_tool_progress(
+                data_dir,
+                old,
+                tool_name="apply_patch",
+                command_family="apply_patch",
+                failed=False,
+                mutating=True,
+                evidence_category="change",
+            )
+            storage.mark_strategy_reviewed(
+                data_dir, old, event_seq=1, midturn=True
+            )
+            storage.append_reaction(
+                data_dir,
+                old,
+                provider="anthropic",
+                model="opus",
+                reaction="old finding",
+                route_metadata={"effective_lens": "beck"},
+            )
+
+            storage.start_turn(data_dir, new, "new task")
+            progress = storage.load_progress_state(data_dir, new)
+            reactions = storage.read_reaction_entries(data_dir, new)
+
+        self.assertEqual(progress["event_seq"], 0)
+        self.assertEqual(progress["last_strategy_event_seq"], 0)
+        self.assertEqual(progress["midturn_review_attempts"], 0)
+        self.assertEqual(progress["recent"], [])
+        self.assertEqual([entry["reaction"] for entry in reactions], ["old finding"])
+
+    def test_new_turn_does_not_confirm_an_old_emitted_finding(self):
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw)
+            old = SessionRef("codex_cli", "same-session", "old-turn")
+            new = SessionRef("codex_cli", "same-session", "new-turn")
+            reaction = storage.append_reaction(
+                data_dir,
+                old,
+                provider="anthropic",
+                model="opus",
+                reaction="old finding",
+                route_metadata={"effective_lens": "beck"},
+            )
+            storage.mark_emitted(
+                data_dir, old, reaction["ts"], event_seq=9, delivered_via="test"
+            )
+            storage.start_turn(data_dir, new, "new task")
+
+            observed = storage.observe_injected_response(
+                data_dir,
+                new,
+                event_seq=1,
+                observation_kind="semantic-event",
+                observation={"evidence_category": "change"},
+            )
+            receipt = storage.load_delivery_state(data_dir, new)["receipts"][
+                reaction["ts"]
+            ]
+
+        self.assertEqual(observed, {})
+        self.assertEqual(receipt["status"], "emitted")
+
     def test_wire_flush_is_only_emitted_until_a_later_host_event_confirms_injection(self):
         with tempfile.TemporaryDirectory() as raw:
             data_dir = Path(raw)

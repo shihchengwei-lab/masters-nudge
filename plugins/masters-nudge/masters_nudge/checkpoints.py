@@ -15,6 +15,7 @@ from .contracts import ToolCompleted
 
 MAX_EVENT_CONTEXT_CHARS = 5000
 SEMANTIC_CHANGE_MAX_CHARS = 1800
+MIDTURN_REVIEW_LIMIT = 3
 TEST_FAILURE_RE = re.compile(
     r"\b[1-9]\d*\s+(?:failed|failing)\b"
     r"|\btests?\s+failed\b"
@@ -272,6 +273,9 @@ def classify_strategy(
         reason = "goal-transition"
         trigger = f"goal-{latest_transition}"
     else:
+        midturn_attempts = int(progress.get("midturn_review_attempts") or 0)
+        if midturn_attempts >= MIDTURN_REVIEW_LIMIT:
+            return None
         failures = [item for item in since if item.get("failed")]
         failure_counts: dict[str, int] = {}
         for item in failures:
@@ -281,6 +285,10 @@ def classify_strategy(
         repeated_failure = any(count >= 2 for count in failure_counts.values())
         if repeated_failure:
             reason, trigger = "strategy-review", "repeated-failure-family"
+        elif completed_semantic_cycles_after(progress, last_seq) >= (
+            1 if midturn_attempts == 0 else 2
+        ):
+            reason, trigger = "strategy-review", "validated-progress"
         else:
             return None
     lines = [
@@ -296,18 +304,27 @@ def classify_strategy(
     }
 
 
-def semantic_cycle_after(progress: dict[str, Any], event_seq: int) -> bool:
-    """Wait for one post-Nudge change and one resulting validation boundary."""
+def completed_semantic_cycles_after(
+    progress: dict[str, Any], event_seq: int
+) -> int:
+    """Count change-to-validation boundaries after ``event_seq``."""
     recent = progress.get("recent") if isinstance(progress.get("recent"), list) else []
     categories = [
         str(item.get("evidence_category") or "")
         for item in recent
         if int(item.get("event_seq") or 0) > int(event_seq or 0)
     ]
-    if "change" not in categories:
-        return False
-    first_change = categories.index("change")
-    return any(
-        category in {"verification", "failure"}
-        for category in categories[first_change + 1 :]
-    )
+    cycles = 0
+    changed = False
+    for category in categories:
+        if category == "change":
+            changed = True
+        elif changed and category in {"verification", "failure"}:
+            cycles += 1
+            changed = False
+    return cycles
+
+
+def semantic_cycle_after(progress: dict[str, Any], event_seq: int) -> bool:
+    """Wait for one post-Nudge change and one resulting validation boundary."""
+    return completed_semantic_cycles_after(progress, event_seq) > 0

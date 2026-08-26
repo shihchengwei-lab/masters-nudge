@@ -101,7 +101,7 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 - 選用的 agentcam evidence；
 - Reviewer prompt 與所選濾鏡。
 
-一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；有長度上限的語意 diff、驗證目標與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。注入後，下一次工具階段 review 會等待新的語意變更及其後續驗證或失敗。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續有語意證據的 Claude 或 Codex host event，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；有長度上限的語意 diff、驗證目標與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。第一個完成的「變更後驗證」語意週期可觸發工作中 review，後續 review 需要再完成兩個新週期；同一失敗面向的重複失敗共用每回合三次的工作中 review 配額。Goal transition 與 Stop review 不受這個配額限制；排隊中或已輸出但尚未確認注入的 finding，仍會阻擋另一個工作中 review。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續有語意證據的 Claude 或 Codex host event，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 

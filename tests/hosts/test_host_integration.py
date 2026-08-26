@@ -14,10 +14,11 @@ from pathlib import Path
 from unittest import mock
 
 import review_telemetry
+import claude_checkpoint as checkpoint_hook
 import claude_stop as buddy
 import hook_entry
 import persona_config
-from masters_nudge import providers, storage
+from masters_nudge import checkpoints, providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
     PromptSubmitted,
@@ -155,6 +156,77 @@ class NamespacedStorageTests(unittest.TestCase):
             self.assertEqual(entry["workspace"], os.path.normcase(str(root.resolve())))
 
 class ClaudeCompatibilityTests(unittest.TestCase):
+    def test_both_hosts_trigger_validated_progress_after_the_same_semantic_cycle(self):
+        claude_events = [
+            checkpoint_hook.normalize_tool_event(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "claude-session",
+                    "turn_id": "turn",
+                    "tool_name": "Edit",
+                    "tool_input": {"file_path": "module.py"},
+                    "tool_response": "updated",
+                }
+            ),
+            checkpoint_hook.normalize_tool_event(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "claude-session",
+                    "turn_id": "turn",
+                    "tool_name": "Bash",
+                    "tool_input": {"command": "python -m unittest tests.test_module"},
+                    "tool_response": "OK",
+                }
+            ),
+        ]
+        codex_events = [
+            normalize_event(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "codex-session",
+                    "turn_id": "turn",
+                    "tool_name": "apply_patch",
+                    "tool_input": {},
+                    "tool_response": "updated",
+                }
+            ),
+            normalize_event(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "codex-session",
+                    "turn_id": "turn",
+                    "tool_name": "exec_command",
+                    "tool_input": {"cmd": "python -m unittest tests.test_module"},
+                    "tool_response": {"exit_code": 0, "output": "OK"},
+                }
+            ),
+        ]
+
+        triggers = []
+        for events in (claude_events, codex_events):
+            categories = [
+                checkpoints.evidence_category(event)
+                for event in events
+                if isinstance(event, ToolCompleted)
+            ]
+            progress = {
+                "last_strategy_event_seq": 0,
+                "midturn_review_attempts": 0,
+                "recent": [
+                    {
+                        "event_seq": index,
+                        "meaningful": True,
+                        "failed": category == "failure",
+                        "evidence_category": category,
+                    }
+                    for index, category in enumerate(categories, start=1)
+                ],
+            }
+            review = checkpoints.classify_strategy(progress)
+            triggers.append(review["trigger"] if review else "")
+
+        self.assertEqual(triggers, ["validated-progress", "validated-progress"])
+
     def test_stop_adapter_writes_new_host_namespaced_log(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

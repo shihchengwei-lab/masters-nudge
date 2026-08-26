@@ -4,12 +4,13 @@
 
 Target package version: `0.2.0-dev.1`.
 
-- Keep findings inside the supplied task contract, treat unknown constraints as hypotheses to check, and stop successful specialist evidence, unverified change growth, and large diffs from triggering reviews; mid-turn intervention now requires a repeated same-surface failure or explicit long-goal completion boundary.
+- Keep findings inside the supplied task contract, treat unknown constraints as hypotheses to check, and stop successful specialist evidence, unverified change growth, and large diffs from triggering reviews; mid-turn intervention now follows validated semantic cycles or repeated same-surface failures.
 - Deliver each finding only in the eligible event that produced it; record a successful flush as `emitted`, a wire failure as terminal `failed`, and require a later host event before confirming `injected`.
 - Use one canonical review-attempt identity across both hosts and every review kind; terminal `finding`, `no_finding`, and `error` attempts do not trigger automatic Provider retries.
 - Run eligible Claude and Codex checkpoint, strategy, goal-transition, and Stop reviews synchronously; a Stop finding continues the same turn instead of waiting for a later prompt or detached worker.
 - Cap Provider work at 90 seconds inside a 120-second host-hook timeout, while retaining lower explicit timeout settings.
-- Run Anthropic reviews at explicit medium effort without session persistence, retain bounded timeout diagnostics, and stop treating a single edit-to-validation cycle as a strategy checkpoint.
+- Run Anthropic reviews at explicit medium effort without session persistence, retain bounded timeout diagnostics, and use one completed change-to-verification cycle for the first mid-turn review, two new cycles thereafter, and a shared three-attempt per-turn budget.
+- Reset progress and mid-turn review ownership at each new turn while preserving reaction and delivery history; old-turn findings cannot block or be confirmed by a new turn.
 - Present earlier failures as bounded history without repeating the current failed event, and remove the duplicate goal objective from strategy evidence.
 - Make `ReviewCore` the sole routing owner, keep the lifecycle filter when unrelated specialist evidence is absent, and avoid rotating filters merely because the primary is cooling down.
 - Present engineering stages and practical focus in public configuration and the floating window; keep person names only inside provider prompts as private attention cues.

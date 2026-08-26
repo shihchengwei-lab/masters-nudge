@@ -336,6 +336,20 @@ def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     )
 
 
+def _new_progress_state(session: SessionRef, goal_objective: str = "") -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "host": session.host,
+        "session_id": session.session_id,
+        "turn_id": session.turn_id,
+        "event_seq": 0,
+        "last_strategy_event_seq": 0,
+        "midturn_review_attempts": 0,
+        "recent": [],
+        "goal_objective": source_context.head_tail(goal_objective, 1000),
+    }
+
+
 def start_turn(
     data_dir: Path,
     session: SessionRef,
@@ -366,6 +380,10 @@ def start_turn(
             "evidence_records": [],
             "transcript_offset": transcript_offset,
         },
+    )
+    _atomic_write(
+        state_path(data_dir, session, "progress"),
+        _new_progress_state(session, prompt),
     )
 
 
@@ -583,6 +601,10 @@ def latest_intervention_state(
         entry
         for entry in read_reaction_entries(data_dir, session)
         if entry.get("kind", "review") == "review"
+        and (
+            not session.turn_id
+            or str(entry.get("turn_id") or "") == session.turn_id
+        )
     ]
     if not entries:
         return "", 0
@@ -619,6 +641,7 @@ def mark_delivery(
         previous = previous if isinstance(previous, dict) else {}
         receipt = {
             **previous,
+            "turn_id": session.turn_id,
             "status": status,
             "event_seq": int(event_seq or 0),
             "delivered_at": now,
@@ -695,6 +718,8 @@ def observe_injected_response(
                 "injected",
             }:
                 continue
+            if session.turn_id and str(receipt.get("turn_id") or "") != session.turn_id:
+                continue
             if isinstance(receipt.get("response_observation"), dict):
                 continue
             delivery_seq = int(receipt.get("event_seq") or 0)
@@ -755,13 +780,7 @@ def observe_injected_response(
 def load_progress_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     return _read_json(
         state_path(data_dir, session, "progress"),
-        {
-            "schema_version": 1,
-            "event_seq": 0,
-            "last_strategy_event_seq": 0,
-            "recent": [],
-            "goal_objective": "",
-        },
+        _new_progress_state(session),
     )
 
 
@@ -822,10 +841,15 @@ def mark_strategy_reviewed(
     session: SessionRef,
     *,
     event_seq: int,
+    midturn: bool = False,
 ) -> None:
     path = state_path(data_dir, session, "progress")
     state = _read_json(path, {})
     state["last_strategy_event_seq"] = int(event_seq or 0)
+    if midturn:
+        state["midturn_review_attempts"] = (
+            int(state.get("midturn_review_attempts") or 0) + 1
+        )
     _atomic_write(path, state)
 
 

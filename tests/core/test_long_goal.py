@@ -403,6 +403,38 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
             self.assertEqual(core.calls[-1].routing_concern, "")
 
+    def test_validated_progress_reviews_first_cycle_then_waits_for_two_more(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = FakeCore(settings_for(root))
+            adapter = CodexAdapter(core)
+
+            def event(name, command, output):
+                return {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "validated-progress",
+                    "turn_id": "t",
+                    "cwd": str(root),
+                    "tool_name": name,
+                    "tool_input": {"command": command},
+                    "tool_response": {"exit_code": 0, "output": output},
+                }
+
+            adapter.process(event("apply_patch", "apply_patch first", "changed"))
+            adapter.process(event("exec_command", "python -m pytest tests/a.py", "1 passed"))
+            self.assertEqual([call.trigger for call in core.calls], ["validated-progress"])
+
+            adapter.process(event("apply_patch", "apply_patch second", "changed"))
+            adapter.process(event("exec_command", "python -m pytest tests/b.py", "1 passed"))
+            self.assertEqual(len(core.calls), 1)
+
+            adapter.process(event("apply_patch", "apply_patch third", "changed"))
+            adapter.process(event("exec_command", "python -m pytest tests/c.py", "1 passed"))
+            self.assertEqual(
+                [call.trigger for call in core.calls],
+                ["validated-progress", "validated-progress"],
+            )
+
     def test_goal_completion_is_reviewed_before_the_final_response(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -423,7 +455,7 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(core.calls[0].trigger, "goal-complete")
             self.assertEqual(core.calls[0].routing_concern, "completion-boundary")
 
-    def test_queued_nudge_is_not_delivered_during_goal_transition_review(self):
+    def test_old_turn_queued_nudge_does_not_block_new_goal_transition_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
@@ -448,7 +480,9 @@ class LongGoalReplayTests(unittest.TestCase):
                     "tool_response": {"success": True},
                 }
             )
-            self.assertEqual(core.calls, [])
+            self.assertEqual(len(core.calls), 1)
+            self.assertEqual(core.calls[0].kind, "goal_transition")
+            self.assertEqual(core.calls[0].trigger, "goal-complete")
             self.assertIsNone(output)
 
     def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):

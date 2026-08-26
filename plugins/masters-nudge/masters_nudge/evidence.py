@@ -129,6 +129,7 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             data_dir,
             event.session,
             event_seq=event_seq,
+            midturn=review_kind == "strategy",
         )
     if checkpoint and checkpoint["reason"] == "goal-transition":
         review_kind = "goal_transition"
