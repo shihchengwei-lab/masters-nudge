@@ -255,20 +255,6 @@ def finish_review_attempt(
     _atomic_write(path, current)
 
 
-def read_review_attempts(
-    data_dir: Path, session: SessionRef
-) -> list[dict[str, Any]]:
-    directory = Path(data_dir) / f"{session_stem(session)}.review-attempts"
-    if not directory.exists():
-        return []
-    attempts: list[dict[str, Any]] = []
-    for path in sorted(directory.glob("*.json")):
-        value = _read_json(path, {})
-        if value:
-            attempts.append(value)
-    return attempts
-
-
 def _reaction_timestamp() -> str:
     """Return a sortable identifier even when the Windows wall clock is coarse."""
     return (

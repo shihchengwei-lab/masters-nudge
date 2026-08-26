@@ -86,13 +86,3 @@ def build_review_input(
         )
     )
     return f"{source_packet.rstrip()}\n\n{block}" if source_packet.strip() else block
-
-
-
-
-def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
-    return {
-        "stage": route.stage,
-        "effective_lens": route.effective_lens,
-        "route_source": route.source,
-    }

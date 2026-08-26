@@ -14,7 +14,6 @@ from .prompting import (
     build_review_input,
     build_system_prompt,
     lens_focus_prompt,
-    route_metadata,
 )
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
@@ -65,7 +64,7 @@ class ReviewCore:
         self.persona_dir = settings.paths.runtime_dir / "personas"
         self.schema_path = settings.paths.runtime_dir / "reaction-schema.json"
 
-    def review(
+    def _review_claimed(
         self,
         request: ReviewRequest,
         *,
@@ -80,7 +79,11 @@ class ReviewCore:
             reported_focus=request.reported_focus,
             stopping=request.kind == "stop",
         )
-        route_fields = route_metadata(route)
+        route_fields = {
+            "stage": route.stage,
+            "effective_lens": route.effective_lens,
+            "route_source": route.source,
+        }
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
@@ -238,7 +241,7 @@ class ReviewCore:
         if not token:
             return None
         try:
-            outcome = self.review(
+            outcome = self._review_claimed(
                 request,
                 persist_reaction=persist_reaction,
                 timeout_sec=timeout_sec,

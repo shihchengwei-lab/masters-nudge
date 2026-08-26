@@ -7,11 +7,9 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 import hook_entry
 import lens_router
-import persona_config
 from masters_nudge import storage
 from masters_nudge.codex_adapter import CodexAdapter, _with_delivery_marker
 from masters_nudge.contracts import ReviewOutcome, SessionRef

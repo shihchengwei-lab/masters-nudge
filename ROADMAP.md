@@ -1,6 +1,6 @@
 # Roadmap
 
-This file lists unresolved work only. Shipped behavior belongs in [CHANGELOG.md](CHANGELOG.md); retained evaluation evidence belongs in [evaluation/README.md](evaluation/README.md).
+This file lists unfinished work and exclusion decisions that remain in force. Shipped behavior belongs in [CHANGELOG.md](CHANGELOG.md); retained evaluation evidence belongs in [evaluation/README.md](evaluation/README.md).
 
 ## Active items
 
@@ -17,13 +17,15 @@ The product is plugin-only. Before treating the prerelease as ready for wider us
 
 ### 2. Natural-trace reaction quality and impact
 
-Design any future experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The latest four-task descriptive A/B benchmark remains in [the evidence index](evaluation/README.md); Arm A passed 2/4 and Arm B passed 3/4, a one-task descriptive difference that does not establish an effect.
+This is future research, not a prerelease acceptance gate. Design any experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The historical prerelease benchmark remains in [the evidence index](evaluation/README.md) and does not establish an effect.
 
-**Manual gate:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
+**Research boundary:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 
 ### 3. Optional reviewer quality
 
-**Manual gate:** Publish model-specific recommendations only after a fixed-packet comparison with declared hardware, versions, latency, failures, and quality adjudication. Masters’ Nudge must not install, pull, or choose a local model for the user.
+This is future research, not a prerelease acceptance gate.
+
+**Research boundary:** Publish model-specific recommendations only after a fixed-packet comparison with declared hardware, versions, latency, failures, and quality adjudication. Masters’ Nudge must not install, pull, or choose a local model for the user.
 
 ## Cut list
 

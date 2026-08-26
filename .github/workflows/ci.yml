@@ -25,12 +25,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
         run: python -m pip install Pillow
-      - name: Compile Python sources
-        run: python -m compileall -q .
       - name: Verify generated plugin runtime
         run: python tools/build_plugin.py --check
-      - name: Run full test suite
-        run: python -m unittest discover -v
       - name: Smoke-test self-contained plugin package
         if: runner.os != 'Windows'
         shell: bash
@@ -106,3 +102,7 @@ jobs:
           if ($turnFiles.Count -ne 2) {
             throw "Expected two host-namespaced turn states, found $($turnFiles.Count)"
           }
+      - name: Compile Python sources
+        run: python -m compileall -q .
+      - name: Run full test suite
+        run: python -m unittest discover -v

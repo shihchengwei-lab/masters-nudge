@@ -81,21 +81,25 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertIn("獨立第二意見：", chinese)
         self.assertNotIn("開放問句", chinese)
 
-    def test_readmes_require_later_host_evidence_before_confirming_injection(self):
+    def test_readmes_limit_receipts_to_delivery_order(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
         chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
-        self.assertIn("only a later semantic Claude or Codex host event", english)
-        self.assertIn("後續有語意證據的 Claude 或 Codex host event", chinese)
+        self.assertIn(
+            "Injected receipts and later response observations establish delivery order only.",
+            english,
+        )
+        self.assertIn(
+            "Injected receipts 與後續 response observations 只能證明投遞順序。",
+            chinese,
+        )
 
-    def test_readmes_do_not_duplicate_the_manifest_version_or_a_cost_experiment(self):
+    def test_readmes_do_not_duplicate_the_manifest_version(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
         chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
         self.assertNotIn("Current package version:", english)
         self.assertNotIn("目前套件版本：", chinese)
-        self.assertIn("there is no active cost experiment", english)
-        self.assertIn("目前沒有正式成本實驗", chinese)
 
     def test_docs_do_not_reference_removed_compatibility_or_visibility_sections(self):
         architecture = (HERE / "docs/architecture.md").read_text(
@@ -145,7 +149,7 @@ class SoftwareColdStartTests(unittest.TestCase):
                 source_packet="CURRENT SOFTWARE STATE",
                 source_fingerprint="state-current",
             )
-            ReviewCore(settings_for(root), dispatch=dispatch).review(
+            ReviewCore(settings_for(root), dispatch=dispatch).review_once(
                 request, persist_reaction=False
             )
 
@@ -579,7 +583,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
 
             persona_config.save_stage(root, "review")
             core = ReviewCore(settings_for(root), dispatch=dispatch)
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",
@@ -939,7 +943,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                 return {"status": "no_finding", "finding": "", "usage": {}}
 
             core = ReviewCore(settings_for(root), dispatch=dispatch)
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="stop",
@@ -1012,7 +1016,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                     "usage": {},
                 },
             )
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",
@@ -1046,7 +1050,7 @@ class SoftwareTelemetrySeparationTests(unittest.TestCase):
                     "usage": {},
                 },
             )
-            outcome = core.review(
+            outcome = core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",

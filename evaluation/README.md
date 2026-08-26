@@ -1,15 +1,17 @@
-# Final benchmark evidence
+# Historical prerelease benchmark snapshot
 
-This directory intentionally retains only the latest benchmark result:
-[`final02.json`](final02.json).
+This directory retains one historical prerelease benchmark snapshot:
+[`final02.json`](final02.json). It was produced from plugin source commit
+`ac090a9f34ff76b826ceedb10361f7d7a3bd4ed3` and does not validate the current
+source tree.
 
 ## Result
 
 `final02` is a fixed-order, descriptive A/B run over four additional,
 previously unused SWE-bench Verified tasks. Both arms used `gpt-5.6-sol` at
 medium reasoning in fresh workspaces from the same frozen task trees. Arm A
-disabled plugin hooks; Arm B enabled the plugin snapshot built from commit
-`ac090a9` with Anthropic `claude-opus-5` as reviewer.
+disabled plugin hooks; Arm B enabled that historical plugin snapshot with
+Anthropic `claude-opus-5` as reviewer.
 
 | Task | Arm A | Arm B | B findings / injected / observed |
 |---|---:|---:|---:|

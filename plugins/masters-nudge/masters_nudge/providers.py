@@ -366,7 +366,6 @@ def call_grok_result(
     *,
     schema_path: Path,
     timeout_sec: int,
-    reasoning_effort: str = "",
     log_error: Logger = _noop,
     grok_bin_resolver: Callable[[], str | None] = resolve_grok_bin,
 ) -> dict:
@@ -410,10 +409,6 @@ def call_grok_result(
         ]
         if str(model or "").strip():
             command.extend(["--model", str(model).strip()])
-        if str(reasoning_effort or "").strip():
-            command.extend(
-                ["--reasoning-effort", str(reasoning_effort).strip()]
-            )
         result = _run_cli_process(
             command,
             cwd=isolated_cwd,
@@ -539,7 +534,6 @@ def dispatch_call_result(
     schema_path: Path,
     timeout_sec: int,
     ollama_url: str = DEFAULT_OLLAMA_URL,
-    reasoning_effort: str = "",
     log_error: Logger = _noop,
 ) -> dict:
     if provider in ("openai", "codex"):
@@ -567,7 +561,6 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
-            reasoning_effort=reasoning_effort,
             log_error=log_error,
         )
     if provider == "ollama-local":

@@ -548,7 +548,7 @@ class TestCheckpointDelivery(unittest.TestCase):
 
         with mock.patch.object(
             self.checkpoint.ReviewCore,
-            "review",
+            "_review_claimed",
             return_value=ReviewOutcome(status="error"),
         ):
             self.assertIsNone(self.checkpoint.prepare_hook(hook))
@@ -559,9 +559,14 @@ class TestCheckpointDelivery(unittest.TestCase):
         from masters_nudge.contracts import SessionRef
 
         session = SessionRef("claude_code", "session-1")
-        attempts = storage.read_review_attempts(
-            self.settings.paths.data_dir, session
+        attempt_dir = (
+            self.settings.paths.data_dir
+            / f"{storage.session_stem(session)}.review-attempts"
         )
+        attempts = [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in attempt_dir.glob("*.json")
+        ]
         self.assertEqual(1, len(attempts))
         self.assertEqual(attempts[0]["status"], "error")
 
@@ -577,7 +582,7 @@ class TestCheckpointDelivery(unittest.TestCase):
 
         with mock.patch.object(
             self.checkpoint.ReviewCore,
-            "review",
+            "_review_claimed",
             return_value=ReviewOutcome(
                 status="finding",
                 finding="路徑假設還沒成立。",

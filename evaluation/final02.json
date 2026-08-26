@@ -1,5 +1,8 @@
 {
   "schema_version": 1,
+  "artifact_status": "historical_prerelease_snapshot",
+  "validates_source_commit": "ac090a9f34ff76b826ceedb10361f7d7a3bd4ed3",
+  "validates_current_source_tree": false,
   "completed_at": "2026-08-26T07:34:44+08:00",
   "design": "fresh_fixed_order_descriptive_ab",
   "dataset": {

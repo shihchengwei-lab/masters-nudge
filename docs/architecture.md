@@ -84,6 +84,6 @@ The packet keeps the task contract, explicitly referenced source content, and th
 
 The checked-in `plugins/masters-nudge/` directory is the self-contained install package. `masters_nudge/plugin_inventory.py` owns one code-defined package manifest for generated files, static files, core runtime dependencies, and optional UI assets. `tools/build_plugin.py` and `doctor` derive their inventories from that manifest; the installed package does not self-report a second inventory. Marketplace metadata points to the generated package rather than to the repository root.
 
-Historical host-smoke evidence is preserved in the verified evidence archive linked from `evaluation/README.md`; it is not a guarantee for later host versions. Native event availability and hook trust must be rechecked during fresh-install acceptance.
+The repository's historical prerelease benchmark is indexed in [evaluation](../evaluation/README.md). Retired specialization and host-smoke artifacts are preserved separately in [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22). Neither archive guarantees behavior on later source or host versions; native event availability and hook trust must be rechecked during fresh-install acceptance.
 
 See the [OpenAI plugin packaging documentation](https://developers.openai.com/plugins/build/plugins) and [Codex hooks documentation](https://learn.chatgpt.com/docs/hooks) for the current host contracts.

@@ -556,10 +556,6 @@ class PluginPackagingTests(unittest.TestCase):
             self.assertIn("claude plugin install masters-nudge@masters-nudge ", text)
             self.assertIn("--config python_command=python", text)
             self.assertIn("codex plugin add masters-nudge@masters-nudge", text)
-            self.assertIn(
-                "0.1.0-dev.2",
-                (HERE / "CHANGELOG.md").read_text(encoding="utf-8"),
-            )
         self.assertTrue((PLUGIN_ROOT / "skills" / "setup-local" / "SKILL.md").exists())
 
     def test_ci_smokes_the_plugin_package_without_legacy_installers(self):
@@ -591,6 +587,20 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertIn("$doctor.python.ready", workflow)
         self.assertIn("$doctor.data.writable", workflow)
         self.assertIn("Expected two host-namespaced turn states", workflow)
+        compile_index = workflow.index("- name: Compile Python sources")
+        self.assertLess(
+            workflow.index("- name: Verify generated plugin runtime"), compile_index
+        )
+        self.assertLess(
+            workflow.index("- name: Smoke-test self-contained plugin package"),
+            compile_index,
+        )
+        self.assertLess(
+            workflow.index(
+                "- name: Smoke-test self-contained plugin package on Windows"
+            ),
+            compile_index,
+        )
 
 
 class LegacyMigrationTests(unittest.TestCase):
@@ -979,6 +989,21 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertEqual(mappings["BUDDY_CLAUDE_DIR"], "MASTERS_NUDGE_DATA_DIR")
             self.assertTrue(result["manual_required"])
             self.assertFalse((Path(raw) / ".profile").exists())
+
+    def test_migrate_does_not_recommend_retired_shadow_environment_aliases(self):
+        with tempfile.TemporaryDirectory() as raw:
+            result = migrate_legacy(
+                "claude",
+                environ={
+                    "HOME": raw,
+                    "USERPROFILE": raw,
+                    "BUDDY_SHADOW_EVALUATION_DAYS": "14",
+                    "BUDDY_SHADOW_TARGET_CALLS": "100",
+                },
+            )
+
+        self.assertEqual(result["environment"], [])
+        self.assertFalse(result["manual_required"])
 
     def test_migrate_requires_a_stage_choice_for_legacy_persona_environment(self):
         with tempfile.TemporaryDirectory() as raw:

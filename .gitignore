@@ -2,6 +2,8 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.ruff_cache/
+.codex-remote-attachments/
 
 # Local-only handoff notes between Agent sessions; never committed.
 HANDOFF.md

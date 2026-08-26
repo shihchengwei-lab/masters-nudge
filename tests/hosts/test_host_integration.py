@@ -17,7 +17,6 @@ import review_telemetry
 import claude_checkpoint as checkpoint_hook
 import claude_stop as buddy
 import hook_entry
-import persona_config
 from masters_nudge import checkpoints, providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
@@ -329,10 +328,17 @@ class CodexAdapterTests(unittest.TestCase):
             {key: first[key] for key in ("decision", "reason")},
         )
         self.assertIsNone(second)
-        attempts = storage.read_review_attempts(
-            self.settings.paths.data_dir,
-            SessionRef("codex_cli", "sync-stop", "turn-1", str(self.root)),
+        session = SessionRef(
+            "codex_cli", "sync-stop", "turn-1", str(self.root)
         )
+        attempt_dir = (
+            self.settings.paths.data_dir
+            / f"{storage.session_stem(session)}.review-attempts"
+        )
+        attempts = [
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in attempt_dir.glob("*.json")
+        ]
         self.assertEqual(len(attempts), 1)
         self.assertEqual(attempts[0]["status"], "finding")
         receipt = next(
@@ -987,7 +993,7 @@ class SharedCoreTests(unittest.TestCase):
                     "masters_nudge.core.review_telemetry.record_review",
                     side_effect=lambda _data_dir, record: telemetry.append(record),
                 ):
-                    ReviewCore(settings, dispatch=dispatch).review(
+                    ReviewCore(settings, dispatch=dispatch).review_once(
                         ReviewRequest(
                             schema_version=1,
                             kind="stop",
@@ -1023,7 +1029,7 @@ class SharedCoreTests(unittest.TestCase):
 
             core = ReviewCore(settings, dispatch=dispatch)
             session = SessionRef("codex_cli", "routing")
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="stop",
@@ -1034,7 +1040,7 @@ class SharedCoreTests(unittest.TestCase):
                 ),
                 persist_reaction=False,
             )
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",
@@ -1046,7 +1052,7 @@ class SharedCoreTests(unittest.TestCase):
                 ),
                 persist_reaction=False,
             )
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="checkpoint",
@@ -1058,7 +1064,7 @@ class SharedCoreTests(unittest.TestCase):
                 ),
                 persist_reaction=False,
             )
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="strategy",
@@ -1071,7 +1077,7 @@ class SharedCoreTests(unittest.TestCase):
                 ),
                 persist_reaction=False,
             )
-            core.review(
+            core.review_once(
                 ReviewRequest(
                     schema_version=1,
                     kind="strategy",
@@ -1114,7 +1120,7 @@ class SharedCoreTests(unittest.TestCase):
                 },
             )
 
-            core.review(
+            core.review_once(
                 request,
                 persist_reaction=True,
             )
@@ -1139,6 +1145,8 @@ class SharedCoreTests(unittest.TestCase):
         parameters = inspect.signature(ReviewCore).parameters
         self.assertNotIn("prompt_builder", parameters)
         self.assertNotIn("telemetry_recorder", parameters)
+        self.assertTrue(hasattr(ReviewCore, "review_once"))
+        self.assertFalse(hasattr(ReviewCore, "review"))
 
     def test_both_hosts_feed_the_same_prompt_and_provider_boundary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -1151,7 +1159,7 @@ class SharedCoreTests(unittest.TestCase):
 
             core = ReviewCore(settings, dispatch=dispatch)
             for host in ("claude_code", "codex_cli"):
-                core.review(
+                core.review_once(
                     ReviewRequest(
                         schema_version=1,
                         kind="stop",
@@ -1361,47 +1369,15 @@ class GrokProviderTests(unittest.TestCase):
             )
         self.assertNotIn("--model", run.call_args.args[0])
 
-    def test_grok_passes_explicit_reasoning_effort(self):
-        completed = mock.Mock(
-            returncode=0,
-            stdout=json.dumps({"status": "no_finding", "finding": ""}),
-            stderr="",
+    def test_grok_does_not_expose_an_unconfigured_reasoning_effort(self):
+        self.assertNotIn(
+            "reasoning_effort",
+            inspect.signature(providers.call_grok_result).parameters,
         )
-        with mock.patch(
-            "masters_nudge.providers._run_cli_process", return_value=completed
-        ) as run:
-            providers.call_grok_result(
-                "system",
-                "evidence",
-                "grok-4.6",
-                schema_path=HERE / "reaction-schema.json",
-                timeout_sec=12,
-                reasoning_effort="medium",
-                grok_bin_resolver=lambda: "grok",
-            )
-
-        command = run.call_args.args[0]
-        self.assertEqual(
-            command[command.index("--reasoning-effort") + 1],
-            "medium",
+        self.assertNotIn(
+            "reasoning_effort",
+            inspect.signature(providers.dispatch_call_result).parameters,
         )
-
-    def test_provider_dispatch_forwards_reasoning_effort_to_grok(self):
-        with mock.patch(
-            "masters_nudge.providers.call_grok_result",
-            return_value={"status": "no_finding", "finding": "", "usage": {}},
-        ) as call:
-            providers.dispatch_call_result(
-                "grok",
-                "system",
-                "evidence",
-                "",
-                schema_path=HERE / "reaction-schema.json",
-                timeout_sec=12,
-                reasoning_effort="medium",
-            )
-
-        self.assertEqual(call.call_args.kwargs["reasoning_effort"], "medium")
 
     def test_grok_subscription_call_does_not_inherit_xai_api_key(self):
         completed = mock.Mock(

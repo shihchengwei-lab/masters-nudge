@@ -102,16 +102,18 @@ Depending on the event, the packet can contain:
 
 The reviewer prompt and selected lens are sent as instructions, not evidence.
 
-Routine navigation output, generic source inspection, external reports, tool names and commands, the main model's running explanation or reaction, and full transcripts are not included in the reviewer packet. Automatic mode's hidden focus marker is used only to select the prompt and is stripped before packet construction. The first completed change-to-verification cycle can trigger a mid-turn review; later reviews require two new completed cycles. Repeated same-surface failures share the same three-attempt per-turn budget. Goal transitions and Stop reviews remain eligible outside that budget, and a queued or emitted finding still blocks another mid-turn review until delivery is resolved. Reactions, task requests, semantic evidence, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. A flushed hook response is recorded as `emitted`; only a later semantic Claude or Codex host event confirms it as `injected`. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
+Routine navigation output, generic source inspection, external reports, tool names and commands, the main model's running explanation or reaction, and full transcripts are not included in the reviewer packet. Automatic mode's hidden focus marker is used only to select the prompt and is stripped before packet construction.
+
+Task requests, semantic evidence, reactions, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. Telemetry records routing, status, latency, and provider-reported usage metadata. Review scheduling and receipt-state semantics are documented in [the architecture](docs/architecture.md). Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 
 The retained evidence index is [evaluation/README.md](evaluation/README.md).
 
-Current evidence supports only bounded claims:
+The retained artifact is a historical prerelease snapshot built from commit `ac090a9`, not validation of the current source tree. Protocol, complete results, exclusions, and claim boundaries remain in the evidence index.
 
-- In the latest fixed-order benchmark, Arm A passed 2/4 and Arm B passed 3/4 additional, previously unused SWE-bench Verified tasks. T03 differed by arm; T04 failed in both arms.
-- Arm B produced six injected findings with six later response observations; this proves delivery order only, not that a Nudge caused an action or result.
+- The sample is descriptive and does not establish a stable effect, prove generalization, or attribute an action or result to a Nudge.
+- Injected receipts and later response observations establish delivery order only.
 - Provider-reported tokens, latency, and estimated cost are not normalized across providers and are not billing guarantees.
 - Hook delivery is best-effort when a host does not emit an expected native event.
 
