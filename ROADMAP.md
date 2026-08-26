@@ -4,26 +4,26 @@ This file lists unfinished work and exclusion decisions that remain in force. Sh
 
 ## Active items
 
-### 1. Prerelease acceptance for `0.2.0-dev.1`
+### 1. Ongoing host compatibility
 
-The product is plugin-only. Before treating the prerelease as ready for wider use:
+The product is plugin-only. Before claiming compatibility with a later Claude Code or Codex host version:
 
 - perform a fresh Claude Code marketplace install and exercise prompt, checkpoint, Stop, doctor, migration, and optional window flows;
 - perform a fresh Codex marketplace install, review hook trust, and exercise prompt, tool, synchronous Stop continuation, doctor, and migration flows;
 - run the generated-package check and the supported Python test matrix on Windows, Linux, and macOS;
 - record host versions, commands, exit status, and any unverified GUI or provider behavior.
 
-**Manual gate:** Do not call the prerelease generally available until the two fresh installs and cross-platform checks have current evidence.
+**Compatibility boundary:** A tagged release and its CI evidence do not automatically cover later host versions. Re-run the applicable checks before making a new compatibility claim.
 
 ### 2. Natural-trace reaction quality and impact
 
-This is future research, not a prerelease acceptance gate. Design any experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The historical prerelease benchmark remains in [the evidence index](evaluation/README.md) and does not establish an effect.
+This is future research, not a release acceptance gate. Design any experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The historical prerelease benchmark remains in [the evidence index](evaluation/README.md) and does not establish an effect.
 
 **Research boundary:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 
 ### 3. Optional reviewer quality
 
-This is future research, not a prerelease acceptance gate.
+This is future research, not a release acceptance gate.
 
 **Research boundary:** Publish model-specific recommendations only after a fixed-packet comparison with declared hardware, versions, latency, failures, and quality adjudication. Masters’ Nudge must not install, pull, or choose a local model for the user.
 

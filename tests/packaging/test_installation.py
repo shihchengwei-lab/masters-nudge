@@ -414,7 +414,7 @@ class PluginPackagingTests(unittest.TestCase):
     def test_generated_runtime_matches_canonical_sources(self):
         self.assertEqual(build_plugin.check_plugin(), [])
 
-    def test_manifests_and_marketplaces_share_name_and_prerelease(self):
+    def test_manifests_and_marketplaces_share_name_and_release_version(self):
         codex = json.loads(
             (PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
@@ -432,7 +432,7 @@ class PluginPackagingTests(unittest.TestCase):
 
         self.assertEqual(codex["name"], "masters-nudge")
         self.assertEqual(codex["version"].split("+", 1)[0], claude["version"])
-        self.assertIn("dev", claude["version"])
+        self.assertEqual(claude["version"], "0.3.0")
         self.assertTrue(codex["interface"]["privacyPolicyURL"].endswith("#privacy"))
         self.assertNotIn("hooks", codex)
         self.assertEqual(claude["hooks"], "./hooks/claude.json")

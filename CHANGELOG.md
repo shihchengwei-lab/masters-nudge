@@ -1,8 +1,6 @@
 # Changelog
 
-## Unreleased
-
-Target package version: `0.2.0-dev.1`.
+## 0.3.0 — 2026-08-26
 
 ### Added
 
