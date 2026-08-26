@@ -5,6 +5,7 @@ Run:  python -m unittest test_buddy -v
 """
 
 import inspect
+import io
 import json
 import os
 import sys
@@ -181,7 +182,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertNotIn(phrase, base_prompt)
 
-    def test_base_prompt_matches_structured_evidence_packet_labels(self):
+    def test_base_prompt_matches_minimal_evidence_packet_labels(self):
         import source_context
 
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -189,14 +190,17 @@ class TestPersonaPromptSelection(unittest.TestCase):
             task_anchor="修正登入錯誤",
             last_assistant_message="已完成",
             task_sources="ISSUE.md\n登入逾時時不得遺失 session",
-            agentcam_evidence="## Risk Flags\n- HIGH",
         )
 
         self.assertIn("Use only the supplied packet", base_prompt)
-        self.assertIn("[decision frame]", packet)
-        self.assertIn("[supporting evidence]", packet)
-        self.assertIn("contract_excerpt:", packet)
-        self.assertIn("external_runtime_evidence:", packet)
+        self.assertIn("original task", base_prompt)
+        self.assertIn("current\nobservable result", base_prompt)
+        self.assertIn("recent injected Nudges", base_prompt)
+        self.assertIn("[contract]", packet)
+        self.assertIn("[current result]", packet)
+        self.assertNotIn("runtime_output:", packet)
+        self.assertNotIn("Decision frame", base_prompt)
+        self.assertNotIn("current approach", base_prompt)
 
 
 # ── 3. Source evidence packets ───────────────────────────────────────
@@ -276,23 +280,42 @@ class TestSourceContext(unittest.TestCase):
 
     def test_packet_keeps_newest_evidence_records_with_bounded_excerpts(self):
         records = [
-            {"seq": 1, "category": "change", "content": "OLD\n" + "a" * 1500},
-            {"seq": 2, "category": "change", "content": "CORE\n" + "b" * 1500},
-            {"seq": 3, "category": "change", "content": "LATEST\n" + "c" * 1500},
+            {"seq": 1, "category": "change", "content": "OLD\n" + "a" * 2200},
+            {"seq": 2, "category": "change", "content": "CORE\n" + "b" * 2200},
+            {"seq": 3, "category": "verification", "content": "CHECKED\n" + "c" * 2200},
+            {"seq": 4, "category": "change", "content": "LATEST\n" + "d" * 2200},
         ]
 
         packet = self.source.build_checkpoint_packet(
             task_anchor="修正行為",
-            event_context="reason: review",
             evidence_records=records,
         )
 
         self.assertNotIn("OLD", packet)
         self.assertIn("CORE", packet)
+        self.assertIn("CHECKED", packet)
         self.assertIn("LATEST", packet)
         self.assertIn(self.source.TRUNCATION_MARKER, packet)
 
-    def test_turn_state_accepts_inspection_as_decision_evidence(self):
+    def test_packet_uses_the_latest_results_without_failure_priority(self):
+        records = [
+            {"seq": 1, "category": "failure", "content": "OPEN_FAILURE"},
+            {"seq": 2, "category": "verification", "content": "CHECK_2"},
+            {"seq": 3, "category": "verification", "content": "CHECK_3"},
+            {"seq": 4, "category": "change", "content": "LATEST_CHANGE"},
+        ]
+
+        packet = self.source.build_checkpoint_packet(
+            task_anchor="修正行為",
+            evidence_records=records,
+        )
+
+        self.assertNotIn("OPEN_FAILURE", packet)
+        self.assertIn("CHECK_2", packet)
+        self.assertIn("CHECK_3", packet)
+        self.assertIn("LATEST_CHANGE", packet)
+
+    def test_turn_state_rejects_generic_inspection_records(self):
         from masters_nudge.contracts import SessionRef
         from masters_nudge import storage
 
@@ -307,13 +330,11 @@ class TestSourceContext(unittest.TestCase):
                 record="inspection:\nassert public_order == [C, A, B]",
             )
 
-        self.assertEqual("inspection", state["evidence_records"][0]["category"])
-        self.assertIn("public_order", state["evidence_records"][0]["content"])
+        self.assertEqual([], state["evidence_records"])
 
     def test_checkpoint_packet_carries_bounded_research_state(self):
         packet = self.source.build_checkpoint_packet(
             task_anchor="修正登入測試",
-            event_context="reason: test-fail\nfailure: 2 failed",
             task_sources="ISSUE.md\n逾時時仍應保留 session",
             evidence_records=[
                 {"seq": 1, "category": "change", "content": "auth.py 修改 14 行"},
@@ -322,16 +343,12 @@ class TestSourceContext(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[decision frame]", packet)
+        self.assertIn("[contract]", packet)
         self.assertIn("修正登入測試", packet)
-        self.assertIn("contract_excerpt:", packet)
         self.assertIn("逾時時仍應保留 session", packet)
-        self.assertIn("[supporting evidence]", packet)
-        self.assertIn("current_approach:", packet)
+        self.assertIn("[current result]", packet)
         self.assertIn("auth.py 修改 14 行", packet)
-        self.assertIn("discriminating_results:", packet)
         self.assertIn("8 passed", packet)
-        self.assertIn("unresolved_contradiction:", packet)
         self.assertIn("2 failed", packet)
         self.assertNotIn("review_event:", packet)
         self.assertNotIn("正在調整 auth.py", packet)
@@ -353,6 +370,11 @@ class TestSourceContext(unittest.TestCase):
             {"cmd": "pwd; Get-ChildItem ISSUE.md"},
             {"content": "C:/repo\nISSUE.md"},
         )
+        mixed_read_and_listing = self.source.capture_referenced_task_source(
+            "Read `ISSUE.md` and resolve it.",
+            {"cmd": "Get-Content ISSUE.md; Get-ChildItem -Recurse"},
+            {"content": "# Issue\nPreserve the API.\n./src/app.py"},
+        )
         similarly_named_file = self.source.capture_referenced_task_source(
             "Read `ISSUE.md` and resolve it.",
             {"cmd": "cat NOTISSUE.md"},
@@ -368,6 +390,7 @@ class TestSourceContext(unittest.TestCase):
         self.assertIn("Preserve the old positional API", captured[1])
         self.assertIsNone(ignored)
         self.assertIsNone(poisoned_listing)
+        self.assertIsNone(mixed_read_and_listing)
         self.assertIsNone(similarly_named_file)
         self.assertEqual(direct_read[0], "ISSUE.md")
         self.assertIn("Preserve the public contract", direct_read[1])
@@ -382,47 +405,17 @@ class TestSourceContext(unittest.TestCase):
                 {"seq": 2, "category": "verification", "content": "128 tests passed"},
                 {"seq": 3, "category": "failure", "content": "舊位置參數尚未驗證"},
             ],
-            agentcam_evidence="## Risk Flags\n| HIGH | auth.py |",
         )
 
-        self.assertIn("[decision frame]", packet)
-        self.assertIn("contract_excerpt:", packet)
-        self.assertIn("completion_claim_context:", packet)
-        self.assertIn("current_approach:", packet)
-        self.assertIn("discriminating_results:", packet)
-        self.assertIn("unresolved_contradiction:", packet)
-        self.assertIn("external_runtime_evidence:", packet)
+        self.assertIn("[contract]", packet)
+        self.assertIn("[current result]", packet)
+        self.assertIn("assistant_output:", packet)
+        self.assertNotIn("runtime_output:", packet)
+        self.assertNotIn("completion_claim_context:", packet)
         self.assertLess(
-            packet.index("[decision frame]"),
-            packet.index("[supporting evidence]"),
+            packet.index("[contract]"),
+            packet.index("[current result]"),
         )
-
-    def test_agentcam_extractor_keeps_only_named_evidence_sections(self):
-        report = """# Agent Run Report
-
-## Summary
-generic summary that should not be sent
-
-## Risk Flags
-| HIGH | auth.py |
-
-## Changed Files
-- auth.py
-
-## Narrative
-long unrelated prose
-
-## Exit Code Detail
-pytest: 1
-"""
-
-        result = self.source.extract_agentcam_evidence(report)
-
-        self.assertIn("Risk Flags", result)
-        self.assertIn("Changed Files", result)
-        self.assertIn("Exit Code Detail", result)
-        self.assertNotIn("generic summary", result)
-        self.assertNotIn("unrelated prose", result)
 
 # ── 4. Checkpoint nudge hooks ────────────────────────────────────────
 
@@ -741,7 +734,6 @@ class TestTranscriptParser(unittest.TestCase):
         ):
             source = self.buddy.build_stop_source_context(
                 hook,
-                "## Risk Flags\n| HIGH | auth.py |\n\n## Summary\nignore me",
                 session=self.buddy.session_from_hook(hook),
             )
             result = source
@@ -752,8 +744,7 @@ class TestTranscriptParser(unittest.TestCase):
         self.assertIn("已完成並通過測試", result)
         self.assertIn("8 passed", result)
         self.assertIn("1 failed", result)
-        self.assertIn("Risk Flags", result)
-        self.assertNotIn("ignore me", result)
+        self.assertNotIn("runtime_output:", result)
 
 class TestPersonaConfig(unittest.TestCase):
 
@@ -777,17 +768,17 @@ class TestPersonaConfig(unittest.TestCase):
             ("review", "linus", "environment"),
         )
 
-    def test_invalid_stage_environment_fails_closed_to_build(self):
+    def test_invalid_stage_environment_falls_back_to_automatic(self):
         selection = self.config.resolve_stage(
             self.tmpdir, environ={"MASTERS_NUDGE_STAGE": "general"}
         )
 
         self.assertEqual(
             (selection.stage, selection.persona, selection.source),
-            ("build", "beck", "invalid_environment"),
+            ("automatic", "", "invalid_environment"),
         )
 
-    def test_missing_or_invalid_config_falls_back_to_build(self):
+    def test_missing_or_invalid_config_falls_back_to_automatic(self):
         missing = self.config.resolve_stage(self.tmpdir, environ={})
         (self.tmpdir / "config.json").write_text(
             json.dumps({"stage": "unknown"}), encoding="utf-8"
@@ -796,11 +787,11 @@ class TestPersonaConfig(unittest.TestCase):
 
         self.assertEqual(
             (missing.stage, missing.persona, missing.source),
-            ("build", "beck", "default"),
+            ("automatic", "", "default"),
         )
         self.assertEqual(
             (invalid.stage, invalid.persona, invalid.source),
-            ("build", "beck", "default"),
+            ("automatic", "", "default"),
         )
 
     def test_save_and_load_new_stage_format(self):
@@ -817,7 +808,7 @@ class TestPersonaConfig(unittest.TestCase):
         )
         self.assertEqual(saved, {"stage": "review"})
 
-    def test_removed_general_stage_config_falls_back_to_build(self):
+    def test_removed_general_stage_config_falls_back_to_automatic(self):
         (self.tmpdir / "config.json").write_text(
             json.dumps({"stage": "general"}), encoding="utf-8"
         )
@@ -826,7 +817,17 @@ class TestPersonaConfig(unittest.TestCase):
 
         self.assertEqual(
             (selection.stage, selection.persona, selection.source),
-            ("build", "beck", "default"),
+            ("automatic", "", "default"),
+        )
+
+    def test_automatic_is_a_persisted_non_persona_selection(self):
+        self.config.save_stage(self.tmpdir, "automatic")
+
+        selection = self.config.resolve_stage(self.tmpdir, environ={})
+
+        self.assertEqual(
+            (selection.stage, selection.persona, selection.source),
+            ("automatic", "", "config"),
         )
 
     def test_general_is_not_a_savable_stage(self):
@@ -857,15 +858,15 @@ class TestLensRouter(unittest.TestCase):
             inspect.signature(self.router.resolve_review_route).parameters,
         )
 
-    def route(self, evidence="", environ=None, *, checkpoint=True):
+    def route(self, focus="", environ=None, *, stopping=False):
         return self.router.resolve_review_route(
             self.tmpdir,
-            evidence,
             environ={} if environ is None else environ,
-            checkpoint=checkpoint,
+            reported_focus=focus,
+            stopping=stopping,
         )
 
-    def test_lifecycle_stages_map_to_primary_lenses(self):
+    def test_explicit_lifecycle_stages_override_reported_focus(self):
         import persona_config
 
         expected = {
@@ -877,109 +878,49 @@ class TestLensRouter(unittest.TestCase):
         for stage, lens in expected.items():
             with self.subTest(stage=stage):
                 persona_config.save_stage(self.tmpdir, stage)
-                route = self.route()
+                route = self.route("performance")
                 self.assertEqual(route.stage, stage)
-                self.assertEqual(route.primary_lens, lens)
                 self.assertEqual(route.effective_lens, lens)
-                self.assertEqual(route.override_lens, "")
+                self.assertEqual(route.source, "config")
 
-    def test_lamport_direct_and_combined_signals_override_once(self):
-        import persona_config
+    def test_reported_focus_selects_one_private_lens(self):
+        expected = {
+            "design": "jeff",
+            "build": "beck",
+            "evolve": "fowler",
+            "review": "linus",
+            "reliability": "lamport",
+            "performance": "carmack",
+        }
+        for focus, lens in expected.items():
+            with self.subTest(focus=focus):
+                route = self.route(focus)
+                self.assertEqual(route.stage, focus)
+                self.assertEqual(route.effective_lens, lens)
+                self.assertEqual(route.source, "main_model_report")
 
-        persona_config.save_stage(self.tmpdir, "build")
-        for evidence in (
-            "retry may duplicate the payment side effect",
-            "舊回應亂序寫回，可能覆蓋新的狀態",
-            "async queue can timeout and leave stale state",
-            "非同步佇列逾時後會留下過期狀態",
-        ):
-            with self.subTest(evidence=evidence):
-                route = self.route(evidence)
-                self.assertEqual(route.primary_lens, "beck")
-                self.assertEqual(route.effective_lens, "lamport")
-                self.assertEqual(route.override_lens, "lamport")
-                self.assertEqual(route.trigger, "state-ordering-evidence")
-
-    def test_carmack_direct_and_measured_signals_override_once(self):
-        import persona_config
-
-        persona_config.save_stage(self.tmpdir, "evolve")
-        for evidence in (
-            "The profiler shows this hot path dominates runtime.",
-            "p95 latency increased from 12 ms to 28 ms",
-            "基準測試顯示資料搬運成本集中在這裡",
-            "吞吐量降低 31% 且有重複 I/O",
-        ):
-            with self.subTest(evidence=evidence):
-                route = self.route(evidence)
-                self.assertEqual(route.primary_lens, "fowler")
-                self.assertEqual(route.effective_lens, "carmack")
-                self.assertEqual(route.override_lens, "carmack")
-                self.assertEqual(route.trigger, "measured-performance-evidence")
-
-    def test_low_signal_words_do_not_trigger_specialists(self):
-        import persona_config
-
-        persona_config.save_stage(self.tmpdir, "design")
-        for evidence in ("cache", "async", "performance", "latency", "效能"):
-            with self.subTest(evidence=evidence):
-                route = self.route(evidence)
-                self.assertEqual(route.effective_lens, "jeff")
-                self.assertEqual(route.override_lens, "")
-
-    def test_lamport_wins_when_both_specialists_match(self):
+    def test_environment_override_wins_over_reported_focus(self):
         route = self.route(
-            "Profiler benchmark: retry caused duplicate delivery; p95 latency 40 ms"
+            "performance", {"MASTERS_NUDGE_STAGE": "review"}
         )
-        self.assertEqual(route.effective_lens, "lamport")
 
-    def test_environment_stage_is_primary_but_checkpoint_can_change(self):
-        checkpoint = self.route(
-            "retry duplicate delivery", {"MASTERS_NUDGE_STAGE": "review"}
+        self.assertEqual(
+            (route.stage, route.effective_lens, route.source),
+            ("review", "linus", "environment"),
         )
-        unknown = self.route("ordinary checkpoint", {"MASTERS_NUDGE_STAGE": "unknown"})
 
-        self.assertEqual(checkpoint.primary_lens, "linus")
-        self.assertEqual(checkpoint.effective_lens, "lamport")
-        self.assertEqual(checkpoint.override_lens, "lamport")
-        self.assertEqual(unknown.primary_lens, "beck")
-        self.assertEqual(unknown.effective_lens, "beck")
+    def test_missing_report_keeps_forced_review_with_phase_fallback(self):
+        midturn = self.route()
+        stopping = self.route(stopping=True)
 
-    def test_stop_always_uses_primary_even_with_override_evidence(self):
-        import persona_config
-
-        persona_config.save_stage(self.tmpdir, "build")
-        route = self.route(
-            "retry caused duplicate delivery",
-            checkpoint=False,
+        self.assertEqual(
+            (midturn.stage, midturn.effective_lens, midturn.source),
+            ("build", "beck", "default_fallback"),
         )
-        self.assertEqual(route.primary_lens, "beck")
-        self.assertEqual(route.effective_lens, "beck")
-        self.assertEqual(route.override_lens, "")
-
-    def test_route_keeps_the_best_specialist_across_repeated_calls(self):
-        import lens_router
-        import persona_config
-
-        persona_config.save_stage(self.tmpdir, "build")
-        routes = [
-            lens_router.resolve_review_route(
-                self.tmpdir,
-                "retry duplicate delivery",
-                environ={},
-                checkpoint=True,
-            )
-            for _ in range(3)
-        ]
-        self.assertEqual([route.effective_lens for route in routes], ["lamport"] * 3)
-
-    def test_repeated_route_calls_keep_the_best_specialist(self):
-        import persona_config
-
-        persona_config.save_stage(self.tmpdir, "build")
-        evidence = "retry caused duplicate delivery"
-        routes = [self.route(evidence) for _ in range(8)]
-        self.assertEqual([route.effective_lens for route in routes], ["lamport"] * 8)
+        self.assertEqual(
+            (stopping.stage, stopping.effective_lens, stopping.source),
+            ("review", "linus", "stop_fallback"),
+        )
 
 
 class TestFloatingWindowLayout(unittest.TestCase):
@@ -1181,13 +1122,14 @@ class TestFloatingWindowLayout(unittest.TestCase):
         window.bubble_label.config.assert_called_with(text=timeout_message)
         window.ts_label.config.assert_called_with(text="10:01:00")
 
-    def test_selector_offers_only_four_lifecycle_stages(self):
+    def test_selector_offers_automatic_then_four_manual_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
         self.assertEqual(
             options,
             [
+                "Automatic · coding agent 回報目前工作焦點",
                 "Design · 系統結構、因果與成本",
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
@@ -1196,7 +1138,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         )
         for label, stage in zip(
             options,
-            ("design", "build", "evolve", "review"),
+            ("automatic", "design", "build", "evolve", "review"),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
 
@@ -1206,7 +1148,8 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn("ttk.Combobox", source)
         self.assertIn("<<ComboboxSelected>>", source)
         self.assertIn("persona_config.save_stage", source)
-        self.assertIn("下一次 review 起使用", source)
+        self.assertIn("下一次 review 起", source)
+        self.assertIn("Hook 仍決定何時強制呼叫 Provider", source)
         self.assertIn("MASTERS_NUDGE_STAGE 正在接管", source)
         self.assertIn("self._set_lens_background(persona)", source)
         self.assertIn(
@@ -1252,7 +1195,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
 
         source = (HERE / "buddy_window.py").read_text(encoding="utf-8")
         self.assertGreaterEqual(buddy_window.BUBBLE_WRAP_LENGTH, 300)
-        self.assertIn('entry.get("persona", "")', source)
+        self.assertIn('entry.get("effective_lens") or entry.get("persona", "")', source)
         self.assertIn("self._set_lens_badge(persona)", source)
         self.assertIn("self._resize_for_reaction(reaction)", source)
 
@@ -1298,7 +1241,11 @@ class TestInjectState(unittest.TestCase):
             "transcript_path": str(transcript),
         }
 
-        with mock.patch.object(self.inject, "read_hook_input", return_value=hook):
+        output = io.StringIO()
+        with (
+            mock.patch.object(self.inject, "read_hook_input", return_value=hook),
+            mock.patch.object(self.inject.sys, "stdout", output),
+        ):
             self.inject.main()
 
         session = SessionRef("claude_code", "sess-anchor")
@@ -1307,108 +1254,8 @@ class TestInjectState(unittest.TestCase):
         self.assertEqual(state["task_anchor"], "只修目前這個登入問題")
         self.assertEqual(state["transcript_offset"], transcript.stat().st_size)
         self.assertEqual(list(data_dir.glob("*.source.json")), [])
+        self.assertIn("masters-nudge-focus:build", output.getvalue())
 
-
-
-# ── 9. agentcam report integration ───────────────────────────────────
-
-class TestAgentcamReport(unittest.TestCase):
-    """Shared evidence discovery and namespaced Agentcam state."""
-
-    def setUp(self):
-        from masters_nudge import evidence, storage
-        from masters_nudge.contracts import SessionRef
-
-        self.evidence = evidence
-        self.storage = storage
-        self.SessionRef = SessionRef
-        self.tmpdir = tempfile.mkdtemp()
-        self.state_dir = Path(self.tmpdir) / "_state"
-
-    def tearDown(self):
-        import shutil
-        shutil.rmtree(self.tmpdir, ignore_errors=True)
-
-    def _make_fake_repo(self) -> Path:
-        repo = Path(self.tmpdir) / "fakerepo"
-        (repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude").mkdir(parents=True)
-        return repo
-
-    def test_returns_none_when_not_in_repo(self):
-        # tmpdir itself is not a git repo
-        result = self.evidence.read_latest_agentcam_report(self.tmpdir)
-        self.assertIsNone(result)
-
-    def test_returns_none_when_repo_has_no_runs(self):
-        repo = Path(self.tmpdir) / "emptyrepo"
-        (repo / ".git").mkdir(parents=True)
-        result = self.evidence.read_latest_agentcam_report(str(repo))
-        self.assertIsNone(result)
-
-    def test_finds_latest_report(self):
-        repo = self._make_fake_repo()
-        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        report_path.write_text("# Agent Run Report\n\n## Risk Flags\n| HIGH | ... |\n", encoding="utf-8")
-        result = self.evidence.read_latest_agentcam_report(str(repo))
-        self.assertIsNotNone(result)
-        self.assertIn("Risk Flags", result["content"])
-        self.assertTrue(os.path.samefile(result["path"], report_path))
-        self.assertGreater(result["mtime"], 0)
-
-    def test_finds_report_from_subdirectory(self):
-        """cwd inside a subdir of the repo still finds .git/agentcam/runs at root."""
-        repo = self._make_fake_repo()
-        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        report_path.write_text("report", encoding="utf-8")
-        subdir = repo / "src" / "auth"
-        subdir.mkdir(parents=True)
-        result = self.evidence.read_latest_agentcam_report(str(subdir))
-        self.assertIsNotNone(result)
-        self.assertTrue(os.path.samefile(result["path"], report_path))
-
-    def test_picks_newest_by_mtime(self):
-        repo = self._make_fake_repo()
-        runs = repo / ".git" / "agentcam" / "runs"
-        r1 = runs / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        r1.write_text("first", encoding="utf-8")
-        (runs / "20260516-100500-200-claude").mkdir()
-        r2 = runs / "20260516-100500-200-claude" / "AGENT_RUN_REPORT.md"
-        r2.write_text("second", encoding="utf-8")
-        # bump r2's mtime above r1's even on fast filesystems
-        os.utime(r2, (r2.stat().st_atime, r2.stat().st_mtime + 10))
-        result = self.evidence.read_latest_agentcam_report(str(repo))
-        self.assertTrue(os.path.samefile(result["path"], r2))
-        self.assertEqual(result["content"], "second")
-
-    def test_content_preserves_head_and_tail_with_read_cap(self):
-        repo = self._make_fake_repo()
-        report_path = repo / ".git" / "agentcam" / "runs" / "20260516-100000-100-claude" / "AGENT_RUN_REPORT.md"
-        big = "HEAD_MARKER" + ("X" * (self.evidence.AGENTCAM_REPORT_READ_CHARS + 500)) + "TAIL_MARKER"
-        report_path.write_text(big, encoding="utf-8")
-        result = self.evidence.read_latest_agentcam_report(str(repo))
-        self.assertLessEqual(len(result["content"]), self.evidence.AGENTCAM_REPORT_READ_CHARS)
-        self.assertTrue(result["content"].startswith("HEAD_MARKER"))
-        self.assertTrue(result["content"].endswith("TAIL_MARKER"))
-
-    def test_state_roundtrip(self):
-        sid = "test-session-xyz"
-        session = self.SessionRef("claude_code", sid)
-        self.assertEqual(self.storage.load_agentcam_mtime(self.state_dir, session), 0.0)
-        self.storage.save_agentcam_mtime(self.state_dir, session, 1234567.89)
-        self.assertAlmostEqual(
-            self.storage.load_agentcam_mtime(self.state_dir, session),
-            1234567.89,
-            places=2,
-        )
-
-    def test_state_handles_corrupt_file(self):
-        sid = "test-corrupt"
-        session = self.SessionRef("claude_code", sid)
-        self.state_dir.mkdir(parents=True, exist_ok=True)
-        state_path = self.storage.state_path(self.state_dir, session, "agentcam")
-        state_path.write_text("not json", encoding="utf-8")
-        # Should return 0.0 silently, not raise
-        self.assertEqual(self.storage.load_agentcam_mtime(self.state_dir, session), 0.0)
 
 
 if __name__ == "__main__":

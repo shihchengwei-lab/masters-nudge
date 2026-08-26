@@ -92,12 +92,18 @@ def lens_badge(persona: str | None) -> tuple[str, str]:
 
 
 def selector_options() -> list[str]:
-    return [spec.label for spec in persona_config.STAGE_SPECS.values()]
+    return [
+        persona_config.AUTOMATIC_LABEL,
+        *(spec.label for spec in persona_config.STAGE_SPECS.values()),
+    ]
 
 
 SELECTOR_STAGES = {
-    spec.label: key
-    for key, spec in persona_config.STAGE_SPECS.items()
+    persona_config.AUTOMATIC_LABEL: persona_config.AUTOMATIC_STAGE,
+    **{
+        spec.label: key
+        for key, spec in persona_config.STAGE_SPECS.items()
+    },
 }
 
 
@@ -436,12 +442,20 @@ class BuddyWindow:
         except (OSError, ValueError):
             self.bubble_label.config(text="階段設定無法儲存，仍使用原設定。")
             return
-        persona = persona_config.STAGE_SPECS[stage].persona
-        self._set_lens_badge(persona)
-        message = (
-            f"下一次 review 起使用 {label}；專科 lens 可能依明確證據單次接手。"
-            "若 coding agent 設有 MASTERS_NUDGE_STAGE，仍以環境變數為準。"
+        persona = (
+            persona_config.STAGE_SPECS[stage].persona
+            if stage in persona_config.STAGE_SPECS
+            else ""
         )
+        self._set_lens_badge(persona)
+        if stage == persona_config.AUTOMATIC_STAGE:
+            message = (
+                "下一次 review 起，由 coding agent 回報目前工作焦點；"
+                "Hook 仍決定何時強制呼叫 Provider。"
+            )
+        else:
+            message = f"下一次 review 起固定使用 {label}。"
+        message += "若設有 MASTERS_NUDGE_STAGE，仍以環境變數為準。"
         self.bubble_label.config(text=message)
         self._resize_for_reaction(message)
 
@@ -544,7 +558,7 @@ class BuddyWindow:
                     continue
                 reaction = (entry.get("reaction") or "").strip()
                 ts = entry.get("ts", "")
-                persona = entry.get("persona", "")
+                persona = entry.get("effective_lens") or entry.get("persona", "")
                 if reaction:
                     self.last_reaction_ts = str(ts or "")
                     self._set_lens_badge(persona)

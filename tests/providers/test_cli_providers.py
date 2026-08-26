@@ -84,7 +84,7 @@ class ReviewerProcessTests(unittest.TestCase):
 
 
 class ProviderErrorContractTests(unittest.TestCase):
-    def test_claude_places_evidence_in_the_positional_prompt(self):
+    def test_claude_places_the_canonical_evidence_packet_in_the_positional_prompt(self):
         completed = subprocess.CompletedProcess(
             ["claude"],
             0,
@@ -104,10 +104,60 @@ class ProviderErrorContractTests(unittest.TestCase):
 
         argv = run.call_args.args[0]
         prompt = argv[argv.index("-p") + 1]
-        self.assertIn("EVIDENCE-Q7K9", prompt)
+        self.assertEqual("EVIDENCE-Q7K9", prompt)
         self.assertEqual(argv[argv.index("--effort") + 1], "medium")
         self.assertIn("--no-session-persistence", argv)
         self.assertIsNone(run.call_args.kwargs["input_text"])
+
+    def test_grok_prompt_file_contains_only_the_canonical_evidence_packet(self):
+        captured = {}
+
+        def run(command, **_kwargs):
+            prompt_path = Path(command[command.index("--prompt-file") + 1])
+            captured["prompt"] = prompt_path.read_text(encoding="utf-8")
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                '{"status":"no_finding","finding":""}',
+                "",
+            )
+
+        with mock.patch.object(providers, "_run_cli_process", side_effect=run):
+            providers.call_grok_result(
+                "system",
+                "EVIDENCE-Q7K9",
+                "grok-model",
+                schema_path=SCHEMA,
+                timeout_sec=12,
+                grok_bin_resolver=lambda: "grok",
+            )
+
+        self.assertEqual("EVIDENCE-Q7K9", captured["prompt"])
+
+    def test_codex_combines_system_prompt_with_the_unchanged_evidence_packet(self):
+        completed = subprocess.CompletedProcess(["codex"], 0, "", "")
+
+        def run(*_args, **kwargs):
+            output_path = Path(_args[0][_args[0].index("-o") + 1])
+            output_path.write_text(
+                '{"status":"no_finding","finding":""}', encoding="utf-8"
+            )
+            return completed
+
+        with mock.patch.object(providers, "_run_cli_process", side_effect=run) as call:
+            providers.call_codex_result(
+                "SYSTEM-Q7K9",
+                "EVIDENCE-Q7K9",
+                "codex-model",
+                schema_path=SCHEMA,
+                timeout_sec=12,
+                codex_bin_resolver=lambda: "codex",
+            )
+
+        self.assertEqual(
+            "SYSTEM-Q7K9\n\n---\n\nEVIDENCE-Q7K9",
+            call.call_args.kwargs["input_text"],
+        )
 
     def test_claude_nonzero_and_invalid_output_are_distinct(self):
         with mock.patch.object(

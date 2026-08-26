@@ -23,32 +23,28 @@ CHECKPOINT_PROMPT = """
 
 # CURRENT STATE CHECKPOINT
 
-Review only the state slice named by the review event. Do not infer a problem
-from the existence or number of operations.
+Current timing: the main agent has reached a state checkpoint.
 """
 
 STRATEGY_PROMPT = """
 
 # TRAJECTORY CHECKPOINT
 
-Identify one plausible branch not represented by the current approach and the
-smallest check that can distinguish it from the current branch now.
+Current timing: the main agent has completed a change-and-validation cycle.
 """
 
 GOAL_TRANSITION_PROMPT = """
 
 # GOAL TRANSITION
 
-At this transition, identify one still-distinguishable alternative to the path
-that produced the latest outcome.
+Current timing: the main agent is transitioning the task goal.
 """
 
 STOP_PROMPT = """
 
 # COMPLETION BOUNDARY
 
-Before the current path closes, identify one alternative causal assumption that
-is still distinguishable now with a bounded check.
+Current timing: the main agent is about to close the task.
 """
 
 ProviderDispatch = Callable[..., dict]
@@ -79,15 +75,10 @@ class ReviewCore:
         provider = self.settings.provider
         model = self.settings.model
         configuration_source = self.settings.configuration_source
-        finding_scope = _finding_scope(request)
-        routing_concern = request.routing_concern
-        if request.kind == "stop" and not routing_concern:
-            routing_concern = "completion-boundary"
         route = lens_router.resolve_review_route(
             self.settings.paths.data_dir,
-            request.routing_evidence,
-            checkpoint=True,
-            routing_concern=routing_concern,
+            reported_focus=request.reported_focus,
+            stopping=request.kind == "stop",
         )
         route_fields = route_metadata(route)
         system_prompt = build_system_prompt(
@@ -168,7 +159,6 @@ class ReviewCore:
                 reason=request.reason,
                 source_event_seq=request.source_event_seq,
                 source_fingerprint=request.source_fingerprint,
-                finding_scope=finding_scope,
             )
             reaction_ts = str((entry or {}).get("ts") or "")
         elif persist_reaction and status == "error":
@@ -192,7 +182,6 @@ class ReviewCore:
                 reason=request.reason,
                 source_event_seq=request.source_event_seq,
                 source_fingerprint=request.source_fingerprint,
-                finding_scope=finding_scope,
             )
 
         try:
@@ -206,14 +195,12 @@ class ReviewCore:
                 "provider": provider,
                 "model": model,
                 "configuration_source": configuration_source,
-                "persona": route.effective_lens,
                 **route_fields,
                 "review_trigger": request.trigger or request.reason,
                 "status": status,
                 "input_chars": len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
-                "finding_scope": finding_scope,
                 "usage": result.get("usage") if isinstance(result, dict) else {},
             }
             review_telemetry.record_review(
@@ -275,7 +262,3 @@ class ReviewCore:
             outcome.status,
         )
         return outcome
-
-
-def _finding_scope(request: ReviewRequest) -> str:
-    return "local" if request.kind == "checkpoint" else "trajectory"

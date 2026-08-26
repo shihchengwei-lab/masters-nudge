@@ -214,7 +214,7 @@ def _usage_from_chat(response: dict) -> dict[str, int]:
 
 def call_local_ollama_result(
     system_prompt: str,
-    transcript_text: str,
+    review_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -258,7 +258,7 @@ def call_local_ollama_result(
                 "model": validate_model_name(model),
                 "messages": [
                     {"role": "system", "content": request_system},
-                    {"role": "user", "content": transcript_text},
+                    {"role": "user", "content": review_input},
                 ],
                 "stream": False,
                 "think": False,

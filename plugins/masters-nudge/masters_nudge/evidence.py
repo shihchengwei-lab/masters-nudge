@@ -4,15 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import source_context
 
 from . import checkpoints, storage
-from .contracts import ReviewKind, ToolCompleted, find_git_root
-
-
-AGENTCAM_REPORT_READ_CHARS = 65536
+from .contracts import ReviewKind, ToolCompleted
 
 
 @dataclass(frozen=True)
@@ -42,49 +39,29 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
         )
     category = checkpoints.evidence_category(event)
     task_source = None
-    inspection = ""
     if not category and not (event.failure_known and event.failed):
         task_source = source_context.capture_referenced_task_source(
             str(turn_state.get("task_anchor") or ""),
             event.tool_input,
             event.tool_output,
         )
-        if not task_source:
-            inspection = source_context.capture_inspection_evidence(
-                event.tool_name,
-                event.tool_input,
-                event.tool_output,
-            )
-            if inspection:
-                category = "inspection"
     if category or task_source:
         turn_state = storage.record_turn_evidence(
             data_dir,
             event.session,
-            record=(
-                inspection
-                if category == "inspection"
-                else checkpoints.render_evidence_record(event)
-                if category
-                else ""
-            ),
+            record=checkpoints.render_evidence_record(event) if category else "",
             category=category,
             scope=checkpoints.evidence_scope(event),
             task_source=task_source,
         )
 
-    transition, objective = checkpoints.goal_transition(event)
+    transition, _objective = checkpoints.goal_transition(event)
     progress = storage.record_tool_progress(
         data_dir,
         event.session,
-        tool_name=event.tool_name,
-        command_family=checkpoints.command_family(event),
         failed=category == "failure",
-        mutating=event.mutating,
         goal_transition=transition,
-        goal_objective=objective,
         evidence_category=category,
-        evidence_scope=checkpoints.evidence_scope(event),
         failure_family=checkpoints.failure_family(event),
         event_fingerprint=event_fingerprint,
     )
@@ -139,28 +116,3 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
         review_kind=review_kind,
         event_seq=event_seq,
     )
-
-
-def read_latest_agentcam_report(
-    cwd: str, *, log_error: Callable[[str], None] | None = None
-) -> dict[str, object] | None:
-    root = find_git_root(cwd)
-    if not root:
-        return None
-    runs_dir = Path(root) / ".git" / "agentcam" / "runs"
-    if not runs_dir.is_dir():
-        return None
-    try:
-        candidates = list(runs_dir.glob("*/AGENT_RUN_REPORT.md"))
-        newest = max(candidates, key=lambda path: path.stat().st_mtime)
-        content = newest.read_text(encoding="utf-8", errors="replace")
-        mtime = newest.stat().st_mtime
-    except (OSError, ValueError) as exc:
-        if log_error:
-            log_error(f"agentcam report read failed: {exc}")
-        return None
-    return {
-        "path": str(newest),
-        "content": source_context.head_tail(content, AGENTCAM_REPORT_READ_CHARS),
-        "mtime": mtime,
-    }

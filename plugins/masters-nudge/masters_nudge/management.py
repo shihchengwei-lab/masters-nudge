@@ -39,7 +39,7 @@ SPECIALIST_PERSONAS = {"lamport", "carmack"}
 
 class _SourceChangedError(RuntimeError):
     pass
-STAGES = {"design", "build", "evolve", "review"}
+STAGES = {"automatic", "design", "build", "evolve", "review"}
 LEGACY_ENVIRONMENT_MAPPINGS = {
     "BUDDY_ACTIVE": "MASTERS_NUDGE_ACTIVE",
     "BUDDY_CHECKPOINT_TIMEOUT": "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
@@ -545,7 +545,7 @@ def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str,
                 {
                     "legacy": legacy,
                     "replacement": "MASTERS_NUDGE_STAGE",
-                    "note": "choose design|build|evolve|review; do not copy the persona value",
+                    "note": "choose design|build|evolve|review, or automatic; do not copy the persona value",
                 }
             )
     return sorted(mappings, key=lambda item: item["legacy"])

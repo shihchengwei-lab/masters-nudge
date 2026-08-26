@@ -90,7 +90,9 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
             "turn_id": "turn-1",
             "cwd": self.tmpdir.name,
             "hook_event_name": "Stop",
-            "last_assistant_message": "已完成。",
+            "last_assistant_message": (
+                "已完成。\n<!-- masters-nudge-focus:reliability -->"
+            ),
             "stop_hook_active": False,
         }
         session = SessionRef(
@@ -125,6 +127,9 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         )
         self.assertIsNone(active)
         review_once.assert_called_once()
+        request = review_once.call_args.args[0]
+        self.assertEqual(request.reported_focus, "reliability")
+        self.assertNotIn("masters-nudge-focus", request.source_packet)
         receipt = storage.load_delivery_state(
             self.settings.paths.data_dir, session
         )["receipts"]["reaction-stop"]

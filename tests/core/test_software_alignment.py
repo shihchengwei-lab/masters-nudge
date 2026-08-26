@@ -35,39 +35,36 @@ def settings_for(root: Path) -> RuntimeSettings:
 
 
 class SoftwareNudgeContractTests(unittest.TestCase):
-    def test_base_prompt_is_an_attention_gate_not_a_case_catalog(self):
+    def test_base_prompt_defines_an_independent_opinion_without_reasoning_scaffolds(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        for heading in ("# ROLE", "# EVIDENCE", "# FINDING GATE", "# NUDGE", "# OUTPUT"):
+        for heading in ("# ROLE", "# EVIDENCE", "# NUDGE", "# OUTPUT"):
             self.assertIn(heading, prompt)
-        for gate in ("ALTERNATIVE", "LEVERAGED", "GROUNDED", "DISCRIMINATING"):
-            self.assertIn(gate, prompt)
-        self.assertIn("Missing evidence means unknown, not undone", prompt)
-        self.assertIn("Do not invent", prompt)
-        self.assertIn("acceptance criteria", prompt)
-        self.assertIn("Prefer `no_finding`", prompt)
-        self.assertIn("underexplored branch", prompt)
-        self.assertIn("concrete alternative mechanism", prompt)
-        self.assertIn("two named competing hypotheses", prompt)
-        self.assertNotIn("Do not solve the task", prompt)
-        self.assertNotIn("completion judgment", prompt)
-        self.assertNotIn("具體型別、順序、重複與是否延遲求值", prompt)
-        self.assertNotIn("新接受案例與一個相鄰拒絕案例", prompt)
+        self.assertNotIn("# FINDING GATE", prompt)
+        for scaffold in (
+            "ALTERNATIVE",
+            "LEVERAGED",
+            "GROUNDED",
+            "DISCRIMINATING",
+            "two named competing hypotheses",
+            "alternative causal assumption",
+        ):
+            self.assertNotIn(scaffold, prompt)
+        self.assertIn("Missing evidence means unknown", prompt)
+        self.assertIn("Do not invent requirements", prompt)
+        self.assertIn("independent second opinion", prompt)
 
-    def test_stop_prompt_does_not_force_every_conflict_into_a_question(self):
-        self.assertIn("alternative causal assumption", STOP_PROMPT)
-        self.assertIn("distinguishable now", STOP_PROMPT)
-        self.assertNotIn("completion claim", STOP_PROMPT)
-        self.assertNotIn("時提問", STOP_PROMPT)
+    def test_stop_prompt_reports_timing_without_prescribing_reasoning(self):
+        self.assertIn("about to close the task", STOP_PROMPT)
+        self.assertNotIn("alternative causal assumption", STOP_PROMPT)
+        self.assertNotIn("distinguishable now", STOP_PROMPT)
+        self.assertNotIn("identify", STOP_PROMPT.lower())
 
-    def test_prompt_keeps_one_grounded_nudge_without_forcing_a_question(self):
+    def test_prompt_keeps_one_grounded_question(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("alternative direction", prompt)
-        self.assertIn("smallest discriminating check", prompt)
+        self.assertIn("ask one concrete question", prompt)
         self.assertIn("at most 52", prompt)
-        self.assertNotIn("finding 只放一個開放問句", prompt)
-        self.assertNotIn("以「？」結尾", prompt)
 
     def test_prompt_entry_has_no_legacy_queue_wrapper(self):
         self.assertFalse(hasattr(inject, "build_context_text"))
@@ -121,7 +118,7 @@ class SoftwareColdStartTests(unittest.TestCase):
                 provider="openai",
                 model="gpt-test",
                 reaction="舊問題不應進入下一次 Provider 輸入？",
-                route_metadata={"effective_lens": "beck", "domain": "software"},
+                route_metadata={"effective_lens": "beck"},
             )
             storage.mark_emitted(root, session, old["ts"])
             storage.observe_injected_response(
@@ -160,7 +157,6 @@ class SoftwareColdStartTests(unittest.TestCase):
     def test_checkpoint_packet_does_not_accept_previous_findings(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="只修登入失敗",
-            event_context="failure: authentication timeout",
             evidence_records=[
                 {"seq": 1, "category": "change", "content": "auth_service.py changed"},
                 {"seq": 2, "category": "failure", "content": "result: 1 failed"},
@@ -171,10 +167,9 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertNotIn("你最近說過", packet)
         self.assertNotIn("正在調整 auth_service.py", packet)
 
-    def test_packet_leads_with_a_decision_frame_and_supporting_evidence(self):
+    def test_packet_contains_only_contract_and_current_result(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正設定解析並保留既有相容性",
-            event_context="reason: strategy-review",
             task_sources={"ISSUE.md": "原始輸入不得崩潰"},
             evidence_records=[
                 {"seq": 1, "category": "change", "content": "change:\nparser updated"},
@@ -183,21 +178,29 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[decision frame]", packet)
-        self.assertIn("observable_goal:", packet)
-        self.assertIn("current_approach:", packet)
-        self.assertIn("latest_outcome:", packet)
-        self.assertIn("unresolved_contradiction:", packet)
-        self.assertIn("recent_approach_outcome_pairs:", packet)
-        self.assertIn("[supporting evidence]", packet)
-        self.assertIn("contract_excerpt:", packet)
-        self.assertIn("semantic_change:", packet)
-        self.assertIn("discriminating_results:", packet)
-        self.assertNotIn("verified_facts:", packet)
-        self.assertNotIn("open_issues:", packet)
-        self.assertNotIn("closed_hypotheses:", packet)
+        self.assertIn("[contract]", packet)
+        self.assertIn("task:\n修正設定解析並保留既有相容性", packet)
+        self.assertIn("source: ISSUE.md", packet)
+        self.assertIn("原始輸入不得崩潰", packet)
+        self.assertIn("[current result]", packet)
+        self.assertIn("parser updated", packet)
+        self.assertIn("1 failed", packet)
+        self.assertIn("20 passed", packet)
+        self.assertNotIn("[result #", packet)
+        self.assertNotIn("scope:", packet)
+        for obsolete in (
+            "[decision frame]",
+            "[supporting evidence]",
+            "current_approach:",
+            "latest_outcome:",
+            "unresolved_contradiction:",
+            "recent_approach_outcome_pairs:",
+            "contract_excerpt:",
+            "discriminating_results:",
+        ):
+            self.assertNotIn(obsolete, packet)
 
-    def test_stop_packet_keeps_completion_claim_as_supporting_context(self):
+    def test_stop_packet_keeps_assistant_output_in_current_result(self):
         packet = source_context.build_stop_packet(
             task_anchor="修正設定解析",
             last_assistant_message="已完成並通過全部測試",
@@ -206,13 +209,13 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        decision = packet.split("[end decision frame]", 1)[0]
-        support = packet.split("[supporting evidence]", 1)[1]
-        self.assertNotIn("completion_claim", decision)
-        self.assertIn("completion_claim_context:", support)
-        self.assertIn("已完成並通過全部測試", support)
+        contract = packet.split("[end contract]", 1)[0]
+        current = packet.split("[current result]", 1)[1]
+        self.assertNotIn("已完成並通過全部測試", contract)
+        self.assertIn("assistant_output:\n已完成並通過全部測試", current)
+        self.assertNotIn("completion_claim_context:", packet)
 
-    def test_unrelated_inspections_do_not_evict_an_open_failure(self):
+    def test_storage_does_not_persist_generic_inspection_records(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "retention")
@@ -224,14 +227,12 @@ class SoftwareColdStartTests(unittest.TestCase):
                 scope="validation-suite",
                 record="failure:\nORIGINAL_OPEN_FAILURE",
             )
-            for index in range(storage.EVIDENCE_RECORDS_MAX):
-                storage.record_turn_evidence(
-                    root,
-                    session,
-                    category="inspection",
-                    record=f"inspection:\nsource excerpt {index}",
-                )
-            state = storage.load_turn_state(root, session)
+            state = storage.record_turn_evidence(
+                root,
+                session,
+                category="inspection",
+                record="inspection:\nsource excerpt",
+            )
 
         failures = [
             record
@@ -239,13 +240,13 @@ class SoftwareColdStartTests(unittest.TestCase):
             if record["category"] == "failure"
         ]
         self.assertEqual(1, len(failures))
+        self.assertEqual(1, len(state["evidence_records"]))
         self.assertIn("ORIGINAL_OPEN_FAILURE", failures[0]["content"])
 
-    def test_packet_has_one_total_budget_and_keeps_decision_critical_edges(self):
+    def test_packet_has_one_total_budget_and_keeps_contract_and_current_result(self):
         records = []
         seq = 0
         for category, count in (
-            ("inspection", 4),
             ("change", 4),
             ("verification", 4),
             ("failure", 4),
@@ -266,13 +267,13 @@ class SoftwareColdStartTests(unittest.TestCase):
             last_assistant_message="COMPLETION_CLAIM " + ("c" * 4000),
             task_sources={"SPEC.md": "s" * 10000},
             evidence_records=records,
-            agentcam_evidence="a" * 4000,
         )
 
         self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
         self.assertIn("TASK_CONTRACT", packet)
         self.assertIn("COMPLETION_CLAIM", packet)
-        self.assertIn("unresolved_contradiction:", packet)
+        self.assertIn("[contract]", packet)
+        self.assertIn("[current result]", packet)
 
     def test_evidence_categories_filter_navigation_and_keep_decisions(self):
         from masters_nudge.contracts import ToolCompleted
@@ -417,6 +418,8 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertIn("semantic_change:", change)
         self.assertIn("+return preserved", change)
         self.assertIn("12 passed, 1 failed", verification)
+        self.assertNotIn("failure:\n", verification)
+        self.assertNotIn("verification:\n", verification)
         self.assertIn("updated x.py", shell_change)
         for packet in (change, verification, shell_change):
             self.assertNotIn("apply_patch", packet)
@@ -425,67 +428,34 @@ class SoftwareColdStartTests(unittest.TestCase):
             self.assertNotIn("edit x.py", packet)
             self.assertNotIn("[tool ", packet)
 
-    def test_successful_content_read_becomes_inspection_evidence_without_operation_details(self):
-        content = source_context.capture_inspection_evidence(
-            "exec_command",
-            {"cmd": "Get-Content tests/test_contract.py | Select-Object -First 80"},
-            {"content": "assert collect(C) == [C, A, B]"},
-        )
-        direct = source_context.capture_inspection_evidence(
-            "read_file",
-            {"file_path": "C:/repo/api.py"},
-            {"content": "def public_api(value): ..."},
-        )
+    def test_unreferenced_content_read_is_not_recorded_as_evidence(self):
+        from masters_nudge.evidence import observe_tool_event
+        from masters_nudge.contracts import ToolCompleted
 
-        self.assertIn("assert collect(C) == [C, A, B]", content)
-        self.assertIn("def public_api", direct)
-        self.assertIn("source:\n- tests/test_contract.py", content)
-        self.assertIn("source:\n- C:/repo/api.py", direct)
-        self.assertNotIn("Get-Content", content)
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "unreferenced-read")
+            storage.start_turn(root, session, "修正公開行為")
+            observed = observe_tool_event(
+                root,
+                ToolCompleted(
+                    session,
+                    "read_file",
+                    {"file_path": "C:/repo/api.py"},
+                    {"content": "def public_api(value): ..."},
+                ),
+            )
+            turn = storage.load_turn_state(root, session)
+            progress = storage.load_progress_state(root, session)
 
-    def test_search_and_compound_read_results_keep_evidence_without_operations(self):
-        search = source_context.capture_inspection_evidence(
-            "exec_command",
-            {"cmd": "rg -n get_unpacked_marks src tests"},
-            {"content": "src/api.py:12:def get_unpacked_marks(obj):\n"
-                        "tests/test_api.py:8:assert list(get_unpacked_marks(C)) == [C, A]"},
-        )
-        compound = source_context.capture_inspection_evidence(
-            "exec_command",
-            {"cmd": "sed -n '1,80p' src/api.py && git diff -- src/api.py"},
-            {"content": "def get_unpacked_marks(obj):\n"
-                        "+    return normalize_mark_list(mark_list)"},
-        )
+        self.assertEqual([], turn["evidence_records"])
+        self.assertEqual({}, turn["task_sources"])
+        self.assertEqual("", progress["recent"][-1]["evidence_category"])
+        self.assertIsNone(observed.checkpoint)
 
-        self.assertIn("def get_unpacked_marks", search)
-        self.assertIn("assert list", search)
-        self.assertIn("normalize_mark_list", compound)
-        for packet in (search, compound):
-            self.assertNotIn("rg -n", packet)
-            self.assertNotIn("sed -n", packet)
-            self.assertNotIn("git diff", packet)
-
-    def test_navigation_and_search_do_not_become_inspection_evidence(self):
-        cases = (
-            {"cmd": "Get-ChildItem tests"},
-            {"cmd": "git status --short"},
-            {"cmd": "pwd"},
-        )
-
-        for tool_input in cases:
-            with self.subTest(tool_input=tool_input):
-                self.assertEqual(
-                    "",
-                    source_context.capture_inspection_evidence(
-                        "exec_command",
-                        tool_input, {"content": "tests/test_contract.py:42"}
-                    ),
-                )
-
-    def test_packet_keeps_source_evidence_inside_the_supporting_block(self):
+    def test_packet_omits_generic_source_inspections(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="Preserve the public contract.",
-            event_context="reason: review",
             evidence_records=[
                 {
                     "seq": 4,
@@ -495,25 +465,24 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[supporting evidence]", packet)
-        self.assertIn("approach_relevant_source:", packet)
-        self.assertIn("assert collect(C) == [C, A, B]", packet)
+        self.assertIn("[contract]", packet)
+        self.assertIn("[current result]", packet)
+        self.assertNotIn("approach_relevant_source:", packet)
+        self.assertNotIn("assert collect(C) == [C, A, B]", packet)
 
-    def test_packet_reduces_large_source_evidence_to_a_current_excerpt(self):
+    def test_packet_does_not_promote_large_inspection_output_to_current_result(self):
         content = "inspection:\n" + "x" * (source_context.TASK_SOURCE_MAX_CHARS - 20)
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正公開行為",
-            event_context="reason: review",
             evidence_records=[
                 {"seq": 1, "category": "inspection", "content": content}
             ],
         )
 
-        self.assertIn("inspection:", packet)
-        self.assertIn(source_context.TRUNCATION_MARKER, packet)
+        self.assertNotIn("inspection:", packet)
         self.assertLess(len(packet), len(content))
 
-    def test_approach_relevant_source_beats_newer_unrelated_environment_probe(self):
+    def test_current_result_uses_semantic_results_without_path_ranking(self):
         records = [
             {
                 "seq": 1,
@@ -540,32 +509,31 @@ class SoftwareColdStartTests(unittest.TestCase):
 
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正公開行為",
-            event_context="reason: review",
             evidence_records=records,
         )
 
-        self.assertIn("RELEVANT_BRANCH", packet)
+        self.assertNotIn("RELEVANT_BRANCH", packet)
         self.assertNotIn("IRRELEVANT_CACHE", packet)
-        self.assertIn("evidence #3 -> evidence #4", packet)
+        self.assertIn("try alternate parser", packet)
+        self.assertIn("alternate parser still rejects empty input", packet)
+        self.assertNotIn("evidence #3 -> evidence #4", packet)
 
-    def test_large_issue_source_keeps_problem_expected_behavior_and_reproducer(self):
+    def test_large_task_source_uses_plain_head_and_tail_without_heading_priority(self):
         issue = (
-            "# Problem\nParser crashes on empty input.\n\n"
-            "# Internal Notes\n" + ("implementation detail\n" * 500) + "\n"
-            "# Expected behavior\nReturn an empty result.\n\n"
-            "# Minimal reproducer\nparse('') must not raise.\n"
+            "SOURCE_HEAD\n"
+            + ("implementation detail\n" * 500)
+            + "SOURCE_TAIL\n"
         )
 
         packet = source_context.build_checkpoint_packet(
             task_anchor="Fix the parser.",
-            event_context="reason: review",
             task_sources={"ISSUE.md": issue},
         )
 
-        self.assertIn("Parser crashes on empty input", packet)
-        self.assertIn("Return an empty result", packet)
-        self.assertIn("parse('') must not raise", packet)
-        self.assertLess(packet.count("implementation detail"), 20)
+        self.assertIn("SOURCE_HEAD", packet)
+        self.assertIn("SOURCE_TAIL", packet)
+        self.assertIn(source_context.TRUNCATION_MARKER, packet)
+        self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
 
 
 class SoftwareEvidenceRoutingTests(unittest.TestCase):
@@ -573,7 +541,6 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
         packet = source_context.build_stop_packet(
             task_anchor="Preserve the public contract.",
             last_assistant_message="The work is complete.",
-            agentcam_evidence="runtime-marker",
             evidence_records=[
                 {"seq": 1, "category": "inspection", "content": "source-marker"},
                 {"seq": 2, "category": "change", "content": "change-marker"},
@@ -583,11 +550,9 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
         )
         lenses = ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
         markers = (
-            "source-marker",
             "change-marker",
             "verify-marker",
             "failure-marker",
-            "runtime-marker",
         )
 
         ordered_packets = {
@@ -599,6 +564,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             with self.subTest(lens=lens):
                 for marker in markers:
                     self.assertEqual(1, ordered.count(marker))
+                self.assertNotIn("source-marker", ordered)
         self.assertEqual(1, len(set(ordered_packets.values())))
 
     def test_lens_focus_is_the_last_system_instruction_before_evidence(self):
@@ -638,21 +604,23 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
         )
         self.assertTrue(
             seen["system_prompt"].rstrip().endswith(
-                "When several candidates pass the finding gate, select the one "
-                "that best matches this focus."
+                "Trace the direct control flow, ownership, and necessary complexity."
             )
+        )
+        self.assertNotIn(
+            "When several candidates pass the finding gate",
+            seen["system_prompt"],
         )
         self.assertEqual("packet-marker", seen["review_input"])
 
-    def test_specialist_route_does_not_rotate_away_from_the_best_evidence_lens(self):
+    def test_reported_specialist_focus_is_stable_across_calls(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            persona_config.save_stage(root, "build")
             routes = [
                 lens_router.resolve_review_route(
                     root,
-                    "retry duplicate delivery",
-                    checkpoint=True,
+                    environ={},
+                    reported_focus="reliability",
                 )
                 for _ in range(3)
             ]
@@ -661,38 +629,34 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             route.effective_lens for route in routes
         ])
 
-    def test_evidence_still_selects_a_specialist(self):
+    def test_reported_focus_selects_a_specialist(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            persona_config.save_stage(root, "build")
             route = lens_router.resolve_review_route(
                 root,
-                "retry duplicate delivery",
-                checkpoint=True,
+                environ={},
+                reported_focus="reliability",
             )
 
         self.assertEqual("lamport", route.effective_lens)
 
-    def test_goal_words_alone_do_not_misroute_to_system_causality(self):
+    def test_missing_report_uses_build_fallback(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            persona_config.save_stage(root, "build")
             route = lens_router.resolve_review_route(
                 root,
-                "acceptance criteria are not yet verified",
-                checkpoint=True,
+                environ={},
             )
 
         self.assertEqual("beck", route.effective_lens)
 
-    def test_upstream_constraint_and_downstream_compensation_route_to_jeff(self):
+    def test_explicit_design_report_routes_to_design_lens(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            persona_config.save_stage(root, "build")
             route = lens_router.resolve_review_route(
                 root,
-                "source of truth ownership forced a downstream fallback",
-                checkpoint=True,
+                environ={},
+                reported_focus="design",
             )
 
         self.assertEqual("jeff", route.effective_lens)
@@ -826,7 +790,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         review = checkpoints.classify_strategy(progress)
 
         self.assertEqual(review["trigger"], "validated-progress")
-        self.assertEqual(review["routing_concern"], "")
+        self.assertNotIn("routing_concern", review)
 
     def test_later_validated_progress_requires_two_new_semantic_cycles(self):
         progress = {
@@ -999,9 +963,8 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                 provider="openai",
                 model="gpt-test",
                 reaction="目前失敗仍支持原本的修正方向嗎？",
-                route_metadata={"effective_lens": "beck", "domain": "software"},
+                route_metadata={"effective_lens": "beck"},
                 source_fingerprint="software-old",
-                finding_scope="local",
             )
 
             self.assertFalse(hasattr(storage, "latest_pending"))
@@ -1019,9 +982,8 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                 provider="openai",
                 model="gpt-test",
                 reaction="目前路徑仍在縮短原始驗收條件嗎？",
-                route_metadata={"effective_lens": "fowler", "domain": "software"},
+                route_metadata={"effective_lens": "fowler"},
                 source_fingerprint="trajectory-old",
-                finding_scope="trajectory",
             )
 
             newer = storage.append_reaction(
@@ -1030,7 +992,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                 provider="openai",
                 model="gpt-test",
                 reaction="較新的問題。",
-                route_metadata={"effective_lens": "fowler", "domain": "software"},
+                route_metadata={"effective_lens": "fowler"},
             )
             storage.mark_emitted(root, session, newer["ts"])
             receipts = storage.load_delivery_state(root, session)["receipts"]
@@ -1038,7 +1000,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         self.assertNotIn(entry["ts"], receipts)
         self.assertEqual("emitted", receipts[newer["ts"]]["status"])
 
-    def test_review_scope_distinguishes_local_and_trajectory_questions(self):
+    def test_reaction_metadata_has_one_canonical_lens_field(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "scope", cwd=str(root), repo_root=str(root))
@@ -1050,23 +1012,25 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                     "usage": {},
                 },
             )
-            for kind in ("checkpoint", "strategy"):
-                core.review(
-                    ReviewRequest(
-                        schema_version=1,
-                        kind=kind,
-                        reason="test-fail" if kind == "checkpoint" else "strategy-review",
-                        session=session,
-                        source_packet=kind,
-                        source_fingerprint=f"state-{kind}",
-                        routing_evidence=kind,
-                    ),
-                    persist_reaction=True,
-                )
+            core.review(
+                ReviewRequest(
+                    schema_version=1,
+                    kind="checkpoint",
+                    reason="test-fail",
+                    session=session,
+                    source_packet="checkpoint",
+                    source_fingerprint="state-checkpoint",
+                    reported_focus="build",
+                ),
+                persist_reaction=True,
+            )
 
             entries = storage.read_reaction_entries(root, session)
 
-        self.assertEqual(["local", "trajectory"], [entry["finding_scope"] for entry in entries])
+        self.assertTrue(entries[0]["effective_lens"])
+        self.assertNotIn("persona", entries[0])
+        self.assertNotIn("domain", entries[0])
+        self.assertNotIn("finding_scope", entries[0])
 
 
 class SoftwareTelemetrySeparationTests(unittest.TestCase):
@@ -1090,14 +1054,17 @@ class SoftwareTelemetrySeparationTests(unittest.TestCase):
                     session=session,
                     source_packet="current packet",
                     source_fingerprint="current-state",
-                    routing_evidence="benchmark latency 20 ms",
+                    reported_focus="performance",
                 ),
                 persist_reaction=True,
             )
             telemetry = json.loads(
                 (root / "review-telemetry.jsonl").read_text(encoding="utf-8").splitlines()[-1]
             )
-            self.assertEqual("carmack", telemetry["persona"])
+            self.assertEqual("carmack", telemetry["effective_lens"])
+            self.assertNotIn("persona", telemetry)
+            self.assertNotIn("domain", telemetry)
+            self.assertNotIn("finding_scope", telemetry)
             self.assertEqual("finding", telemetry["status"])
             self.assertNotIn(
                 outcome.reaction_ts,

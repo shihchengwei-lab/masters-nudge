@@ -57,17 +57,6 @@ READ_NAVIGATION_RE = re.compile(
     re.IGNORECASE,
 )
 
-TRIGGER_ROUTING_CONCERNS = {
-    "goal-complete": "completion-boundary",
-    "goal-blocked": "completion-boundary",
-}
-
-
-def routing_concern_for_trigger(trigger: str) -> str:
-    """Map classifier-owned triggers to router-owned structured concerns."""
-    return TRIGGER_ROUTING_CONCERNS.get(str(trigger or ""), "")
-
-
 def compact_json(value: Any) -> str:
     if isinstance(value, str):
         text = value
@@ -262,8 +251,7 @@ def render_evidence_record(event: ToolCompleted) -> str:
         if output:
             parts.append(f"result:\n{output}")
         return "\n".join(parts)
-    label = "failure" if category == "failure" else "verification"
-    return f"{label}:\n{output}" if output else ""
+    return output
 
 
 def classify_strategy(
@@ -274,7 +262,8 @@ def classify_strategy(
     since = [
         item
         for item in recent
-        if int(item.get("event_seq") or 0) > last_seq and item.get("meaningful")
+        if int(item.get("event_seq") or 0) > last_seq
+        and (item.get("evidence_category") or item.get("goal_transition"))
     ]
     if not since:
         return None
@@ -308,7 +297,6 @@ def classify_strategy(
     return {
         "reason": reason,
         "trigger": trigger,
-        "routing_concern": routing_concern_for_trigger(trigger),
         "context": "\n".join(lines),
         "fingerprint": f"{reason}-{trigger}",
     }

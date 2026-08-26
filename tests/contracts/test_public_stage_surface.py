@@ -21,6 +21,7 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
     def test_selector_and_badges_describe_work_not_people(self):
         self.assertEqual(
             [
+                "Automatic · coding agent 回報目前工作焦點",
                 "Design · 系統結構、因果與成本",
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
@@ -57,20 +58,17 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
         self.assertEqual(("review", "linus", "environment"), (
             selected.stage, selected.persona, selected.source
         ))
-        self.assertEqual(("build", "beck", "default"), (
+        self.assertEqual(("automatic", "", "default"), (
             legacy.stage, legacy.persona, legacy.source
         ))
-        self.assertEqual(("build", "beck", "invalid_environment"), (
+        self.assertEqual(("automatic", "", "invalid_environment"), (
             invalid.stage, invalid.persona, invalid.source
         ))
 
     def test_provider_prompt_keeps_person_name_as_private_attention_cue(self):
         route = lens_router.ReviewRoute(
             stage="review",
-            primary_lens="linus",
             effective_lens="linus",
-            override_lens="",
-            trigger="configured-stage",
             source="config",
         )
         prompt = build_system_prompt(

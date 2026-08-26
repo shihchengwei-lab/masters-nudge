@@ -62,11 +62,7 @@ def lens_focus_prompt(effective_lens: str) -> str:
     focus = LENS_FOCUS.get(str(effective_lens or "").strip().lower(), "")
     if not focus:
         return ""
-    return (
-        f"\n\n# LENS FOCUS\n\n{focus}\n\n"
-        "When several candidates pass the finding gate, select the one "
-        "that best matches this focus.\n"
-    )
+    return f"\n\n# LENS FOCUS\n\n{focus}\n"
 
 
 def build_review_input(
@@ -96,11 +92,7 @@ def build_review_input(
 
 def route_metadata(route: lens_router.ReviewRoute) -> dict[str, str]:
     return {
-        "domain": "software",
         "stage": route.stage,
-        "primary_lens": route.primary_lens,
         "effective_lens": route.effective_lens,
-        "override_lens": route.override_lens,
-        "trigger": route.trigger,
         "route_source": route.source,
     }

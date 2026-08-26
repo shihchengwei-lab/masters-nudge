@@ -210,17 +210,13 @@ def parse_usage(stdout: str) -> dict[str, int]:
 
 def call_claude_result(
     system_prompt: str,
-    transcript_text: str,
+    review_input: str,
     model: str,
     *,
     schema_path: Path,
     timeout_sec: int,
     log_error: Logger = _noop,
 ) -> dict:
-    user_prompt = (
-        "只輸出一個由證據支持、主模型可能忽略且可立即驗證的高價值 Nudge。\n\n"
-        f"{transcript_text}"
-    )
     schema_json = load_output_schema_json(schema_path, log_error)
     if not schema_json:
         return call_result()
@@ -235,7 +231,7 @@ def call_claude_result(
             [
                 "claude",
                 "-p",
-                user_prompt,
+                review_input,
                 "--model",
                 model,
                 "--effort",
@@ -365,7 +361,7 @@ def parse_grok_reaction_result(stdout: str) -> dict:
 
 def call_grok_result(
     system_prompt: str,
-    transcript_text: str,
+    review_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -384,10 +380,7 @@ def call_grok_result(
     prompt = tempfile.NamedTemporaryFile(
         mode="w", suffix=".txt", delete=False, encoding="utf-8"
     )
-    prompt.write(
-        "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。\n\n"
-        f"[transcript]\n{transcript_text}\n[end transcript]\n"
-    )
+    prompt.write(review_input)
     prompt.close()
     isolated_workspace = tempfile.TemporaryDirectory(prefix="masters-nudge-grok-")
     try:
@@ -454,7 +447,7 @@ def call_grok_result(
 
 def call_codex_result(
     system_prompt: str,
-    transcript_text: str,
+    review_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -469,11 +462,7 @@ def call_codex_result(
     if not load_output_schema_json(schema_path, log_error):
         return call_result()
 
-    user_prompt = "請對下方 [transcript] 區塊裡的對話片段寫一句簡短的旁觀者反應。"
-    combined = (
-        f"{system_prompt}\n\n---\n\n{user_prompt}\n\n"
-        f"[transcript]\n{transcript_text}\n[end transcript]"
-    )
+    combined = f"{system_prompt}\n\n---\n\n{review_input}"
     output = tempfile.NamedTemporaryFile(
         mode="w", suffix=".txt", delete=False, encoding="utf-8"
     )
@@ -544,7 +533,7 @@ def call_codex_result(
 def dispatch_call_result(
     provider: str,
     system_prompt: str,
-    transcript_text: str,
+    review_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -556,7 +545,7 @@ def dispatch_call_result(
     if provider in ("openai", "codex"):
         return call_codex_result(
             system_prompt,
-            transcript_text,
+            review_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
@@ -565,7 +554,7 @@ def dispatch_call_result(
     if provider == "anthropic":
         return call_claude_result(
             system_prompt,
-            transcript_text,
+            review_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
@@ -574,7 +563,7 @@ def dispatch_call_result(
     if provider == "grok":
         return call_grok_result(
             system_prompt,
-            transcript_text,
+            review_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
@@ -584,7 +573,7 @@ def dispatch_call_result(
     if provider == "ollama-local":
         return call_local_ollama_result(
             system_prompt,
-            transcript_text,
+            review_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,

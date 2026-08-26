@@ -79,12 +79,12 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 | `MASTERS_NUDGE_TIMEOUT` | `90` | 回合結束 reviewer 逾時；超過 90 會被限制為 90 |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 途中 reviewer 逾時；超過 90 會被限制為 90 |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
-| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `design`、`build`、`evolve` 或 `review` |
+| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve` 或 `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗 spritesheet |
 
-Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
+Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。未指定工程階段時使用 Automatic：coding agent 只用隱藏標記回報目前工作焦點，Hook 仍自行判斷檢查點並強制呼叫 Reviewer。手動選擇 `design`、`build`、`evolve` 或 `review` 會固定濾鏡，不交由 coding agent 選擇。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
 
-浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。Review 已到期後，直接的可靠性或效能證據可以選擇對應 specialist；專科證據本身不會觸發 review，兩者也不是手動階段設定。
+浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。在 Automatic 模式下，coding agent 可回報 Design、Build、Evolve、Review、Reliability 或 Performance 焦點；這份回報只選擇一份 reviewer prompt，不會觸發、延後或取消 review。缺少回報時，工作中 review 使用 Build，Stop review 使用 Review。
 
 本機模式只接受 loopback HTTP、停用 client proxy 與 redirect、要求 Ollama 回報 cloud 功能已關閉，並拒絕 remote model metadata。Masters’ Nudge 不會安裝或下載模型，也不會失敗後改用雲端 provider。Grok 則會透過已登入的 Grok CLI 使用 xAI 雲端服務。
 
@@ -96,12 +96,13 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 
 - 最新使用者任務要求；
 - 從任務中明示的本機來源讀到的內容；
-- 分開且受長度限制的實質變更、驗證與失敗歷史；
-- 觸發 checkpoint、當下最終宣告或完成證據；
-- 選用的 agentcam evidence；
-- Reviewer prompt 與所選濾鏡。
+- 最新且受長度限制的實質變更、驗證與失敗語意結果；
+- Stop 邊界的當下最終宣告；
+- 最多三則只用於避免重複的已注入 Nudge 文字。
 
-一般搜尋／瀏覽輸出、工具名稱與命令、主模型進行中的說明及完整 transcript 不會放進 reviewer 封包；有長度上限的語意 diff、驗證目標與失敗結果仍會保留。最近三則已注入 Nudge 文字只會用來避免重複，不包含主模型反應。第一個完成的「變更後驗證」語意週期可觸發工作中 review，後續 review 需要再完成兩個新週期；同一失敗面向的重複失敗共用每回合三次的工作中 review 配額。Goal transition 與 Stop review 不受這個配額限制；排隊中或已輸出但尚未確認注入的 finding，仍會阻擋另一個工作中 review。Reactions、任務要求、分層證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續有語意證據的 Claude 或 Codex host event，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
+Reviewer prompt 與所選濾鏡會作為指令送出，不屬於證據封包。
+
+一般搜尋／瀏覽輸出、未被任務明示的一般原始碼檢查、外部報告、工具名稱與命令、主模型進行中的說明或反應，以及完整 transcript，都不會放進 reviewer 封包。Automatic 使用的隱藏焦點標記只用於選擇 prompt，進入封包前會移除。第一個完成的「變更後驗證」語意週期可觸發工作中 review，後續 review 需要再完成兩個新週期；同一失敗面向的重複失敗共用每回合三次的工作中 review 配額。Goal transition 與 Stop review 不受這個配額限制；排隊中或已輸出但尚未確認注入的 finding，仍會阻擋另一個工作中 review。Reactions、任務要求、語意證據、投遞 receipts、本機模型設定與不含對話內容的診斷 telemetry，會以純文字存在 `~/.masters-nudge/data/`。Telemetry 只記錄路由、狀態、延遲與 provider 回報的用量 metadata；目前沒有正式成本實驗，也沒有自動成本 gate。Hook response 寫出並 flush 後只記為 `emitted`；必須等後續有語意證據的 Claude 或 Codex host event，才確認為 `injected`。後續動作只證明時序，不代表 Nudge 造成該動作。外部 provider 的保留與訓練政策不屬於本 repository，而且可能改變。
 
 ## 證據與限制
 

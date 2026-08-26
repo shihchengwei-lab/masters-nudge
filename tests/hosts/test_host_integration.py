@@ -241,11 +241,6 @@ class ClaudeCompatibilityTests(unittest.TestCase):
                 mock.patch.object(buddy.claude_adapter, "RUNTIME", settings),
                 mock.patch.object(buddy, "read_hook_input", return_value=hook),
                 mock.patch.object(
-                    buddy.shared_evidence,
-                    "read_latest_agentcam_report",
-                    return_value=None,
-                ),
-                mock.patch.object(
                     providers,
                     "dispatch_call_result",
                     return_value={
@@ -389,7 +384,7 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertIsInstance(failure, ToolCompleted)
         self.assertTrue(failure.failed)
 
-    def test_active_goal_context_populates_turn_anchor_and_progress_objective(self):
+    def test_active_goal_context_populates_turn_anchor_without_duplicate_progress_copy(self):
         transcript = self.root / "rollout.jsonl"
         transcript.write_text(
             json.dumps(
@@ -450,14 +445,12 @@ class CodexAdapterTests(unittest.TestCase):
             ],
             "改善登入流程的可靠性。",
         )
-        self.assertEqual(
-            json.loads(
-                storage.state_path(
-                    self.settings.paths.data_dir, session, "progress"
-                ).read_text(encoding="utf-8")
-            )["goal_objective"],
-            "改善登入流程的可靠性。",
+        progress = json.loads(
+            storage.state_path(
+                self.settings.paths.data_dir, session, "progress"
+            ).read_text(encoding="utf-8")
         )
+        self.assertNotIn("goal_objective", progress)
 
     def test_first_tool_recovers_active_goal_when_prompt_hook_did_not_fire(self):
         transcript = self.root / "rollout-with-goal.jsonl"
@@ -514,7 +507,7 @@ class CodexAdapterTests(unittest.TestCase):
         )
         self.assertEqual(turn["task_anchor"], "改善登入流程的可靠性。")
         self.assertGreater(turn["transcript_offset"], 0)
-        self.assertEqual(progress["goal_objective"], "改善登入流程的可靠性。")
+        self.assertNotIn("goal_objective", progress)
 
     def test_stop_review_uses_layered_evidence_not_transcript_contents(self):
         core = FakeCore(self.settings, ReviewOutcome("no_finding"))
@@ -559,16 +552,21 @@ class CodexAdapterTests(unittest.TestCase):
                     "turn_id": "t",
                     "cwd": str(self.root),
                     "transcript_path": str(self.root / "does-not-exist.jsonl"),
-                    "last_assistant_message": "已完成登入修正",
+                    "last_assistant_message": (
+                        "已完成登入修正\n"
+                        "<!-- masters-nudge-focus:reliability -->"
+                    ),
                 }
             )
         self.assertIsNone(output)
         request, persist, _timeout = core.calls[-1]
         self.assertTrue(persist)
         self.assertIn("token check", request.source_packet)
-        self.assertIn("contract_excerpt:", request.source_packet)
-        self.assertIn("unresolved_contradiction:", request.source_packet)
+        self.assertIn("[contract]", request.source_packet)
+        self.assertIn("[current result]", request.source_packet)
         self.assertIn("已完成登入修正", request.source_packet)
+        self.assertEqual(request.reported_focus, "reliability")
+        self.assertNotIn("masters-nudge-focus", request.source_packet)
         self.assertNotIn("does-not-exist", request.source_packet)
 
     def test_repeated_test_failure_returns_additional_context(self):
@@ -614,7 +612,7 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertEqual(request.reason, "strategy-review")
         self.assertEqual(request.trigger, "repeated-failure-family")
         self.assertNotIn("review_event:", request.source_packet)
-        self.assertIn("unresolved_contradiction:", request.source_packet)
+        self.assertIn("[current result]", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
         self.assertTrue(persist)
         self.assertEqual(timeout, 15)
@@ -668,9 +666,9 @@ class CodexAdapterTests(unittest.TestCase):
 
         request, _persist, _timeout = core.calls[-1]
         self.assertNotIn("review_event:", request.source_packet)
-        self.assertIn("contract_excerpt:", request.source_packet)
+        self.assertIn("[contract]", request.source_packet)
         self.assertIn("token check", request.source_packet)
-        self.assertIn("unresolved_contradiction:", request.source_packet)
+        self.assertIn("[current result]", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
         self.assertIn("讓登入流程通過完整驗收", request.source_packet)
 
@@ -710,9 +708,9 @@ class CodexAdapterTests(unittest.TestCase):
         followup_payload = dict(payload)
         followup_payload.update(
             {
-                "tool_name": "Read",
-                "tool_input": {"file_path": "benchmark/result.json"},
-                "tool_response": {"content": "{}"},
+                "tool_name": "shell_command",
+                "tool_input": {"command": "pytest tests/test_math.py"},
+                "tool_response": {"exit_code": 0, "output": "1 passed"},
             }
         )
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -722,7 +720,7 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertEqual(receipt["response_observation"]["kind"], "semantic-event")
         self.assertEqual(
             receipt["response_observation"]["observation"]["evidence_category"],
-            "inspection",
+            "verification",
         )
 
     def test_queued_finding_is_not_delivered_on_later_prompt(self):
@@ -747,8 +745,10 @@ class CodexAdapterTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             first = adapter.process(payload)
             second = adapter.process(payload)
-        self.assertIsNone(first)
-        self.assertIsNone(second)
+        for result in (first, second):
+            context = result["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("masters-nudge-focus:build", context)
+            self.assertNotIn("先確認交付證據", context)
 
     def test_later_tool_does_not_claim_an_unemitted_finding(self):
         session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
@@ -1008,14 +1008,13 @@ class SharedCoreTests(unittest.TestCase):
             entry["reaction"] == "Reviewer 逾時（90 秒）；本輪沒有 Nudge。"
             for entry in entries
         ))
-        self.assertTrue(all(entry["finding_scope"] == "trajectory" for entry in entries))
-        self.assertTrue(all(record["finding_scope"] == "trajectory" for record in telemetry))
+        self.assertTrue(all("finding_scope" not in entry for entry in entries))
+        self.assertTrue(all("finding_scope" not in record for record in telemetry))
 
-    def test_stop_is_primary_and_checkpoint_routing_uses_only_new_event(self):
+    def test_review_route_uses_reported_focus_and_phase_fallbacks(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
-            persona_config.save_stage(settings.paths.data_dir, "build")
             prompts: list[str] = []
 
             def dispatch(_provider, system_prompt, _review_input, _model, **_kwargs):
@@ -1043,7 +1042,7 @@ class SharedCoreTests(unittest.TestCase):
                     session=session,
                     source_packet="retry caused duplicate delivery\nordinary file edit",
                     source_fingerprint="quiet",
-                    routing_evidence="ordinary file edit",
+                    reported_focus="build",
                 ),
                 persist_reaction=False,
             )
@@ -1055,7 +1054,7 @@ class SharedCoreTests(unittest.TestCase):
                     session=session,
                     source_packet="retry caused duplicate delivery",
                     source_fingerprint="new-event",
-                    routing_evidence="retry caused duplicate delivery",
+                    reported_focus="reliability",
                 ),
                 persist_reaction=False,
             )
@@ -1067,9 +1066,8 @@ class SharedCoreTests(unittest.TestCase):
                     session=session,
                     source_packet="ordinary workflow",
                     source_fingerprint="structured-route",
-                    routing_evidence="ordinary workflow",
+                    reported_focus="evolve",
                     trigger="manual-route",
-                    routing_concern="knowledge-boundary",
                 ),
                 persist_reaction=False,
             )
@@ -1081,7 +1079,6 @@ class SharedCoreTests(unittest.TestCase):
                     session=session,
                     source_packet="ordinary workflow",
                     source_fingerprint="machine-text-only",
-                    routing_evidence="ordinary workflow",
                     trigger="manual-route",
                 ),
                 persist_reaction=False,
@@ -1106,7 +1103,7 @@ class SharedCoreTests(unittest.TestCase):
                 session=session,
                 source_packet="pytest: 1 failed",
                 source_fingerprint="failure-1",
-                routing_evidence="pytest: 1 failed",
+                reported_focus="build",
             )
             core = ReviewCore(
                 settings,

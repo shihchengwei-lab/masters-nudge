@@ -4,6 +4,7 @@
 import json
 import sys
 
+import persona_config
 from masters_nudge import claude_adapter, storage
 from masters_nudge.runtime import active_guard
 
@@ -25,6 +26,15 @@ def read_hook_input() -> dict:
     except Exception as e:
         log_error(f"hook input parse failed: {e}")
         return {}
+
+
+def build_hook_output() -> dict:
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": persona_config.FOCUS_REPORT_INSTRUCTION,
+        }
+    }
 
 
 def main() -> None:
@@ -49,6 +59,8 @@ def main() -> None:
             )
         except Exception as e:
             log_error(f"turn state save failed: {e}")
+            return
+    print(json.dumps(build_hook_output(), ensure_ascii=False))
 
 
 

@@ -60,10 +60,9 @@ class ReviewRequest:
     session: SessionRef
     source_packet: str
     source_fingerprint: str
-    routing_evidence: str = ""
+    reported_focus: str = ""
     source_event_seq: int = 0
     trigger: str = ""
-    routing_concern: str = ""
 
 
 @dataclass(frozen=True)

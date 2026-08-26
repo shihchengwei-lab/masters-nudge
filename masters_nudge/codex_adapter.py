@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import source_context
+import persona_config
 
 from . import prompting, storage
 from .contracts import (
@@ -20,7 +21,7 @@ from .contracts import (
     find_git_root,
 )
 from .core import ReviewCore
-from .evidence import observe_tool_event, read_latest_agentcam_report
+from .evidence import observe_tool_event
 from .runtime import active_guard
 
 
@@ -71,6 +72,56 @@ def _goal_from_transcript(transcript_path: str) -> str:
             if match:
                 objective = match.group(1).strip()
     return objective
+
+
+def _latest_assistant_text(transcript_path: str, start_offset: int = 0) -> str:
+    """Read only visible assistant text from the current Codex turn."""
+    if not transcript_path:
+        return ""
+    try:
+        path = Path(transcript_path)
+        size = path.stat().st_size
+        with path.open("rb") as handle:
+            if 0 < start_offset <= size:
+                handle.seek(start_offset)
+            elif size > 65536:
+                handle.seek(size - 65536)
+                handle.readline()
+            lines = handle.read().decode("utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+
+    messages: list[str] = []
+    for line in lines:
+        try:
+            item = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        payload = item.get("payload") if isinstance(item, dict) else None
+        if not isinstance(payload, dict):
+            continue
+        if (
+            item.get("type") == "event_msg"
+            and payload.get("type") == "agent_message"
+        ):
+            message = str(payload.get("message") or "").strip()
+            if message:
+                messages.append(message)
+            continue
+        if payload.get("role") != "assistant":
+            continue
+        content = payload.get("content")
+        if not isinstance(content, list):
+            continue
+        text = "\n".join(
+            str(block.get("text") or "")
+            for block in content
+            if isinstance(block, dict)
+            and block.get("type") in {"output_text", "text"}
+        ).strip()
+        if text:
+            messages.append(text)
+    return messages[-1] if messages else ""
 
 
 def _prompt_text(payload: dict[str, Any]) -> str:
@@ -219,6 +270,15 @@ def build_hook_output(
     }
 
 
+def build_progress_instruction_output(event_name: str) -> dict[str, Any]:
+    return {
+        "hookSpecificOutput": {
+            "hookEventName": event_name,
+            "additionalContext": persona_config.FOCUS_REPORT_INSTRUCTION,
+        }
+    }
+
+
 def build_stop_hook_output(text: str) -> dict[str, Any]:
     return {"decision": "block", "reason": prompting.delivery_text(text)}
 
@@ -248,7 +308,15 @@ class CodexAdapter:
         if isinstance(event, PromptSubmitted):
             return self._prompt(event)
         if isinstance(event, ToolCompleted):
-            return self._tool(event)
+            state = storage.load_turn_state(self.data_dir, event.session)
+            focus_text = _latest_assistant_text(
+                str(payload.get("transcript_path") or ""),
+                int(state.get("transcript_offset") or 0),
+            )
+            return self._tool(
+                event,
+                reported_focus=persona_config.reported_focus(focus_text),
+            )
         if isinstance(event, TurnStopped):
             return self._stop(event)
         return None
@@ -260,16 +328,20 @@ class CodexAdapter:
             event.prompt,
             transcript_path=event.transcript_path,
         )
-        return None
+        return build_progress_instruction_output("UserPromptSubmit")
 
-    def _tool(self, event: ToolCompleted) -> dict[str, Any] | None:
+    def _tool(
+        self,
+        event: ToolCompleted,
+        *,
+        reported_focus: str = "",
+    ) -> dict[str, Any] | None:
         observed = observe_tool_event(self.data_dir, event)
         checkpoint = observed.checkpoint
         if not checkpoint:
             return None
         source_packet = source_context.build_checkpoint_packet(
             task_anchor=str(observed.turn_state.get("task_anchor") or ""),
-            event_context=checkpoint["context"],
             task_sources=observed.turn_state.get("task_sources") or {},
             evidence_records=(
                 observed.turn_state.get("evidence_records")
@@ -287,10 +359,9 @@ class CodexAdapter:
                 f"{observed.review_kind}:{checkpoint.get('trigger') or checkpoint['reason']}\n"
                 f"{source_packet}"
             ),
-            routing_evidence=source_packet,
+            reported_focus=reported_focus,
             source_event_seq=observed.event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
-            routing_concern=str(checkpoint.get("routing_concern") or ""),
         )
         try:
             outcome = self.core.review_once(
@@ -327,6 +398,17 @@ class CodexAdapter:
         )
 
     def _stop(self, event: TurnStopped) -> dict[str, Any] | None:
+        focus_text = event.final_claim or _latest_assistant_text(
+            event.transcript_path,
+            int(
+                storage.load_turn_state(self.data_dir, event.session).get(
+                    "transcript_offset"
+                )
+                or 0
+            ),
+        )
+        reported_focus = persona_config.reported_focus(focus_text)
+        final_claim = persona_config.strip_focus_markers(focus_text)
         progress = storage.load_progress_state(self.data_dir, event.session)
         event_seq = int(progress.get("event_seq") or 0)
         storage.observe_injected_response(
@@ -334,35 +416,21 @@ class CodexAdapter:
             event.session,
             event_seq=event_seq,
             observation_kind="stop",
-            observation={"assistant_claim": event.final_claim},
+            observation={"assistant_claim": final_claim},
         )
         if event.stop_hook_active:
             return None
         state = storage.load_turn_state(self.data_dir, event.session)
-        agentcam_evidence = ""
-        report = read_latest_agentcam_report(
-            event.session.cwd, log_error=self.core.log_error
-        )
-        if report and float(report["mtime"]) > storage.load_agentcam_mtime(
-            self.data_dir, event.session
-        ):
-            agentcam_evidence = source_context.extract_agentcam_evidence(
-                str(report["content"])
-            )
-            storage.save_agentcam_mtime(
-                self.data_dir, event.session, float(report["mtime"])
-            )
         task_anchor = str(state.get("task_anchor") or "")
         source_packet = source_context.build_stop_packet(
             task_anchor=task_anchor,
-            last_assistant_message=event.final_claim,
+            last_assistant_message=final_claim,
             task_sources=state.get("task_sources") or {},
             evidence_records=(
                 state.get("evidence_records")
                 if isinstance(state.get("evidence_records"), list)
                 else []
             ),
-            agentcam_evidence=agentcam_evidence,
         )
         if not source_packet:
             return None
@@ -373,6 +441,7 @@ class CodexAdapter:
             session=event.session,
             source_packet=source_packet,
             source_fingerprint=_fingerprint(source_packet),
+            reported_focus=reported_focus,
         )
         try:
             outcome = self.core.review_once(request, persist_reaction=True)

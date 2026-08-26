@@ -14,6 +14,7 @@ import sys
 from typing import Any
 
 import source_context
+import persona_config
 from masters_nudge import (
     claude_adapter,
     evidence as shared_evidence,
@@ -60,12 +61,12 @@ def review_checkpoint(
     session: SessionRef,
     review_kind: str = "checkpoint",
     source_event_seq: int = 0,
+    reported_focus: str = "",
 ) -> ReviewOutcome | None:
     settings = claude_adapter.runtime_settings()
     state = storage.load_turn_state(settings.paths.data_dir, session)
     source_packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
-        event_context=event["context"],
         task_sources=state.get("task_sources") or {},
         evidence_records=(
             state.get("evidence_records")
@@ -86,10 +87,9 @@ def review_checkpoint(
                 f"{source_packet}"
             ).encode("utf-8")
         ).hexdigest(),
-        routing_evidence=source_packet,
+        reported_focus=reported_focus,
         source_event_seq=source_event_seq,
         trigger=str(event.get("trigger") or event["reason"]),
-        routing_concern=event.get("routing_concern", ""),
     )
     return ReviewCore(
         settings,
@@ -125,12 +125,18 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     event = observed.checkpoint
     if event is None:
         return None
+    state = storage.load_turn_state(settings.paths.data_dir, session)
+    focus_text = claude_adapter.read_latest_assistant_text(
+        str(hook.get("transcript_path") or ""),
+        int(state.get("transcript_offset") or 0),
+    )
     try:
         outcome = review_checkpoint(
             event,
             session=session,
             review_kind=observed.review_kind,
             source_event_seq=observed.event_seq,
+            reported_focus=persona_config.reported_focus(focus_text),
         )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None

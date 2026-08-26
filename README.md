@@ -79,12 +79,12 @@ Common environment variables:
 | `MASTERS_NUDGE_TIMEOUT` | `90` | End-of-turn reviewer timeout; values above 90 are clamped |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Mid-turn reviewer timeout; values above 90 are clamped |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs, state, receipts, telemetry, and reviewer config |
-| `MASTERS_NUDGE_STAGE` | Unset | Select `design`, `build`, `evolve`, or `review` |
+| `MASTERS_NUDGE_STAGE` | Unset | Select `automatic`, `design`, `build`, `evolve`, or `review` |
 | `MASTERS_NUDGE_SPRITE_PATH` | Bundled sprite | Optional floating-window spritesheet |
 
-Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
+Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. With no manual stage, Automatic mode is used: the coding agent only reports its current work focus in a hidden marker, while the Hook still detects checkpoints and forces the Reviewer call. Selecting `design`, `build`, `evolve`, or `review` pins the lens instead of delegating that selection to the coding agent. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
 
-The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. Once a review is due, direct reliability or performance evidence may select a specialist; specialist evidence does not itself trigger a review, and those specialists are not manual stage settings.
+The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. In Automatic mode, the coding agent may report Design, Build, Evolve, Review, Reliability, or Performance. This report selects one reviewer prompt; it cannot trigger, delay, or cancel a review. A missing report falls back to Build during work and Review at Stop.
 
 Local-only mode accepts only loopback HTTP, disables client proxy use and redirects, requires Ollama to report cloud features disabled, and rejects remote model metadata. It never installs or pulls a model and never falls back to a cloud provider. Grok remains a cloud provider through the signed-in Grok CLI.
 
@@ -96,12 +96,13 @@ Depending on the event, the packet can contain:
 
 - the latest user task request;
 - content read from local sources explicitly named in that request;
-- separate bounded evidence of material changes, verification, and failure history;
-- the triggering checkpoint, current final claim, or completion evidence;
-- optional agentcam evidence;
-- the reviewer prompt and selected lens.
+- the latest bounded semantic results from material changes, verification, and failures;
+- the current final claim at a Stop boundary;
+- up to three previously injected Nudge texts for duplicate avoidance only.
 
-Routine navigation output, tool names and commands, the main model's running explanation, and full transcripts are not included in the reviewer packet. Bounded semantic diffs, verification targets, and failure results remain available. The latest three injected Nudge texts may be included only to avoid repetition; the main model's reaction is not included. The first completed change-to-verification cycle can trigger a mid-turn review; later reviews require two new completed cycles. Repeated same-surface failures share the same three-attempt per-turn budget. Goal transitions and Stop reviews remain eligible outside that budget, and a queued or emitted finding still blocks another mid-turn review until delivery is resolved. Reactions, task requests, layered evidence, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. A flushed hook response is recorded as `emitted`; only a later semantic Claude or Codex host event confirms it as `injected`. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
+The reviewer prompt and selected lens are sent as instructions, not evidence.
+
+Routine navigation output, generic source inspection, external reports, tool names and commands, the main model's running explanation or reaction, and full transcripts are not included in the reviewer packet. Automatic mode's hidden focus marker is used only to select the prompt and is stripped before packet construction. The first completed change-to-verification cycle can trigger a mid-turn review; later reviews require two new completed cycles. Repeated same-surface failures share the same three-attempt per-turn budget. Goal transitions and Stop reviews remain eligible outside that budget, and a queued or emitted finding still blocks another mid-turn review until delivery is resolved. Reactions, task requests, semantic evidence, delivery receipts, local-model selection, and content-free diagnostic telemetry are stored as plain text under `~/.masters-nudge/data/`. The telemetry records routing, status, latency, and provider-reported usage metadata; there is no active cost experiment or automatic cost gate. A flushed hook response is recorded as `emitted`; only a later semantic Claude or Codex host event confirms it as `injected`. That following action records sequence only; it does not prove that the Nudge caused the action. Provider retention and training policies are outside this repository and may change.
 
 ## Evidence and limits
 

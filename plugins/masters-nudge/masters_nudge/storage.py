@@ -20,7 +20,6 @@ from .contracts import SessionRef, safe_identifier
 EVIDENCE_RECORD_MAX_CHARS = 3000
 EVIDENCE_RECORDS_MAX = 24
 EVIDENCE_CATEGORY_LIMITS = {
-    "inspection": 4,
     "change": 6,
     "verification": 6,
     "failure": 8,
@@ -336,7 +335,7 @@ def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     )
 
 
-def _new_progress_state(session: SessionRef, goal_objective: str = "") -> dict[str, Any]:
+def _new_progress_state(session: SessionRef) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "host": session.host,
@@ -346,7 +345,6 @@ def _new_progress_state(session: SessionRef, goal_objective: str = "") -> dict[s
         "last_strategy_event_seq": 0,
         "midturn_review_attempts": 0,
         "recent": [],
-        "goal_objective": source_context.head_tail(goal_objective, 1000),
     }
 
 
@@ -383,7 +381,7 @@ def start_turn(
     )
     _atomic_write(
         state_path(data_dir, session, "progress"),
-        _new_progress_state(session, prompt),
+        _new_progress_state(session),
     )
 
 
@@ -407,7 +405,7 @@ def record_turn_evidence(
                 source_content, source_context.TASK_SOURCE_MAX_CHARS
             )
 
-    evidence_categories = {"inspection", "change", "verification", "failure"}
+    evidence_categories = {"change", "verification", "failure"}
     if category not in evidence_categories:
         category = ""
     evidence_seq = int(state.get("evidence_seq") or 0)
@@ -470,17 +468,11 @@ def append_reaction(
     reason: str = "stop",
     source_event_seq: int = 0,
     source_fingerprint: str = "",
-    finding_scope: str = "local",
 ) -> dict[str, Any]:
     if not reaction.strip():
         return {}
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
-    normalized_scope = (
-        finding_scope
-        if finding_scope in {"local", "trajectory"}
-        else "local"
-    )
     entry: dict[str, Any] = {
         "schema_version": 2,
         "ts": _reaction_timestamp(),
@@ -492,12 +484,10 @@ def append_reaction(
         "reason": reason,
         "provider": provider,
         "model": model,
-        "persona": route_metadata.get("effective_lens", ""),
         **route_metadata,
         "reaction": reaction,
         "source_event_seq": int(source_event_seq or 0),
         "source_fingerprint": str(source_fingerprint or ""),
-        "finding_scope": normalized_scope,
         "generated_at": datetime.now().isoformat(),
         "delivery_status": "" if kind == "review_status" else "queued",
         "delivered_at": "",
@@ -788,37 +778,22 @@ def record_tool_progress(
     data_dir: Path,
     session: SessionRef,
     *,
-    tool_name: str,
-    command_family: str,
     failed: bool,
-    mutating: bool,
     goal_transition: str = "",
-    goal_objective: str = "",
     evidence_category: str = "",
-    evidence_scope: str = "",
     failure_family: str = "",
     event_fingerprint: str = "",
 ) -> dict[str, Any]:
     path = state_path(data_dir, session, "progress")
     state = load_progress_state(data_dir, session)
-    if not state.get("goal_objective"):
-        task_anchor = str(load_turn_state(data_dir, session).get("task_anchor") or "")
-        if task_anchor:
-            state["goal_objective"] = source_context.head_tail(task_anchor, 1000)
     event_seq = int(state.get("event_seq") or 0) + 1
     recent = state.get("recent") if isinstance(state.get("recent"), list) else []
-    meaningful = bool(evidence_category or goal_transition)
     recent.append(
         {
             "event_seq": event_seq,
-            "tool": tool_name,
-            "command_family": command_family,
             "failed": bool(failed),
-            "mutating": bool(mutating),
-            "meaningful": meaningful,
             "goal_transition": goal_transition,
             "evidence_category": evidence_category,
-            "evidence_scope": evidence_scope,
             "failure_family": failure_family,
             "event_fingerprint": event_fingerprint,
         }
@@ -830,8 +805,6 @@ def record_tool_progress(
             "recent": recent[-PROGRESS_EVENT_LIMIT:],
         }
     )
-    if goal_objective:
-        state["goal_objective"] = source_context.head_tail(goal_objective, 1000)
     _atomic_write(path, state)
     return state
 
@@ -851,20 +824,3 @@ def mark_strategy_reviewed(
             int(state.get("midturn_review_attempts") or 0) + 1
         )
     _atomic_write(path, state)
-
-
-def load_agentcam_mtime(data_dir: Path, session: SessionRef) -> float:
-    state = _read_json(state_path(data_dir, session, "agentcam"), {})
-    try:
-        return float(state.get("last_mtime") or 0.0)
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def save_agentcam_mtime(
-    data_dir: Path, session: SessionRef, mtime: float
-) -> None:
-    _atomic_write(
-        state_path(data_dir, session, "agentcam"),
-        {"schema_version": 1, "last_mtime": float(mtime)},
-    )

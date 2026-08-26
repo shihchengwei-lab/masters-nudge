@@ -159,7 +159,6 @@ class DeliveryLifecycleTests(unittest.TestCase):
                 route_metadata={"effective_lens": "carmack"},
                 source_event_seq=3,
                 source_fingerprint="change-a",
-                finding_scope="local",
             )
             storage.mark_emitted(
                 root,
@@ -401,7 +400,7 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual([call.kind for call in core.calls], ["strategy"])
             self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
-            self.assertEqual(core.calls[-1].routing_concern, "")
+            self.assertEqual(core.calls[-1].reported_focus, "")
 
     def test_validated_progress_reviews_first_cycle_then_waits_for_two_more(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -453,7 +452,7 @@ class LongGoalReplayTests(unittest.TestCase):
             )
             self.assertEqual(core.calls[0].kind, "goal_transition")
             self.assertEqual(core.calls[0].trigger, "goal-complete")
-            self.assertEqual(core.calls[0].routing_concern, "completion-boundary")
+            self.assertEqual(core.calls[0].reported_focus, "")
 
     def test_old_turn_queued_nudge_does_not_block_new_goal_transition_review(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -504,25 +503,22 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual(core.calls, [])
 
-    def test_strategy_signals_route_to_distinct_existing_lenses(self):
+    def test_reported_focus_routes_to_distinct_existing_lenses(self):
         cases = (
-            ("ordinary workflow", "feedback-loop", "beck"),
-            ("local proxy improved but acceptance criteria did not", "", "beck"),
-            ("ordinary completion record", "completion-boundary", "linus"),
-            ("ordinary diff record", "knowledge-boundary", "fowler"),
-            ("duplicate delivery after retry", "", "lamport"),
-            ("benchmark latency 20ms", "", "carmack"),
+            ("design", "jeff"),
+            ("build", "beck"),
+            ("evolve", "fowler"),
+            ("review", "linus"),
+            ("reliability", "lamport"),
+            ("performance", "carmack"),
         )
-        for evidence, routing_concern, expected in cases:
-            with self.subTest(evidence=evidence, routing_concern=routing_concern):
+        for focus, expected in cases:
+            with self.subTest(focus=focus):
                 root = Path(tempfile.mkdtemp())
-                persona_config.save_stage(root, "build")
                 route = lens_router.resolve_review_route(
                     root,
-                    evidence,
                     environ={},
-                    checkpoint=True,
-                    routing_concern=routing_concern,
+                    reported_focus=focus,
                 )
                 self.assertEqual(route.effective_lens, expected)
 

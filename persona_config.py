@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,27 @@ from typing import Mapping
 
 
 CONFIG_FILE = "config.json"
+AUTOMATIC_STAGE = "automatic"
+AUTOMATIC_LABEL = "Automatic · coding agent 回報目前工作焦點"
+FOCUS_REPORT_INSTRUCTION = (
+    "Append one hidden marker to every progress or final message reporting your "
+    "current work focus: <!-- masters-nudge-focus:build -->. Use design, build, "
+    "evolve, review, reliability, or performance. This only reports progress; "
+    "hooks decide when reviews run."
+)
+FOCUS_LENSES = {
+    "design": "jeff",
+    "build": "beck",
+    "evolve": "fowler",
+    "review": "linus",
+    "reliability": "lamport",
+    "performance": "carmack",
+}
+FOCUS_MARKER_RE = re.compile(
+    r"<!--\s*masters-nudge-focus\s*:\s*"
+    r"(design|build|evolve|review|reliability|performance)\s*-->",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -66,23 +88,38 @@ def persona_label(persona: str) -> str:
 
 def stage_label(stage: str) -> str:
     key = str(stage or "").strip().lower()
+    if key == AUTOMATIC_STAGE:
+        return AUTOMATIC_LABEL
     if key not in STAGE_SPECS:
-        key = "build"
+        return AUTOMATIC_LABEL
     return STAGE_SPECS[key].label
+
+
+def reported_focus(text: str) -> str:
+    """Read the main model's latest explicit work-focus report."""
+    matches = FOCUS_MARKER_RE.findall(str(text or ""))
+    return str(matches[-1]).lower() if matches else ""
+
+
+def strip_focus_markers(text: str) -> str:
+    """Keep the transport marker out of reviewer evidence and user claims."""
+    return FOCUS_MARKER_RE.sub("", str(text or "")).strip()
 
 
 def resolve_stage(
     base_dir: Path, *, environ: Mapping[str, str] | None = None
 ) -> StageSelection:
-    """Resolve the public stage override, stage config, then Build."""
+    """Resolve a manual override or the default automatic focus report mode."""
     environment = os.environ if environ is None else environ
     env_stage = str(environment.get("MASTERS_NUDGE_STAGE") or "").strip().lower()
     if env_stage:
+        if env_stage == AUTOMATIC_STAGE:
+            return StageSelection(AUTOMATIC_STAGE, "", "environment")
         if env_stage in STAGE_SPECS:
             return StageSelection(
                 env_stage, STAGE_SPECS[env_stage].persona, "environment"
             )
-        return StageSelection("build", "beck", "invalid_environment")
+        return StageSelection(AUTOMATIC_STAGE, "", "invalid_environment")
 
     try:
         payload = json.loads(config_path(base_dir).read_text(encoding="utf-8"))
@@ -92,11 +129,13 @@ def resolve_stage(
         payload = {}
 
     config_stage = str(payload.get("stage") or "").strip().lower()
+    if config_stage == AUTOMATIC_STAGE:
+        return StageSelection(AUTOMATIC_STAGE, "", "config")
     if config_stage in STAGE_SPECS:
         return StageSelection(
             config_stage, STAGE_SPECS[config_stage].persona, "config"
         )
-    return StageSelection("build", "beck", "default")
+    return StageSelection(AUTOMATIC_STAGE, "", "default")
 
 
 def _atomic_save(base_dir: Path, payload: dict[str, str], prefix: str) -> None:
@@ -130,6 +169,6 @@ def _atomic_save(base_dir: Path, payload: dict[str, str], prefix: str) -> None:
 def save_stage(base_dir: Path, stage: str) -> None:
     """Atomically persist a valid lifecycle stage in the new config format."""
     key = str(stage or "").strip().lower()
-    if key not in STAGE_SPECS:
+    if key != AUTOMATIC_STAGE and key not in STAGE_SPECS:
         raise ValueError(f"unsupported stage: {stage!r}")
     _atomic_save(base_dir, {"stage": key}, "stage-")

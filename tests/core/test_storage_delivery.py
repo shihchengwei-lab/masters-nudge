@@ -21,10 +21,7 @@ class StorageDeliveryTests(unittest.TestCase):
             storage.record_tool_progress(
                 data_dir,
                 old,
-                tool_name="apply_patch",
-                command_family="apply_patch",
                 failed=False,
-                mutating=True,
                 evidence_category="change",
             )
             storage.mark_strategy_reviewed(
@@ -47,7 +44,35 @@ class StorageDeliveryTests(unittest.TestCase):
         self.assertEqual(progress["last_strategy_event_seq"], 0)
         self.assertEqual(progress["midturn_review_attempts"], 0)
         self.assertEqual(progress["recent"], [])
+        self.assertNotIn("goal_objective", progress)
         self.assertEqual([entry["reaction"] for entry in reactions], ["old finding"])
+
+    def test_progress_records_only_scheduler_state(self):
+        with tempfile.TemporaryDirectory() as raw:
+            data_dir = Path(raw)
+            session = SessionRef("codex_cli", "minimal-progress")
+            storage.start_turn(data_dir, session, "修正登入失敗")
+            progress = storage.record_tool_progress(
+                data_dir,
+                session,
+                failed=True,
+                evidence_category="failure",
+                failure_family="validation:auth",
+                event_fingerprint="event-1",
+            )
+
+        self.assertEqual(
+            {
+                "event_seq",
+                "failed",
+                "goal_transition",
+                "evidence_category",
+                "failure_family",
+                "event_fingerprint",
+            },
+            set(progress["recent"][0]),
+        )
+        self.assertNotIn("goal_objective", progress)
 
     def test_new_turn_does_not_confirm_an_old_emitted_finding(self):
         with tempfile.TemporaryDirectory() as raw:

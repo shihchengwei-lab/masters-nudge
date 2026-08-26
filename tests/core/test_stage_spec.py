@@ -36,11 +36,14 @@ class TestStageSpec(unittest.TestCase):
     def test_window_selector_iterates_the_canonical_stage_order(self):
         self.assertFalse(hasattr(buddy_window, "stage_selection_label"))
         self.assertEqual(
-            list(persona_config.STAGE_SPECS),
+            [persona_config.AUTOMATIC_STAGE, *persona_config.STAGE_SPECS],
             list(buddy_window.SELECTOR_STAGES.values()),
         )
         self.assertEqual(
-            [spec.label for spec in persona_config.STAGE_SPECS.values()],
+            [
+                persona_config.AUTOMATIC_LABEL,
+                *(spec.label for spec in persona_config.STAGE_SPECS.values()),
+            ],
             buddy_window.selector_options(),
         )
 

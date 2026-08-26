@@ -14,12 +14,8 @@ import os
 import sys
 from typing import Any
 
-from masters_nudge import (
-    claude_adapter,
-    evidence as shared_evidence,
-    prompting,
-    storage,
-)
+import persona_config
+from masters_nudge import claude_adapter, prompting, storage
 from masters_nudge.contracts import ReviewRequest
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
@@ -56,32 +52,28 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     cwd = hook.get("cwd") or os.getcwd()
     session = claude_adapter.session_from_hook(hook, default_cwd=str(cwd))
     state = storage.load_turn_state(settings.paths.data_dir, session)
+    focus_text = str(hook.get("last_assistant_message") or "")
+    if not focus_text:
+        focus_text = claude_adapter.read_latest_assistant_text(
+            str(hook.get("transcript_path") or ""),
+            int(state.get("transcript_offset") or 0),
+        )
+    reported_focus = persona_config.reported_focus(focus_text)
+    assistant_claim = persona_config.strip_focus_markers(focus_text)
     storage.observe_injected_response(
         settings.paths.data_dir,
         session,
         event_seq=int(state.get("evidence_seq") or 0),
         observation_kind="stop",
         observation={
-            "assistant_claim": str(hook.get("last_assistant_message") or "")
+            "assistant_claim": assistant_claim
         },
     )
     if bool(hook.get("stop_hook_active")):
         return None
 
-    report = shared_evidence.read_latest_agentcam_report(
-        str(cwd), log_error=log_error
-    )
-    report_content = ""
-    if report and float(report["mtime"]) > storage.load_agentcam_mtime(
-        settings.paths.data_dir, session
-    ):
-        report_content = report["content"]
-        storage.save_agentcam_mtime(
-            settings.paths.data_dir, session, float(report["mtime"])
-        )
-
     source_packet = claude_adapter.build_stop_source_context(
-        hook, report_content, session=session
+        hook, session=session
     )
     if not source_packet:
         log_error("empty source packet, skipping")
@@ -96,6 +88,7 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         source_fingerprint=hashlib.sha256(
             source_packet.encode("utf-8", errors="replace")
         ).hexdigest()[:24],
+        reported_focus=reported_focus,
     )
 
     outcome = ReviewCore(settings, log_error=log_error).review_once(

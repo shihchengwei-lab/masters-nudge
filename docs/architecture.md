@@ -17,9 +17,9 @@ The core contracts are `PromptSubmitted`, `ToolCompleted`, `TurnStopped`, `Revie
 
 ## Lifecycle selection and private attention cues
 
-`persona_config.STAGE_SPECS` owns each lifecycle stage's public name, practical focus, and private persona slug; window choices read that registry directly. `persona_config.resolve_stage()` owns lifecycle selection. `MASTERS_NUDGE_STAGE` accepts only `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Build through the `invalid_environment` source. The former persona environment override is not accepted.
+`persona_config.STAGE_SPECS` owns each manual lifecycle stage's public name, practical focus, and private persona slug; window choices read that registry directly. `persona_config.resolve_stage()` owns manual selection and defaults to `automatic`. `MASTERS_NUDGE_STAGE` accepts `automatic`, `design`, `build`, `evolve`, or `review`; an invalid value falls back visibly to Automatic through the `invalid_environment` source. The former persona environment override is not accepted.
 
-Public UI labels describe the engineering stage and practical focus. Internal persona slugs remain available for routing and telemetry, while the corresponding person name appears only in the provider prompt as a private attention cue. Once a review is due, direct reliability or performance evidence may select a specialist automatically; specialist evidence does not make a review due, and those specialists are not public stage settings.
+Public UI labels describe the engineering stage and practical focus. Internal persona slugs remain available for routing and telemetry, while the corresponding person name appears only in the provider prompt as a private attention cue. At turn start, the Host asks the coding agent to append one hidden focus marker to progress and final messages. The marker can report Design, Build, Evolve, Review, Reliability, or Performance and selects exactly one private prompt only after the shared checkpoint policy has already made a review due. It cannot request or suppress a Provider call. An explicit manual stage wins; a missing marker uses Build during work and Review at Stop. No tool output or free-form evidence text is reparsed to choose a lens.
 
 ## Host paths
 
@@ -37,8 +37,8 @@ Both paths use the classifier in `masters_nudge/checkpoints.py`. Host entry file
 
 | Lifecycle | Claude Code | Codex |
 |---|---|---|
-| Start turn | Save the task request and final-claim fallback offset | Save the task request; do not parse the Codex transcript |
-| Collect evidence | Capture explicitly referenced task sources plus layered event evidence | Capture explicitly referenced task sources plus layered event evidence |
+| Start turn | Save the task request and final-claim fallback offset; add the hidden focus-report contract | Save the task request and transcript offset; add the hidden focus-report contract |
+| Collect evidence | Capture explicitly referenced task sources plus semantic results | Capture explicitly referenced task sources plus semantic results |
 | Tool boundary | Record bounded semantic evidence; review on the second same-surface failure or an explicit long-goal `complete`／`blocked` transition | Record bounded semantic evidence; review on the second same-surface failure or an explicit long-goal `complete`／`blocked` transition |
 | End turn | Synchronous native `Stop`; a finding adds context and continues | Synchronous native `Stop`; a finding returns `decision: block` and continues |
 | Deliver finding | `hookSpecificOutput.additionalContext` on the eligible event, prefixed `獨立第二意見：` | `hookSpecificOutput.additionalContext`, or Stop `reason`, on the eligible event, prefixed `獨立第二意見：` |
@@ -61,13 +61,14 @@ New state is written under `~/.masters-nudge/data/` by default:
 claude_code--<session>.log
 codex_cli--<session>.log
 <host>--<session>.turn.json
+<host>--<session>.progress.json
 <host>--<session>.delivery.json
 <host>--<session>.review-attempts/
 reviewer.json
 review-telemetry.jsonl
 ```
 
-One `.turn.json` record owns the task request, explicitly referenced sources, change evidence, verification evidence, failure history, and any final-claim fallback offset. There is no second source-state file for the same turn. Reviewer configuration is host-neutral.
+One `.turn.json` record owns the task request, explicitly referenced sources, bounded semantic results, and any final-claim fallback offset. The matching `.progress.json` keeps only scheduler state needed to decide when another review is eligible; it does not duplicate the task, tool identity, commands, or evidence text. Reviewer configuration is host-neutral.
 
 The `migrate` command is a one-shot boundary for older installations. It defaults to dry-run, requires `--apply` to write, backs up an exact known host configuration before editing, refuses near matches or conflicting destinations, refuses if the source changes after preflight, and does not delete original review data.
 
@@ -77,7 +78,7 @@ Hooks fail open on errors: malformed native input, unavailable Provider CLIs, ti
 
 Provider selection does not fail over silently. The Ollama path additionally fails closed for network privacy: only loopback HTTP is accepted, proxies and redirects are disabled, cloud-disabled status is checked, and remote model metadata is rejected.
 
-Each evidence layer is capped per turn and per record. Routine navigation output, tool identity, commands, and the main model's running explanation are excluded; bounded semantic diffs, semantic validation scopes, and failure results remain. Normal changes, successful specialist evidence, large diffs, and a single failure are evidence, not intervention triggers. After an injected Nudge, another tool-time review waits until a new semantic change reaches a later verification or failure boundary. `ReviewCore` appends at most the latest three injected Nudge texts as duplicate-avoidance context, without the main model's reaction. Current final claims and optional Agentcam evidence are separately bounded before entering `ReviewCore`. Full transcripts are not copied into reviewer packets or telemetry.
+The packet keeps the task contract, explicitly referenced source content, and the latest bounded semantic results in chronological order. Routine navigation output, generic source inspection, external reports, tool identity, commands, and the main model's running explanation or reaction are excluded. The Host may read the latest current-turn assistant text only to extract the hidden focus marker; the marker is stripped from final claims and never copied into reviewer evidence. Normal changes, large diffs, and a single failure are evidence, not intervention triggers. After an injected Nudge, another tool-time review waits until a new semantic change reaches a later verification or failure boundary. `ReviewCore` appends at most the latest three injected Nudge texts as duplicate-avoidance context. Current final claims are bounded before entering `ReviewCore`; full transcripts are not copied into reviewer packets or telemetry.
 
 ## Package and verification
 
