@@ -566,8 +566,8 @@ class CodexAdapterTests(unittest.TestCase):
         request, persist, _timeout = core.calls[-1]
         self.assertTrue(persist)
         self.assertIn("token check", request.source_packet)
-        self.assertIn("referenced_sources:", request.source_packet)
-        self.assertIn("active_failures:", request.source_packet)
+        self.assertIn("contract_excerpt:", request.source_packet)
+        self.assertIn("unresolved_contradiction:", request.source_packet)
         self.assertIn("已完成登入修正", request.source_packet)
         self.assertNotIn("does-not-exist", request.source_packet)
 
@@ -613,8 +613,8 @@ class CodexAdapterTests(unittest.TestCase):
         request, persist, timeout = core.calls[0]
         self.assertEqual(request.reason, "strategy-review")
         self.assertEqual(request.trigger, "repeated-failure-family")
-        self.assertIn("review_event:", request.source_packet)
-        self.assertIn("active_failures:", request.source_packet)
+        self.assertNotIn("review_event:", request.source_packet)
+        self.assertIn("unresolved_contradiction:", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
         self.assertTrue(persist)
         self.assertEqual(timeout, 15)
@@ -667,10 +667,10 @@ class CodexAdapterTests(unittest.TestCase):
             )
 
         request, _persist, _timeout = core.calls[-1]
-        self.assertIn("review_event:", request.source_packet)
-        self.assertIn("referenced_sources:", request.source_packet)
+        self.assertNotIn("review_event:", request.source_packet)
+        self.assertIn("contract_excerpt:", request.source_packet)
         self.assertIn("token check", request.source_packet)
-        self.assertIn("active_failures:", request.source_packet)
+        self.assertIn("unresolved_contradiction:", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
         self.assertIn("讓登入流程通過完整驗收", request.source_packet)
 

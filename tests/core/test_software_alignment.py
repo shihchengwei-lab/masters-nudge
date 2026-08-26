@@ -40,30 +40,31 @@ class SoftwareNudgeContractTests(unittest.TestCase):
 
         for heading in ("# ROLE", "# EVIDENCE", "# FINDING GATE", "# NUDGE", "# OUTPUT"):
             self.assertIn(heading, prompt)
-        for gate in (
-            "NOVEL",
-            "GROUNDED",
-            "CONSEQUENTIAL",
-            "OPEN",
-            "TESTABLE",
-            "CONTRACT-BOUND",
-        ):
+        for gate in ("ALTERNATIVE", "LEVERAGED", "GROUNDED", "DISCRIMINATING"):
             self.assertIn(gate, prompt)
         self.assertIn("Missing evidence means unknown, not undone", prompt)
         self.assertIn("Do not invent", prompt)
         self.assertIn("acceptance criteria", prompt)
         self.assertIn("Prefer `no_finding`", prompt)
+        self.assertIn("underexplored branch", prompt)
+        self.assertIn("concrete alternative mechanism", prompt)
+        self.assertIn("two named competing hypotheses", prompt)
+        self.assertNotIn("Do not solve the task", prompt)
+        self.assertNotIn("completion judgment", prompt)
         self.assertNotIn("具體型別、順序、重複與是否延遲求值", prompt)
         self.assertNotIn("新接受案例與一個相鄰拒絕案例", prompt)
 
     def test_stop_prompt_does_not_force_every_conflict_into_a_question(self):
-        self.assertIn("completion claim", STOP_PROMPT)
+        self.assertIn("alternative causal assumption", STOP_PROMPT)
+        self.assertIn("distinguishable now", STOP_PROMPT)
+        self.assertNotIn("completion claim", STOP_PROMPT)
         self.assertNotIn("時提問", STOP_PROMPT)
 
     def test_prompt_keeps_one_grounded_nudge_without_forcing_a_question(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("constraint, counterexample, alternative assumption", prompt)
+        self.assertIn("alternative direction", prompt)
+        self.assertIn("smallest discriminating check", prompt)
         self.assertIn("at most 52", prompt)
         self.assertNotIn("finding 只放一個開放問句", prompt)
         self.assertNotIn("以「？」結尾", prompt)
@@ -170,7 +171,7 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertNotIn("你最近說過", packet)
         self.assertNotIn("正在調整 auth_service.py", packet)
 
-    def test_packet_separates_universal_state_from_software_evidence(self):
+    def test_packet_leads_with_a_decision_frame_and_supporting_evidence(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正設定解析並保留既有相容性",
             event_context="reason: strategy-review",
@@ -182,17 +183,21 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[universal task state]", packet)
-        self.assertIn("task_contract:", packet)
-        self.assertIn("verified_facts:", packet)
-        self.assertIn("open_issues: []", packet)
-        self.assertIn("[software engineering evidence]", packet)
-        self.assertIn("relevant_changes:", packet)
-        self.assertIn("verification:", packet)
-        self.assertNotIn("[failure history]", packet)
-        self.assertNotIn("[inspection evidence]", packet)
+        self.assertIn("[decision frame]", packet)
+        self.assertIn("observable_goal:", packet)
+        self.assertIn("current_approach:", packet)
+        self.assertIn("latest_outcome:", packet)
+        self.assertIn("unresolved_contradiction:", packet)
+        self.assertIn("recent_approach_outcome_pairs:", packet)
+        self.assertIn("[supporting evidence]", packet)
+        self.assertIn("contract_excerpt:", packet)
+        self.assertIn("semantic_change:", packet)
+        self.assertIn("discriminating_results:", packet)
+        self.assertNotIn("verified_facts:", packet)
+        self.assertNotIn("open_issues:", packet)
+        self.assertNotIn("closed_hypotheses:", packet)
 
-    def test_stop_packet_labels_completion_claim_inside_universal_state(self):
+    def test_stop_packet_keeps_completion_claim_as_supporting_context(self):
         packet = source_context.build_stop_packet(
             task_anchor="修正設定解析",
             last_assistant_message="已完成並通過全部測試",
@@ -201,9 +206,11 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        universal = packet.split("[end universal task state]", 1)[0]
-        self.assertIn("completion_claim:", universal)
-        self.assertIn("已完成並通過全部測試", universal)
+        decision = packet.split("[end decision frame]", 1)[0]
+        support = packet.split("[supporting evidence]", 1)[1]
+        self.assertNotIn("completion_claim", decision)
+        self.assertIn("completion_claim_context:", support)
+        self.assertIn("已完成並通過全部測試", support)
 
     def test_unrelated_inspections_do_not_evict_an_open_failure(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -265,7 +272,7 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
         self.assertIn("TASK_CONTRACT", packet)
         self.assertIn("COMPLETION_CLAIM", packet)
-        self.assertIn("active_failures:", packet)
+        self.assertIn("unresolved_contradiction:", packet)
 
     def test_evidence_categories_filter_navigation_and_keep_decisions(self):
         from masters_nudge.contracts import ToolCompleted
@@ -334,6 +341,37 @@ class SoftwareColdStartTests(unittest.TestCase):
         for event, expected in cases:
             with self.subTest(tool=event.tool_name, expected=expected):
                 self.assertEqual(checkpoints.evidence_category(event), expected)
+
+    def test_validation_runtime_exceptions_are_failures_not_verifications(self):
+        from masters_nudge.contracts import ToolCompleted
+
+        session = SessionRef("codex_cli", "runtime-failure")
+        cases = (
+            "Traceback (most recent call last):\nAssertionError: (2, 2, 3, [], [])",
+            "ModuleNotFoundError: No module named 'docutils'",
+            {"content": "ModuleNotFoundError: No module named 'docutils'"},
+        )
+        for output in cases:
+            with self.subTest(output=output):
+                event = ToolCompleted(
+                    session,
+                    "exec_command",
+                    {"cmd": "python verify_behavior.py"},
+                    output,
+                )
+                self.assertEqual("failure", checkpoints.evidence_category(event))
+
+    def test_source_read_with_exception_text_is_not_a_runtime_failure(self):
+        from masters_nudge.contracts import ToolCompleted
+
+        event = ToolCompleted(
+            SessionRef("codex_cli", "source-text"),
+            "exec_command",
+            {"cmd": "Get-Content src/errors.py"},
+            "class ExpectedAssertionError(Exception):\n    pass",
+        )
+
+        self.assertEqual("", checkpoints.evidence_category(event))
 
     def test_provider_evidence_keeps_results_without_tool_identity_or_commands(self):
         from masters_nudge.contracts import ToolCompleted
@@ -444,7 +482,7 @@ class SoftwareColdStartTests(unittest.TestCase):
                     ),
                 )
 
-    def test_packet_keeps_source_evidence_inside_the_software_block(self):
+    def test_packet_keeps_source_evidence_inside_the_supporting_block(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="Preserve the public contract.",
             event_context="reason: review",
@@ -457,8 +495,8 @@ class SoftwareColdStartTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[software engineering evidence]", packet)
-        self.assertIn("relevant_sources:", packet)
+        self.assertIn("[supporting evidence]", packet)
+        self.assertIn("approach_relevant_source:", packet)
         self.assertIn("assert collect(C) == [C, A, B]", packet)
 
     def test_packet_reduces_large_source_evidence_to_a_current_excerpt(self):
@@ -475,15 +513,30 @@ class SoftwareColdStartTests(unittest.TestCase):
         self.assertIn(source_context.TRUNCATION_MARKER, packet)
         self.assertLess(len(packet), len(content))
 
-    def test_only_two_latest_source_excerpts_enter_the_current_snapshot(self):
-        records = []
-        for seq, marker in enumerate(("accept-boundary", "semantic-owner", "api-shape"), 1):
-            content = source_context.capture_inspection_evidence(
-                "exec_command",
-                {"cmd": f"sed -n '1,240p' source-{seq}.py"},
-                {"content": marker + "\n" + (str(seq) * 5000)},
-            )
-            records.append({"seq": seq, "category": "inspection", "content": content})
+    def test_approach_relevant_source_beats_newer_unrelated_environment_probe(self):
+        records = [
+            {
+                "seq": 1,
+                "category": "inspection",
+                "content": "source:\n- src/parser.py\ninspection:\nRELEVANT_BRANCH",
+            },
+            {
+                "seq": 2,
+                "category": "inspection",
+                "content": "source:\n- /var/cache/pip/state.json\ninspection:\nIRRELEVANT_CACHE",
+            },
+            {
+                "seq": 3,
+                "category": "change",
+                "content": "changed_paths:\n- src/parser.py\nsemantic_change:\ntry alternate parser",
+            },
+            {
+                "seq": 4,
+                "category": "failure",
+                "scope": "validation:tests/test_parser.py",
+                "content": "AssertionError: alternate parser still rejects empty input",
+            },
+        ]
 
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正公開行為",
@@ -491,9 +544,28 @@ class SoftwareColdStartTests(unittest.TestCase):
             evidence_records=records,
         )
 
-        self.assertNotIn("accept-boundary", packet)
-        self.assertIn("semantic-owner", packet)
-        self.assertIn("api-shape", packet)
+        self.assertIn("RELEVANT_BRANCH", packet)
+        self.assertNotIn("IRRELEVANT_CACHE", packet)
+        self.assertIn("evidence #3 -> evidence #4", packet)
+
+    def test_large_issue_source_keeps_problem_expected_behavior_and_reproducer(self):
+        issue = (
+            "# Problem\nParser crashes on empty input.\n\n"
+            "# Internal Notes\n" + ("implementation detail\n" * 500) + "\n"
+            "# Expected behavior\nReturn an empty result.\n\n"
+            "# Minimal reproducer\nparse('') must not raise.\n"
+        )
+
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="Fix the parser.",
+            event_context="reason: review",
+            task_sources={"ISSUE.md": issue},
+        )
+
+        self.assertIn("Parser crashes on empty input", packet)
+        self.assertIn("Return an empty result", packet)
+        self.assertIn("parse('') must not raise", packet)
+        self.assertLess(packet.count("implementation detail"), 20)
 
 
 class SoftwareEvidenceRoutingTests(unittest.TestCase):

@@ -31,22 +31,24 @@ STRATEGY_PROMPT = """
 
 # TRAJECTORY CHECKPOINT
 
-Check whether the current state has moved toward the observable task contract.
+Identify one plausible branch not represented by the current approach and the
+smallest check that can distinguish it from the current branch now.
 """
 
 GOAL_TRANSITION_PROMPT = """
 
 # GOAL TRANSITION
 
-Treat a goal transition as a claim. Compare it with the current open issues.
+At this transition, identify one still-distinguishable alternative to the path
+that produced the latest outcome.
 """
 
 STOP_PROMPT = """
 
 # COMPLETION BOUNDARY
 
-Treat the completion claim as unverified. Compare it with the universal task
-state and active software-engineering evidence.
+Before the current path closes, identify one alternative causal assumption that
+is still distinguishable now with a bounded check.
 """
 
 ProviderDispatch = Callable[..., dict]

@@ -193,8 +193,9 @@ class TestPersonaPromptSelection(unittest.TestCase):
         )
 
         self.assertIn("Use only the supplied packet", base_prompt)
-        self.assertIn("[universal task state]", packet)
-        self.assertIn("referenced_sources:", packet)
+        self.assertIn("[decision frame]", packet)
+        self.assertIn("[supporting evidence]", packet)
+        self.assertIn("contract_excerpt:", packet)
         self.assertIn("external_runtime_evidence:", packet)
 
 
@@ -321,18 +322,18 @@ class TestSourceContext(unittest.TestCase):
             ],
         )
 
-        self.assertIn("[universal task state]", packet)
+        self.assertIn("[decision frame]", packet)
         self.assertIn("修正登入測試", packet)
-        self.assertIn("referenced_sources:", packet)
+        self.assertIn("contract_excerpt:", packet)
         self.assertIn("逾時時仍應保留 session", packet)
-        self.assertIn("review_event:", packet)
-        self.assertIn("[software engineering evidence]", packet)
-        self.assertIn("relevant_changes:", packet)
+        self.assertIn("[supporting evidence]", packet)
+        self.assertIn("current_approach:", packet)
         self.assertIn("auth.py 修改 14 行", packet)
-        self.assertIn("verification:", packet)
+        self.assertIn("discriminating_results:", packet)
         self.assertIn("8 passed", packet)
-        self.assertIn("active_failures:", packet)
+        self.assertIn("unresolved_contradiction:", packet)
         self.assertIn("2 failed", packet)
+        self.assertNotIn("review_event:", packet)
         self.assertNotIn("正在調整 auth.py", packet)
         self.assertNotIn("[transcript", packet)
 
@@ -384,16 +385,16 @@ class TestSourceContext(unittest.TestCase):
             agentcam_evidence="## Risk Flags\n| HIGH | auth.py |",
         )
 
-        self.assertIn("[universal task state]", packet)
-        self.assertIn("referenced_sources:", packet)
-        self.assertIn("completion_claim:", packet)
-        self.assertIn("relevant_changes:", packet)
-        self.assertIn("verification:", packet)
-        self.assertIn("active_failures:", packet)
+        self.assertIn("[decision frame]", packet)
+        self.assertIn("contract_excerpt:", packet)
+        self.assertIn("completion_claim_context:", packet)
+        self.assertIn("current_approach:", packet)
+        self.assertIn("discriminating_results:", packet)
+        self.assertIn("unresolved_contradiction:", packet)
         self.assertIn("external_runtime_evidence:", packet)
         self.assertLess(
-            packet.index("[universal task state]"),
-            packet.index("[software engineering evidence]"),
+            packet.index("[decision frame]"),
+            packet.index("[supporting evidence]"),
         )
 
     def test_agentcam_extractor_keeps_only_named_evidence_sections(self):

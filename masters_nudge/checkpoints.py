@@ -23,6 +23,12 @@ TEST_FAILURE_RE = re.compile(
     r"|\s[✗✘]\s",
     re.IGNORECASE | re.MULTILINE,
 )
+RUNTIME_FAILURE_RE = re.compile(
+    r"\bTraceback \(most recent call last\):"
+    r"|\b(?:AssertionError|ModuleNotFoundError|ImportError|"
+    r"TypeError|ValueError|RuntimeError|SyntaxError)(?::|\s*$)",
+    re.IGNORECASE | re.MULTILINE,
+)
 TEST_COMMAND_RE = re.compile(
     r"(?:^|[;&|\s])(?:"
     r"pytest|py\.test|unittest|vitest|jest|mocha|rspec|"
@@ -149,15 +155,19 @@ def evidence_category(event: ToolCompleted) -> str:
     output = compact_json(event.tool_output)
     command = _command(event)
     semantic_text = f"{event.tool_name} {command}"
-    if (event.failure_known and event.failed) or TEST_FAILURE_RE.search(output):
+    test_command = bool(TEST_COMMAND_RE.search(command))
+    validation_like = bool(test_command or SEMANTIC_VALIDATION_RE.search(semantic_text))
+    if event.failure_known and event.failed:
         return "failure"
-    if READ_NAVIGATION_RE.search(semantic_text):
+    if READ_NAVIGATION_RE.search(semantic_text) and not test_command:
         return ""
+    if validation_like and (
+        TEST_FAILURE_RE.search(output) or RUNTIME_FAILURE_RE.search(output)
+    ):
+        return "failure"
     if SEMANTIC_MUTATION_RE.search(semantic_text):
         return "change"
-    if TEST_COMMAND_RE.search(command) or SEMANTIC_VALIDATION_RE.search(
-        semantic_text
-    ):
+    if validation_like:
         return "verification"
     return ""
 

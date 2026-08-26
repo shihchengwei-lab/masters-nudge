@@ -15,8 +15,9 @@ INSPECTION_RECORD_MAX_CHARS = 2000
 STOP_ASSISTANT_MAX_CHARS = 2500
 AGENTCAM_EVIDENCE_MAX_CHARS = 2000
 PACKET_MAX_CHARS = 16000
-UNIVERSAL_SECTION_MAX_CHARS = 7200
-SOFTWARE_SECTION_MAX_CHARS = 8400
+DECISION_SECTION_MAX_CHARS = 6000
+SUPPORTING_SECTION_MAX_CHARS = 9800
+PACKET_TASK_SOURCE_MAX_CHARS = 3200
 PACKET_INSPECTION_RECORD_MAX_CHARS = 700
 PACKET_CHANGE_RECORD_MAX_CHARS = 1400
 PACKET_VERIFICATION_RECORD_MAX_CHARS = 600
@@ -35,6 +36,18 @@ _INSPECTION_COMMAND_RE = re.compile(
     re.IGNORECASE,
 )
 _DIRECT_READ_TOOLS = {"read", "read_file", "read_text_file"}
+_PRIORITY_SOURCE_HEADING_RE = re.compile(
+    r"\b(?:problem|issue|bug|expected|requirements?|acceptance|reproduc\w*|"
+    r"behavior|behaviour|observable|input|output)\b"
+    r"|(?:問題|預期|需求|驗收|重現|行為|輸入|輸出)",
+    re.IGNORECASE,
+)
+_EVIDENCE_PATH_RE = re.compile(
+    r"(?:[A-Za-z]:)?(?:[A-Za-z0-9_.-]+[/\\])+[A-Za-z0-9_.-]+"
+    r"|(?<![A-Za-z0-9_.-])[A-Za-z0-9_.-]+\."
+    r"(?:py|js|jsx|ts|tsx|go|rs|java|rb|md|toml|json|yaml|yml)",
+    re.IGNORECASE,
+)
 
 AGENTCAM_SECTION_NAMES = {
     "risk flags",
@@ -199,10 +212,30 @@ def capture_inspection_evidence(
     return f"{source_block}inspection:\n{content}"
 
 
+def _task_source_excerpt(content: str) -> str:
+    """Keep contract-bearing Markdown sections instead of bulk implementation notes."""
+    content = str(content or "").strip()
+    if len(content) <= PACKET_TASK_SOURCE_MAX_CHARS:
+        return content
+    sections = re.split(r"(?=^#{1,6}\s+.+$)", content, flags=re.MULTILINE)
+    selected: list[str] = []
+    for index, section in enumerate(sections):
+        section = section.strip()
+        if not section:
+            continue
+        heading = section.splitlines()[0]
+        if (index == 0 and not heading.startswith("#")) or _PRIORITY_SOURCE_HEADING_RE.search(
+            heading
+        ):
+            selected.append(head_tail(section, 1000))
+    excerpt = "\n\n".join(selected)
+    return head_tail(excerpt or content, PACKET_TASK_SOURCE_MAX_CHARS)
+
+
 def render_task_sources(task_sources: Any) -> str:
     if isinstance(task_sources, Mapping):
         parts = [
-            f"source: {name}\n{content}"
+            f"source: {name}\n{_task_source_excerpt(str(content))}"
             for name, content in task_sources.items()
             if str(name).strip() and str(content).strip()
         ]
@@ -236,12 +269,6 @@ def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
     return selected
 
 
-def _record_refs(records: list[dict[str, Any]]) -> str:
-    if not records:
-        return "[]"
-    return "\n".join(f"  - evidence #{record['seq']}" for record in records)
-
-
 def _render_current_records(
     records: list[dict[str, Any]], *, limit: int, max_chars: int
 ) -> str:
@@ -253,6 +280,68 @@ def _render_current_records(
             f"{head_tail(record['content'], max_chars)}"
         )
     return "\n\n".join(rendered) if rendered else "[]"
+
+
+def _evidence_paths(text: str) -> set[str]:
+    paths: set[str] = set()
+    for match in _EVIDENCE_PATH_RE.findall(str(text or "")):
+        normalized = match.strip("'\"`<>[](){},:;").replace("\\", "/").lower()
+        if normalized:
+            paths.add(normalized)
+    return paths
+
+
+def _path_affinity(left: set[str], right: set[str]) -> int:
+    if not left or not right:
+        return 0
+    exact = len(left & right)
+    left_names = {path.rsplit("/", 1)[-1] for path in left}
+    right_names = {path.rsplit("/", 1)[-1] for path in right}
+    return (exact * 4) + len(left_names & right_names)
+
+
+def _select_relevant_inspections(
+    inspections: list[dict[str, Any]], context: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Prefer sources tied to the active approach or its latest outcome."""
+    target_paths: set[str] = set()
+    for record in context:
+        target_paths.update(_evidence_paths(record["content"]))
+        target_paths.update(_evidence_paths(record["scope"]))
+    if not target_paths:
+        return inspections[-2:]
+    ranked = [
+        (_path_affinity(_evidence_paths(record["content"]), target_paths), record)
+        for record in inspections
+    ]
+    relevant = [item for item in ranked if item[0] > 0]
+    relevant.sort(key=lambda item: (item[0], item[1]["seq"]), reverse=True)
+    return sorted((record for _score, record in relevant[:2]), key=lambda record: record["seq"])
+
+
+def _approach_outcome_pairs(
+    changes: list[dict[str, Any]], outcomes: list[dict[str, Any]]
+) -> str:
+    pairs: list[str] = []
+    ordered_changes = sorted(changes, key=lambda record: record["seq"])
+    ordered_outcomes = sorted(outcomes, key=lambda record: record["seq"])
+    for index, change in enumerate(ordered_changes):
+        next_change_seq = (
+            ordered_changes[index + 1]["seq"]
+            if index + 1 < len(ordered_changes)
+            else None
+        )
+        candidates = [
+            outcome
+            for outcome in ordered_outcomes
+            if outcome["seq"] > change["seq"]
+            and (next_change_seq is None or outcome["seq"] < next_change_seq)
+        ]
+        if candidates:
+            pairs.append(
+                f"  - evidence #{change['seq']} -> evidence #{candidates[-1]['seq']}"
+            )
+    return "\n".join(pairs[-2:]) if pairs else "[]"
 
 
 def _partition_failures(
@@ -288,83 +377,91 @@ def _build_packet(
     changes = _records(evidence_records, "change")
     verifications = _records(evidence_records, "verification")
     failures = _records(evidence_records, "failure")
-    open_failures, closed_failures = _partition_failures(failures, verifications)
+    open_failures, _closed_failures = _partition_failures(failures, verifications)
+    outcomes = sorted(verifications + failures, key=lambda record: record["seq"])
+    latest_change = changes[-1:] if changes else []
+    latest_outcome = outcomes[-1:] if outcomes else []
+    latest_contradiction = open_failures[-1:] if open_failures else []
+    decision_record_seqs = {
+        record["seq"]
+        for record in latest_change + latest_outcome + latest_contradiction
+    }
 
-    universal_lines = [
-        "task_contract:",
+    decision_lines = [
+        "observable_goal:",
         head_tail(task_anchor, TASK_ANCHOR_MAX_CHARS) or "  unknown",
+        "current_approach:",
+        _render_current_records(
+            latest_change, limit=1, max_chars=PACKET_CHANGE_RECORD_MAX_CHARS
+        ),
+        "latest_outcome:",
+        _render_current_records(
+            latest_outcome, limit=1, max_chars=PACKET_FAILURE_RECORD_MAX_CHARS
+        ),
+        "unresolved_contradiction:",
+        (
+            f"  evidence #{latest_contradiction[0]['seq']} remains open"
+            if latest_contradiction
+            else "[]"
+        ),
+        "recent_approach_outcome_pairs:",
+        _approach_outcome_pairs(changes, outcomes),
     ]
+
+    supporting_lines = ["contract_excerpt:"]
     rendered_sources = render_task_sources(task_sources)
     if rendered_sources:
-        universal_lines.extend(("referenced_sources:", rendered_sources))
-    universal_lines.extend(
-        (
-            "current_state:",
-            f"  latest_evidence_seq: {max((record['seq'] for record in inspections + changes + verifications + failures), default=0)}",
-            f"  change_evidence: {'present' if changes else 'none'}",
-            "verified_facts:",
-            _record_refs(verifications[-3:]),
-        )
+        supporting_lines.append(rendered_sources)
+    else:
+        supporting_lines.append("[]")
+    relevant_inspections = _select_relevant_inspections(
+        inspections, latest_change + latest_outcome + latest_contradiction
     )
-    if open_failures:
-        universal_lines.extend(("open_issues:", _record_refs(open_failures[-3:])))
-    else:
-        universal_lines.append("open_issues: []")
-    universal_lines.append("closed_hypotheses:")
-    if closed_failures:
-        universal_lines.extend(
-            f"  - evidence #{failure['seq']} closed by evidence #{verification['seq']}"
-            for failure, verification in closed_failures[-3:]
-        )
-    else:
-        universal_lines.append("[]")
-    if event_context.strip():
-        universal_lines.extend(
-            ("review_event:", head_tail(event_context, CHECKPOINT_EVENT_MAX_CHARS))
-        )
-    if completion_claim.strip():
-        universal_lines.extend(
-            ("completion_claim:", head_tail(completion_claim, STOP_ASSISTANT_MAX_CHARS))
-        )
-
-    software_lines = [
-        "relevant_sources:",
+    supporting_lines.extend((
+        "approach_relevant_source:",
         _render_current_records(
-            inspections, limit=2, max_chars=PACKET_INSPECTION_RECORD_MAX_CHARS
+            relevant_inspections,
+            limit=2,
+            max_chars=PACKET_INSPECTION_RECORD_MAX_CHARS,
         ),
-        "relevant_changes:",
+        "semantic_change:",
         _render_current_records(
-            changes, limit=2, max_chars=PACKET_CHANGE_RECORD_MAX_CHARS
+            [record for record in changes if record["seq"] not in decision_record_seqs],
+            limit=1,
+            max_chars=PACKET_CHANGE_RECORD_MAX_CHARS,
         ),
-    ]
+        "discriminating_results:",
+        _render_current_records(
+            [record for record in outcomes if record["seq"] not in decision_record_seqs],
+            limit=3,
+            max_chars=PACKET_FAILURE_RECORD_MAX_CHARS,
+        ),
+    ))
     if agentcam_evidence.strip():
-        software_lines.extend(
+        supporting_lines.extend(
             (
                 "external_runtime_evidence:",
                 head_tail(agentcam_evidence, PACKET_RUNTIME_EVIDENCE_MAX_CHARS),
             )
         )
-    software_lines.extend((
-        "verification:",
-        _render_current_records(
-            verifications, limit=3, max_chars=PACKET_VERIFICATION_RECORD_MAX_CHARS
-        ),
-        "active_failures:",
-        _render_current_records(
-            open_failures, limit=3, max_chars=PACKET_FAILURE_RECORD_MAX_CHARS
-        ),
-    ))
+    if completion_claim.strip():
+        supporting_lines.extend(
+            (
+                "completion_claim_context:",
+                head_tail(completion_claim, STOP_ASSISTANT_MAX_CHARS),
+            )
+        )
     packet = "\n\n".join(
         (
             _section(
-                "universal task state",
-                "\n".join(universal_lines),
-                UNIVERSAL_SECTION_MAX_CHARS,
+                "decision frame",
+                "\n".join(decision_lines),
+                DECISION_SECTION_MAX_CHARS,
             ),
             _section(
-                "software engineering evidence",
-                "\n".join(software_lines),
-                SOFTWARE_SECTION_MAX_CHARS,
+                "supporting evidence",
+                "\n".join(supporting_lines),
+                SUPPORTING_SECTION_MAX_CHARS,
             ),
         )
     )
