@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any, Mapping
 
 
@@ -119,6 +120,34 @@ def referenced_task_sources(task_request: str) -> tuple[str, ...]:
         seen.add(normalized)
         sources.append(source)
     return tuple(sources)
+
+
+def load_referenced_task_sources(
+    task_request: str,
+    workspace_root: str,
+) -> dict[str, str]:
+    """Read explicitly referenced relative files that are inside the workspace."""
+    loaded: dict[str, str] = {}
+    if not str(workspace_root or "").strip():
+        return loaded
+    try:
+        root = Path(workspace_root).resolve()
+    except (OSError, RuntimeError):
+        return loaded
+    for source in referenced_task_sources(task_request):
+        reference = Path(source)
+        if reference.is_absolute():
+            continue
+        try:
+            candidate = (root / reference).resolve()
+            candidate.relative_to(root)
+            content = candidate.read_text(encoding="utf-8", errors="replace")
+        except (OSError, RuntimeError, ValueError):
+            continue
+        content = head_tail(content, TASK_SOURCE_MAX_CHARS)
+        if content:
+            loaded[source] = content
+    return loaded
 
 
 def capture_referenced_task_source(

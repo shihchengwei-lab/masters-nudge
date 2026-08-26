@@ -361,6 +361,10 @@ def start_turn(
             transcript_offset = Path(transcript_path).stat().st_size
         except OSError:
             transcript_offset = 0
+    task_sources = source_context.load_referenced_task_sources(
+        prompt,
+        session.repo_root or session.cwd,
+    )
     _atomic_write(
         state_path(data_dir, session, "turn"),
         {
@@ -373,7 +377,7 @@ def start_turn(
             "task_anchor": source_context.head_tail(
                 prompt, source_context.TASK_ANCHOR_MAX_CHARS
             ),
-            "task_sources": {},
+            "task_sources": task_sources,
             "evidence_seq": 0,
             "evidence_records": [],
             "transcript_offset": transcript_offset,

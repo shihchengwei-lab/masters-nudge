@@ -247,6 +247,42 @@ class TestSourceContext(unittest.TestCase):
         self.assertIn("PROMPT_TAIL", state["task_anchor"])
         self.assertEqual(state["transcript_offset"], expected_offset)
 
+    def test_turn_start_loads_an_explicit_referenced_contract_file(self):
+        from masters_nudge import storage
+        from masters_nudge.contracts import SessionRef
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            (workspace / "ISSUE.md").write_text(
+                "# Expected behavior\nUse the docstring instead of alias text.\n",
+                encoding="utf-8",
+            )
+            session = SessionRef(
+                "codex_cli",
+                "contract-source",
+                cwd=str(workspace),
+                repo_root=str(workspace),
+            )
+
+            storage.start_turn(
+                root / "data",
+                session,
+                "Read `ISSUE.md` and resolve it completely.",
+            )
+            state = storage.load_turn_state(root / "data", session)
+
+        self.assertEqual(
+            state["task_sources"],
+            {
+                "ISSUE.md": (
+                    "# Expected behavior\n"
+                    "Use the docstring instead of alias text."
+                )
+            },
+        )
+
     def test_layered_evidence_uses_one_cross_section_chronology(self):
         from masters_nudge import storage
         from masters_nudge.contracts import SessionRef
