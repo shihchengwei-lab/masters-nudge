@@ -8,7 +8,7 @@ Masters’ Nudge 會在少數工作檢查點與回合結束時，替 Claude Code
 
 Masters’ Nudge 把 hooks、skills、reviewer prompts、六種軟體工程濾鏡，以及選用的浮動視窗包成一個 plugin。它關注未驗證假設、範圍膨脹、回饋不足、脆弱的事件順序，以及證據尚未支持的完成宣告。
 
-Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 必須留在既有任務契約內、指出一個有限檢查、符合結構化輸出契約且最長 52 個字；不合格輸出會被拒絕，不會由程式改寫。相同可觀察範圍第二次失敗、長期目標明確轉成 `complete` 或 `blocked`，以及回合結束，都可能觸發 reviewer。一般變更、成功的專科證據、大型 diff 與單次失敗只會留下證據，不會打斷主要 agent。
+Nudge 不是 code review、命令，也不能證明另一個模型比較正確。Finding 必須留在既有任務契約內、指出一個有限檢查、符合結構化輸出契約且最長 52 個字元；不合格輸出會被拒絕，不會由程式改寫。相同可觀察範圍第二次失敗、長期目標明確轉成 `complete` 或 `blocked`，以及回合結束，都可能觸發 reviewer。一般變更、成功的專科證據、大型 diff 與單次失敗只會留下證據，不會打斷主要 agent。
 
 符合條件的 checkpoint 與 Stop review 會同步執行：host 等 reviewer 回覆，並在同一回合送出 finding。Provider 工作最多 90 秒，外層 host hook 預留 120 秒；符合條件的事件可能因此增加等待時間。錯誤或逾時不會產生 Nudge，也不會自動重試 Provider 或切換 provider。
 
@@ -97,10 +97,9 @@ Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAG
 - 最新使用者任務要求；
 - 從任務中明示的本機來源讀到的內容；
 - 最新且受長度限制的實質變更、驗證與失敗語意結果；
-- Stop 邊界的當下最終宣告；
-- 最多三則只用於避免重複的已注入 Nudge 文字。
+- Stop 邊界的當下最終宣告。
 
-Reviewer prompt 與所選濾鏡會作為指令送出，不屬於證據封包。
+最多三則已注入 Nudge 會在證據封包前作為獨立排除集合送出，不是證據、建議或範例。Reviewer prompt 與所選濾鏡也屬於指令，不屬於證據封包。
 
 一般搜尋／瀏覽輸出、未被任務明示的一般原始碼檢查、外部報告、工具名稱與命令、主模型進行中的說明或反應，以及完整 transcript，都不會放進 reviewer 封包。Automatic 使用的隱藏焦點標記只用於選擇 prompt，進入封包前會移除。
 

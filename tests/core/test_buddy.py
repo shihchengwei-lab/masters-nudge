@@ -194,8 +194,9 @@ class TestPersonaPromptSelection(unittest.TestCase):
 
         self.assertIn("Use only the supplied packet", base_prompt)
         self.assertIn("original task", base_prompt)
-        self.assertIn("current\nobservable result", base_prompt)
-        self.assertIn("recent injected Nudges", base_prompt)
+        self.assertIn("current observable result", base_prompt)
+        self.assertIn("Recent injected Nudges", base_prompt)
+        self.assertIn("a separate exclusion set", base_prompt)
         self.assertIn("[contract]", packet)
         self.assertIn("[current result]", packet)
         self.assertNotIn("runtime_output:", packet)

@@ -66,6 +66,15 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertIn("ask one concrete question", prompt)
         self.assertIn("at most 52", prompt)
 
+    def test_prompt_treats_recent_nudges_as_exclusions_not_examples(self):
+        prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn("a separate exclusion set", prompt)
+        self.assertIn("not evidence, suggestions, or examples", prompt)
+        self.assertIn("Do not repeat, paraphrase,", prompt)
+        self.assertIn("continue, or imitate", prompt)
+        self.assertIn("return `no_finding`", prompt)
+
     def test_prompt_entry_has_no_legacy_queue_wrapper(self):
         self.assertFalse(hasattr(inject, "build_context_text"))
         self.assertFalse(hasattr(storage, "latest_pending"))
@@ -154,9 +163,13 @@ class SoftwareColdStartTests(unittest.TestCase):
             )
 
         self.assertIn("CURRENT SOFTWARE STATE", seen["input"])
-        self.assertIn("[recent injected nudges — deduplication only]", seen["input"])
+        self.assertIn("[recent injected nudges — exclusions, not evidence]", seen["input"])
         self.assertIn("舊問題不應進入下一次 Provider 輸入？", seen["input"])
-        self.assertIn("只用來避免重複", seen["input"])
+        self.assertIn("不是證據、建議或範例", seen["input"])
+        self.assertLess(
+            seen["input"].index("舊問題不應進入下一次 Provider 輸入？"),
+            seen["input"].index("CURRENT SOFTWARE STATE"),
+        )
 
     def test_checkpoint_packet_does_not_accept_previous_findings(self):
         packet = source_context.build_checkpoint_packet(
@@ -571,7 +584,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 self.assertNotIn("source-marker", ordered)
         self.assertEqual(1, len(set(ordered_packets.values())))
 
-    def test_lens_focus_is_the_last_system_instruction_before_evidence(self):
+    def test_novelty_and_output_contract_follow_lens_focus(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             seen = {}
@@ -601,16 +614,16 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             seen["system_prompt"].rfind("# LENS FOCUS"),
             seen["system_prompt"].rfind("# CURRENT STATE CHECKPOINT"),
         )
+        self.assertGreater(
+            seen["system_prompt"].rfind("# NUDGE"),
+            seen["system_prompt"].rfind("# LENS FOCUS"),
+        )
         final_focus = seen["system_prompt"].split("# LENS FOCUS", 1)[1]
         self.assertIn(
             "Trace the direct control flow, ownership, and necessary complexity.",
             final_focus,
         )
-        self.assertTrue(
-            seen["system_prompt"].rstrip().endswith(
-                "Trace the direct control flow, ownership, and necessary complexity."
-            )
-        )
+        self.assertTrue(seen["system_prompt"].rstrip().endswith("No preamble or labels."))
         self.assertNotIn(
             "When several candidates pass the finding gate",
             seen["system_prompt"],

@@ -97,10 +97,9 @@ Depending on the event, the packet can contain:
 - the latest user task request;
 - content read from local sources explicitly named in that request;
 - the latest bounded semantic results from material changes, verification, and failures;
-- the current final claim at a Stop boundary;
-- up to three previously injected Nudge texts for duplicate avoidance only.
+- the current final claim at a Stop boundary.
 
-The reviewer prompt and selected lens are sent as instructions, not evidence.
+Up to three previously injected Nudge texts are sent before the packet as a separate exclusion set. They are not evidence, suggestions, or examples. The reviewer prompt and selected lens are also instructions, not evidence.
 
 Routine navigation output, generic source inspection, external reports, tool names and commands, the main model's running explanation or reaction, and full transcripts are not included in the reviewer packet. Automatic mode's hidden focus marker is used only to select the prompt and is stripped before packet construction.
 

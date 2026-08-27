@@ -13,7 +13,6 @@ from .contracts import ReviewOutcome, ReviewRequest
 from .prompting import (
     build_review_input,
     build_system_prompt,
-    lens_focus_prompt,
 )
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
@@ -84,10 +83,20 @@ class ReviewCore:
             "effective_lens": route.effective_lens,
             "route_source": route.source,
         }
+        timing_prompt = ""
+        if request.kind == "checkpoint":
+            timing_prompt = CHECKPOINT_PROMPT
+        elif request.kind == "strategy":
+            timing_prompt = STRATEGY_PROMPT
+        elif request.kind == "goal_transition":
+            timing_prompt = GOAL_TRANSITION_PROMPT
+        elif request.kind == "stop":
+            timing_prompt = STOP_PROMPT
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
             route=route,
+            timing_prompt=timing_prompt,
             log_error=self.log_error,
         )
         if not system_prompt:
@@ -97,16 +106,6 @@ class ReviewCore:
                 provider=provider,
                 model=model,
             )
-        if request.kind == "checkpoint":
-            system_prompt += CHECKPOINT_PROMPT
-        elif request.kind == "strategy":
-            system_prompt += STRATEGY_PROMPT
-        elif request.kind == "goal_transition":
-            system_prompt += GOAL_TRANSITION_PROMPT
-        elif request.kind == "stop":
-            system_prompt += STOP_PROMPT
-        system_prompt += lens_focus_prompt(route.effective_lens)
-
         review_input = build_review_input(
             request.source_packet,
             storage.read_recent_injected_findings(

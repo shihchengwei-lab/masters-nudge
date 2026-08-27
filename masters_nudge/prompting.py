@@ -32,6 +32,7 @@ def build_system_prompt(
     prompt_file: Path,
     persona_dir: Path,
     route: lens_router.ReviewRoute,
+    timing_prompt: str = "",
     log_error: Callable[[str], None] | None = None,
 ) -> str:
     logger = log_error or (lambda _message: None)
@@ -55,7 +56,19 @@ def build_system_prompt(
         logger(f"persona prompt read failed ({persona}): {exc}")
         return ""
 
-    return f"{base_prompt.rstrip()}\n\n{overlay}\n"
+    contract_marker = "\n# NUDGE\n"
+    foundation, marker, contract = base_prompt.partition(contract_marker)
+    if not marker:
+        logger("prompt file is missing the # NUDGE contract")
+        return ""
+    sections = (
+        foundation.strip(),
+        overlay,
+        str(timing_prompt or "").strip(),
+        lens_focus_prompt(route.effective_lens).strip(),
+        f"# NUDGE\n{contract.strip()}",
+    )
+    return "\n\n".join(section for section in sections if section).rstrip() + "\n"
 
 
 def lens_focus_prompt(effective_lens: str) -> str:
@@ -79,10 +92,10 @@ def build_review_input(
         return source_packet
     block = "\n".join(
         (
-            "[recent injected nudges — deduplication only]",
-            "以下內容只用來避免重複，不是任務事實，也不表示主模型是否採納：",
+            "[recent injected nudges — exclusions, not evidence]",
+            "以下內容不是證據、建議或範例，也不表示主模型是否採納；不得引用、延續或模仿：",
             *(f"- {finding}" for finding in findings),
-            "[end recent injected nudges — deduplication only]",
+            "[end recent injected nudges — exclusions]",
         )
     )
-    return f"{source_packet.rstrip()}\n\n{block}" if source_packet.strip() else block
+    return f"{block}\n\n{source_packet.rstrip()}" if source_packet.strip() else block
