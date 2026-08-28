@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "preflight_complete_before_arm_outcomes",
+  "created_at": "2026-08-29T07:35:59+08:00",
+  "purpose": "Fresh paired 10-task A/B of no Nudge versus automatic taste-v3 Masters' Nudge; descriptive mechanism evidence, not an efficacy or capability claim",
+  "interpretation_guardrail": "Passing SWE-bench is not the target construct. Primary interpretation concerns whether B changes engineering judgment, prioritization, and implementation shape without adding review-style friction; task pass/fail is retained only as a safety and gross-regression check.",
+  "dataset": {
+    "name": "princeton-nlp/SWE-bench_Verified",
+    "source": "https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified/tree/main/data",
+    "selection_seed": "taste-v3-fresh-ab-2026-08-29",
+    "selection_algorithm": "Exclude every instance used by earlier smoke/pilot runs; within each repository sort eligible instance_id by SHA-256(seed + '|' + instance_id), take fixed strata Django=3, pytest=2, Sphinx=2, SymPy=3; globally order by SHA-256(seed + '|global|' + instance_id).",
+    "arm_order_algorithm": "SHA-256(seed + '|order|' + instance_id) parity; even=A_then_B, odd=B_then_A.",
+    "eligible_repositories": [
+      "django/django",
+      "pytest-dev/pytest",
+      "sphinx-doc/sphinx",
+      "sympy/sympy"
+    ],
+    "excluded_previously_used_instances": [
+      "django__django-16631",
+      "pytest-dev__pytest-6197",
+      "sphinx-doc__sphinx-9229",
+      "sympy__sympy-18199",
+      "pytest-dev__pytest-7432",
+      "sympy__sympy-21379",
+      "django__django-14434",
+      "django__django-12209",
+      "sphinx-doc__sphinx-8265",
+      "django__django-13821",
+      "sympy__sympy-24539",
+      "pytest-dev__pytest-10051",
+      "django__django-13513",
+      "sphinx-doc__sphinx-8056"
+    ],
+    "sampling_note": "Fresh Windows-native stratified convenience sample; no selected task was used to design taste-v3 or in the prior A/B runs. It is not representative of all SWE-bench Verified tasks."
+  },
+  "apparatus": {
+    "main_model": "gpt-5.6-sol",
+    "reasoning_effort": "medium",
+    "arm_a": "isolated CODEX_HOME with no hooks",
+    "arm_b": "isolated CODEX_HOME with frozen taste-v3 Masters' Nudge hooks",
+    "reviewer_provider": "openai",
+    "reviewer_model": "gpt-5.6-sol",
+    "nudge_stage": "automatic",
+    "masters_nudge_head": "7989014c82c82879bb2ce25ee86ba77e2941778c",
+    "frozen_plugin_tree_sha256": "3b33c424c520bf4a68ba222ceba8abec2743e258b27900b3a05a49b8cb4f96dd",
+    "frozen_plugin_tree_hash_method": "SHA-256 of UTF-8 lines sorted by absolute file path, each line relative/path + TAB + lowercase SHA-256(file bytes) + LF; 46 files",
+    "source_preflight": "316 tests passed, 2 skipped; plugin runtime synchronized; contract JSON and harness syntax validated",
+    "run_timeout_seconds": 1800,
+    "test_timeout_seconds": 900,
+    "network_policy": "Prompt forbids external task research; both arms have identical process permissions."
+  },
+  "outcomes": {
+    "primary_construct": "Paired blinded qualitative coding of observable engineering-taste deltas: problem framing, invariant selection, complexity rejection, implementation shape, and decisiveness.",
+    "primary_rule": "Count only concrete differences supported by the two model traces or product patches; persona-name mentions and generic advice are not evidence.",
+    "review_friction_check": "Record questions, hedges, stop/approval language, duplicated review commentary, and advice that does not alter the implementation trajectory.",
+    "safety_outcomes": [
+      "official targeted tests pass/fail",
+      "empty or malformed product patch",
+      "runtime/setup failure"
+    ],
+    "mechanism_outcomes": [
+      "B lens distribution",
+      "B finding count",
+      "B injected receipt count",
+      "B response observation count",
+      "wall time and token overhead"
+    ],
+    "analysis_timing": "The qualitative rubric may be operationalized after traces exist, but must be frozen before arm labels are revealed to the rater; pass/fail is never treated as proof of taste injection."
+  },
+  "scoring": {
+    "gold_patch_withheld_from_main_model": true,
+    "test_patch_withheld_from_main_model": true,
+    "evaluator": "Fresh base checkout, model product-code diff only, then official test patch",
+    "test_file_policy": "Run every test file or Django test label modified by the official test patch",
+    "pass_rule": "Evaluator command exits 0 after the test patch is applied",
+    "inference": "Descriptive paired evidence only. n=10 can expose mechanism failures and large regressions, but cannot establish a stable effect size."
+  },
+  "exclusion_and_replacement": {
+    "pre_arm_preflight": "Apply official test patch to the base checkout and require a completed, non-passing native test command.",
+    "replacement": "Before any arm starts, replace an infrastructure-excluded task only with the next same-repository item in the fixed-seed rank; record an explicit contract amendment. Never inspect model outcomes while replacing.",
+    "post_arm": "Once either arm starts, retain the task in the denominator. Runtime/setup failures are reported separately and are not silently replaced.",
+    "no_rerun_rule": "Do not rerun a completed model arm for a different answer. Evaluator-only infrastructure errors may be corrected against the unchanged model diff."
+  },
+  "reserve_rank_by_repo": {
+    "django/django": ["django__django-16032", "django__django-16938", "django__django-11333", "django__django-13794", "django__django-11400"],
+    "pytest-dev/pytest": ["pytest-dev__pytest-7236", "pytest-dev__pytest-7324", "pytest-dev__pytest-5631", "pytest-dev__pytest-5262", "pytest-dev__pytest-8399", "pytest-dev__pytest-5787"],
+    "sphinx-doc/sphinx": ["sphinx-doc__sphinx-9320", "sphinx-doc__sphinx-9258", "sphinx-doc__sphinx-7910", "sphinx-doc__sphinx-8595", "sphinx-doc__sphinx-8548", "sphinx-doc__sphinx-7462"],
+    "sympy/sympy": ["sympy__sympy-15809", "sympy__sympy-16886", "sympy__sympy-20438", "sympy__sympy-18189", "sympy__sympy-15599"]
+  },
+  "provisional_tasks": [
+    {"task_key": "t01", "instance_id": "sympy__sympy-18763", "repo": "sympy/sympy", "base_commit": "70381f282f2d9d039da860e391fe51649df2779d", "order": "B_then_A"},
+    {"task_key": "t02", "instance_id": "django__django-15104", "repo": "django/django", "base_commit": "a7e7043c8746933dafce652507d3b821801cdc7d", "order": "A_then_B"},
+    {"task_key": "t03", "instance_id": "sympy__sympy-12489", "repo": "sympy/sympy", "base_commit": "aa9780761ad8c3c0f68beeef3a0ce5caac9e100b", "order": "B_then_A"},
+    {"task_key": "t04", "instance_id": "pytest-dev__pytest-7571", "repo": "pytest-dev/pytest", "base_commit": "422685d0bdc110547535036c1ff398b5e1c44145", "order": "B_then_A"},
+    {"task_key": "t05", "instance_id": "django__django-11477", "repo": "django/django", "base_commit": "e28671187903e6aca2428374fdd504fca3032aee", "order": "B_then_A"},
+    {"task_key": "t06", "instance_id": "pytest-dev__pytest-7982", "repo": "pytest-dev/pytest", "base_commit": "a7e38c5c61928033a2dc1915cbee8caa8544a4d0", "order": "B_then_A"},
+    {"task_key": "t07", "instance_id": "django__django-13741", "repo": "django/django", "base_commit": "d746f28949c009251a8741ba03d156964050717f", "order": "B_then_A"},
+    {"task_key": "t08", "instance_id": "sphinx-doc__sphinx-11445", "repo": "sphinx-doc/sphinx", "base_commit": "71db08c05197545944949d5aa76cd340e7143627", "order": "A_then_B"},
+    {"task_key": "t09", "instance_id": "sphinx-doc__sphinx-9230", "repo": "sphinx-doc/sphinx", "base_commit": "567ff22716ac258b9edd2c1711d766b440ac0b11", "order": "B_then_A"},
+    {"task_key": "t10", "instance_id": "sympy__sympy-20154", "repo": "sympy/sympy", "base_commit": "bdb49c4abfb35554a3c8ce761696ffff3bb837fe", "order": "A_then_B"}
+  ]
+}
