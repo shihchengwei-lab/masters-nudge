@@ -26,6 +26,8 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
                 "Review · 簡化與責任歸屬",
+                "Reliability · 狀態、順序與失敗",
+                "Performance · 執行路徑與效能",
             ],
             buddy_window.selector_options(),
         )
@@ -45,9 +47,19 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
     def test_stage_environment_is_the_only_public_override(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
-            selected = persona_config.resolve_stage(
-                base, environ={"MASTERS_NUDGE_STAGE": "review"}
-            )
+            selected = {
+                stage: persona_config.resolve_stage(
+                    base, environ={"MASTERS_NUDGE_STAGE": stage}
+                )
+                for stage in (
+                    "design",
+                    "build",
+                    "evolve",
+                    "review",
+                    "reliability",
+                    "performance",
+                )
+            }
             legacy = persona_config.resolve_stage(
                 base, environ={"MASTERS_NUDGE_PERSONA": "linus"}
             )
@@ -55,9 +67,21 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
                 base, environ={"MASTERS_NUDGE_STAGE": "linus"}
             )
 
-        self.assertEqual(("review", "linus", "environment"), (
-            selected.stage, selected.persona, selected.source
-        ))
+        expected = {
+            "design": "jeff",
+            "build": "beck",
+            "evolve": "fowler",
+            "review": "linus",
+            "reliability": "lamport",
+            "performance": "carmack",
+        }
+        for stage, persona in expected.items():
+            with self.subTest(stage=stage):
+                result = selected[stage]
+                self.assertEqual(
+                    (stage, persona, "environment"),
+                    (result.stage, result.persona, result.source),
+                )
         self.assertEqual(("automatic", "", "default"), (
             legacy.stage, legacy.persona, legacy.source
         ))

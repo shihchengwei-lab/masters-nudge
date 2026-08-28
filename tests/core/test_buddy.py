@@ -916,6 +916,8 @@ class TestLensRouter(unittest.TestCase):
             "build": "beck",
             "evolve": "fowler",
             "review": "linus",
+            "reliability": "lamport",
+            "performance": "carmack",
         }
         for stage, lens in expected.items():
             with self.subTest(stage=stage):
@@ -1164,7 +1166,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         window.bubble_label.config.assert_called_with(text=timeout_message)
         window.ts_label.config.assert_called_with(text="10:01:00")
 
-    def test_selector_offers_automatic_then_four_manual_stages(self):
+    def test_selector_offers_automatic_then_six_manual_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
@@ -1176,11 +1178,21 @@ class TestFloatingWindowLayout(unittest.TestCase):
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
                 "Review · 簡化與責任歸屬",
+                "Reliability · 狀態、順序與失敗",
+                "Performance · 執行路徑與效能",
             ],
         )
         for label, stage in zip(
             options,
-            ("automatic", "design", "build", "evolve", "review"),
+            (
+                "automatic",
+                "design",
+                "build",
+                "evolve",
+                "review",
+                "reliability",
+                "performance",
+            ),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
 

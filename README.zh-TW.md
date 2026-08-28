@@ -79,10 +79,10 @@ Hooks 會自動執行。以下說法會啟用 plugin 內建 skills：
 | `MASTERS_NUDGE_TIMEOUT` | `90` | 回合結束 reviewer 逾時；超過 90 會被限制為 90 |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 途中 reviewer 逾時；超過 90 會被限制為 90 |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
-| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve` 或 `review` |
+| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve`、`review`、`reliability` 或 `performance` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗 spritesheet |
 
-Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。未指定工程階段時使用 Automatic：coding agent 只用隱藏標記回報目前工作焦點，Hook 仍自行判斷檢查點並強制呼叫 Reviewer。手動選擇 `design`、`build`、`evolve` 或 `review` 會固定濾鏡，不交由 coding agent 選擇。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
+Provider 環境變數優先於持久化的 `reviewer.json`；`MASTERS_NUDGE_STAGE` 優先於 `config.json` 的工程階段。未指定工程階段時使用 Automatic：coding agent 只用隱藏標記回報目前工作焦點，Hook 仍自行判斷檢查點並強制呼叫 Reviewer。手動選擇 `design`、`build`、`evolve`、`review`、`reliability` 或 `performance` 會固定濾鏡，不交由 coding agent 選擇。若 reviewer 設定損壞，審查會停止並留下診斷，不會靜默切換 provider。
 
 浮動視窗與公開設定只呈現工程階段和實際關注點，不顯示作為 reviewer 內部注意力提示的人物。在 Automatic 模式下，coding agent 可回報 Design、Build、Evolve、Review、Reliability 或 Performance 焦點；這份回報只選擇一份 reviewer prompt，不會觸發、延後或取消 review。缺少回報時，工作中 review 使用 Build，Stop review 使用 Review。
 

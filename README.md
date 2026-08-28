@@ -79,10 +79,10 @@ Common environment variables:
 | `MASTERS_NUDGE_TIMEOUT` | `90` | End-of-turn reviewer timeout; values above 90 are clamped |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Mid-turn reviewer timeout; values above 90 are clamped |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs, state, receipts, telemetry, and reviewer config |
-| `MASTERS_NUDGE_STAGE` | Unset | Select `automatic`, `design`, `build`, `evolve`, or `review` |
+| `MASTERS_NUDGE_STAGE` | Unset | Select `automatic`, `design`, `build`, `evolve`, `review`, `reliability`, or `performance` |
 | `MASTERS_NUDGE_SPRITE_PATH` | Bundled sprite | Optional floating-window spritesheet |
 
-Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. With no manual stage, Automatic mode is used: the coding agent only reports its current work focus in a hidden marker, while the Hook still detects checkpoints and forces the Reviewer call. Selecting `design`, `build`, `evolve`, or `review` pins the lens instead of delegating that selection to the coding agent. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
+Provider environment variables override the persistent `reviewer.json` setting; `MASTERS_NUDGE_STAGE` overrides the lifecycle stage in `config.json`. With no manual stage, Automatic mode is used: the coding agent only reports its current work focus in a hidden marker, while the Hook still detects checkpoints and forces the Reviewer call. Selecting `design`, `build`, `evolve`, `review`, `reliability`, or `performance` pins the lens instead of delegating that selection to the coding agent. A malformed reviewer config stops the review and writes a diagnostic; it does not silently switch providers.
 
 The floating window and public configuration describe engineering stages and practical focus, not the people used as private reviewer attention cues. In Automatic mode, the coding agent may report Design, Build, Evolve, Review, Reliability, or Performance. This report selects one reviewer prompt; it cannot trigger, delay, or cancel a review. A missing report falls back to Build during work and Review at Stop.
 
