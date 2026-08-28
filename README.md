@@ -151,6 +151,8 @@ This repository currently implements the software-engineering version. Other Len
 
 The current output contract compresses a semantic anchor into one short question.
 
+To the main agent, the Nudge is one short, evidence-grounded second opinion.
+
 The Reviewer returns one of two outcomes.
 
 ### `finding`
@@ -486,7 +488,7 @@ The snapshot comes from commit `ac090a9f34ff76b826ceedb10361f7d7a3bd4ed3`. It re
 
 Four fixed-order tasks provide descriptive behavioral material. They are insufficient to establish a stable effect, demonstrate generalization, or attribute the changed task result to the Nudge.
 
-Injected receipts and subsequent response observations can confirm delivery order. By themselves, they cannot prove that a Nudge caused the later action.
+Injected receipts and later response observations establish delivery order only. They cannot prove that a Nudge caused the later action.
 
 For the full protocol, results, exclusions, and claim boundaries, see:
 

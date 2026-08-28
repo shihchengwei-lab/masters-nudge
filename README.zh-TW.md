@@ -151,6 +151,8 @@ Lens 定義 Nudge provider 應該注意什麼。
 
 目前的輸出契約把語義錨點壓縮成一則短問題。
 
+對主要 agent 而言，Nudge 是一則簡短、以證據為錨點的獨立第二意見。
+
 Reviewer 每次回傳兩種結果之一。
 
 ### `finding`
@@ -486,7 +488,7 @@ Repository 保留了一次 prerelease A/B snapshot：
 
 四個固定順序 task 只能提供描述性的行為材料。目前材料不足以建立穩定效果、證明泛化，或把其中一個 task 的結果歸因於 Nudge。
 
-Injected receipts 與後續 response observations 可以確認投遞順序，不能單獨證明 Nudge 造成後續行動。
+Injected receipts 與後續 response observations 只能證明投遞順序。它們不能單獨證明 Nudge 造成後續行動。
 
 完整 protocol、結果、排除項目與宣告範圍：
 
