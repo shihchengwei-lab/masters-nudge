@@ -60,12 +60,12 @@ STAGE_SPECS = {
     "build": StageSpec("Build", "小步驟、測試與回饋", "beck"),
     "evolve": StageSpec("Evolve", "重構與變更成本", "fowler"),
     "review": StageSpec("Review", "簡化與責任歸屬", "linus"),
+    "reliability": StageSpec("Reliability", "狀態、順序與失敗", "lamport"),
+    "performance": StageSpec("Performance", "執行路徑與效能", "carmack"),
 }
 PERSONA_NAMES = dict(LENS_PERSONAS)
 PERSONA_PUBLIC_LABELS = {
-    "lamport": "Reliability · 狀態、順序與失敗",
-    "carmack": "Performance · 執行路徑與效能",
-    **{spec.persona: spec.label for spec in STAGE_SPECS.values()},
+    spec.persona: spec.label for spec in STAGE_SPECS.values()
 }
 
 

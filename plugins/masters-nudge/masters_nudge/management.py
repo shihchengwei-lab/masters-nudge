@@ -33,13 +33,22 @@ LEGACY_PERSONA_STAGES = {
     "beck": "build",
     "fowler": "evolve",
     "linus": "review",
+    "lamport": "reliability",
+    "carmack": "performance",
 }
-SPECIALIST_PERSONAS = {"lamport", "carmack"}
 
 
 class _SourceChangedError(RuntimeError):
     pass
-STAGES = {"automatic", "design", "build", "evolve", "review"}
+STAGES = {
+    "automatic",
+    "design",
+    "build",
+    "evolve",
+    "review",
+    "reliability",
+    "performance",
+}
 LEGACY_ENVIRONMENT_MAPPINGS = {
     "BUDDY_ACTIVE": "MASTERS_NUDGE_ACTIVE",
     "BUDDY_CHECKPOINT_TIMEOUT": "MASTERS_NUDGE_CHECKPOINT_TIMEOUT",
@@ -395,12 +404,6 @@ def inspect_legacy_lifecycle(environment: Mapping[str, str]) -> dict:
         )
         return result
     result["persona"] = persona
-    if persona in SPECIALIST_PERSONAS:
-        result.update(
-            status="manual_required",
-            error=f"{persona} has no lossless lifecycle-stage mapping",
-        )
-        return result
     stage = LEGACY_PERSONA_STAGES.get(persona)
     if not stage:
         result.update(
@@ -543,7 +546,7 @@ def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str,
                 {
                     "legacy": legacy,
                     "replacement": "MASTERS_NUDGE_STAGE",
-                    "note": "choose design|build|evolve|review, or automatic; do not copy the persona value",
+                    "note": "choose design|build|evolve|review|reliability|performance, or automatic; do not copy the persona value",
                 }
             )
     return sorted(mappings, key=lambda item: item["legacy"])

@@ -850,6 +850,23 @@ class TestPersonaConfig(unittest.TestCase):
         )
         self.assertEqual(saved, {"stage": "review"})
 
+    def test_save_and_load_reliability_and_performance_stages(self):
+        for stage, lens in (
+            ("reliability", "lamport"),
+            ("performance", "carmack"),
+        ):
+            with self.subTest(stage=stage):
+                self.config.save_stage(self.tmpdir, stage)
+                selection = self.config.resolve_stage(self.tmpdir, environ={})
+                saved = json.loads(
+                    (self.tmpdir / "config.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual(
+                    (selection.stage, selection.persona, selection.source),
+                    (stage, lens, "config"),
+                )
+                self.assertEqual(saved, {"stage": stage})
+
     def test_removed_general_stage_config_falls_back_to_automatic(self):
         (self.tmpdir / "config.json").write_text(
             json.dumps({"stage": "general"}), encoding="utf-8"
@@ -1164,7 +1181,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         window.bubble_label.config.assert_called_with(text=timeout_message)
         window.ts_label.config.assert_called_with(text="10:01:00")
 
-    def test_selector_offers_automatic_then_four_manual_stages(self):
+    def test_selector_offers_automatic_then_six_manual_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
@@ -1176,11 +1193,21 @@ class TestFloatingWindowLayout(unittest.TestCase):
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
                 "Review · 簡化與責任歸屬",
+                "Reliability · 狀態、順序與失敗",
+                "Performance · 執行路徑與效能",
             ],
         )
         for label, stage in zip(
             options,
-            ("automatic", "design", "build", "evolve", "review"),
+            (
+                "automatic",
+                "design",
+                "build",
+                "evolve",
+                "review",
+                "reliability",
+                "performance",
+            ),
         ):
             self.assertEqual(buddy_window.SELECTOR_STAGES[label], stage)
 

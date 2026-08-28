@@ -881,8 +881,11 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertEqual(repeated["logs"]["items"][0]["status"], "already_copied")
             self.assertFalse(repeated["unsafe"])
 
-    def test_migrate_requires_manual_choice_for_specialist_persona(self):
-        for persona in ("lamport", "carmack"):
+    def test_migrate_maps_specialist_persona_to_public_stage(self):
+        for persona, stage in (
+            ("lamport", "reliability"),
+            ("carmack", "performance"),
+        ):
             with self.subTest(persona=persona), tempfile.TemporaryDirectory() as raw:
                 legacy = Path(raw) / ".claude" / "buddy"
                 legacy.mkdir(parents=True)
@@ -896,10 +899,12 @@ class LegacyMigrationTests(unittest.TestCase):
                     environ={"HOME": raw, "USERPROFILE": raw},
                 )
 
-                self.assertTrue(result["manual_required"])
-                self.assertEqual(result["lifecycle"]["status"], "manual_required")
-                self.assertFalse(
-                    (Path(raw) / ".masters-nudge" / "data" / "config.json").exists()
+                config = Path(raw) / ".masters-nudge" / "data" / "config.json"
+                self.assertFalse(result["manual_required"])
+                self.assertEqual(result["lifecycle"]["status"], "migrated")
+                self.assertEqual(
+                    json.loads(config.read_text(encoding="utf-8")),
+                    {"stage": stage},
                 )
 
     def test_migrate_converts_in_place_legacy_config_with_backup(self):
@@ -1019,7 +1024,9 @@ class LegacyMigrationTests(unittest.TestCase):
         [mapping] = result["environment"]
         self.assertEqual(mapping["legacy"], "BUDDY_PERSONA")
         self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
-        self.assertIn("design|build|evolve|review", mapping["note"])
+        self.assertIn(
+            "design|build|evolve|review|reliability|performance", mapping["note"]
+        )
         self.assertTrue(result["manual_required"])
 
     def test_migrate_reports_removed_masters_nudge_persona_override(self):
@@ -1036,7 +1043,9 @@ class LegacyMigrationTests(unittest.TestCase):
         [mapping] = result["environment"]
         self.assertEqual(mapping["legacy"], "MASTERS_NUDGE_PERSONA")
         self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
-        self.assertIn("design|build|evolve|review", mapping["note"])
+        self.assertIn(
+            "design|build|evolve|review|reliability|performance", mapping["note"]
+        )
         self.assertTrue(result["manual_required"])
 
 

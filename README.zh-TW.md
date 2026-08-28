@@ -284,7 +284,7 @@ Repository 目前提供六種工程 Lens：
 
 Automatic 模式會根據主要 agent 回報的當下工作焦點選擇 Lens。這份焦點回報只負責選擇 reviewer prompt；是否進行 review 仍由 Hook 與 checkpoint policy 決定。
 
-手動設定可以固定使用 Design、Build、Evolve 或 Review Lens。
+手動設定可以固定使用六種 Lens 中的任一種：Design、Build、Evolve、Review、Reliability 或 Performance。
 
 ---
 
@@ -415,7 +415,7 @@ Hooks 會自動執行，不需要在每個 Prompt 中手動呼叫 Masters’ Nud
 | `MASTERS_NUDGE_TIMEOUT` | `90` | 回合結束時的 Reviewer 逾時秒數 |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 工作途中的 Reviewer 逾時秒數 |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
-| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve` 或 `review` |
+| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve`、`review`、`reliability` 或 `performance` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗的 spritesheet |
 
 Provider 環境變數優先於 `reviewer.json` 中保存的設定。

@@ -284,7 +284,8 @@ The repository currently provides six engineering Lenses:
 
 Automatic mode selects a Lens from the main agent’s reported work focus. This focus report only selects the reviewer prompt; the Hook and checkpoint policy still decide whether a review runs.
 
-Manual configuration can pin the Design, Build, Evolve, or Review Lens.
+Manual configuration can pin any of the six Lenses: Design, Build, Evolve,
+Review, Reliability, or Performance.
 
 ---
 
@@ -415,7 +416,7 @@ Common environment variables:
 | `MASTERS_NUDGE_TIMEOUT` | `90` | Reviewer timeout at the end of a turn, in seconds |
 | `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Reviewer timeout during the work, in seconds |
 | `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs, state, receipts, telemetry, and Reviewer configuration |
-| `MASTERS_NUDGE_STAGE` | unset | Select `automatic`, `design`, `build`, `evolve`, or `review` |
+| `MASTERS_NUDGE_STAGE` | unset | Select `automatic`, `design`, `build`, `evolve`, `review`, `reliability`, or `performance` |
 | `MASTERS_NUDGE_SPRITE_PATH` | bundled sprite | Optional floating-window spritesheet |
 
 Provider environment variables take precedence over saved settings in `reviewer.json`.

@@ -26,6 +26,8 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
                 "Review · 簡化與責任歸屬",
+                "Reliability · 狀態、順序與失敗",
+                "Performance · 執行路徑與效能",
             ],
             buddy_window.selector_options(),
         )
@@ -64,6 +66,27 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
         self.assertEqual(("automatic", "", "invalid_environment"), (
             invalid.stage, invalid.persona, invalid.source
         ))
+
+    def test_stage_environment_accepts_all_six_public_lenses(self):
+        expected = {
+            "design": "jeff",
+            "build": "beck",
+            "evolve": "fowler",
+            "review": "linus",
+            "reliability": "lamport",
+            "performance": "carmack",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            for stage, lens in expected.items():
+                with self.subTest(stage=stage):
+                    selected = persona_config.resolve_stage(
+                        base, environ={"MASTERS_NUDGE_STAGE": stage}
+                    )
+                    self.assertEqual(
+                        (stage, lens, "environment"),
+                        (selected.stage, selected.persona, selected.source),
+                    )
 
     def test_provider_prompt_keeps_person_name_as_private_attention_cue(self):
         route = lens_router.ReviewRoute(

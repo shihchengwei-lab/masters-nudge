@@ -16,6 +16,8 @@ class TestStageSpec(unittest.TestCase):
             "build": ("Build", "小步驟、測試與回饋", "beck"),
             "evolve": ("Evolve", "重構與變更成本", "fowler"),
             "review": ("Review", "簡化與責任歸屬", "linus"),
+            "reliability": ("Reliability", "狀態、順序與失敗", "lamport"),
+            "performance": ("Performance", "執行路徑與效能", "carmack"),
         }
 
         self.assertEqual(expected, {

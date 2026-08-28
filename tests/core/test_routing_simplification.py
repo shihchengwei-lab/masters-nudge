@@ -41,6 +41,26 @@ class RoutingSimplificationTests(unittest.TestCase):
         self.assertEqual(route.effective_lens, "beck")
         self.assertEqual(route.source, "config")
 
+    def test_explicit_specialist_stage_wins_over_report_and_stop_fallback(self):
+        for stage, lens, reported_focus in (
+            ("reliability", "lamport", "performance"),
+            ("performance", "carmack", "reliability"),
+        ):
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as raw:
+                data_dir = Path(raw)
+                persona_config.save_stage(data_dir, stage)
+                route = lens_router.resolve_review_route(
+                    data_dir,
+                    environ={},
+                    reported_focus=reported_focus,
+                    stopping=True,
+                )
+
+                self.assertEqual(
+                    (route.stage, route.effective_lens, route.source),
+                    (stage, lens, "config"),
+                )
+
     def test_automatic_stage_uses_report_or_phase_fallback(self):
         with tempfile.TemporaryDirectory() as raw:
             data_dir = Path(raw)
