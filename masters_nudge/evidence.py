@@ -85,11 +85,7 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
     review_kind: ReviewKind = "checkpoint"
     if strategy:
         checkpoint = strategy
-        review_kind = (
-            "goal_transition"
-            if strategy["reason"] == "goal-transition"
-            else "strategy"
-        )
+        review_kind = "strategy"
     intervention_status, barrier_seq = storage.latest_intervention_state(
         data_dir, event.session
     )
@@ -108,8 +104,6 @@ def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolReviewState:
             event_seq=event_seq,
             midturn=review_kind == "strategy",
         )
-    if checkpoint and checkpoint["reason"] == "goal-transition":
-        review_kind = "goal_transition"
     return ToolReviewState(
         turn_state=turn_state,
         checkpoint=checkpoint,

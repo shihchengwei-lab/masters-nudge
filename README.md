@@ -8,7 +8,7 @@ Masters’ Nudge is a dynamic context steering plugin for Claude Code and Codex.
 
 At selected checkpoints, it collects limited evidence left by the main agent and sends it to an independent Nudge provider. The provider focuses through a selected Lens, produces a short Nudge, and the Harness writes it into the main agent’s context.
 
-The short question is the surface form of a Nudge. Underneath, the system places a new semantic anchor into context so the main agent continues generating under a new condition.
+The short direction is the surface form of a Nudge. Underneath, the system places a new semantic anchor into context so the main agent continues generating under a new condition.
 
 ---
 
@@ -25,7 +25,7 @@ The checkpoint policy decides whether to run a review
         ↓
 The Nudge provider focuses through the selected Lens
         ↓
-It produces one short question, or returns no_finding
+It produces one short direction, or returns no_finding
         ↓
 The Harness writes the Nudge into context as a new anchor
         ↓
@@ -57,9 +57,9 @@ A new token distribution
 A potentially different generation path
 ```
 
-Masters’ Nudge currently compresses this anchor into one short question.
+Masters’ Nudge currently compresses this anchor into one short direction.
 
-The question supplies a direction without expanding into a complete solution. The main agent combines that direction with the original task, evidence, and generation path, then decides what to produce next.
+The Nudge states what to favor, preserve, simplify, or remove without expanding into a complete solution. The main agent combines that direction with the original task, evidence, and generation path, then decides what to produce next.
 
 This control point lives in inference-time context. The model weights remain unchanged.
 
@@ -99,7 +99,7 @@ The Master filter is supplied only to the Nudge provider.
 
 The provider reads the current evidence through this filter, selects the direction most worth adding to the main agent’s context, and compresses it into a Nudge.
 
-The main agent receives only the final question. It does not receive the person’s name, the role description, or the complete reviewer prompt.
+The main agent receives only the final direction. It does not receive the person’s name, the role description, or the complete reviewer prompt.
 
 The project name describes this path:
 
@@ -127,20 +127,20 @@ It can focus on:
 
 Different Lenses can select different semantic anchors from the same evidence.
 
-The current implementation expresses each anchor as a question:
+The current implementation expresses each anchor as a concise preference:
 
 ```text
 Engineering Lens:
-Which component actually owns this state?
+Give this state one owner; let other components relay it.
 
 Moral Lens:
-Whose cost has this decision moved outside the system?
+Keep displaced costs visible in the decision.
 
 Compliance Lens:
-What evidence supports this compliance claim?
+Tie each compliance claim to direct evidence.
 
 Scientific Lens:
-What result would distinguish these two explanations?
+Prefer the experiment that separates the explanations.
 ```
 
 This repository currently implements the software-engineering version. Other Lenses can use the same Hook, checkpoint, and injection loop.
@@ -149,7 +149,7 @@ This repository currently implements the software-engineering version. Other Len
 
 ## The shape of a Nudge
 
-The current output contract compresses a semantic anchor into one short question.
+The current output contract compresses a semantic anchor into one short direction.
 
 To the main agent, the Nudge is one short, evidence-grounded second opinion.
 
@@ -160,16 +160,23 @@ The Reviewer returns one of two outcomes.
 A valid Nudge:
 
 - uses only the evidence supplied for the current review;
-- focuses on one assumption, constraint, counterexample, or alternative direction;
-- asks one concrete question that can be checked now;
+- focuses on one evidence-grounded preference or trade-off;
+- states what to favor, preserve, simplify, or remove now;
+- follows `<favor>；別<alternative>，因為<reason>。`;
+- does not ask a question or describe the Reviewer process;
 - contains only one idea;
 - stays within 52 characters.
+
+For example: `直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。`
+The example is 28 characters. A request only to add, run, or pass tests is not
+an engineering preference and must return `no_finding` unless it changes an
+implementation, interface, ownership, or behavior boundary.
 
 The main agent receives:
 
 ```text
 Independent second opinion:
-<one short question>
+<one short direction>
 ```
 
 ### `no_finding`
@@ -178,7 +185,7 @@ When the available evidence does not support a useful new direction, the Reviewe
 
 In practice, `no_finding` is usually a low-probability result.
 
-After an LLM receives a review task, it tends to produce a deliverable opinion rather than say it has no opinion. Even when the evidence is weak, it may force a question.
+After an LLM receives a review task, it tends to produce a deliverable opinion rather than say it has no opinion. Even when the evidence is weak, it may force a direction.
 
 `no_finding` therefore provides an explicit path to silence. It should not be expected to appear as often as `finding`.
 
@@ -203,7 +210,7 @@ A full Reviewer is suitable for delivering a separate analysis.
 
 Masters’ Nudge intervenes during the work. It first reads how far the main agent has progressed, then chooses which direction to place into context at that moment.
 
-The current implementation carries that direction in a short question.
+The current implementation carries that preference in a short direction.
 
 ---
 
@@ -216,8 +223,8 @@ The Harness makes that direction operate repeatedly inside a fixed workflow:
 1. preserve the user’s task;
 2. collect observable evidence;
 3. evaluate the checkpoint;
-4. select a Lens;
-5. invoke the Nudge provider;
+4. in Automatic mode, ask a compact Router to select one Lens;
+5. invoke a Generator that sees only that Lens;
 6. validate the Nudge format;
 7. write the Nudge into the main agent’s context as a new anchor;
 8. record the review, delivery, and subsequent response.
@@ -248,13 +255,13 @@ After working for some time, the main agent begins to form a generation path tha
 
 A Nudge places another semantic anchor into the same context, requiring the main agent to account for both its existing path and the new direction.
 
-When the Nudge reaches a blind spot, this tension can:
+When the Nudge reaches a weak design choice, this tension can:
 
-- expose an untested assumption;
-- prevent a premature completion claim;
-- recover a direction that was dropped too early;
-- prompt one discriminating check;
-- move generation toward a lower-probability but more valuable path.
+- replace inference with explicit state;
+- move responsibility to the component that owns it;
+- remove a special case instead of extending it;
+- prefer a smaller, more legible representation;
+- redirect the next implementation choice after the first semantic result.
 
 When the Nudge conflicts with sufficient evidence or reopens a question at the wrong time, the same tension can appear as:
 
@@ -265,7 +272,7 @@ When the Nudge conflicts with sufficient evidence or reopens a question at the w
 
 The mechanism derives its effect from tension and is also limited by that tension.
 
-The Harness bounds each intervention through sparse checkpoints, limited evidence, one question, a 52-character limit, and the `no_finding` path.
+The Harness bounds each intervention through sparse checkpoints, limited evidence, one direction, a 52-character limit, and the `no_finding` path.
 
 ---
 
@@ -282,7 +289,10 @@ The repository currently provides six engineering Lenses:
 | Reliability | State, event order, invariants, and partial failure |
 | Performance | Actual execution cost and unnecessary work |
 
-Automatic mode selects a Lens from the main agent’s reported work focus. This focus report only selects the reviewer prompt; the Hook and checkpoint policy still decide whether a review runs.
+Automatic mode uses two bounded calls. A compact Router sees Lens definitions
+but no persona overlays, identifies the unresolved engineering choice, and
+selects one Lens. A Generator then sees only that Lens and produces the Nudge.
+Manual mode skips the Router and calls the selected Generator directly.
 
 Manual configuration can pin any of the six Lenses: Design, Build, Evolve,
 Review, Reliability, or Performance.
@@ -313,15 +323,21 @@ Every review is an independent model call, even when it uses the same provider a
 
 The current Hooks may produce a Nudge at these points:
 
-- the second failure on the same observable surface;
-- an explicit transition of a long-running goal to `complete` or `blocked`;
-- the end of a work turn.
+- immediately after the first semantic change in a turn;
+- after the same observable failure family repeats.
 
-Ordinary code changes, large diffs, successful validation, and the first failure accumulate as evidence. The Nudge provider reads the bounded evidence packet only after a checkpoint becomes eligible.
+Goal transitions, successful validation, and routine progress do not open a
+review. Post-tool events record actual results and make the first changed state
+available to the Router and Generator.
 
 Eligible reviews run synchronously so the Nudge can enter the main agent’s later context in the same turn.
 
-Provider work is capped at 90 seconds, inside a 120-second Host Hook budget. If a review errors or times out, that intervention ends and the main agent continues.
+At `Stop`, the Hook only records whether the main agent responded after an earlier Nudge. It does not call the Provider, emit another Nudge, or block completion.
+
+Provider work is capped at 90 seconds, inside a 120-second Host Hook budget.
+Automatic mode shares that budget between Router and Generator; manual mode
+uses one Generator call. If either stage errors or times out, that intervention
+ends and the main agent continues.
 
 ---
 

@@ -88,7 +88,7 @@ class ProviderErrorContractTests(unittest.TestCase):
         completed = subprocess.CompletedProcess(
             ["claude"],
             0,
-            '{"structured_output":{"status":"no_finding","finding":""}}',
+            '{"structured_output":{"status":"no_finding","effective_lens":"none","finding":""}}',
             "",
         )
         with mock.patch.object(
@@ -118,7 +118,7 @@ class ProviderErrorContractTests(unittest.TestCase):
             return subprocess.CompletedProcess(
                 command,
                 0,
-                '{"status":"no_finding","finding":""}',
+                '{"status":"no_finding","effective_lens":"none","finding":""}',
                 "",
             )
 
@@ -140,7 +140,7 @@ class ProviderErrorContractTests(unittest.TestCase):
         def run(*_args, **kwargs):
             output_path = Path(_args[0][_args[0].index("-o") + 1])
             output_path.write_text(
-                '{"status":"no_finding","finding":""}', encoding="utf-8"
+                '{"status":"no_finding","effective_lens":"none","finding":""}', encoding="utf-8"
             )
             return completed
 
@@ -193,7 +193,8 @@ class ProviderErrorContractTests(unittest.TestCase):
     def test_claude_timeout_recovers_complete_structured_output(self):
         payload = (
             '{"structured_output":{"status":"finding",'
-            '"finding":"哪個觀察能區分修復與放寬判定？"},'
+            '"effective_lens":"beck",'
+            '"finding":"保留可觀察失敗；別放寬判定，因為兩者代表不同契約。"},'
             '"usage":{"input_tokens":7,"output_tokens":4}}'
         )
         with mock.patch.object(
@@ -215,7 +216,7 @@ class ProviderErrorContractTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "finding")
-        self.assertEqual(result["finding"], "哪個觀察能區分修復與放寬判定？")
+        self.assertEqual(result["finding"], "保留可觀察失敗；別放寬判定，因為兩者代表不同契約。")
         self.assertEqual(result["usage"]["input_tokens"], 7)
 
     def test_claude_timeout_distinguishes_before_and_after_stdout(self):

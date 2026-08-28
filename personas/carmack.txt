@@ -29,5 +29,6 @@ execution path，逐項記下 copy、parse、allocation、I/O、等待與重做�
 
 ### 形成 Nudge
 
-packet 必須提供量測或明確執行證據，並能連到目前的工作選擇。
-提醒要把主模型拉回真實成本與更短執行路徑；不要只因出現 performance 就猜瓶頸。
+從 packet 已呈現的量測與執行路徑中，選出一個讓機器少做實際工作的取捨。
+Nudge 直接說明應優先量測、縮短或移除的路徑；不要向主模型提問，
+不要描述檢查流程，也不要只因出現 performance 就猜瓶頸。

@@ -10,7 +10,7 @@ import source_context
 from masters_nudge import checkpoints, storage
 from masters_nudge.prompting import build_review_input
 from masters_nudge.contracts import ReviewRequest, SessionRef
-from masters_nudge.core import STOP_PROMPT, ReviewCore
+from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
@@ -54,16 +54,14 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertIn("Do not invent requirements", prompt)
         self.assertIn("independent second opinion", prompt)
 
-    def test_stop_prompt_reports_timing_without_prescribing_reasoning(self):
-        self.assertIn("about to close the task", STOP_PROMPT)
-        self.assertNotIn("alternative causal assumption", STOP_PROMPT)
-        self.assertNotIn("distinguishable now", STOP_PROMPT)
-        self.assertNotIn("identify", STOP_PROMPT.lower())
-
-    def test_prompt_keeps_one_grounded_question(self):
+    def test_prompt_keeps_one_grounded_taste_direction(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("ask one concrete question", prompt)
+        self.assertIn("State what to favor", prompt)
+        self.assertIn("Do not ask a question", prompt)
+        self.assertIn("<favor>；別<alternative>，因為<reason>。", prompt)
+        self.assertNotIn("ask one concrete question", prompt)
+        self.assertNotIn("one complete question", prompt)
         self.assertIn("at most 52", prompt)
 
     def test_prompt_treats_recent_nudges_as_exclusions_not_examples(self):
@@ -79,16 +77,27 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertFalse(hasattr(inject, "build_context_text"))
         self.assertFalse(hasattr(storage, "latest_pending"))
 
-    def test_readmes_describe_one_short_grounded_second_opinion(self):
+    def test_readmes_describe_one_short_grounded_direction(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
         chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
 
         self.assertIn("one short, evidence-grounded second opinion", english)
         self.assertIn("Independent second opinion:", english)
+        self.assertIn("one short direction", english)
+        self.assertNotIn("one short question", english)
         self.assertNotIn("one short open question", english)
         self.assertIn("一則簡短、以證據為錨點的獨立第二意見", chinese)
         self.assertIn("獨立第二意見：", chinese)
+        self.assertIn("一則短方向", chinese)
+        self.assertNotIn("一則短問題", chinese)
         self.assertNotIn("開放問句", chinese)
+
+    def test_readmes_describe_stop_as_observation_only(self):
+        english = (HERE / "README.md").read_text(encoding="utf-8")
+        chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+
+        self.assertIn("does not call the Provider", english)
+        self.assertIn("不會呼叫 Provider", chinese)
 
     def test_readmes_limit_receipts_to_delivery_order(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
@@ -146,6 +155,7 @@ class SoftwareColdStartTests(unittest.TestCase):
                 seen["input"] = review_input
                 return {
                     "status": "finding",
+                    "effective_lens": "lamport",
                     "finding": "目前證據排除了哪一個仍可能成立的解釋？",
                     "usage": {},
                 }
@@ -592,7 +602,12 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             def dispatch(_provider, system_prompt, review_input, *_args, **_kwargs):
                 seen["system_prompt"] = system_prompt
                 seen["review_input"] = review_input
-                return {"status": "no_finding", "finding": "", "usage": {}}
+                return {
+                    "status": "no_finding",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                }
 
             persona_config.save_stage(root, "review")
             core = ReviewCore(settings_for(root), dispatch=dispatch)
@@ -623,41 +638,27 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
             "Trace the direct control flow, ownership, and necessary complexity.",
             final_focus,
         )
-        self.assertTrue(seen["system_prompt"].rstrip().endswith("No preamble or labels."))
+        self.assertTrue(seen["system_prompt"].rstrip().endswith("No labels."))
         self.assertNotIn(
             "When several candidates pass the finding gate",
             seen["system_prompt"],
         )
         self.assertEqual("packet-marker", seen["review_input"])
 
-    def test_reported_specialist_focus_is_stable_across_calls(self):
+    def test_automatic_route_is_stable_without_preselecting(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             routes = [
                 lens_router.resolve_review_route(
                     root,
                     environ={},
-                    reported_focus="reliability",
                 )
                 for _ in range(3)
             ]
 
-        self.assertEqual(["lamport", "lamport", "lamport"], [
-            route.effective_lens for route in routes
-        ])
+        self.assertEqual(["", "", ""], [route.lens for route in routes])
 
-    def test_reported_focus_selects_a_specialist(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            route = lens_router.resolve_review_route(
-                root,
-                environ={},
-                reported_focus="reliability",
-            )
-
-        self.assertEqual("lamport", route.effective_lens)
-
-    def test_missing_report_uses_build_fallback(self):
+    def test_automatic_route_does_not_select_a_specialist(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             route = lens_router.resolve_review_route(
@@ -665,18 +666,25 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 environ={},
             )
 
-        self.assertEqual("beck", route.effective_lens)
+        self.assertEqual("", route.lens)
 
-    def test_explicit_design_report_routes_to_design_lens(self):
+    def test_automatic_route_has_no_build_fallback(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             route = lens_router.resolve_review_route(
                 root,
                 environ={},
-                reported_focus="design",
             )
 
-        self.assertEqual("jeff", route.effective_lens)
+        self.assertEqual("", route.lens)
+
+    def test_explicit_design_stage_routes_to_design_lens(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            persona_config.save_stage(root, "design")
+            route = lens_router.resolve_review_route(root, environ={})
+
+        self.assertEqual("jeff", route.lens)
 
     def test_routing_does_not_own_a_standalone_intervention_classifier(self):
         self.assertFalse(hasattr(checkpoints, "classify_tool"))
@@ -777,7 +785,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             checkpoints.classify_strategy(progress)
         )
 
-    def test_first_complete_semantic_cycle_triggers_validated_progress(self):
+    def test_first_change_triggers_before_the_completed_semantic_cycle(self):
         progress = {
             "event_seq": 2,
             "last_strategy_event_seq": 0,
@@ -806,7 +814,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
 
         review = checkpoints.classify_strategy(progress)
 
-        self.assertEqual(review["trigger"], "validated-progress")
+        self.assertEqual(review["trigger"], "first-change")
         self.assertNotIn("routing_concern", review)
 
     def test_later_validated_progress_requires_two_new_semantic_cycles(self):
@@ -831,9 +839,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             ]
         )
 
-        review = checkpoints.classify_strategy(progress)
-
-        self.assertEqual(review["trigger"], "validated-progress")
+        self.assertIsNone(checkpoints.classify_strategy(progress))
 
     def test_three_midturn_attempts_exhaust_the_shared_budget(self):
         progress = {
@@ -853,7 +859,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
 
         self.assertIsNone(checkpoints.classify_strategy(progress))
 
-    def test_goal_transition_remains_eligible_after_midturn_budget(self):
+    def test_goal_transition_does_not_create_a_late_nudge(self):
         progress = {
             "last_strategy_event_seq": 0,
             "midturn_review_attempts": 3,
@@ -863,9 +869,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             ],
         }
 
-        review = checkpoints.classify_strategy(progress)
-
-        self.assertEqual(review["trigger"], "goal-complete")
+        self.assertIsNone(checkpoints.classify_strategy(progress))
 
     def test_semantic_cycle_counter_ignores_inspection_and_extra_validation(self):
         progress = {
@@ -902,11 +906,9 @@ class SoftwareSemanticStateTests(unittest.TestCase):
             ],
         }
 
-        self.assertIsNone(
-            checkpoints.classify_strategy(progress)
-        )
+        self.assertIsNone(checkpoints.classify_strategy(progress))
 
-    def test_unverified_change_growth_does_not_trigger_without_a_failure(self):
+    def test_first_unverified_change_opens_the_taste_window(self):
         recent = [
             {
                 "event_seq": index,
@@ -942,33 +944,8 @@ class SoftwareSemanticStateTests(unittest.TestCase):
         ]
         progress["event_seq"] = 12
 
-        self.assertIsNone(
-            checkpoints.classify_strategy(progress)
-        )
-
-    def test_stop_review_uses_completion_boundary_route(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            seen = {}
-
-            def dispatch(_provider, system_prompt, *_args, **_kwargs):
-                seen["system_prompt"] = system_prompt
-                return {"status": "no_finding", "finding": "", "usage": {}}
-
-            core = ReviewCore(settings_for(root), dispatch=dispatch)
-            core.review_once(
-                ReviewRequest(
-                    schema_version=1,
-                    kind="stop",
-                    reason="stop",
-                    session=SessionRef("codex_cli", "stop-route"),
-                    source_packet="final evidence",
-                    source_fingerprint="final-evidence",
-                ),
-                persist_reaction=False,
-            )
-
-        self.assertIn("Linus Torvalds", seen["system_prompt"])
+        review = checkpoints.classify_strategy(progress)
+        self.assertEqual(review["trigger"], "first-change")
 
     def test_storage_does_not_select_or_supersede_queued_findings(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -1025,6 +1002,7 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                 settings_for(root),
                 dispatch=lambda *_args, **_kwargs: {
                     "status": "finding",
+                    "effective_lens": "linus",
                     "finding": "目前證據還留下哪個未區分的解釋？",
                     "usage": {},
                 },
@@ -1037,7 +1015,6 @@ class SoftwareSemanticStateTests(unittest.TestCase):
                     session=session,
                     source_packet="checkpoint",
                     source_fingerprint="state-checkpoint",
-                    reported_focus="build",
                 ),
                 persist_reaction=True,
             )
@@ -1059,7 +1036,8 @@ class SoftwareTelemetrySeparationTests(unittest.TestCase):
                 settings_for(root),
                 dispatch=lambda *_args, **_kwargs: {
                     "status": "finding",
-                    "finding": "目前數據證明的是效能改善，還是量測順序差異？",
+                    "effective_lens": "carmack",
+                    "finding": "固定量測順序；別混入環境差異，因為效能改善必須可歸因。",
                     "usage": {},
                 },
             )
@@ -1071,7 +1049,6 @@ class SoftwareTelemetrySeparationTests(unittest.TestCase):
                     session=session,
                     source_packet="current packet",
                     source_fingerprint="current-state",
-                    reported_focus="performance",
                 ),
                 persist_reaction=True,
             )

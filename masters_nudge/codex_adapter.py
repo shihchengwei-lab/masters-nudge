@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import source_context
-import persona_config
 
 from . import prompting, storage
 from .contracts import (
@@ -27,8 +26,9 @@ from .runtime import active_guard
 
 MUTATING_TOOLS = {
     "apply_patch",
-    "Bash",
-    "PowerShell",
+    "file_change",
+    "bash",
+    "powershell",
     "shell_command",
     "exec_command",
 }
@@ -241,7 +241,7 @@ def normalize_event(payload: dict[str, Any]):
             failed=failed,
             failure_known=known,
             interrupted=bool(payload.get("is_interrupt")),
-            mutating=tool_name in MUTATING_TOOLS,
+            mutating=tool_name.lower().split("__")[-1] in MUTATING_TOOLS,
             native_event_name=event_name,
         )
     if event_name == "Stop":
@@ -270,19 +270,6 @@ def build_hook_output(
     }
 
 
-def build_progress_instruction_output(event_name: str) -> dict[str, Any]:
-    return {
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": persona_config.FOCUS_REPORT_INSTRUCTION,
-        }
-    }
-
-
-def build_stop_hook_output(text: str) -> dict[str, Any]:
-    return {"decision": "block", "reason": prompting.delivery_text(text)}
-
-
 class CodexAdapter:
     def __init__(self, core: ReviewCore) -> None:
         self.core = core
@@ -308,15 +295,7 @@ class CodexAdapter:
         if isinstance(event, PromptSubmitted):
             return self._prompt(event)
         if isinstance(event, ToolCompleted):
-            state = storage.load_turn_state(self.data_dir, event.session)
-            focus_text = _latest_assistant_text(
-                str(payload.get("transcript_path") or ""),
-                int(state.get("transcript_offset") or 0),
-            )
-            return self._tool(
-                event,
-                reported_focus=persona_config.reported_focus(focus_text),
-            )
+            return self._tool(event)
         if isinstance(event, TurnStopped):
             return self._stop(event)
         return None
@@ -328,13 +307,11 @@ class CodexAdapter:
             event.prompt,
             transcript_path=event.transcript_path,
         )
-        return build_progress_instruction_output("UserPromptSubmit")
+        return None
 
     def _tool(
         self,
         event: ToolCompleted,
-        *,
-        reported_focus: str = "",
     ) -> dict[str, Any] | None:
         observed = observe_tool_event(self.data_dir, event)
         checkpoint = observed.checkpoint
@@ -359,7 +336,6 @@ class CodexAdapter:
                 f"{observed.review_kind}:{checkpoint.get('trigger') or checkpoint['reason']}\n"
                 f"{source_packet}"
             ),
-            reported_focus=reported_focus,
             source_event_seq=observed.event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
         )
@@ -407,8 +383,7 @@ class CodexAdapter:
                 or 0
             ),
         )
-        reported_focus = persona_config.reported_focus(focus_text)
-        final_claim = persona_config.strip_focus_markers(focus_text)
+        final_claim = focus_text.strip()
         progress = storage.load_progress_state(self.data_dir, event.session)
         event_seq = int(progress.get("event_seq") or 0)
         storage.observe_injected_response(
@@ -418,49 +393,4 @@ class CodexAdapter:
             observation_kind="stop",
             observation={"assistant_claim": final_claim},
         )
-        if event.stop_hook_active:
-            return None
-        state = storage.load_turn_state(self.data_dir, event.session)
-        task_anchor = str(state.get("task_anchor") or "")
-        source_packet = source_context.build_stop_packet(
-            task_anchor=task_anchor,
-            last_assistant_message=final_claim,
-            task_sources=state.get("task_sources") or {},
-            evidence_records=(
-                state.get("evidence_records")
-                if isinstance(state.get("evidence_records"), list)
-                else []
-            ),
-        )
-        if not source_packet:
-            return None
-        request = ReviewRequest(
-            schema_version=1,
-            kind="stop",
-            reason="stop",
-            session=event.session,
-            source_packet=source_packet,
-            source_fingerprint=_fingerprint(source_packet),
-            reported_focus=reported_focus,
-        )
-        try:
-            outcome = self.core.review_once(request, persist_reaction=True)
-        except Exception as exc:
-            self.core.log_error(f"Codex stop review failed: {exc}")
-            return None
-        if outcome is None or outcome.status != "finding" or not outcome.finding:
-            return None
-        timestamp = outcome.reaction_ts
-        if not timestamp:
-            return None
-        claim_token = storage.claim_delivery(self.data_dir, event.session, timestamp)
-        if not claim_token:
-            return None
-        return _with_delivery_marker(
-            build_stop_hook_output(outcome.finding),
-            event.session,
-            timestamp,
-            event_seq=event_seq,
-            event_name="Stop",
-            claim_token=claim_token,
-        )
+        return None

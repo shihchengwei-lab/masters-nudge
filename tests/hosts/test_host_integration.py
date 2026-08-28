@@ -224,9 +224,9 @@ class ClaudeCompatibilityTests(unittest.TestCase):
             review = checkpoints.classify_strategy(progress)
             triggers.append(review["trigger"] if review else "")
 
-        self.assertEqual(triggers, ["validated-progress", "validated-progress"])
+        self.assertEqual(triggers, ["first-change", "first-change"])
 
-    def test_stop_adapter_writes_new_host_namespaced_log(self):
+    def test_stop_adapter_does_not_call_provider_or_write_a_new_reaction(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             settings = settings_for(root)
@@ -236,22 +236,20 @@ class ClaudeCompatibilityTests(unittest.TestCase):
                 "hook_event_name": "Stop",
                 "last_assistant_message": "已完成指定流程",
             }
+            dispatch = mock.Mock()
             with (
                 mock.patch.object(buddy.claude_adapter, "RUNTIME", settings),
                 mock.patch.object(buddy, "read_hook_input", return_value=hook),
                 mock.patch.object(
                     providers,
                     "dispatch_call_result",
-                    return_value={
-                        "status": "finding",
-                        "finding": "完成宣告仍缺少與需求相同邊界的驗證。",
-                        "usage": {},
-                    },
+                    dispatch,
                 ),
                 mock.patch.object(buddy.sys, "stdout", io.StringIO()),
             ):
                 buddy.main()
-            self.assertTrue(
+            dispatch.assert_not_called()
+            self.assertFalse(
                 (root / "data" / "claude_code--claude-session.log").exists()
             )
             self.assertFalse((root / "data" / "claude-session.log").exists())
@@ -286,15 +284,9 @@ class CodexAdapterTests(unittest.TestCase):
             "獨立第二意見：\n目前省下的工作，是否只是轉移到另一個 pass？",
         )
 
-    def test_stop_finding_continues_the_same_turn_and_is_reviewed_once(self):
-        core = ReviewCore(
-            self.settings,
-            dispatch=lambda *_args, **_kwargs: {
-                "status": "finding",
-                "finding": "哪個完成條件仍缺少直接證據？",
-                "usage": {},
-            },
-        )
+    def test_stop_observes_prior_nudge_without_reviewing_or_blocking(self):
+        dispatch = mock.Mock()
+        core = ReviewCore(self.settings, dispatch=dispatch)
         adapter = CodexAdapter(core)
         payload = {
             "hook_event_name": "Stop",
@@ -304,33 +296,26 @@ class CodexAdapterTests(unittest.TestCase):
             "last_assistant_message": "已完成。",
             "stop_hook_active": False,
         }
-        storage.start_turn(
-            self.settings.paths.data_dir,
-            SessionRef("codex_cli", "sync-stop", "turn-1", str(self.root)),
-            "完成可靠性修正",
-        )
-
-        first = adapter.process(payload)
-        hook_entry._emit_output(first, self.settings, io.StringIO())
-        second = adapter.process(
-            {
-                **payload,
-                "last_assistant_message": "我會補上完成證據。",
-                "stop_hook_active": True,
-            }
-        )
-
-        self.assertEqual(
-            {
-                "decision": "block",
-                "reason": "獨立第二意見：\n哪個完成條件仍缺少直接證據？",
-            },
-            {key: first[key] for key in ("decision", "reason")},
-        )
-        self.assertIsNone(second)
         session = SessionRef(
             "codex_cli", "sync-stop", "turn-1", str(self.root)
         )
+        storage.start_turn(
+            self.settings.paths.data_dir, session, "完成可靠性修正"
+        )
+        entry = storage.append_reaction(
+            self.settings.paths.data_dir,
+            session,
+            provider="openai",
+            model="test-model",
+            reaction="讓狀態只歸一個 owner。",
+            route_metadata={"effective_lens": "linus"},
+        )
+        storage.mark_emitted(self.settings.paths.data_dir, session, entry["ts"])
+
+        output = adapter.process(payload)
+
+        self.assertIsNone(output)
+        dispatch.assert_not_called()
         attempt_dir = (
             self.settings.paths.data_dir
             / f"{storage.session_stem(session)}.review-attempts"
@@ -339,19 +324,15 @@ class CodexAdapterTests(unittest.TestCase):
             json.loads(path.read_text(encoding="utf-8"))
             for path in attempt_dir.glob("*.json")
         ]
-        self.assertEqual(len(attempts), 1)
-        self.assertEqual(attempts[0]["status"], "finding")
-        receipt = next(
-            iter(
-                storage.load_delivery_state(
-                    self.settings.paths.data_dir,
-                    SessionRef(
-                        "codex_cli", "sync-stop", "turn-1", str(self.root)
-                    ),
-                )["receipts"].values()
-            )
-        )
+        self.assertEqual(attempts, [])
+        receipt = storage.load_delivery_state(
+            self.settings.paths.data_dir, session
+        )["receipts"][entry["ts"]]
         self.assertEqual(receipt["status"], "injected")
+        self.assertEqual(
+            receipt["response_observation"]["observation"]["assistant_claim"],
+            "已完成。",
+        )
 
     def test_normalizes_documented_prompt_and_tool_fields(self):
         prompt = normalize_event(
@@ -389,6 +370,7 @@ class CodexAdapterTests(unittest.TestCase):
         )
         self.assertIsInstance(failure, ToolCompleted)
         self.assertTrue(failure.failed)
+
 
     def test_active_goal_context_populates_turn_anchor_without_duplicate_progress_copy(self):
         transcript = self.root / "rollout.jsonl"
@@ -515,7 +497,7 @@ class CodexAdapterTests(unittest.TestCase):
         self.assertGreater(turn["transcript_offset"], 0)
         self.assertNotIn("goal_objective", progress)
 
-    def test_stop_review_uses_layered_evidence_not_transcript_contents(self):
+    def test_stop_does_not_review_after_collecting_layered_evidence(self):
         core = FakeCore(self.settings, ReviewOutcome("no_finding"))
         adapter = CodexAdapter(core)  # type: ignore[arg-type]
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -558,22 +540,14 @@ class CodexAdapterTests(unittest.TestCase):
                     "turn_id": "t",
                     "cwd": str(self.root),
                     "transcript_path": str(self.root / "does-not-exist.jsonl"),
-                    "last_assistant_message": (
-                        "已完成登入修正\n"
-                        "<!-- masters-nudge-focus:reliability -->"
-                    ),
+                    "last_assistant_message": "已完成登入修正",
                 }
             )
         self.assertIsNone(output)
-        request, persist, _timeout = core.calls[-1]
-        self.assertTrue(persist)
-        self.assertIn("token check", request.source_packet)
-        self.assertIn("[contract]", request.source_packet)
-        self.assertIn("[current result]", request.source_packet)
-        self.assertIn("已完成登入修正", request.source_packet)
-        self.assertEqual(request.reported_focus, "reliability")
-        self.assertNotIn("masters-nudge-focus", request.source_packet)
-        self.assertNotIn("does-not-exist", request.source_packet)
+        self.assertEqual(core.calls, [])
+        session = SessionRef("codex_cli", "s", "t", str(self.root))
+        state = storage.load_turn_state(self.settings.paths.data_dir, session)
+        self.assertIn("token check", str(state.get("task_sources") or {}))
 
     def test_repeated_test_failure_returns_additional_context(self):
         core = FakeCore(
@@ -683,7 +657,8 @@ class CodexAdapterTests(unittest.TestCase):
             self.settings,
             dispatch=lambda *_args, **_kwargs: {
                 "status": "finding",
-                "finding": "B_N² 的界尚未閉合。",
+                "effective_lens": "linus",
+                "finding": "固定 B_N² 的界；別留下開口，因為結論必須有明確邊界。",
                 "usage": {},
             },
         )
@@ -751,10 +726,8 @@ class CodexAdapterTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             first = adapter.process(payload)
             second = adapter.process(payload)
-        for result in (first, second):
-            context = result["hookSpecificOutput"]["additionalContext"]
-            self.assertIn("masters-nudge-focus:build", context)
-            self.assertNotIn("先確認交付證據", context)
+        self.assertIsNone(first)
+        self.assertIsNone(second)
 
     def test_later_tool_does_not_claim_an_unemitted_finding(self):
         session = SessionRef("codex_cli", "s", "old-turn", str(self.root))
@@ -805,7 +778,8 @@ class CodexAdapterTests(unittest.TestCase):
             self.settings,
             dispatch=lambda *_args, **_kwargs: {
                 "status": "finding",
-                "finding": "輸出失敗後不可跨事件重送。",
+                "effective_lens": "linus",
+                "finding": "把失敗標成終態；別跨事件重送，因為同一提醒只能注入一次。",
                 "usage": {},
             },
         )
@@ -960,9 +934,12 @@ class HookOutputTests(unittest.TestCase):
 
 
 class SharedCoreTests(unittest.TestCase):
-    def test_every_timeout_subtype_is_visible_and_keeps_stop_scope(self):
+    def test_every_generator_timeout_subtype_is_visible(self):
+        import persona_config
+
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
+            persona_config.save_stage(root / "data", "review")
             base = settings_for(root)
             settings = RuntimeSettings(
                 base.provider,
@@ -996,8 +973,8 @@ class SharedCoreTests(unittest.TestCase):
                     ReviewCore(settings, dispatch=dispatch).review_once(
                         ReviewRequest(
                             schema_version=1,
-                            kind="stop",
-                            reason="stop",
+                            kind="strategy",
+                            reason="strategy-review",
                             session=session,
                             source_packet="已完成",
                             source_fingerprint=error_kind,
@@ -1017,7 +994,9 @@ class SharedCoreTests(unittest.TestCase):
         self.assertTrue(all("finding_scope" not in entry for entry in entries))
         self.assertTrue(all("finding_scope" not in record for record in telemetry))
 
-    def test_review_route_uses_reported_focus_and_phase_fallbacks(self):
+    def test_review_route_uses_automatic_choice_or_manual_override(self):
+        import persona_config
+
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
@@ -1025,45 +1004,27 @@ class SharedCoreTests(unittest.TestCase):
 
             def dispatch(_provider, system_prompt, _review_input, _model, **_kwargs):
                 prompts.append(system_prompt)
-                return {"status": "no_finding", "finding": "", "usage": {}}
+                return {
+                    "status": "no_finding",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                }
 
             core = ReviewCore(settings, dispatch=dispatch)
             session = SessionRef("codex_cli", "routing")
             core.review_once(
                 ReviewRequest(
                     schema_version=1,
-                    kind="stop",
-                    reason="stop",
-                    session=session,
-                    source_packet="retry caused duplicate delivery",
-                    source_fingerprint="stop",
-                ),
-                persist_reaction=False,
-            )
-            core.review_once(
-                ReviewRequest(
-                    schema_version=1,
-                    kind="checkpoint",
-                    reason="tool",
-                    session=session,
-                    source_packet="retry caused duplicate delivery\nordinary file edit",
-                    source_fingerprint="quiet",
-                    reported_focus="build",
-                ),
-                persist_reaction=False,
-            )
-            core.review_once(
-                ReviewRequest(
-                    schema_version=1,
                     kind="checkpoint",
                     reason="tool",
                     session=session,
                     source_packet="retry caused duplicate delivery",
-                    source_fingerprint="new-event",
-                    reported_focus="reliability",
+                    source_fingerprint="automatic",
                 ),
                 persist_reaction=False,
             )
+            persona_config.save_stage(settings.paths.data_dir, "review")
             core.review_once(
                 ReviewRequest(
                     schema_version=1,
@@ -1071,31 +1032,17 @@ class SharedCoreTests(unittest.TestCase):
                     reason="strategy-review",
                     session=session,
                     source_packet="ordinary workflow",
-                    source_fingerprint="structured-route",
-                    reported_focus="evolve",
-                    trigger="manual-route",
-                ),
-                persist_reaction=False,
-            )
-            core.review_once(
-                ReviewRequest(
-                    schema_version=1,
-                    kind="strategy",
-                    reason="strategy-review",
-                    session=session,
-                    source_packet="ordinary workflow",
-                    source_fingerprint="machine-text-only",
+                    source_fingerprint="manual",
                     trigger="manual-route",
                 ),
                 persist_reaction=False,
             )
 
-            self.assertIn("# COMPLETION BOUNDARY", prompts[0])
-            self.assertIn("Linus Torvalds", prompts[0])
-            self.assertIn("Kent Beck", prompts[1])
-            self.assertIn("Leslie Lamport", prompts[2])
-            self.assertIn("Martin Fowler", prompts[3])
-            self.assertIn("Kent Beck", prompts[4])
+            for name in persona_config.LENS_PERSONAS.values():
+                self.assertNotIn(name, prompts[0])
+            self.assertIn("# AUTOMATIC LENS ROUTER", prompts[0])
+            self.assertIn("Linus Torvalds", prompts[1])
+            self.assertNotIn("Kent Beck", prompts[1])
 
     def test_checkpoint_reaction_is_visible_but_not_redelivered_next_turn(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -1109,13 +1056,13 @@ class SharedCoreTests(unittest.TestCase):
                 session=session,
                 source_packet="pytest: 1 failed",
                 source_fingerprint="failure-1",
-                reported_focus="build",
             )
             core = ReviewCore(
                 settings,
                 dispatch=lambda *_args, **_kwargs: {
                     "status": "finding",
-                    "finding": "先確認失敗是否推翻目前使用的前提。",
+                    "effective_lens": "linus",
+                    "finding": "直接檢查失敗前提；別只重跑測試，因為錯的假設不會自行修正。",
                     "usage": {},
                 },
             )
@@ -1133,7 +1080,10 @@ class SharedCoreTests(unittest.TestCase):
             entries = storage.read_reaction_entries(
                 settings.paths.data_dir, session
             )
-            self.assertEqual(entries[-1]["reaction"], "先確認失敗是否推翻目前使用的前提。")
+            self.assertEqual(
+                entries[-1]["reaction"],
+                "直接檢查失敗前提；別只重跑測試，因為錯的假設不會自行修正。",
+            )
             self.assertEqual(
                 "emitted",
                 storage.load_delivery_state(settings.paths.data_dir, session)[
@@ -1155,7 +1105,12 @@ class SharedCoreTests(unittest.TestCase):
 
             def dispatch(provider, system_prompt, review_input, model, **kwargs):
                 calls.append((provider, system_prompt, review_input, model, kwargs))
-                return {"status": "no_finding", "finding": "", "usage": {}}
+                return {
+                    "status": "no_finding",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                }
 
             core = ReviewCore(settings, dispatch=dispatch)
             for host in ("claude_code", "codex_cli"):
@@ -1258,7 +1213,8 @@ class GrokProviderTests(unittest.TestCase):
                 "text": json.dumps(
                     {
                         "status": "finding",
-                        "finding": "先固定 GPU baseline 再比較。",
+                        "effective_lens": "carmack",
+                        "finding": "固定同一 GPU baseline；別混用環境，因為差異必須可歸因。",
                     },
                     ensure_ascii=False,
                 ),
@@ -1287,12 +1243,12 @@ class GrokProviderTests(unittest.TestCase):
             )
 
         self.assertEqual(result["status"], "finding")
-        self.assertEqual(result["finding"], "先固定 GPU baseline 再比較。")
+        self.assertEqual(result["finding"], "固定同一 GPU baseline；別混用環境，因為差異必須可歸因。")
         self.assertEqual(result["usage"]["input_tokens"], 10)
 
     def test_grok_runs_one_tool_free_schema_constrained_turn(self):
         payload = json.dumps(
-            {"result": {"status": "finding", "finding": "先確認停止條件。"}},
+            {"result": {"status": "finding", "effective_lens": "beck", "finding": "固定停止條件；別繼續擴張，因為現有證據已足夠。"}},
             ensure_ascii=False,
             indent=2,
         )
@@ -1323,7 +1279,10 @@ class GrokProviderTests(unittest.TestCase):
                 timeout_sec=12,
                 grok_bin_resolver=lambda: "grok",
             )
-        self.assertEqual(result["finding"], "先確認停止條件。")
+        self.assertEqual(
+            result["finding"],
+            "固定停止條件；別繼續擴張，因為現有證據已足夠。",
+        )
         command = observed["command"]
         self.assertIn("--disable-web-search", command)
         self.assertNotIn("--tools", command)
@@ -1353,7 +1312,7 @@ class GrokProviderTests(unittest.TestCase):
     def test_grok_uses_cli_default_model_when_model_is_empty(self):
         completed = mock.Mock(
             returncode=0,
-            stdout=json.dumps({"status": "no_finding", "finding": ""}),
+            stdout=json.dumps({"status": "no_finding", "effective_lens": "none", "finding": ""}),
             stderr="",
         )
         with mock.patch(
@@ -1382,7 +1341,7 @@ class GrokProviderTests(unittest.TestCase):
     def test_grok_subscription_call_does_not_inherit_xai_api_key(self):
         completed = mock.Mock(
             returncode=0,
-            stdout=json.dumps({"status": "no_finding", "finding": ""}),
+            stdout=json.dumps({"status": "no_finding", "effective_lens": "none", "finding": ""}),
             stderr="",
         )
         with mock.patch.dict(os.environ, {"XAI_API_KEY": "must-not-be-used"}), mock.patch(
@@ -1410,12 +1369,13 @@ class GrokProviderTests(unittest.TestCase):
         raw = json.dumps(
             {
                 "text": json.dumps(
-                    {"status": "finding", "finding": "先重現原始失敗。"},
+                    {"status": "finding", "effective_lens": "beck", "finding": "保留原始失敗；別先改判定，因為需要最短回饋。"},
                     ensure_ascii=False,
                 ),
                 "structuredOutput": {
                     "status": "finding",
-                    "finding": "先重現原始失敗。",
+                    "effective_lens": "beck",
+                    "finding": "保留原始失敗；別先改判定，因為需要最短回饋。",
                 },
                 "usage": {
                     "input_tokens": 10,
@@ -1430,7 +1390,7 @@ class GrokProviderTests(unittest.TestCase):
         )
         result = providers.parse_grok_reaction_result(raw)
         usage = providers.parse_usage(raw)
-        self.assertEqual(result["finding"], "先重現原始失敗。")
+        self.assertEqual(result["finding"], "保留原始失敗；別先改判定，因為需要最短回饋。")
         self.assertEqual(usage["cached_input_tokens"], 2)
         self.assertEqual(usage["reasoning_output_tokens"], 1)
 

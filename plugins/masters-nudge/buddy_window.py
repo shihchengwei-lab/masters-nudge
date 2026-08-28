@@ -450,8 +450,8 @@ class BuddyWindow:
         self._set_lens_badge(persona)
         if stage == persona_config.AUTOMATIC_STAGE:
             message = (
-                "下一次 review 起，由 coding agent 回報目前工作焦點；"
-                "Hook 仍決定何時強制呼叫 Provider。"
+                "下一次 review 起，由 reviewer 依目前決策壓力選一種 Lens；"
+                "Hook 仍決定何時呼叫 Provider。"
             )
         else:
             message = f"下一次 review 起固定使用 {label}。"

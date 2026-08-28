@@ -44,7 +44,7 @@ MEANINGFUL_TOOL_RE = re.compile(
     r"(?:apply_patch|write|edit|test|verify|benchmark|build|plan|goal)", re.IGNORECASE
 )
 SEMANTIC_MUTATION_RE = re.compile(
-    r"(?:\bapply_patch\b|\bwrite\b|\bedit\b)", re.IGNORECASE
+    r"(?:\bapply_patch\b|\bfile_change\b|\bwrite\b|\bedit\b)", re.IGNORECASE
 )
 SEMANTIC_VALIDATION_RE = re.compile(
     r"\b(?:test|verify|benchmark|build|pytest|unittest|vitest|jest|cargo|dotnet)\b"
@@ -263,33 +263,28 @@ def classify_strategy(
         item
         for item in recent
         if int(item.get("event_seq") or 0) > last_seq
-        and (item.get("evidence_category") or item.get("goal_transition"))
+        and item.get("evidence_category")
     ]
     if not since:
         return None
-    latest_transition = str(since[-1].get("goal_transition") or "")
-    if latest_transition in {"complete", "blocked"}:
-        reason = "goal-transition"
-        trigger = f"goal-{latest_transition}"
+    midturn_attempts = int(progress.get("midturn_review_attempts") or 0)
+    if midturn_attempts >= MIDTURN_REVIEW_LIMIT:
+        return None
+    failures = [item for item in since if item.get("failed")]
+    failure_counts: dict[str, int] = {}
+    for item in failures:
+        family = str(item.get("failure_family") or "")
+        if family:
+            failure_counts[family] = failure_counts.get(family, 0) + 1
+    repeated_failure = any(count >= 2 for count in failure_counts.values())
+    if repeated_failure:
+        reason, trigger = "strategy-review", "repeated-failure-family"
+    elif midturn_attempts == 0 and any(
+        item.get("evidence_category") == "change" for item in since
+    ):
+        reason, trigger = "taste-review", "first-change"
     else:
-        midturn_attempts = int(progress.get("midturn_review_attempts") or 0)
-        if midturn_attempts >= MIDTURN_REVIEW_LIMIT:
-            return None
-        failures = [item for item in since if item.get("failed")]
-        failure_counts: dict[str, int] = {}
-        for item in failures:
-            family = str(item.get("failure_family") or "")
-            if family:
-                failure_counts[family] = failure_counts.get(family, 0) + 1
-        repeated_failure = any(count >= 2 for count in failure_counts.values())
-        if repeated_failure:
-            reason, trigger = "strategy-review", "repeated-failure-family"
-        elif completed_semantic_cycles_after(progress, last_seq) >= (
-            1 if midturn_attempts == 0 else 2
-        ):
-            reason, trigger = "strategy-review", "validated-progress"
-        else:
-            return None
+        return None
     lines = [
         f"reason: {reason}",
         f"trigger: {trigger}",

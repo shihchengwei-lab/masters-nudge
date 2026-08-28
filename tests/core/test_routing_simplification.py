@@ -1,4 +1,4 @@
-"""Characterization tests for explicit work-focus routing."""
+"""Keep route state smaller than the reviewer decision it enables."""
 
 from __future__ import annotations
 
@@ -8,72 +8,35 @@ from pathlib import Path
 
 import lens_router
 import persona_config
+
+
 class RoutingSimplificationTests(unittest.TestCase):
-    def test_reported_focus_routes_without_reparsing_evidence(self):
+    def test_automatic_neither_parses_evidence_nor_guesses_a_lens(self):
         with tempfile.TemporaryDirectory() as raw:
-            data_dir = Path(raw)
-            route = lens_router.resolve_review_route(
-                data_dir,
-                environ={},
-                reported_focus="reliability",
-            )
+            route = lens_router.resolve_review_route(Path(raw), environ={})
 
-        self.assertEqual(route.stage, "reliability")
-        self.assertEqual(route.effective_lens, "lamport")
-        self.assertEqual(route.source, "main_model_report")
+        self.assertEqual(route.lens, "")
+        self.assertEqual(route.stage, "automatic")
 
-    def test_router_accepts_no_evidence_or_structured_concern_arguments(self):
-        parameters = lens_router.resolve_review_route.__annotations__
-        self.assertNotIn("evidence", parameters)
-        self.assertNotIn("routing_concern", parameters)
-
-    def test_explicit_manual_stage_wins(self):
-        with tempfile.TemporaryDirectory() as raw:
-            data_dir = Path(raw)
-            persona_config.save_stage(data_dir, "build")
-            route = lens_router.resolve_review_route(
-                data_dir,
-                environ={},
-                reported_focus="performance",
-            )
-
-        self.assertEqual(route.stage, "build")
-        self.assertEqual(route.effective_lens, "beck")
-        self.assertEqual(route.source, "config")
-
-    def test_explicit_specialist_stage_wins_over_report_and_stop_fallback(self):
-        for stage, lens, reported_focus in (
-            ("reliability", "lamport", "performance"),
-            ("performance", "carmack", "reliability"),
+    def test_each_manual_stage_forces_its_existing_lens(self):
+        for stage, lens in (
+            ("design", "jeff"),
+            ("build", "beck"),
+            ("evolve", "fowler"),
+            ("review", "linus"),
+            ("reliability", "lamport"),
+            ("performance", "carmack"),
         ):
             with self.subTest(stage=stage), tempfile.TemporaryDirectory() as raw:
-                data_dir = Path(raw)
-                persona_config.save_stage(data_dir, stage)
-                route = lens_router.resolve_review_route(
-                    data_dir,
-                    environ={},
-                    reported_focus=reported_focus,
-                    stopping=True,
-                )
-
+                root = Path(raw)
+                persona_config.save_stage(root, stage)
+                route = lens_router.resolve_review_route(root, environ={})
                 self.assertEqual(
-                    (route.stage, route.effective_lens, route.source),
+                    (route.stage, route.lens, route.source),
                     (stage, lens, "config"),
                 )
 
-    def test_automatic_stage_uses_report_or_phase_fallback(self):
-        with tempfile.TemporaryDirectory() as raw:
-            data_dir = Path(raw)
-            persona_config.save_stage(data_dir, "automatic")
-            reported = lens_router.resolve_review_route(
-                data_dir, environ={}, reported_focus="performance"
-            )
-            stopping = lens_router.resolve_review_route(
-                data_dir, environ={}, stopping=True
-            )
-
-        self.assertEqual(reported.effective_lens, "carmack")
-        self.assertEqual(stopping.effective_lens, "linus")
+    def test_router_has_no_general_persona(self):
         self.assertNotIn("general", persona_config.PERSONA_NAMES)
 
 

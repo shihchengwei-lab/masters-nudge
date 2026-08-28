@@ -10,6 +10,7 @@ from pathlib import Path
 
 import hook_entry
 import lens_router
+import persona_config
 from masters_nudge import storage
 from masters_nudge.codex_adapter import CodexAdapter, _with_delivery_marker
 from masters_nudge.contracts import ReviewOutcome, SessionRef
@@ -41,7 +42,7 @@ class FakeCore:
 
 
 class DeliveryLifecycleTests(unittest.TestCase):
-    def test_stop_reviews_completion_without_detached_coordination(self):
+    def test_stop_does_not_review_or_start_detached_coordination(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
@@ -62,7 +63,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
 
             self.assertFalse(hasattr(storage, "wait_for_strategy_idle"))
-            self.assertEqual([call.kind for call in core.calls], ["stop"])
+            self.assertEqual(core.calls, [])
 
     def test_back_to_back_reactions_have_distinct_sortable_ids(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -340,7 +341,7 @@ class DeliveryLifecycleTests(unittest.TestCase):
             )
 
 class LongGoalReplayTests(unittest.TestCase):
-    def test_large_diff_does_not_create_a_review(self):
+    def test_first_semantic_change_creates_one_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -358,7 +359,8 @@ class LongGoalReplayTests(unittest.TestCase):
             adapter.process(event)
             adapter.process(event)
 
-            self.assertEqual(core.calls, [])
+            self.assertEqual(len(core.calls), 1)
+            self.assertEqual(core.calls[0].trigger, "first-change")
 
     def test_repeated_command_family_without_state_change_does_not_review(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -398,9 +400,8 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual([call.kind for call in core.calls], ["strategy"])
             self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
-            self.assertEqual(core.calls[-1].reported_focus, "")
 
-    def test_validated_progress_reviews_first_cycle_then_waits_for_two_more(self):
+    def test_first_change_reviews_once_without_progress_reviews(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -409,7 +410,7 @@ class LongGoalReplayTests(unittest.TestCase):
             def event(name, command, output):
                 return {
                     "hook_event_name": "PostToolUse",
-                    "session_id": "validated-progress",
+                    "session_id": "first-change",
                     "turn_id": "t",
                     "cwd": str(root),
                     "tool_name": name,
@@ -419,7 +420,7 @@ class LongGoalReplayTests(unittest.TestCase):
 
             adapter.process(event("apply_patch", "apply_patch first", "changed"))
             adapter.process(event("exec_command", "python -m pytest tests/a.py", "1 passed"))
-            self.assertEqual([call.trigger for call in core.calls], ["validated-progress"])
+            self.assertEqual([call.trigger for call in core.calls], ["first-change"])
 
             adapter.process(event("apply_patch", "apply_patch second", "changed"))
             adapter.process(event("exec_command", "python -m pytest tests/b.py", "1 passed"))
@@ -429,10 +430,10 @@ class LongGoalReplayTests(unittest.TestCase):
             adapter.process(event("exec_command", "python -m pytest tests/c.py", "1 passed"))
             self.assertEqual(
                 [call.trigger for call in core.calls],
-                ["validated-progress", "validated-progress"],
+                ["first-change"],
             )
 
-    def test_goal_completion_is_reviewed_before_the_final_response(self):
+    def test_goal_completion_does_not_create_a_late_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -448,11 +449,9 @@ class LongGoalReplayTests(unittest.TestCase):
                     "tool_response": {"success": True},
                 }
             )
-            self.assertEqual(core.calls[0].kind, "goal_transition")
-            self.assertEqual(core.calls[0].trigger, "goal-complete")
-            self.assertEqual(core.calls[0].reported_focus, "")
+            self.assertEqual(core.calls, [])
 
-    def test_old_turn_queued_nudge_does_not_block_new_goal_transition_review(self):
+    def test_old_turn_queued_nudge_does_not_create_goal_transition_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = settings_for(root)
@@ -477,9 +476,7 @@ class LongGoalReplayTests(unittest.TestCase):
                     "tool_response": {"success": True},
                 }
             )
-            self.assertEqual(len(core.calls), 1)
-            self.assertEqual(core.calls[0].kind, "goal_transition")
-            self.assertEqual(core.calls[0].trigger, "goal-complete")
+            self.assertEqual(core.calls, [])
             self.assertIsNone(output)
 
     def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):
@@ -501,7 +498,7 @@ class LongGoalReplayTests(unittest.TestCase):
                 )
             self.assertEqual(core.calls, [])
 
-    def test_reported_focus_routes_to_distinct_existing_lenses(self):
+    def test_manual_stage_forces_each_existing_lens(self):
         cases = (
             ("design", "jeff"),
             ("build", "beck"),
@@ -510,15 +507,12 @@ class LongGoalReplayTests(unittest.TestCase):
             ("reliability", "lamport"),
             ("performance", "carmack"),
         )
-        for focus, expected in cases:
-            with self.subTest(focus=focus):
-                root = Path(tempfile.mkdtemp())
-                route = lens_router.resolve_review_route(
-                    root,
-                    environ={},
-                    reported_focus=focus,
-                )
-                self.assertEqual(route.effective_lens, expected)
+        for stage, expected in cases:
+            with self.subTest(stage=stage), tempfile.TemporaryDirectory() as raw:
+                root = Path(raw)
+                persona_config.save_stage(root, stage)
+                route = lens_router.resolve_review_route(root, environ={})
+                self.assertEqual(route.lens, expected)
 
 
 if __name__ == "__main__":

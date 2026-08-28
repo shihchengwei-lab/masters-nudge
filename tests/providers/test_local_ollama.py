@@ -244,7 +244,11 @@ class LocalCallTests(unittest.TestCase):
             "message": {
                 "role": "assistant",
                 "content": json.dumps(
-                    {"status": "finding", "finding": "驗證仍早於真正的完成條件。"},
+                    {
+                        "status": "finding",
+                        "effective_lens": "beck",
+                        "finding": "固定可觀察行為；別替內部做法蓋章，因為契約才是邊界。",
+                    },
                     ensure_ascii=False,
                 ),
             },
@@ -298,7 +302,7 @@ class LocalCallTests(unittest.TestCase):
     def test_incomplete_chat_response_is_an_error(self):
         chat = {
             "done": False,
-            "message": {"content": '{"status":"no_finding","finding":""}'},
+            "message": {"content": '{"status":"no_finding","effective_lens":"none","finding":""}'},
         }
         errors = []
         with FakeOllama(ready_routes(chat)) as fake:
@@ -320,7 +324,7 @@ class LocalCallTests(unittest.TestCase):
             "done": True,
             "remote_model": "remote",
             "remote_host": "https://ollama.com",
-            "message": {"content": '{"status":"no_finding","finding":""}'},
+            "message": {"content": '{"status":"no_finding","effective_lens":"none","finding":""}'},
         }
         with FakeOllama(ready_routes(chat)) as fake:
             with patch.object(providers, "call_codex_result") as codex, patch.object(

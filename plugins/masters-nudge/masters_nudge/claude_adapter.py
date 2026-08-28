@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 
 import source_context
-import persona_config
 
 from . import storage
 from .contracts import SessionRef, find_git_root
@@ -123,7 +122,6 @@ def build_stop_source_context(
     last_assistant = str(hook.get("last_assistant_message") or "")
     if not last_assistant:
         last_assistant = read_latest_assistant_text(transcript_path, offset)
-    last_assistant = persona_config.strip_focus_markers(last_assistant)
     return source_context.build_stop_packet(
         task_anchor=str(state.get("task_anchor") or ""),
         last_assistant_message=last_assistant,

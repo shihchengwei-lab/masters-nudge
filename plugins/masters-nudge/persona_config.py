@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Shared persistent lifecycle-stage selection for Masters' Nudge."""
+"""Shared persistent Lens selection for Masters' Nudge."""
 
 from __future__ import annotations
 
 import json
 import os
-import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,26 +13,7 @@ from typing import Mapping
 
 CONFIG_FILE = "config.json"
 AUTOMATIC_STAGE = "automatic"
-AUTOMATIC_LABEL = "Automatic · coding agent 回報目前工作焦點"
-FOCUS_REPORT_INSTRUCTION = (
-    "Append one hidden marker to every progress or final message reporting your "
-    "current work focus: <!-- masters-nudge-focus:build -->. Use design, build, "
-    "evolve, review, reliability, or performance. This only reports progress; "
-    "hooks decide when reviews run."
-)
-FOCUS_LENSES = {
-    "design": "jeff",
-    "build": "beck",
-    "evolve": "fowler",
-    "review": "linus",
-    "reliability": "lamport",
-    "performance": "carmack",
-}
-FOCUS_MARKER_RE = re.compile(
-    r"<!--\s*masters-nudge-focus\s*:\s*"
-    r"(design|build|evolve|review|reliability|performance)\s*-->",
-    re.IGNORECASE,
-)
+AUTOMATIC_LABEL = "Automatic · 依目前決策壓力選擇濾鏡"
 
 
 @dataclass(frozen=True)
@@ -95,21 +75,10 @@ def stage_label(stage: str) -> str:
     return STAGE_SPECS[key].label
 
 
-def reported_focus(text: str) -> str:
-    """Read the main model's latest explicit work-focus report."""
-    matches = FOCUS_MARKER_RE.findall(str(text or ""))
-    return str(matches[-1]).lower() if matches else ""
-
-
-def strip_focus_markers(text: str) -> str:
-    """Keep the transport marker out of reviewer evidence and user claims."""
-    return FOCUS_MARKER_RE.sub("", str(text or "")).strip()
-
-
 def resolve_stage(
     base_dir: Path, *, environ: Mapping[str, str] | None = None
 ) -> StageSelection:
-    """Resolve a manual override or the default automatic focus report mode."""
+    """Resolve a manual Lens override or the default automatic Router mode."""
     environment = os.environ if environ is None else environ
     env_stage = str(environment.get("MASTERS_NUDGE_STAGE") or "").strip().lower()
     if env_stage:
@@ -167,7 +136,7 @@ def _atomic_save(base_dir: Path, payload: dict[str, str], prefix: str) -> None:
 
 
 def save_stage(base_dir: Path, stage: str) -> None:
-    """Atomically persist a valid lifecycle stage in the new config format."""
+    """Atomically persist a valid public Lens selection."""
     key = str(stage or "").strip().lower()
     if key != AUTOMATIC_STAGE and key not in STAGE_SPECS:
         raise ValueError(f"unsupported stage: {stage!r}")

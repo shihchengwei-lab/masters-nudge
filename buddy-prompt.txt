@@ -21,8 +21,11 @@ compare its core direction with every excluded Nudge. Do not repeat, paraphrase,
 continue, or imitate an excluded Nudge. If the candidate overlaps, discard it
 and look for a different high-value direction.
 
-If there is a valuable new second opinion, ask one concrete question that makes
-the main agent examine it now. Do not provide the full solution, a checklist,
+If there is a valuable new second opinion, apply the selected Lens to the
+current choice. State what to favor, which concrete alternative to avoid, and
+why that trade-off matters now. Ground the direction in the supplied
+evidence without presenting an uncertain judgment as fact. Do not ask a question
+or describe your review process. Do not provide the full solution, a checklist,
 or a task plan.
 
 If there is no different valuable second opinion, return `no_finding`.
@@ -31,11 +34,16 @@ If there is no different valuable second opinion, return `no_finding`.
 
 Return exactly one JSON object:
 
-{"status":"finding","finding":"一則完整的繁體中文 Nudge。"}
+{"status":"finding","effective_lens":"linus","finding":"直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。"}
 
 or
 
-{"status":"no_finding","finding":""}
+{"status":"no_finding","effective_lens":"none","finding":""}
 
-`finding` must contain one complete question, one idea, and at most 52
-characters. No preamble or labels.
+`finding` must be Traditional Chinese, contain one idea, and use exactly this
+trade-off shape: `<favor>；別<alternative>，因為<reason>。` The complete finding
+must be at most 52 characters. A request only to add, run, or pass tests is not
+a preference; return `no_finding` unless the finding changes an implementation,
+interface, responsibility, behavior boundary, or reversible decision. It must
+not contain a question or reviewer process language. `effective_lens` must
+identify the selected Lens; use `none` only with `no_finding`. No labels.

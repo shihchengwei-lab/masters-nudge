@@ -8,7 +8,7 @@ Masters’ Nudge 是給 Claude Code 與 Codex 使用的動態 context steering p
 
 它在選定的 checkpoint 收集主要 agent 當下留下的有限證據，交給獨立的 Nudge provider。Provider 透過指定的 Lens 聚焦問題，產生一則短 Nudge，再由 Harness 寫入主要 agent 的 context。
 
-短問題是 Nudge 的外在形式。底層動作是把一個新的語義錨點放進 context，讓主要 agent 在新的條件下繼續生成。
+短方向是 Nudge 的外在形式。底層動作是把一個新的語義錨點放進 context，讓主要 agent 在新的條件下繼續生成。
 
 ---
 
@@ -25,7 +25,7 @@ Checkpoint policy 判斷是否進行 review
         ↓
 Nudge provider 透過指定 Lens 聚焦
         ↓
-產生一則短問題，或回傳 no_finding
+產生一則短方向，或回傳 no_finding
         ↓
 Harness 將 Nudge 作為新錨點寫入 context
         ↓
@@ -57,9 +57,9 @@ Nudge 進入 context 後，它的 token 也會參與後續生成，使下一個 
 可能不同的生成路徑
 ```
 
-Masters’ Nudge 目前把這個錨點壓縮成一則短問題。
+Masters’ Nudge 目前把這個錨點壓縮成一則短方向。
 
-問題提供方向，但不展開完整解法。主要 agent 會自行把這個方向與原本的任務、證據和生成路徑混合，再決定下一步輸出。
+Nudge 直接說明此刻應優先、保留、簡化或移除什麼，但不展開完整解法。主要 agent 會自行把這個方向與原本的任務、證據和生成路徑混合，再決定下一步輸出。
 
 這個控制點位於推論階段的 context，模型權重保持不變。
 
@@ -99,7 +99,7 @@ Master filter 只提供給 Nudge provider。
 
 Provider 透過這層濾鏡閱讀當下證據，選出最值得帶入主要 agent context 的方向，再把它壓縮成一則 Nudge。
 
-主要 agent 只會收到最後產生的問題，不會看到人物名稱、角色設定或完整的 reviewer prompt。
+主要 agent 只會收到最後產生的方向，不會看到人物名稱、角色設定或完整的 reviewer prompt。
 
 專案名稱描述的就是這條路徑：
 
@@ -127,20 +127,20 @@ Lens 定義 Nudge provider 應該注意什麼。
 
 不同 Lens 會從同一份證據中選出不同的語義錨點。
 
-目前的實作把錨點表達成問題：
+目前的實作把錨點表達成簡潔的取捨偏好：
 
 ```text
 工程 Lens：
-哪個元件真正擁有這個狀態？
+讓狀態只歸一個 owner，其餘元件只負責傳遞。
 
 道德 Lens：
-這個決定把誰的代價移到系統外？
+讓被移轉的代價留在決策視野內。
 
 合規 Lens：
-哪份證據支持這項合規宣告？
+讓每項合規宣告直接連到證據。
 
 科學 Lens：
-什麼結果能區分這兩個解釋？
+優先做能區分兩個解釋的實驗。
 ```
 
 目前這個 repository 實作的是軟體工程版本。其他 Lens 可以沿用相同的 Hook、checkpoint 與注入迴圈。
@@ -149,7 +149,7 @@ Lens 定義 Nudge provider 應該注意什麼。
 
 ## 一則 Nudge 的形狀
 
-目前的輸出契約把語義錨點壓縮成一則短問題。
+目前的輸出契約把語義錨點壓縮成一則短方向。
 
 對主要 agent 而言，Nudge 是一則簡短、以證據為錨點的獨立第二意見。
 
@@ -160,16 +160,21 @@ Reviewer 每次回傳兩種結果之一。
 一則有效的 Nudge：
 
 - 根據目前提供的證據；
-- 聚焦一個假設、限制、反例或替代方向；
-- 提出一個現在可以檢查的問題；
+- 聚焦一個有證據支持的偏好或取捨；
+- 直接說明此刻應優先、保留、簡化或移除什麼；
+- 使用 `<優先選擇>；別<替代方案>，因為<理由>。`；
+- 不向主要 agent 提問，也不描述 Reviewer 的檢查流程；
 - 一次只包含一個想法；
 - 最長 52 個字元。
+
+例如：`直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。`
+這個範例是 28 個字元。單純要求新增、執行或通過測試，不算工程偏好；除非會改變實作、介面、責任歸屬或行為邊界，否則必須回傳 `no_finding`。
 
 主要 agent 會收到：
 
 ```text
 獨立第二意見：
-<一則短問題>
+<一則短方向>
 ```
 
 ### `no_finding`
@@ -178,7 +183,7 @@ Reviewer 每次回傳兩種結果之一。
 
 `no_finding` 的實際機率通常偏低。
 
-LLM 在收到 review 任務後，傾向產生一個可以交付的意見，不傾向回答「沒有意見」。即使證據不足，它仍可能勉強選出一個問題。
+LLM 在收到 review 任務後，傾向產生一個可以交付的意見，不傾向回答「沒有意見」。即使證據不足，它仍可能勉強選出一個方向。
 
 因此，`no_finding` 提供的是一個明確的沉默出口，不應預期它和 `finding` 一樣常見。
 
@@ -203,7 +208,7 @@ Temperature 適合調整整體取樣方式。
 
 Masters’ Nudge 則把介入放在工作途中：先讀取主要 agent 已經做到哪裡，再決定此刻要把哪個方向放進 context。
 
-目前的實作使用短問題承載這個方向。
+目前的實作使用簡短陳述承載這個偏好。
 
 ---
 
@@ -216,8 +221,8 @@ Harness 負責讓這個方向在固定流程中反覆運作：
 1. 保存使用者任務；
 2. 收集可觀察證據；
 3. 判斷 checkpoint；
-4. 選擇 Lens；
-5. 呼叫 Nudge provider；
+4. 在 Automatic 模式由精簡 Router 選擇一個 Lens；
+5. 呼叫只看得到該 Lens 的 Generator；
 6. 驗證 Nudge 格式；
 7. 將 Nudge 作為新錨點寫入主要 agent 的 context；
 8. 記錄 review、投遞與後續反應。
@@ -248,13 +253,13 @@ Harness 負責讓這個方向在固定流程中反覆運作：
 
 Nudge 把另一個語義錨點加入同一個 context，使主要 agent 同時面對原本的路徑與新的方向。
 
-當 Nudge 命中盲點時，這股張力可以：
+當 Nudge 命中薄弱的設計選擇時，這股張力可以：
 
-- 揭露尚未驗證的假設；
-- 阻止過早宣告完成；
-- 拉回已被忽略的方向；
-- 促使 agent 補上一個辨別性檢查；
-- 推動原本低機率但有價值的生成路徑。
+- 用明確狀態取代猜測；
+- 把責任移回真正擁有資料的元件；
+- 刪除特例，而不是再延伸一層；
+- 選擇更小、更容易讀懂的表示方式；
+- 在第一個語意結果出現後，校正下一個實作選擇。
 
 當 Nudge 與充分證據衝突，或在錯誤時點重新打開問題時，張力也可能表現為：
 
@@ -265,7 +270,7 @@ Nudge 把另一個語義錨點加入同一個 context，使主要 agent 同時�
 
 這個機制的效果來自張力，也受張力限制。
 
-Harness 透過少數 checkpoint、有限證據、單一問題、52 字元上限與 `no_finding`，控制每次介入的範圍。
+Harness 透過少數 checkpoint、有限證據、單一方向、52 字元上限與 `no_finding`，控制每次介入的範圍。
 
 ---
 
@@ -282,7 +287,7 @@ Repository 目前提供六種工程 Lens：
 | Reliability | 狀態、事件順序、不變量與局部失敗 |
 | Performance | 實際執行成本與不必要工作 |
 
-Automatic 模式會根據主要 agent 回報的當下工作焦點選擇 Lens。這份焦點回報只負責選擇 reviewer prompt；是否進行 review 仍由 Hook 與 checkpoint policy 決定。
+Automatic 模式使用兩次受限呼叫。精簡 Router 只看 Lens 定義、不看完整 persona，找出尚未解決的工程選擇並選定一個 Lens；Generator 只看該 Lens，再產生 Nudge。手動模式略過 Router，直接呼叫固定 Lens 的 Generator。
 
 手動設定可以固定使用六種 Lens 中的任一種：Design、Build、Evolve、Review、Reliability 或 Performance。
 
@@ -312,15 +317,16 @@ Reviewer 每次都是獨立的模型呼叫，即使它使用與主要 agent 相�
 
 目前的 Hook 會在下列時點考慮產生 Nudge：
 
-- 相同可觀察範圍發生第二次失敗；
-- 長期目標明確轉為 `complete` 或 `blocked`；
-- 一個工作回合結束。
+- 每回合第一次語意變更完成後；
+- 相同可觀察範圍的失敗類型重複發生後。
 
-一般程式變更、大型 diff、成功驗證與第一次失敗會先累積為證據。Checkpoint 成立後，Nudge provider 才會讀取受限的證據封包。
+目標狀態轉換、成功驗證與一般進度不會開啟 review。修改後事件會記錄實際結果，讓 Router 與 Generator 看得到第一個已改變的狀態。
 
 符合條件的 review 會同步執行，讓 Nudge 在同一回合進入主要 agent 的後續 context。
 
-Provider 工作時間最多 90 秒，外層 Host Hook 預留 120 秒。Review 發生錯誤或逾時時，這次介入結束，主要 agent 繼續工作。
+在 `Stop` 時，Hook 只記錄主要 agent 是否已回應先前注入的 Nudge；不會呼叫 Provider、產生新 Nudge 或阻擋收尾。
+
+Provider 工作時間最多 90 秒，外層 Host Hook 預留 120 秒。Automatic 模式由 Router 與 Generator 共用這段時間；手動模式只呼叫一次 Generator。任一階段發生錯誤或逾時時，這次介入結束，主要 agent 繼續工作。
 
 ---
 

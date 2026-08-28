@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["finding", "no_finding"]
+    },
+    "finding": {
+      "type": "string",
+      "maxLength": 52
+    },
+    "effective_lens": {
+      "type": "string",
+      "enum": ["jeff", "linus", "fowler", "beck", "lamport", "carmack", "none"]
+    }
+  },
+  "required": ["status", "effective_lens", "finding"],
+  "additionalProperties": false
+}

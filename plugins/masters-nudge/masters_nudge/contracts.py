@@ -8,7 +8,7 @@ from typing import Literal, TypeAlias
 
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
-ReviewKind: TypeAlias = Literal["checkpoint", "strategy", "goal_transition", "stop"]
+ReviewKind: TypeAlias = Literal["checkpoint", "strategy"]
 ReviewStatus: TypeAlias = Literal["finding", "no_finding", "error"]
 
 
@@ -60,7 +60,6 @@ class ReviewRequest:
     session: SessionRef
     source_packet: str
     source_fingerprint: str
-    reported_focus: str = ""
     source_event_seq: int = 0
     trigger: str = ""
 

@@ -30,6 +30,7 @@ PACKAGE_MANIFEST = (
     PackageFile("masters_nudge_cli.py"),
     PackageFile("persona_config.py"),
     PackageFile("reaction-schema.json"),
+    PackageFile("route-schema.json"),
     PackageFile("review_telemetry.py"),
     PackageFile("source_context.py"),
     PackageFile("spritesheet.webp", runtime_required=False),

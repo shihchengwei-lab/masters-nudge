@@ -10,11 +10,25 @@
     },
     "finding": {
       "type": "string",
-      "maxLength": 52
+      "maxLength": 52,
+      "pattern": "^.+；別.+，因為.+。$"
+    },
+    "effective_lens": {
+      "type": "string",
+      "enum": [
+        "jeff",
+        "linus",
+        "fowler",
+        "beck",
+        "lamport",
+        "carmack",
+        "none"
+      ]
     }
   },
   "required": [
     "status",
+    "effective_lens",
     "finding"
   ],
   "additionalProperties": false

@@ -22,6 +22,35 @@ LENS_FOCUS = {
     "carmack": "Trace measured execution cost and work the machine need not do.",
 }
 
+AUTOMATIC_ROUTING_PROMPT = """# AUTOMATIC LENS ROUTER
+
+Find one unresolved engineering choice in the supplied evidence, then choose
+the one Lens whose taste is most relevant to that choice:
+
+- jeff: system shape, data movement, ownership, scale, and downstream cost.
+- linus: data shape, interfaces, special cases, and unnecessary complexity.
+- fowler: duplicated knowledge, change spread, naming, and responsibility.
+- beck: uncertainty that a smaller feedback step can resolve before expansion.
+- lamport: state, event order, invariants, retries, and partial failure.
+- carmack: measured runtime cost, hot paths, and work the machine need not do.
+
+Route by decision pressure, not lifecycle stage, project topic, test presence,
+or failure presence. Do not give advice and do not produce a Nudge. The full
+persona contexts are intentionally absent.
+
+Return exactly one JSON object. Use `finding` only as the unresolved decision:
+
+{"status":"finding","effective_lens":"linus","finding":"如何記錄輸入值的來源"}
+
+or, when no unresolved choice is supported by the evidence:
+
+{"status":"no_finding","effective_lens":"none","finding":""}
+"""
+
+
+def build_router_prompt() -> str:
+    return AUTOMATIC_ROUTING_PROMPT.strip() + "\n"
+
 def delivery_text(finding: str) -> str:
     """Identify reviewer provenance without changing the stored finding."""
     return f"{INDEPENDENT_OPINION_LABEL}\n{str(finding or '').strip()}"
@@ -32,6 +61,7 @@ def build_system_prompt(
     prompt_file: Path,
     persona_dir: Path,
     route: lens_router.ReviewRoute,
+    route_decision: str = "",
     timing_prompt: str = "",
     log_error: Callable[[str], None] | None = None,
 ) -> str:
@@ -43,18 +73,24 @@ def build_system_prompt(
         return ""
 
     personas = persona_config.LENS_PERSONAS
-    persona = route.effective_lens
-    if persona not in personas:
-        supported = ", ".join(personas)
-        logger(f"unknown persona: {persona!r}; supported: {supported}")
+    selected_lens = route.lens
+    selected = (selected_lens,) if selected_lens else ()
+    if not selected:
+        logger("generator requires one selected lens")
         return ""
-
-    persona_file = persona_dir / f"{persona}.txt"
-    try:
-        overlay = persona_file.read_text(encoding="utf-8").strip()
-    except Exception as exc:
-        logger(f"persona prompt read failed ({persona}): {exc}")
-        return ""
+    overlays = []
+    for persona in selected:
+        if persona not in personas:
+            supported = ", ".join(personas)
+            logger(f"unknown persona: {persona!r}; supported: {supported}")
+            return ""
+        persona_file = persona_dir / f"{persona}.txt"
+        try:
+            overlay = persona_file.read_text(encoding="utf-8").strip()
+        except Exception as exc:
+            logger(f"persona prompt read failed ({persona}): {exc}")
+            return ""
+        overlays.append(f"# LENS CONTEXT: {persona}\n\n{overlay}")
 
     contract_marker = "\n# NUDGE\n"
     foundation, marker, contract = base_prompt.partition(contract_marker)
@@ -63,9 +99,21 @@ def build_system_prompt(
         return ""
     sections = (
         foundation.strip(),
-        overlay,
+        "\n\n".join(overlays),
         str(timing_prompt or "").strip(),
-        lens_focus_prompt(route.effective_lens).strip(),
+        (
+            "# ROUTING HYPOTHESIS — NOT EVIDENCE\n\n"
+            f"The router identified this unresolved choice: {route_decision.strip()}\n"
+            "Verify it against the supplied evidence. If unsupported or already "
+            "decided, return `no_finding`."
+            if route_decision.strip()
+            else ""
+        ),
+        (
+            f"# SELECTED LENS\n\nUse only `{selected_lens}` and return it as "
+            "`effective_lens` when there is a finding."
+        ),
+        lens_focus_prompt(selected_lens).strip(),
         f"# NUDGE\n{contract.strip()}",
     )
     return "\n\n".join(section for section in sections if section).rstrip() + "\n"

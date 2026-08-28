@@ -21,7 +21,7 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
     def test_selector_and_badges_describe_work_not_people(self):
         self.assertEqual(
             [
-                "Automatic · coding agent 回報目前工作焦點",
+                "Automatic · 依目前決策壓力選擇濾鏡",
                 "Design · 系統結構、因果與成本",
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
@@ -91,7 +91,7 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
     def test_provider_prompt_keeps_person_name_as_private_attention_cue(self):
         route = lens_router.ReviewRoute(
             stage="review",
-            effective_lens="linus",
+            lens="linus",
             source="config",
         )
         prompt = build_system_prompt(

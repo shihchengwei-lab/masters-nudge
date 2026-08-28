@@ -6,14 +6,17 @@ import time
 from typing import Callable
 
 import lens_router
+import persona_config
 import review_telemetry
 
 from . import providers, storage
 from .contracts import ReviewOutcome, ReviewRequest
 from .prompting import (
+    build_router_prompt,
     build_review_input,
     build_system_prompt,
 )
+from .provider_contract import is_taste_finding
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
 
@@ -28,24 +31,23 @@ STRATEGY_PROMPT = """
 
 # TRAJECTORY CHECKPOINT
 
-Current timing: the main agent has completed a change-and-validation cycle.
-"""
-
-GOAL_TRANSITION_PROMPT = """
-
-# GOAL TRANSITION
-
-Current timing: the main agent is transitioning the task goal.
-"""
-
-STOP_PROMPT = """
-
-# COMPLETION BOUNDARY
-
-Current timing: the main agent is about to close the task.
+Current timing: the main agent has made its first semantic change or repeated
+the same failure family. Focus on the unresolved choice, not review completion.
 """
 
 ProviderDispatch = Callable[..., dict]
+
+
+def _merge_usage(*values: object) -> dict[str, int | float]:
+    merged: dict[str, int | float] = {}
+    for value in values:
+        if not isinstance(value, dict):
+            continue
+        for key, amount in value.items():
+            if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+                continue
+            merged[str(key)] = merged.get(str(key), 0) + amount
+    return merged
 
 
 class ReviewCore:
@@ -62,6 +64,7 @@ class ReviewCore:
         self.prompt_file = settings.paths.runtime_dir / "buddy-prompt.txt"
         self.persona_dir = settings.paths.runtime_dir / "personas"
         self.schema_path = settings.paths.runtime_dir / "reaction-schema.json"
+        self.route_schema_path = settings.paths.runtime_dir / "route-schema.json"
 
     def _review_claimed(
         self,
@@ -75,34 +78,78 @@ class ReviewCore:
         configuration_source = self.settings.configuration_source
         route = lens_router.resolve_review_route(
             self.settings.paths.data_dir,
-            reported_focus=request.reported_focus,
-            stopping=request.kind == "stop",
         )
-        route_fields = {
-            "stage": route.stage,
-            "effective_lens": route.effective_lens,
-            "route_source": route.source,
-        }
-        timing_prompt = ""
-        if request.kind == "checkpoint":
-            timing_prompt = CHECKPOINT_PROMPT
-        elif request.kind == "strategy":
-            timing_prompt = STRATEGY_PROMPT
-        elif request.kind == "goal_transition":
-            timing_prompt = GOAL_TRANSITION_PROMPT
-        elif request.kind == "stop":
-            timing_prompt = STOP_PROMPT
+        timing_prompt = (
+            CHECKPOINT_PROMPT if request.kind == "checkpoint" else STRATEGY_PROMPT
+        )
+        effective_timeout = min(
+            timeout_sec or self.settings.timeout_sec,
+            REVIEW_TIMEOUT_SEC,
+        )
+        route_decision = ""
+        router_usage: dict[str, int] = {}
+        router_latency_ms = 0
+        router_input_chars = 0
+        result: dict | None = None
+        if not route.lens:
+            router_prompt = build_router_prompt()
+            router_timeout = min(25, max(5, effective_timeout // 3))
+            router_started = time.perf_counter()
+            routed = self.dispatch(
+                provider,
+                router_prompt,
+                request.source_packet,
+                model,
+                schema_path=self.route_schema_path,
+                timeout_sec=router_timeout,
+                ollama_url=self.settings.ollama_url,
+                log_error=self.log_error,
+            )
+            router_latency_ms = round((time.perf_counter() - router_started) * 1000)
+            router_input_chars = len(router_prompt) + len(request.source_packet)
+            if not isinstance(routed, dict):
+                routed = {"status": "error", "effective_lens": "none", "finding": ""}
+            router_usage = (
+                routed.get("usage") if isinstance(routed.get("usage"), dict) else {}
+            )
+            routed_status = str(routed.get("status") or "error")
+            routed_lens = str(routed.get("effective_lens") or "none").lower()
+            route_decision = str(routed.get("finding") or "").strip()
+            if routed_status == "no_finding":
+                result = {
+                    "status": "no_finding",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                }
+            elif (
+                routed_status == "finding"
+                and routed_lens in persona_config.PERSONA_NAMES
+                and route_decision
+            ):
+                route = lens_router.ReviewRoute(
+                    "automatic", routed_lens, "automatic_router"
+                )
+            else:
+                result = {
+                    "status": "error",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                    "error_kind": str(routed.get("error_kind") or "invalid_route"),
+                }
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
             route=route,
+            route_decision=route_decision,
             timing_prompt=timing_prompt,
             log_error=self.log_error,
-        )
-        if not system_prompt:
+        ) if result is None else ""
+        if result is None and not system_prompt:
             return ReviewOutcome(
                 "error",
-                effective_lens=route.effective_lens,
+                effective_lens="none",
                 provider=provider,
                 model=model,
             )
@@ -115,30 +162,51 @@ class ReviewCore:
             ),
         )
 
-        effective_timeout = min(
-            timeout_sec or self.settings.timeout_sec,
-            REVIEW_TIMEOUT_SEC,
-        )
         started = time.perf_counter()
-        result = self.dispatch(
-            provider,
-            system_prompt,
-            review_input,
-            model,
-            schema_path=self.schema_path,
-            timeout_sec=effective_timeout,
-            ollama_url=self.settings.ollama_url,
-            log_error=self.log_error,
-        )
+        if result is None:
+            generator_timeout = (
+                max(1, effective_timeout - min(25, max(5, effective_timeout // 3)))
+                if route.source == "automatic_router"
+                else effective_timeout
+            )
+            result = self.dispatch(
+                provider,
+                system_prompt,
+                review_input,
+                model,
+                schema_path=self.schema_path,
+                timeout_sec=generator_timeout,
+                ollama_url=self.settings.ollama_url,
+                log_error=self.log_error,
+            )
         if not isinstance(result, dict):
             result = {"status": "error", "finding": "", "usage": {}}
-        latency_ms = round((time.perf_counter() - started) * 1000)
+        result["usage"] = _merge_usage(router_usage, result.get("usage"))
+        latency_ms = router_latency_ms + round((time.perf_counter() - started) * 1000)
         finding = str(result.get("finding") or "").strip()
         status = str(result.get("status") or "error")
+        effective_lens = str(result.get("effective_lens") or "none").strip().lower()
         if status not in {"finding", "no_finding", "error"}:
             status = "error"
         if status == "finding" and not finding:
             status = "error"
+        if status == "finding" and not is_taste_finding(finding):
+            status = "error"
+        if status == "finding" and effective_lens not in persona_config.PERSONA_NAMES:
+            status = "error"
+        if (
+            status == "finding"
+            and route.lens
+            and effective_lens != route.lens
+        ):
+            status = "error"
+        if status != "finding":
+            effective_lens = "none"
+        route_fields = {
+            "stage": route.stage,
+            "effective_lens": effective_lens,
+            "route_source": route.source,
+        }
         reaction_ts = ""
         if persist_reaction and status == "finding":
             entry = storage.append_reaction(
@@ -150,13 +218,6 @@ class ReviewCore:
                 route_metadata={
                     **route_fields,
                     "review_trigger": request.trigger or request.reason,
-                    **(
-                        {
-                            "completion_basis": "unclear"
-                        }
-                        if request.trigger in {"goal-complete", "goal-blocked"}
-                        else {}
-                    ),
                 },
                 reason=request.reason,
                 source_event_seq=request.source_event_seq,
@@ -200,7 +261,7 @@ class ReviewCore:
                 **route_fields,
                 "review_trigger": request.trigger or request.reason,
                 "status": status,
-                "input_chars": len(system_prompt) + len(review_input),
+                "input_chars": router_input_chars + len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
                 "usage": result.get("usage") if isinstance(result, dict) else {},
@@ -215,7 +276,7 @@ class ReviewCore:
         return ReviewOutcome(
             status,  # type: ignore[arg-type]
             finding=finding if status == "finding" else "",
-            effective_lens=route.effective_lens,
+            effective_lens=effective_lens,
             provider=provider,
             model=model,
             latency_ms=latency_ms,
@@ -230,7 +291,7 @@ class ReviewCore:
         persist_reaction: bool = True,
         timeout_sec: int | None = None,
     ) -> ReviewOutcome | None:
-        """Run exactly one Provider call for a canonical review identity."""
+        """Run one canonical review attempt and claim its identity once."""
         token = storage.claim_review_attempt(
             self.settings.paths.data_dir,
             request.session,

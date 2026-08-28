@@ -157,6 +157,14 @@ def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str
     return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
 
+def parse_schema_result(stdout: str, schema_path: Path) -> dict:
+    """Apply semantic taste validation only to final Nudge output."""
+    return parse_reaction_result(
+        stdout,
+        require_taste=Path(schema_path).name == "reaction-schema.json",
+    )
+
+
 def parse_usage(stdout: str) -> dict[str, int]:
     usage_fields = {
         "input_tokens",
@@ -257,7 +265,7 @@ def call_claude_result(
             detail = str(result.stderr or result.stdout or "")[:500]
             log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
-        parsed = parse_reaction_result(result.stdout)
+        parsed = parse_schema_result(result.stdout, schema_path)
         parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
@@ -271,7 +279,7 @@ def call_claude_result(
             partial_stdout = partial_stdout.decode("utf-8", errors="replace")
         if isinstance(partial_stderr, bytes):
             partial_stderr = partial_stderr.decode("utf-8", errors="replace")
-        parsed = parse_reaction_result(str(partial_stdout))
+        parsed = parse_schema_result(str(partial_stdout), schema_path)
         if parsed.get("status") != "error":
             parsed["usage"] = parse_usage(str(partial_stdout))
             log_error("claude CLI timed out after complete structured output; recovered")
@@ -325,9 +333,11 @@ def resolve_grok_bin() -> str | None:
     return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
 
 
-def parse_grok_reaction_result(stdout: str) -> dict:
+def parse_grok_reaction_result(
+    stdout: str, *, require_taste: bool = True
+) -> dict:
     """Extract schema output from direct or Grok headless JSON envelopes."""
-    direct = parse_reaction_result(stdout)
+    direct = parse_reaction_result(stdout, require_taste=require_taste)
     if direct.get("status") != "error":
         return direct
     try:
@@ -348,10 +358,13 @@ def parse_grok_reaction_result(stdout: str) -> dict:
                 candidates.append(outer[key])
     for value in candidates:
         if isinstance(value, str):
-            parsed = parse_reaction_result(value)
+            parsed = parse_reaction_result(value, require_taste=require_taste)
         else:
             try:
-                parsed = parse_reaction_result(json.dumps(value, ensure_ascii=False))
+                parsed = parse_reaction_result(
+                    json.dumps(value, ensure_ascii=False),
+                    require_taste=require_taste,
+                )
             except (TypeError, ValueError):
                 continue
         if parsed.get("status") != "error":
@@ -416,7 +429,10 @@ def call_grok_result(
             timeout_sec=timeout_sec,
             log_error=log_error,
         )
-        parsed = parse_grok_reaction_result(result.stdout)
+        parsed = parse_grok_reaction_result(
+            result.stdout,
+            require_taste=Path(schema_path).name == "reaction-schema.json",
+        )
         parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") != "error":
             return parsed
@@ -507,7 +523,7 @@ def call_codex_result(
             return call_result(
                 usage=parse_usage(result.stdout), error_kind="invalid_output"
             )
-        parsed = parse_reaction_result(raw_output)
+        parsed = parse_schema_result(raw_output, schema_path)
         parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
@@ -572,6 +588,7 @@ def dispatch_call_result(
             timeout_sec=timeout_sec,
             base_url=ollama_url,
             log_error=log_error,
+            parse_result=lambda value: parse_schema_result(value, schema_path),
         )
     log_error(f"unsupported reviewer provider: {provider!r}")
     return call_result()

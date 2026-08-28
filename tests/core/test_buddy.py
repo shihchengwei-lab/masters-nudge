@@ -5,6 +5,7 @@ Run:  python -m unittest test_buddy -v
 """
 
 import inspect
+import hashlib
 import io
 import json
 import os
@@ -100,6 +101,14 @@ class TestPersonaPromptSelection(unittest.TestCase):
         "lamport": "Leslie Lamport",
         "carmack": "John Carmack",
     }
+    PERSONA_CONTEXT_HASHES = {
+        "beck": "023fea5ac9b018acf7b6677f381bb88791d9770fd1ccd387faf87d06655c0321",
+        "carmack": "5bc75ce9a99c2390287a59e42865f6b0d9e8a8334b4ac6e7d0321f9db0065023",
+        "fowler": "4240eb302181121533ef1380221524a544c10191d7d338c1ae15629f2cc92d51",
+        "jeff": "51c4eaddbe12d7567f098f342a15d16616a3c9201339d958bd6de79744d07796",
+        "lamport": "f423252423dbd4580aa30e9c5203ff2817d2c575ba631b5401bded871560a9a9",
+        "linus": "f955b3d61dc5d2f1158b7ff79ffd3e404cd7c8798ccab46992836e58a0f4d482",
+    }
 
     def test_each_persona_defines_concepts_focus_and_two_internal_questions(self):
         for persona in self.PERSONAS:
@@ -127,7 +136,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 for question in questions:
                     self.assertTrue(question.endswith("？"))
 
-    def test_each_persona_has_a_distinct_workflow_thesis_and_grounding_rule(self):
+    def test_each_persona_has_a_distinct_focus_context(self):
         concept_anchors = {
             "jeff": "constraint、ownership 或 source of truth",
             "beck": "從假設到回饋的距離",
@@ -150,13 +159,30 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                     encoding="utf-8"
                 )
-                self.assertIn(concept_anchor, overlay)
-                self.assertIn(scene_anchors[persona], overlay)
-                self.assertIn("packet 必須", overlay)
-                self.assertIn("提醒要", overlay)
-                if persona == "fowler":
-                    self.assertIn("優先完成這條變更擴散", overlay)
-                    self.assertIn("回饋時機、範圍或系統邊界", overlay)
+                focus_context = overlay.split("### 形成 Nudge", 1)[0]
+                self.assertIn(concept_anchor, focus_context)
+                self.assertIn(scene_anchors[persona], focus_context)
+
+    def test_persona_focus_context_is_unchanged_before_output_contract(self):
+        for persona, expected_hash in self.PERSONA_CONTEXT_HASHES.items():
+            with self.subTest(persona=persona):
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                )
+                context = overlay.split("### 形成 Nudge", 1)[0]
+                actual_hash = hashlib.sha256(context.encode("utf-8")).hexdigest()
+                self.assertEqual(expected_hash, actual_hash)
+
+    def test_each_persona_outputs_direction_instead_of_question_or_review_steps(self):
+        for persona in self.PERSONAS:
+            with self.subTest(persona=persona):
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                )
+                output_contract = overlay.split("### 形成 Nudge", 1)[1]
+                self.assertIn("Nudge 直接說明", output_contract)
+                self.assertIn("不要向主模型提問", output_contract)
+                self.assertIn("不要描述檢查流程", output_contract)
 
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
@@ -166,7 +192,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn('{"status":"finding"', base_prompt)
-        self.assertIn('{"status":"no_finding","finding":""}', base_prompt)
+        self.assertIn(
+            '{"status":"no_finding","effective_lens":"none","finding":""}',
+            base_prompt,
+        )
         self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
 
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
@@ -598,7 +627,7 @@ class TestCheckpointDelivery(unittest.TestCase):
         self.assertIsNone(second)
         review.assert_called_once()
 
-    def test_claude_does_not_review_unverified_changes_alone(self):
+    def test_claude_reviews_the_first_change_before_validation(self):
         from masters_nudge import storage
         from masters_nudge.contracts import ReviewOutcome, SessionRef
 
@@ -627,7 +656,8 @@ class TestCheckpointDelivery(unittest.TestCase):
                 {**hook, "tool_input": {"file_path": "second.py"}}
             )
 
-        review.assert_not_called()
+        review.assert_called_once()
+        self.assertEqual(review.call_args.args[0]["trigger"], "first-change")
         progress = storage.load_progress_state(
             self.settings.paths.data_dir, session
         )
@@ -678,7 +708,8 @@ class TestCheckpointDelivery(unittest.TestCase):
                 "dispatch_call_result",
                 return_value={
                     "status": "finding",
-                    "finding": "路徑前提還沒成立。",
+                    "effective_lens": "linus",
+                    "finding": "先固定路徑前提；別猜工作目錄，因為來源不明會掩蓋錯誤。",
                     "usage": {"input_tokens": 100},
                 },
             ) as dispatch,
@@ -689,7 +720,10 @@ class TestCheckpointDelivery(unittest.TestCase):
                 session=self.checkpoint.claude_adapter.session_from_hook(hook),
             )
 
-        self.assertEqual(result.finding, "路徑前提還沒成立。")
+        self.assertEqual(
+            result.finding,
+            "先固定路徑前提；別猜工作目錄，因為來源不明會掩蓋錯誤。",
+        )
         payload = dispatch.call_args.args[2]
         self.assertIn("只修路徑問題", payload)
         self.assertIn("missing file", payload)
@@ -700,7 +734,7 @@ class TestCheckpointDelivery(unittest.TestCase):
         telemetry_record = telemetry.call_args.args[1]
         self.assertEqual(telemetry_record["kind"], "checkpoint")
         self.assertEqual(telemetry_record["reason"], "error")
-        self.assertEqual(telemetry_record["effective_lens"], "beck")
+        self.assertEqual(telemetry_record["effective_lens"], "linus")
 
 
 # ── 5. Transcript parser ─────────────────────────────────────────────
@@ -917,15 +951,13 @@ class TestLensRouter(unittest.TestCase):
             inspect.signature(self.router.resolve_review_route).parameters,
         )
 
-    def route(self, focus="", environ=None, *, stopping=False):
+    def route(self, environ=None):
         return self.router.resolve_review_route(
             self.tmpdir,
             environ={} if environ is None else environ,
-            reported_focus=focus,
-            stopping=stopping,
         )
 
-    def test_explicit_lifecycle_stages_override_reported_focus(self):
+    def test_explicit_lifecycle_stages_force_one_lens(self):
         import persona_config
 
         expected = {
@@ -937,48 +969,24 @@ class TestLensRouter(unittest.TestCase):
         for stage, lens in expected.items():
             with self.subTest(stage=stage):
                 persona_config.save_stage(self.tmpdir, stage)
-                route = self.route("performance")
+                route = self.route()
                 self.assertEqual(route.stage, stage)
-                self.assertEqual(route.effective_lens, lens)
+                self.assertEqual(route.lens, lens)
                 self.assertEqual(route.source, "config")
 
-    def test_reported_focus_selects_one_private_lens(self):
-        expected = {
-            "design": "jeff",
-            "build": "beck",
-            "evolve": "fowler",
-            "review": "linus",
-            "reliability": "lamport",
-            "performance": "carmack",
-        }
-        for focus, lens in expected.items():
-            with self.subTest(focus=focus):
-                route = self.route(focus)
-                self.assertEqual(route.stage, focus)
-                self.assertEqual(route.effective_lens, lens)
-                self.assertEqual(route.source, "main_model_report")
-
-    def test_environment_override_wins_over_reported_focus(self):
-        route = self.route(
-            "performance", {"MASTERS_NUDGE_STAGE": "review"}
-        )
+    def test_environment_override_forces_one_lens(self):
+        route = self.route({"MASTERS_NUDGE_STAGE": "review"})
 
         self.assertEqual(
-            (route.stage, route.effective_lens, route.source),
+            (route.stage, route.lens, route.source),
             ("review", "linus", "environment"),
         )
 
-    def test_missing_report_keeps_forced_review_with_phase_fallback(self):
-        midturn = self.route()
-        stopping = self.route(stopping=True)
-
+    def test_automatic_route_has_no_phase_fallback(self):
+        route = self.route()
         self.assertEqual(
-            (midturn.stage, midturn.effective_lens, midturn.source),
-            ("build", "beck", "default_fallback"),
-        )
-        self.assertEqual(
-            (stopping.stage, stopping.effective_lens, stopping.source),
-            ("review", "linus", "stop_fallback"),
+            (route.stage, route.lens, route.source),
+            ("automatic", "", "default"),
         )
 
 
@@ -1188,7 +1196,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertEqual(
             options,
             [
-                "Automatic · coding agent 回報目前工作焦點",
+                "Automatic · 依目前決策壓力選擇濾鏡",
                 "Design · 系統結構、因果與成本",
                 "Build · 小步驟、測試與回饋",
                 "Evolve · 重構與變更成本",
@@ -1218,7 +1226,8 @@ class TestFloatingWindowLayout(unittest.TestCase):
         self.assertIn("<<ComboboxSelected>>", source)
         self.assertIn("persona_config.save_stage", source)
         self.assertIn("下一次 review 起", source)
-        self.assertIn("Hook 仍決定何時強制呼叫 Provider", source)
+        self.assertIn("由 reviewer 依目前決策壓力選一種 Lens", source)
+        self.assertIn("Hook 仍決定何時呼叫 Provider", source)
         self.assertIn("MASTERS_NUDGE_STAGE 正在接管", source)
         self.assertIn("self._set_lens_background(persona)", source)
         self.assertIn(
@@ -1323,7 +1332,7 @@ class TestInjectState(unittest.TestCase):
         self.assertEqual(state["task_anchor"], "只修目前這個登入問題")
         self.assertEqual(state["transcript_offset"], transcript.stat().st_size)
         self.assertEqual(list(data_dir.glob("*.source.json")), [])
-        self.assertIn("masters-nudge-focus:build", output.getvalue())
+        self.assertEqual(output.getvalue(), "")
 
 
 

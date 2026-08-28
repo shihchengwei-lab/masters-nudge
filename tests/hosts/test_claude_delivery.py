@@ -84,15 +84,13 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         self.assertEqual(receipt["status"], "emitted")
         stream.flush.assert_called_once_with()
 
-    def test_stop_finding_uses_non_error_feedback_and_active_stop_does_not_review_again(self):
+    def test_stop_observes_prior_nudge_without_reviewing_or_emitting(self):
         hook = {
             "session_id": "session-stop",
             "turn_id": "turn-1",
             "cwd": self.tmpdir.name,
             "hook_event_name": "Stop",
-            "last_assistant_message": (
-                "已完成。\n<!-- masters-nudge-focus:reliability -->"
-            ),
+            "last_assistant_message": "已完成。",
             "stop_hook_active": False,
         }
         session = SessionRef(
@@ -101,38 +99,27 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         storage.start_turn(
             self.settings.paths.data_dir, session, "完成可靠性修正"
         )
-        outcome = ReviewOutcome(
-            status="finding",
-            finding="哪個完成條件仍缺少直接證據？",
-            reaction_ts="reaction-stop",
+        entry = storage.append_reaction(
+            self.settings.paths.data_dir,
+            session,
+            provider="anthropic",
+            model="test-model",
+            reaction="讓狀態只歸一個 owner。",
+            route_metadata={"effective_lens": "linus"},
         )
+        storage.mark_emitted(self.settings.paths.data_dir, session, entry["ts"])
         with mock.patch.object(
-            claude_stop.ReviewCore, "review_once", return_value=outcome
-        ) as review_once:
+            claude_stop, "ReviewCore", create=True
+        ) as review_core:
             prepared = claude_stop.prepare_hook(hook)
-            stream = mock.Mock()
-            claude_adapter.emit_json_delivery(
-                prepared, delivered_via="claude-stop", stream=stream
-            )
             active = claude_stop.prepare_hook({**hook, "stop_hook_active": True})
 
-        self.assertEqual(
-            prepared.output,
-            {
-                "hookSpecificOutput": {
-                    "hookEventName": "Stop",
-                    "additionalContext": "獨立第二意見：\n哪個完成條件仍缺少直接證據？",
-                }
-            },
-        )
+        self.assertIsNone(prepared)
         self.assertIsNone(active)
-        review_once.assert_called_once()
-        request = review_once.call_args.args[0]
-        self.assertEqual(request.reported_focus, "reliability")
-        self.assertNotIn("masters-nudge-focus", request.source_packet)
+        review_core.assert_not_called()
         receipt = storage.load_delivery_state(
             self.settings.paths.data_dir, session
-        )["receipts"]["reaction-stop"]
+        )["receipts"][entry["ts"]]
         self.assertEqual(receipt["status"], "injected")
         self.assertEqual(
             receipt["response_observation"]["observation"]["assistant_claim"],

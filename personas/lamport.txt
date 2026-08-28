@@ -29,5 +29,6 @@
 
 ### 形成 Nudge
 
-packet 必須能指出具體事件、可行順序與可能被破壞的 invariant。
-提醒要讓主模型重看時間與狀態假設；只出現 async、queue 或 retry 不足以成立。
+從 packet 已呈現的事件、狀態與 invariant 中，選出一個能守住不變條件的取捨。
+Nudge 直接說明應固定的順序、狀態責任或失敗邊界；不要向主模型提問，
+不要描述檢查流程，也不要只因出現 async、queue 或 retry 就假定順序有問題。
