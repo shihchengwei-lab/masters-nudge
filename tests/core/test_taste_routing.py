@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 import lens_router
-from masters_nudge import checkpoints, prompting
+from masters_nudge import checkpoints, prompting, storage
 from masters_nudge.contracts import ReviewRequest, SessionRef, ToolCompleted
 from masters_nudge.core import ReviewCore
 from masters_nudge.provider_contract import parse_reaction_result
@@ -60,6 +60,28 @@ class TasteRouteTests(unittest.TestCase):
             ).strip()
             self.assertEqual(prompt.count(overlay), 1 if persona == "linus" else 0)
 
+    def test_generator_only_speaks_when_lens_changes_the_next_decision(self):
+        route = lens_router.ReviewRoute("automatic", "linus", "automatic_router")
+        prompt = prompting.build_system_prompt(
+            prompt_file=HERE / "buddy-prompt.txt",
+            persona_dir=HERE / "personas",
+            route=route,
+            route_decision="如何決定欄位責任",
+        )
+
+        self.assertNotIn("already decided", prompt)
+        self.assertIn(
+            "Existing implementation is evidence of the current choice",
+            prompt,
+        )
+        self.assertIn(
+            "Only return a finding when the selected Lens would change what "
+            "the main agent should decide next",
+            prompt,
+        )
+        self.assertIn("Otherwise return `no_finding`", prompt)
+        self.assertNotIn("preserve, redirect, or narrow", prompt)
+
     def test_structured_finding_carries_the_selected_lens(self):
         parsed = parse_reaction_result(
             '{"status":"finding","effective_lens":"linus",'
@@ -75,23 +97,52 @@ class TasteRouteTests(unittest.TestCase):
         self.assertEqual(len(finding), 39)
         self.assertLessEqual(len(finding), prompting.MAX_REACTION_CHARS)
 
-    def test_pure_test_instruction_is_rejected(self):
-        parsed = parse_reaction_result(
+    def test_semantic_contract_miss_is_delivered_and_observable(self):
+        raw = (
             '{"status":"finding","effective_lens":"beck",'
             '"finding":"先執行新增的回歸測試再收尾。"}'
         )
 
-        self.assertEqual(parsed["status"], "error")
+        parsed = parse_reaction_result(raw)
+
+        self.assertEqual(parsed["status"], "finding")
+        self.assertEqual(parsed["finding"], "先執行新增的回歸測試再收尾。")
+        self.assertEqual(parsed["raw_output"], raw)
+        self.assertEqual(
+            parsed["contract_deviations"],
+            ["tradeoff_shape_mismatch"],
+        )
+
+    def test_router_decision_does_not_use_the_nudge_output_contract(self):
+        parsed = parse_reaction_result(
+            '{"status":"finding","effective_lens":"linus",'
+            '"finding":"如何記錄輸入值的來源"}',
+            require_taste=False,
+        )
+
+        self.assertEqual(parsed["status"], "finding")
+        self.assertEqual(parsed["contract_deviations"], [])
+
+    def test_over_52_character_finding_is_delivered_and_observable(self):
+        finding = "保留清楚的責任邊界與明確來源；別讓中介層持續替上下游猜測所有未宣告的意圖，因為隱性補償會把真正的介面錯誤長期藏起來並向更多呼叫端擴散。"
+
+        parsed = parse_reaction_result(
+            '{"status":"finding","effective_lens":"linus",'
+            f'"finding":"{finding}"}}'
+        )
+
+        self.assertEqual(parsed["status"], "finding")
+        self.assertEqual(parsed["finding"], finding)
+        self.assertIn("over_52_characters", parsed["contract_deviations"])
 
     def test_no_finding_has_no_fake_lens(self):
         parsed = parse_reaction_result(
             '{"status":"no_finding","effective_lens":"none","finding":""}'
         )
 
-        self.assertEqual(
-            parsed,
-            {"status": "no_finding", "effective_lens": "none", "finding": ""},
-        )
+        self.assertEqual(parsed["status"], "no_finding")
+        self.assertEqual(parsed["effective_lens"], "none")
+        self.assertEqual(parsed["finding"], "")
 
     def test_automatic_review_routes_then_generates_with_one_persona(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -171,7 +222,7 @@ class TasteRouteTests(unittest.TestCase):
         self.assertEqual(calls[0][1], "reaction-schema.json")
         self.assertIn("Linus Torvalds", calls[0][0])
 
-    def test_core_rejects_invalid_finding_even_when_dispatch_bypasses_parser(self):
+    def test_core_delivers_semantic_contract_miss_when_dispatch_bypasses_parser(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             (root / "config.json").write_text('{"stage":"review"}\n', encoding="utf-8")
@@ -196,8 +247,105 @@ class TasteRouteTests(unittest.TestCase):
                 persist_reaction=False,
             )
 
-        self.assertEqual(outcome.status, "error")
-        self.assertEqual(outcome.finding, "")
+        self.assertEqual(outcome.status, "finding")
+        self.assertEqual(outcome.finding, "先跑完整測試再收尾。")
+        self.assertEqual(
+            outcome.contract_deviations,
+            ("tradeoff_shape_mismatch",),
+        )
+
+    def test_automatic_route_uses_the_shared_remaining_deadline(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            timeouts = []
+
+            def dispatch(*_args, **kwargs):
+                timeouts.append(kwargs["timeout_sec"])
+                if len(timeouts) == 1:
+                    return {
+                        "status": "finding",
+                        "effective_lens": "linus",
+                        "finding": "輸入來源的表示方式",
+                        "usage": {},
+                    }
+                return {
+                    "status": "no_finding",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                }
+
+            settings = RuntimeSettings(
+                "openai", "test-model", 90, 90,
+                RuntimePaths(HERE, root, root / "error.log"),
+            )
+            ReviewCore(settings, dispatch=dispatch).review_once(
+                ReviewRequest(
+                    1, "strategy", "taste-review",
+                    SessionRef("codex_cli", "shared-deadline"),
+                    "packet", "shared-deadline",
+                ),
+                persist_reaction=False,
+            )
+
+        self.assertEqual(len(timeouts), 2)
+        self.assertGreaterEqual(timeouts[0], 89)
+        self.assertGreaterEqual(timeouts[1], 89)
+
+    def test_provider_stage_outputs_are_preserved_in_the_audit_log(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            calls = 0
+
+            def dispatch(*_args, **_kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    return {
+                        "status": "finding",
+                        "effective_lens": "linus",
+                        "finding": "輸入來源的表示方式",
+                        "raw_output": '{"stage":"router"}',
+                        "usage": {},
+                    }
+                return {
+                    "status": "finding",
+                    "effective_lens": "linus",
+                    "finding": "先跑完整測試再收尾。",
+                    "raw_output": '{"stage":"generator"}',
+                    "contract_deviations": ["tradeoff_shape_mismatch"],
+                    "usage": {},
+                }
+
+            settings = RuntimeSettings(
+                "openai", "test-model", 90, 90,
+                RuntimePaths(HERE, root, root / "error.log"),
+            )
+            outcome = ReviewCore(settings, dispatch=dispatch).review_once(
+                ReviewRequest(
+                    1, "strategy", "taste-review",
+                    SessionRef("codex_cli", "provider-audit"),
+                    "packet", "provider-audit",
+                ),
+                persist_reaction=True,
+            )
+            diagnostics = [
+                entry for entry in storage.read_audit_entries(
+                    root, SessionRef("codex_cli", "provider-audit")
+                )
+                if entry.get("kind") == "provider_output"
+            ]
+
+        self.assertEqual(outcome.status, "finding")
+        self.assertEqual(
+            [item["provider_stage"] for item in diagnostics],
+            ["router", "generator"],
+        )
+        self.assertEqual(diagnostics[0]["raw_output"], '{"stage":"router"}')
+        self.assertEqual(
+            diagnostics[1]["contract_deviations"],
+            ["tradeoff_shape_mismatch"],
+        )
 
     def test_automatic_review_sums_router_and_generator_usage(self):
         with tempfile.TemporaryDirectory() as raw:

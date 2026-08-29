@@ -1,0 +1,67 @@
+{
+  "task": "t07",
+  "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+  "status": "no_finding",
+  "effective_lens": "none",
+  "finding": "",
+  "contract_deviations": [],
+  "error_stage": "",
+  "error_kind": "",
+  "latency_ms": 14648,
+  "usage": {
+    "input_tokens": 34648,
+    "cached_input_tokens": 11008,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 229,
+    "reasoning_output_tokens": 153
+  },
+  "provider_outputs": [
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:37:49.774265-00000598798919832500-104324",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t07",
+      "turn_id": "provider-replay-t07",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "router",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "linus",
+      "route_source": "default",
+      "status": "finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"ReadOnlyPasswordHashField 是否應允許呼叫端以 disabled=False 覆寫唯讀保護\",\"effective_lens\":\"linus\"}",
+      "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+      "generated_at": "2026-08-29T08:37:49.775266",
+      "recorded_contract_deviations": [
+        "over_52_characters",
+        "tradeoff_shape_mismatch"
+      ],
+      "normalization_note": "Router decisions do not use the Nudge output contract; normalized from preserved raw output without a provider rerun."
+    },
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:37:56.285513-00000598805431048100-104324",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t07",
+      "turn_id": "provider-replay-t07",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "generator",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "none",
+      "route_source": "automatic_router",
+      "status": "no_finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"no_finding\",\"finding\":\"\",\"effective_lens\":\"none\"}",
+      "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+      "generated_at": "2026-08-29T08:37:56.285513"
+    }
+  ]
+}

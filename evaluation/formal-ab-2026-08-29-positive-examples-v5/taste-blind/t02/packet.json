@@ -1,0 +1,26 @@
+{
+  "task_key": "t02",
+  "problem_statement": "ResolverMatch.__repr__() doesn't handle functools.partial() nicely.\nDescription\n\t \n\t\t(last modified by Nick Pope)\n\t \nWhen a partial function is passed as the view, the __repr__ shows the func argument as functools.partial which isn't very helpful, especially as it doesn't reveal the underlying function or arguments provided.\nBecause a partial function also has arguments provided up front, we need to handle those specially so that they are accessible in __repr__.\nISTM that we can simply unwrap functools.partial objects in ResolverMatch.__init__().\n",
+  "instructions": "Compare only engineering taste. Correctness and test activity are intentionally absent and must not be inferred.",
+  "candidates": {
+    "X": {
+      "visible_trajectory": [
+        "I’ll inspect the resolver implementation and its existing reverse-resolution tests, then make the narrowest change and run the focused suite with the prepared interpreter.",
+        "The current `ResolverMatch` class classifies a partial as the callable class `functools.partial`, so its representation loses both the wrapped view’s path and the pre-bound arguments. I’m checking the public attribute expectations before changing initialization semantics.",
+        "The fix now normalizes a partial at construction time: it keeps the underlying function, prepends bound positional arguments, and merges bound keywords with resolution-time keywords taking precedence—the same precedence as calling a partial. I’ve added a regression test that exercises all three aspects.",
+        "Implemented the `ResolverMatch` partial handling fix.\n\n- Unwraps `functools.partial` to its underlying function.\n- Includes pre-bound positional and keyword arguments.\n- Preserves call-time keyword precedence.\n- Added a regression test for `__repr__()`.\n\nValidation:\n\n- `ResolverMatchTests`: 5 passed\n- Full `urlpatterns_reverse` suite: 103 passed\n- `git diff --check`: clean"
+      ],
+      "product_patch": "diff --git a/django/urls/resolvers.py b/django/urls/resolvers.py\nindex 9b00e24..0251dc4 100644\n--- a/django/urls/resolvers.py\n+++ b/django/urls/resolvers.py\n@@ -31,6 +31,10 @@ from .utils import get_callable\n \n class ResolverMatch:\n     def __init__(self, func, args, kwargs, url_name=None, app_names=None, namespaces=None, route=None, tried=None):\n+        if isinstance(func, functools.partial):\n+            args = func.args + args\n+            kwargs = {**func.keywords, **kwargs}\n+            func = func.func\n         self.func = func\n         self.args = args\n         self.kwargs = kwargs"
+    },
+    "Y": {
+      "visible_trajectory": [
+        "I’ll inspect the resolver implementation and its existing representation tests, then patch the smallest surface and run the focused URL-pattern suite.",
+        "The current bug comes from classifying a `partial` as an arbitrary callable object, producing `functools.partial`. I’m checking resolver contracts before deciding whether the partial’s bound values should be folded into public match arguments or represented separately, since changing `match.args` could be a compatibility break.",
+        "The resolver’s documented tuple is “the function and arguments that would be invoked.” Unwrapping the partial while prepending its positional arguments and merging its keyword defaults preserves that invocation exactly; URL-derived keywords must win, matching `functools.partial` call semantics. I’ll encode that and cover ordinary, nested, and metadata-wrapped partials.",
+        "The focused representation tests now pass, including nested and `update_wrapper()`-decorated partials. I’m running the full `urlpatterns_reverse` suite next to catch changes in resolution, reverse lookup, and callback invocation behavior.",
+        "Implemented the `ResolverMatch` fix for `functools.partial` views.\n\nChanges:\n\n- Unwraps partial functions to expose the underlying function.\n- Prepends bound positional arguments.\n- Merges bound keyword arguments, allowing resolved URL kwargs to override them.\n- Added regression coverage for regular, nested, and wrapped partials.\n\nValidation:\n\n- `ResolverMatchTests`: 5 passed.\n- Full `urlpatterns_reverse` suite: 103 passed.\n- `git diff --check`: clean."
+      ],
+      "product_patch": "diff --git a/django/urls/resolvers.py b/django/urls/resolvers.py\nindex 9b00e24..0251dc4 100644\n--- a/django/urls/resolvers.py\n+++ b/django/urls/resolvers.py\n@@ -31,6 +31,10 @@ from .utils import get_callable\n \n class ResolverMatch:\n     def __init__(self, func, args, kwargs, url_name=None, app_names=None, namespaces=None, route=None, tried=None):\n+        if isinstance(func, functools.partial):\n+            args = func.args + args\n+            kwargs = {**func.keywords, **kwargs}\n+            func = func.func\n         self.func = func\n         self.args = args\n         self.kwargs = kwargs"
+    }
+  }
+}

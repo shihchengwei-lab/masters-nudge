@@ -275,7 +275,8 @@ class LocalCallTests(unittest.TestCase):
         self.assertFalse(payload["stream"])
         self.assertFalse(payload["think"])
         self.assertEqual(payload["options"]["temperature"], 0)
-        self.assertEqual(payload["format"]["properties"]["finding"]["maxLength"], 52)
+        self.assertNotIn("maxLength", payload["format"]["properties"]["finding"])
+        self.assertNotIn("pattern", payload["format"]["properties"]["finding"])
         self.assertIn("evidence packet", payload["messages"][1]["content"])
         self.assertIn("JSON schema", payload["messages"][0]["content"])
 

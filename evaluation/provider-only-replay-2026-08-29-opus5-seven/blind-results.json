@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "summary": {
+    "sol_wins": 7,
+    "opus_wins": 0,
+    "ties": 0
+  },
+  "pairs": [
+    {
+      "task": "t01",
+      "blind_winner": "Y",
+      "provider_winner": "sol",
+      "confidence": "medium",
+      "reason": "Y is materially more packet-grounded and actionable: it states exactly how to handle the failing inverted-generator case—lookup by the positive generator while letting the exponent carry direction—and explains why. X selects broader simplification but leaves the replacement lookup/data flow underspecified.",
+      "rating": {
+        "task": "t01",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses to remove the PermutationGroup index special case: \"別留 PermutationGroup 的 index 特例\".",
+            "Grounds that direction in the observed inverted-generator failure: \"因為反元素會一直是例外\".",
+            "\"統一逐字母求像\" gives a direction, but does not specify how generator identity and sign should be represented."
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses a concrete division of responsibility: \"正生成元查表、冪次負責方向\".",
+            "The reason identifies an invariant/ownership problem: a separate reverse mapping would create \"雙重控制\".",
+            "Directly guides the next patch to normalize lookup to the positive generator and preserve inversion in the exponent."
+          ]
+        },
+        "winner": "Y",
+        "confidence": "medium",
+        "reason": "Y is materially more packet-grounded and actionable: it states exactly how to handle the failing inverted-generator case—lookup by the positive generator while letting the exponent carry direction—and explains why. X selects broader simplification but leaves the replacement lookup/data flow underspecified."
+      }
+    },
+    {
+      "task": "t02",
+      "blind_winner": "Y",
+      "provider_winner": "sol",
+      "confidence": "high",
+      "reason": "Y materially better matches the packet's intended ownership and data flow: unwrap the partial into the underlying function and merge its bound arguments into ResolverMatch metadata for __repr__. X proposes display-only expansion based on an unsupported duplicate-call concern.",
+      "rating": {
+        "task": "t02",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 1,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses a concrete alternative: \"partial 僅在顯示層展開；別把 partial 參數併入欄位\".",
+            "Its reason, \"呼叫端會重複傳參\", isn't supported by the visible packet and conflicts with the stated need for partial arguments to be accessible in __repr__."
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses the packet-aligned representation: \"保留 func 為解包後的底層函式\".",
+            "Gives the relevant data-flow reason: \"參數已併入 args 與 kwargs\", matching the visible implementation and the requirement to expose the partial's underlying function and supplied arguments."
+          ]
+        },
+        "winner": "Y",
+        "confidence": "high",
+        "reason": "Y materially better matches the packet's intended ownership and data flow: unwrap the partial into the underlying function and merge its bound arguments into ResolverMatch metadata for __repr__. X proposes display-only expansion based on an unsupported duplicate-call concern."
+      }
+    },
+    {
+      "task": "t03",
+      "blind_winner": "X",
+      "provider_winner": "sol",
+      "confidence": "medium",
+      "reason": "X has the stronger packet-grounded preference-reason pair: keep native iteration order because the visible test treats ordering as irrelevant. Y is actionable, but its load-bearing correctness choice—the empty-set special case—is asserted without its key syntactic reason.",
+      "rating": {
+        "task": "t03",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses native set iteration order over adding sorting.",
+            "The packet’s set test explicitly accepts either element order, supporting the reason that only recursively correct element representation is required."
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 1,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses to retain the empty-set special case and avoid a shared dict/set formatter.",
+            "The empty-set branch is packet-grounded by the expected \"set()\", but no reason is given for why that branch is necessary; the stated reason only supports avoiding abstraction."
+          ]
+        },
+        "winner": "X",
+        "confidence": "medium",
+        "reason": "X has the stronger packet-grounded preference-reason pair: keep native iteration order because the visible test treats ordering as irrelevant. Y is actionable, but its load-bearing correctness choice—the empty-set special case—is asserted without its key syntactic reason."
+      }
+    },
+    {
+      "task": "t04",
+      "blind_winner": "X",
+      "provider_winner": "sol",
+      "confidence": "high",
+      "reason": "X 的偏好與理由都精確命中可見失敗及修補邊界：只有實際進入 tearDown 才註冊清理，因此 skipped 路徑不會產生清理事件。Y 雖具體且可操作，但其負載理由依賴封包未顯示的重入／雙重執行情境，屬於較弱的封包依據。",
+      "rating": {
+        "task": "t04",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "選擇「以實際進入 tearDown 作為延後註冊邊界」，並明確排除預先註冊。",
+            "理由「跳過路徑不應產生清理事件」直接對應封包中的 skipped test 不應執行 tearDown，以及目前以 delayed_teardown 延後設定 _explicit_tearDown 的修補方向。"
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 1,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "選擇在延後呼叫後清空 _explicit_tearDown、還原原 tearDown，並排除保留替身旗標。",
+            "「重入會讓 tearDown 跑兩次」描述了可操作的不變量，但封包可見問題是跳過路徑錯誤執行 tearDown，未提供重入或雙重執行的證據。"
+          ]
+        },
+        "winner": "X",
+        "confidence": "high",
+        "reason": "X 的偏好與理由都精確命中可見失敗及修補邊界：只有實際進入 tearDown 才註冊清理，因此 skipped 路徑不會產生清理事件。Y 雖具體且可操作，但其負載理由依賴封包未顯示的重入／雙重執行情境，屬於較弱的封包依據。"
+      }
+    },
+    {
+      "task": "t05",
+      "blind_winner": "Y",
+      "provider_winner": "sol",
+      "confidence": "high",
+      "reason": "Y 有實質且封包落地的優勢：它同時保住 q==1 的既有正常求值路徑，並把修正定位到造成 `Product(n + 1/2**k, ...)` 錯算的 Add 分配特例。X 雖也反對 q==1 特例，但其替代原則較含混，理由也沒有清楚表達需要維持的語義 invariant。",
+      "rating": {
+        "task": "t05",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "「別加 q==1 特例」選擇了方向，但「只由 p、q 子乘積能否求值決定」接近目前補丁已採用的 broadly fallback，沒有清楚指出應如何隔離真正出錯的 Add 分配邏輯。",
+            "「只是替上層猜測擦屁股」不是由可見封包建立的具體 invariant 或資料流理由。"
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "「保留分母為一時的正常乘積求值」直接反對目前 `if q == 1: return None` 的廣泛行為改變。",
+            "「錯誤只在加法分配特例」把修補範圍收斂到封包中原本把乘積錯誤轉成各項乘積之和的 Add 分支，能直接指導下一個 patch。"
+          ]
+        },
+        "winner": "Y",
+        "confidence": "high",
+        "reason": "Y 有實質且封包落地的優勢：它同時保住 q==1 的既有正常求值路徑，並把修正定位到造成 `Product(n + 1/2**k, ...)` 錯算的 Add 分配特例。X 雖也反對 q==1 特例，但其替代原則較含混，理由也沒有清楚表達需要維持的語義 invariant。"
+      }
+    },
+    {
+      "task": "t07",
+      "blind_winner": "X",
+      "provider_winner": "sol",
+      "confidence": "high",
+      "reason": "兩者都具體且不設門檻；X 的範圍判斷與可見需求及新增的 `-0.00` 回歸案例一致。Y 雖提供更具體的控制流程位置，但其負零理由直接牴觸封包中的預期，構成實質且可見的劣勢。",
+      "rating": {
+        "task": "t07",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "「保留捨入結果的輸入負號」明確選擇保留負號。",
+            "「別另加負零正規化」可直接約束補丁範圍。",
+            "「需求只改指數表示邊界」以可見問題陳述界定變更範圍，且目前回歸案例明確預期 `-0.00`。"
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "「在進入指數分支前就直接決定回傳零」明確指定控制流程位置。",
+            "「別在指數分支內再包一層條件」能直接指導重構。",
+            "「還漏出 '-0.00'」把目前測試明確預期的结果當成缺陷，超出可見需求，削弱其理由的封包依據。"
+          ]
+        },
+        "winner": "X",
+        "confidence": "high",
+        "reason": "兩者都具體且不設門檻；X 的範圍判斷與可見需求及新增的 `-0.00` 回歸案例一致。Y 雖提供更具體的控制流程位置，但其負零理由直接牴觸封包中的預期，構成實質且可見的劣勢。"
+      }
+    },
+    {
+      "task": "t10",
+      "blind_winner": "Y",
+      "provider_winner": "sol",
+      "confidence": "high",
+      "reason": "Y 同時涵蓋封包中的 metaclass MRO 缺口與不得執行 getter 的核心約束，可直接塑造下一個修補；X 雖有明確的責任歸屬偏好，但理由較抽象，且沒有處理可見的 metaclass 查找需求。",
+      "rating": {
+        "task": "t10",
+        "candidate_x": {
+          "specific_preference": 2,
+          "load_bearing_reason": 1,
+          "actionability": 1,
+          "review_friction": 0,
+          "evidence": [
+            "「讓解包只由 import_object 擁有」明確選擇責任歸屬。",
+            "「別用 get_attr 攔截所有取值」能指引修改位置，但「責任會被轉交遮住」未具體連結到封包中 getter 被執行或 metaclass 成員遺漏的機制。"
+          ]
+        },
+        "candidate_y": {
+          "specific_preference": 2,
+          "load_bearing_reason": 2,
+          "actionability": 2,
+          "review_friction": 0,
+          "evidence": [
+            "「擴充靜態描述符查找至 metaclass MRO」直接選定封包中 metaclass class-property 案例所需的查找方向。",
+            "「別落回動態 getattr，因為會執行 getter」指出可觀察的關鍵不變量，並呼應測試把 getter 改成拋出 AssertionError。"
+          ]
+        },
+        "winner": "Y",
+        "confidence": "high",
+        "reason": "Y 同時涵蓋封包中的 metaclass MRO 缺口與不得執行 getter 的核心約束，可直接塑造下一個修補；X 雖有明確的責任歸屬偏好，但理由較抽象，且沒有處理可見的 metaclass 查找需求。"
+      }
+    }
+  ]
+}

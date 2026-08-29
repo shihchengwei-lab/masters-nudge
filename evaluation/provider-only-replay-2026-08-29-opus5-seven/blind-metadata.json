@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "seed": "opus5-seven-reviewer-blind-v1",
+  "rubric_sha256": "392e52a4b1f37552d0f25565d6573533c347d031160db6928e7a454fa5788592",
+  "schema_sha256": "2273ec514e1f418a13a136e65b12b7f70534366d19659732e56864d7f0f2da08",
+  "x_provider_counts": {
+    "opus": 4,
+    "sol": 3
+  },
+  "mapping": {
+    "t01": {
+      "X": "opus",
+      "Y": "sol"
+    },
+    "t02": {
+      "X": "opus",
+      "Y": "sol"
+    },
+    "t03": {
+      "X": "sol",
+      "Y": "opus"
+    },
+    "t04": {
+      "X": "sol",
+      "Y": "opus"
+    },
+    "t05": {
+      "X": "opus",
+      "Y": "sol"
+    },
+    "t07": {
+      "X": "sol",
+      "Y": "opus"
+    },
+    "t10": {
+      "X": "opus",
+      "Y": "sol"
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "task": "t08",
+  "source_fingerprint": "b876d687dd4f09aa38af859e",
+  "status": "finding",
+  "effective_lens": "linus",
+  "finding": "保留以欄位後空白直接分流；別加角色白名單，因為會把語法責任拆成兩層。",
+  "contract_deviations": [],
+  "error_stage": "",
+  "error_kind": "",
+  "latency_ms": 20191,
+  "usage": {
+    "input_tokens": 35103,
+    "cached_input_tokens": 24064,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 436,
+    "reasoning_output_tokens": 328
+  },
+  "provider_outputs": [
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:52:03.579002-00000599652723682500-111064",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t08",
+      "turn_id": "provider-replay-t08",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "router",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "linus",
+      "route_source": "default",
+      "status": "finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"如何區分真正的文件資訊欄位與以角色語法開頭的標題\",\"effective_lens\":\"linus\"}",
+      "source_fingerprint": "b876d687dd4f09aa38af859e",
+      "generated_at": "2026-08-29T08:52:03.579002"
+    },
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:52:14.989125-00000599664133909100-111064",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t08",
+      "turn_id": "provider-replay-t08",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "generator",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "linus",
+      "route_source": "automatic_router",
+      "status": "finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"保留以欄位後空白直接分流；別加角色白名單，因為會把語法責任拆成兩層。\",\"effective_lens\":\"linus\"}",
+      "source_fingerprint": "b876d687dd4f09aa38af859e",
+      "generated_at": "2026-08-29T08:52:14.989125"
+    }
+  ]
+}

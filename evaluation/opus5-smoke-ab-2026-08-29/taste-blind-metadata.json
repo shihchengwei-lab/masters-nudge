@@ -1,0 +1,15 @@
+{
+  "rubric_sha256": "a00d27006426fdba2b2771d6a4b1b933132d3387d5dfc8fef4dd599d762727f3",
+  "passes": [
+    {
+      "X": "a",
+      "Y": "b"
+    },
+    {
+      "X": "b",
+      "Y": "a"
+    }
+  ],
+  "treatment_cues_removed": true,
+  "correctness_and_test_activity_excluded": true
+}

@@ -56,9 +56,11 @@ class SoftwareNudgeContractTests(unittest.TestCase):
 
     def test_prompt_keeps_one_grounded_taste_direction(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
 
         self.assertIn("State what to favor", prompt)
-        self.assertIn("Do not ask a question", prompt)
+        self.assertIn("A direct preference is the result", prompt)
+        self.assertIn("it is not a question", normalized)
         self.assertIn("<favor>；別<alternative>，因為<reason>。", prompt)
         self.assertNotIn("ask one concrete question", prompt)
         self.assertNotIn("one complete question", prompt)
@@ -71,7 +73,7 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertIn("not evidence, suggestions, or examples", prompt)
         self.assertIn("Do not repeat, paraphrase,", prompt)
         self.assertIn("continue, or imitate", prompt)
-        self.assertIn("return `no_finding`", prompt)
+        self.assertIn("Otherwise return `no_finding`", prompt)
 
     def test_prompt_entry_has_no_legacy_queue_wrapper(self):
         self.assertFalse(hasattr(inject, "build_context_text"))

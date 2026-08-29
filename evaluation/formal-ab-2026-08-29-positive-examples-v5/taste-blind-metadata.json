@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "seed": "taste-blind-v1-2026-08-29",
+  "rubric_sha256": "a00d27006426fdba2b2771d6a4b1b933132d3387d5dfc8fef4dd599d762727f3",
+  "rating_schema_sha256": "a0023ff22bf97d419a213b3b0cccbfb4d5d7fb96220cbcfe44e629f5b3b9f6dd",
+  "task_count": 10,
+  "x_contains_arm_counts": {
+    "a": 5,
+    "b": 5
+  },
+  "allocation": "SHA-256 rank by seed; first half X=A, second half X=B",
+  "pre_rating_amendment": "Initial parity allocation yielded 2/8 positional imbalance. Replaced before any rating with deterministic 5/5 allocation.",
+  "material": "problem statement, chronological agent messages, final product patch",
+  "excluded": "commands, test outcomes, safety scores, hook events, treatment/persona labels"
+}

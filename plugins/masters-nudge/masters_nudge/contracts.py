@@ -74,6 +74,9 @@ class ReviewOutcome:
     latency_ms: int = 0
     usage: dict[str, int] = field(default_factory=dict)
     reaction_ts: str = ""
+    contract_deviations: tuple[str, ...] = ()
+    error_stage: str = ""
+    error_kind: str = ""
 
 
 def safe_identifier(value: str, fallback: str = "unknown", limit: int = 160) -> str:

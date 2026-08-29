@@ -184,6 +184,24 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.assertIn("不要向主模型提問", output_contract)
                 self.assertIn("不要描述檢查流程", output_contract)
 
+    def test_each_persona_output_contract_has_two_short_positive_examples(self):
+        from masters_nudge.provider_contract import finding_contract_deviations
+
+        for persona in self.PERSONAS:
+            with self.subTest(persona=persona):
+                overlay = (HERE / "personas" / f"{persona}.txt").read_text(
+                    encoding="utf-8"
+                )
+                output_contract = overlay.split("### 形成 Nudge", 1)[1]
+                examples = [
+                    line.removeprefix("- 正面範例：").strip()
+                    for line in output_contract.splitlines()
+                    if line.startswith("- 正面範例：")
+                ]
+                self.assertEqual(len(examples), 2)
+                for example in examples:
+                    self.assertEqual(finding_contract_deviations(example), [])
+
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
         self.assertEqual(files, set(self.PERSONAS))
@@ -197,6 +215,27 @@ class TestPersonaPromptSelection(unittest.TestCase):
             base_prompt,
         )
         self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
+
+    def test_base_prompt_only_speaks_when_lens_changes_the_next_decision(self):
+        base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(base_prompt.split())
+
+        self.assertIn(
+            "Existing implementation is evidence of a current choice",
+            normalized,
+        )
+        self.assertIn(
+            "Only return a finding when the selected Lens would change what "
+            "the main agent should decide next",
+            normalized,
+        )
+        self.assertIn(
+            "replace the current direction, remove an unnecessary part, or "
+            "move responsibility to a better owner",
+            normalized,
+        )
+        self.assertIn("Otherwise return `no_finding`", normalized)
+        self.assertNotIn("preserve, redirect, or narrow", normalized)
 
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")

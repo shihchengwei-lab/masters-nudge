@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_key", "candidate_x", "candidate_y", "winner", "confidence", "reason"],
+  "properties": {
+    "task_key": {"type": "string"},
+    "candidate_x": {"$ref": "#/$defs/candidate"},
+    "candidate_y": {"$ref": "#/$defs/candidate"},
+    "winner": {"enum": ["X", "Y", "tie"]},
+    "confidence": {"enum": ["low", "medium", "high"]},
+    "reason": {"type": "string", "maxLength": 900}
+  },
+  "$defs": {
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["choice_specificity", "load_bearing_principle", "trajectory_influence", "review_friction", "evidence"],
+      "properties": {
+        "choice_specificity": {"type": "integer", "minimum": 0, "maximum": 2},
+        "load_bearing_principle": {"type": "integer", "minimum": 0, "maximum": 2},
+        "trajectory_influence": {"type": "integer", "minimum": 0, "maximum": 2},
+        "review_friction": {"type": "integer", "minimum": 0, "maximum": 2},
+        "evidence": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"type": "string", "maxLength": 400}}
+      }
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "task": "t03",
+      "source_fingerprint": "5d6bc5f0e1a147fcabdc2063",
+      "status": "no_finding",
+      "effective_lens": "none",
+      "finding": "",
+      "contract_deviations": [],
+      "error_stage": "",
+      "error_kind": "",
+      "latency_ms": 20521,
+      "usage": {
+        "input_tokens": 36651,
+        "cached_input_tokens": 11008,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 433,
+        "reasoning_output_tokens": 337
+      },
+      "provider_outputs": [
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:37:30.053848-00000598779199078100-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t03",
+          "turn_id": "provider-replay-t03",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "router",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "linus",
+          "route_source": "default",
+          "status": "finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"finding\",\"finding\":\"當建構子接收既有的 Permutation 或其子類實例時，哪些類別關係應直接回傳原物件，哪些應建立呼叫類別的新實例\",\"effective_lens\":\"linus\"}",
+          "source_fingerprint": "5d6bc5f0e1a147fcabdc2063",
+          "generated_at": "2026-08-29T08:37:30.053848",
+          "recorded_contract_deviations": [
+            "over_52_characters",
+            "tradeoff_shape_mismatch"
+          ],
+          "normalization_note": "Router decisions do not use the Nudge output contract; normalized from preserved raw output without a provider rerun."
+        },
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:37:41.587769-00000598790733336000-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t03",
+          "turn_id": "provider-replay-t03",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "generator",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "none",
+          "route_source": "automatic_router",
+          "status": "no_finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"no_finding\",\"finding\":\"\",\"effective_lens\":\"none\"}",
+          "source_fingerprint": "5d6bc5f0e1a147fcabdc2063",
+          "generated_at": "2026-08-29T08:37:41.588762"
+        }
+      ]
+    },
+    {
+      "task": "t07",
+      "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+      "status": "no_finding",
+      "effective_lens": "none",
+      "finding": "",
+      "contract_deviations": [],
+      "error_stage": "",
+      "error_kind": "",
+      "latency_ms": 14648,
+      "usage": {
+        "input_tokens": 34648,
+        "cached_input_tokens": 11008,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 229,
+        "reasoning_output_tokens": 153
+      },
+      "provider_outputs": [
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:37:49.774265-00000598798919832500-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t07",
+          "turn_id": "provider-replay-t07",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "router",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "linus",
+          "route_source": "default",
+          "status": "finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"finding\",\"finding\":\"ReadOnlyPasswordHashField 是否應允許呼叫端以 disabled=False 覆寫唯讀保護\",\"effective_lens\":\"linus\"}",
+          "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+          "generated_at": "2026-08-29T08:37:49.775266",
+          "recorded_contract_deviations": [
+            "over_52_characters",
+            "tradeoff_shape_mismatch"
+          ],
+          "normalization_note": "Router decisions do not use the Nudge output contract; normalized from preserved raw output without a provider rerun."
+        },
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:37:56.285513-00000598805431048100-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t07",
+          "turn_id": "provider-replay-t07",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "generator",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "none",
+          "route_source": "automatic_router",
+          "status": "no_finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"no_finding\",\"finding\":\"\",\"effective_lens\":\"none\"}",
+          "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+          "generated_at": "2026-08-29T08:37:56.285513"
+        }
+      ]
+    },
+    {
+      "task": "t08",
+      "source_fingerprint": "b876d687dd4f09aa38af859e",
+      "status": "no_finding",
+      "effective_lens": "none",
+      "finding": "",
+      "contract_deviations": [],
+      "error_stage": "",
+      "error_kind": "",
+      "latency_ms": 16281,
+      "usage": {
+        "input_tokens": 34932,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 323,
+        "reasoning_output_tokens": 247
+      },
+      "provider_outputs": [
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:38:04.199794-00000598813345382800-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t08",
+          "turn_id": "provider-replay-t08",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "router",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "linus",
+          "route_source": "default",
+          "status": "finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"finding\",\"finding\":\"如何區分文件開頭的 docinfo 欄位與以 interpreted-text role 開頭的標題\",\"effective_lens\":\"linus\"}",
+          "source_fingerprint": "b876d687dd4f09aa38af859e",
+          "generated_at": "2026-08-29T08:38:04.200796",
+          "recorded_contract_deviations": [
+            "tradeoff_shape_mismatch"
+          ],
+          "normalization_note": "Router decisions do not use the Nudge output contract; normalized from preserved raw output without a provider rerun."
+        },
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:38:12.619900-00000598821765767700-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t08",
+          "turn_id": "provider-replay-t08",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "generator",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "none",
+          "route_source": "automatic_router",
+          "status": "no_finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"no_finding\",\"finding\":\"\",\"effective_lens\":\"none\"}",
+          "source_fingerprint": "b876d687dd4f09aa38af859e",
+          "generated_at": "2026-08-29T08:38:12.619900"
+        }
+      ]
+    },
+    {
+      "task": "t10",
+      "source_fingerprint": "2a26281bf9d6d05bdcd57045",
+      "status": "no_finding",
+      "effective_lens": "none",
+      "finding": "",
+      "contract_deviations": [],
+      "error_stage": "",
+      "error_kind": "",
+      "latency_ms": 27126,
+      "usage": {
+        "input_tokens": 34584,
+        "cached_input_tokens": 11008,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 156,
+        "reasoning_output_tokens": 72
+      },
+      "provider_outputs": [
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:38:32.346013-00000598841490955300-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t10",
+          "turn_id": "provider-replay-t10",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "router",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "linus",
+          "route_source": "default",
+          "status": "finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"finding\",\"finding\":\"是否應在每次 yield 前複製分割字典，以換取獨立輸出物件並承擔複製成本\",\"effective_lens\":\"linus\"}",
+          "source_fingerprint": "2a26281bf9d6d05bdcd57045",
+          "generated_at": "2026-08-29T08:38:32.346013",
+          "recorded_contract_deviations": [
+            "tradeoff_shape_mismatch"
+          ],
+          "normalization_note": "Router decisions do not use the Nudge output contract; normalized from preserved raw output without a provider rerun."
+        },
+        {
+          "schema_version": 1,
+          "ts": "2026-08-29T08:38:39.788972-00000598848934024200-104324",
+          "host": "codex_cli",
+          "session_id": "provider-replay-t10",
+          "turn_id": "provider-replay-t10",
+          "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+          "kind": "provider_output",
+          "provider_stage": "generator",
+          "provider": "openai",
+          "model": "gpt-5.6-sol",
+          "stage": "automatic",
+          "effective_lens": "none",
+          "route_source": "automatic_router",
+          "status": "no_finding",
+          "error_kind": "",
+          "contract_deviations": [],
+          "raw_output": "{\"status\":\"no_finding\",\"finding\":\"\",\"effective_lens\":\"none\"}",
+          "source_fingerprint": "2a26281bf9d6d05bdcd57045",
+          "generated_at": "2026-08-29T08:38:39.788972"
+        }
+      ]
+    }
+  ]
+}

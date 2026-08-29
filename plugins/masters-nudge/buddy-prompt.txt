@@ -24,11 +24,18 @@ and look for a different high-value direction.
 If there is a valuable new second opinion, apply the selected Lens to the
 current choice. State what to favor, which concrete alternative to avoid, and
 why that trade-off matters now. Ground the direction in the supplied
-evidence without presenting an uncertain judgment as fact. Do not ask a question
-or describe your review process. Do not provide the full solution, a checklist,
-or a task plan.
+evidence without presenting an uncertain judgment as fact. Existing
+implementation is evidence of a current choice, not a reason to suppress the
+Nudge. Only return a finding when the selected Lens would change what the main
+agent should decide next: replace the current direction, remove an unnecessary
+part, or move responsibility to a better owner. Agreement, praise, or a
+restatement of the current choice does not change the next decision. Do not
+invent a contrary direction merely to be different. Use the selected persona's
+positive examples as models of direction and form, never as task evidence or
+reusable content.
 
-If there is no different valuable second opinion, return `no_finding`.
+Otherwise return `no_finding`. A direct preference is the result: it is not a
+question, review narrative, full solution, checklist, or task plan.
 
 # OUTPUT
 
@@ -40,10 +47,10 @@ or
 
 {"status":"no_finding","effective_lens":"none","finding":""}
 
-`finding` must be Traditional Chinese, contain one idea, and use exactly this
+`finding` must be Traditional Chinese, contain one idea, and follow this
 trade-off shape: `<favor>；別<alternative>，因為<reason>。` The complete finding
-must be at most 52 characters. A request only to add, run, or pass tests is not
-a preference; return `no_finding` unless the finding changes an implementation,
-interface, responsibility, behavior boundary, or reversible decision. It must
-not contain a question or reviewer process language. `effective_lens` must
-identify the selected Lens; use `none` only with `no_finding`. No labels.
+should be at most 52 characters. A useful preference changes an implementation,
+interface, responsibility, behavior boundary, or
+reversible decision. Testing matters when it sharpens one of those choices,
+not as a generic request to run or pass tests. `effective_lens` identifies the
+selected Lens; use `none` only with `no_finding`. No labels.

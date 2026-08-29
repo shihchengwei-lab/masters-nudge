@@ -488,6 +488,47 @@ def append_reaction(
     return entry
 
 
+def append_provider_output(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    stage: str,
+    provider: str,
+    model: str,
+    result: dict[str, Any],
+    route_metadata: dict[str, str],
+    source_fingerprint: str = "",
+) -> dict[str, Any]:
+    """Preserve one provider-stage result for local prompt diagnostics."""
+    data_dir = Path(data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    deviations = result.get("contract_deviations")
+    entry: dict[str, Any] = {
+        "schema_version": 1,
+        "ts": _reaction_timestamp(),
+        "host": session.host,
+        "session_id": session.session_id,
+        "turn_id": session.turn_id,
+        "workspace": _normalized_workspace(session.repo_root or session.cwd),
+        "kind": "provider_output",
+        "provider_stage": str(stage or ""),
+        "provider": provider,
+        "model": model,
+        **route_metadata,
+        "status": str(result.get("status") or "error"),
+        "error_kind": str(result.get("error_kind") or ""),
+        "contract_deviations": [
+            str(value) for value in deviations if str(value).strip()
+        ] if isinstance(deviations, (list, tuple)) else [],
+        "raw_output": str(result.get("raw_output") or ""),
+        "source_fingerprint": str(source_fingerprint or ""),
+        "generated_at": datetime.now().isoformat(),
+    }
+    with reaction_log_path(data_dir, session).open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    return entry
+
+
 def _normalized_workspace(value: str) -> str:
     try:
         return os.path.normcase(str(Path(value).expanduser().resolve())) if value else ""

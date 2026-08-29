@@ -1,0 +1,62 @@
+{
+  "task": "t07",
+  "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+  "status": "finding",
+  "effective_lens": "fowler",
+  "finding": "保留欄位停用作為唯一防護；別保留表單清理，因為重複規則會同步失敗。",
+  "contract_deviations": [],
+  "error_stage": "",
+  "error_kind": "",
+  "latency_ms": 16892,
+  "usage": {
+    "input_tokens": 34833,
+    "cached_input_tokens": 24064,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 341,
+    "reasoning_output_tokens": 223
+  },
+  "provider_outputs": [
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:51:45.888786-00000599635034368200-111064",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t07",
+      "turn_id": "provider-replay-t07",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "router",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "fowler",
+      "route_source": "default",
+      "status": "finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"在欄位設為預設停用後，是否仍應保留 UserChangeForm 與文件範例中的 clean_password 防護\",\"effective_lens\":\"fowler\"}",
+      "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+      "generated_at": "2026-08-29T08:51:45.889787"
+    },
+    {
+      "schema_version": 1,
+      "ts": "2026-08-29T08:51:54.750026-00000599643894706400-111064",
+      "host": "codex_cli",
+      "session_id": "provider-replay-t07",
+      "turn_id": "provider-replay-t07",
+      "workspace": "c:\\users\\kk789\\desktop\\gh_repos\\masters-nudge",
+      "kind": "provider_output",
+      "provider_stage": "generator",
+      "provider": "openai",
+      "model": "gpt-5.6-sol",
+      "stage": "automatic",
+      "effective_lens": "fowler",
+      "route_source": "automatic_router",
+      "status": "finding",
+      "error_kind": "",
+      "contract_deviations": [],
+      "raw_output": "{\"status\":\"finding\",\"finding\":\"保留欄位停用作為唯一防護；別保留表單清理，因為重複規則會同步失敗。\",\"effective_lens\":\"fowler\"}",
+      "source_fingerprint": "9afbdc5ee1f43cef4a0d9fcb",
+      "generated_at": "2026-08-29T08:51:54.750026"
+    }
+  ]
+}

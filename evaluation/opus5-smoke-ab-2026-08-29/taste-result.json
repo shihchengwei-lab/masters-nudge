@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "consensus": "tie",
+  "passes": [
+    {
+      "pass": "pass1",
+      "mapping": {
+        "X": "a",
+        "Y": "b"
+      },
+      "blind_winner": "tie",
+      "treatment_winner": "tie",
+      "rating": {
+        "task_key": "t01-pass1",
+        "candidate_x": {
+          "choice_specificity": 2,
+          "load_bearing_principle": 2,
+          "trajectory_influence": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses to translate the image dictionary once from permutation generators to presentation generators instead of repairing the per-letter special case.",
+            "The patch establishes one representation boundary, removes the `gens.index(...)` branch, and preserves the existing generic inverse lookup."
+          ]
+        },
+        "candidate_y": {
+          "choice_specificity": 2,
+          "load_bearing_principle": 2,
+          "trajectory_influence": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses a single presentation-generator-to-image map over repeated per-letter translation.",
+            "The patch removes `gens.index(...)`, introduces `rel_images`, and reshapes relator evaluation to normalize inverse letters before direct lookup."
+          ]
+        },
+        "winner": "tie",
+        "confidence": "high",
+        "reason": "Both candidates make an equally specific normalization choice, identify representation ownership as the simplifying principle, and visibly reshape the patch around a single presentation-level image map. Their implementation trajectories differ slightly, but neither is materially stronger on at least two positive dimensions including trajectory influence."
+      }
+    },
+    {
+      "pass": "pass2",
+      "mapping": {
+        "X": "b",
+        "Y": "a"
+      },
+      "blind_winner": "tie",
+      "treatment_winner": "tie",
+      "rating": {
+        "task_key": "t01-pass2",
+        "candidate_x": {
+          "choice_specificity": 2,
+          "load_bearing_principle": 2,
+          "trajectory_influence": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses a single presentation-generator-to-image map over fragile per-letter `gens.index(...)` translation.",
+            "The patch caches `domain.presentation()`, creates `rel_images`, and normalizes inverse letters before lookup."
+          ]
+        },
+        "candidate_y": {
+          "choice_specificity": 2,
+          "load_bearing_principle": 2,
+          "trajectory_influence": 2,
+          "review_friction": 0,
+          "evidence": [
+            "Chooses one-time translation of the image dictionary so the existing generic inverse handling remains unchanged.",
+            "The patch removes the permutation-specific per-letter lookup and maps presentation generators directly to images."
+          ]
+        },
+        "winner": "tie",
+        "confidence": "high",
+        "reason": "Both candidates make an explicit, situated choice, identify the presentation/domain generator interface as the load-bearing concern, and visibly reshape the patch around a one-time mapping. Y preserves more existing evaluation logic while X adds explicit normalization, but neither is materially stronger on at least two positive dimensions including trajectory influence."
+      }
+    }
+  ]
+}

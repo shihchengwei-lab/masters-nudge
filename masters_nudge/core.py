@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import time
 from typing import Callable
 
@@ -16,7 +17,7 @@ from .prompting import (
     build_review_input,
     build_system_prompt,
 )
-from .provider_contract import is_taste_finding
+from .provider_contract import finding_contract_deviations
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
 
@@ -86,14 +87,17 @@ class ReviewCore:
             timeout_sec or self.settings.timeout_sec,
             REVIEW_TIMEOUT_SEC,
         )
+        review_started = time.perf_counter()
+        deadline = review_started + effective_timeout
         route_decision = ""
         router_usage: dict[str, int] = {}
         router_latency_ms = 0
         router_input_chars = 0
         result: dict | None = None
+        error_stage = ""
         if not route.lens:
             router_prompt = build_router_prompt()
-            router_timeout = min(25, max(5, effective_timeout // 3))
+            router_timeout = max(1, math.ceil(deadline - time.perf_counter()))
             router_started = time.perf_counter()
             routed = self.dispatch(
                 provider,
@@ -109,6 +113,21 @@ class ReviewCore:
             router_input_chars = len(router_prompt) + len(request.source_packet)
             if not isinstance(routed, dict):
                 routed = {"status": "error", "effective_lens": "none", "finding": ""}
+            if persist_reaction:
+                storage.append_provider_output(
+                    self.settings.paths.data_dir,
+                    request.session,
+                    stage="router",
+                    provider=provider,
+                    model=model,
+                    result=routed,
+                    route_metadata={
+                        "stage": route.stage,
+                        "effective_lens": str(routed.get("effective_lens") or "none"),
+                        "route_source": route.source,
+                    },
+                    source_fingerprint=request.source_fingerprint,
+                )
             router_usage = (
                 routed.get("usage") if isinstance(routed.get("usage"), dict) else {}
             )
@@ -117,6 +136,7 @@ class ReviewCore:
             route_decision = str(routed.get("finding") or "").strip()
             if routed_status == "no_finding":
                 result = {
+                    **routed,
                     "status": "no_finding",
                     "effective_lens": "none",
                     "finding": "",
@@ -132,12 +152,13 @@ class ReviewCore:
                 )
             else:
                 result = {
+                    **routed,
                     "status": "error",
                     "effective_lens": "none",
                     "finding": "",
-                    "usage": {},
                     "error_kind": str(routed.get("error_kind") or "invalid_route"),
                 }
+                error_stage = "router"
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
@@ -164,21 +185,53 @@ class ReviewCore:
 
         started = time.perf_counter()
         if result is None:
-            generator_timeout = (
-                max(1, effective_timeout - min(25, max(5, effective_timeout // 3)))
-                if route.source == "automatic_router"
-                else effective_timeout
-            )
-            result = self.dispatch(
-                provider,
-                system_prompt,
-                review_input,
-                model,
-                schema_path=self.schema_path,
-                timeout_sec=generator_timeout,
-                ollama_url=self.settings.ollama_url,
-                log_error=self.log_error,
-            )
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                result = {
+                    "status": "error",
+                    "effective_lens": "none",
+                    "finding": "",
+                    "usage": {},
+                    "error_kind": "timeout_before_generator",
+                    "raw_output": "",
+                }
+                error_stage = "generator"
+            else:
+                generator_timeout = max(1, math.ceil(remaining))
+                result = self.dispatch(
+                    provider,
+                    system_prompt,
+                    review_input,
+                    model,
+                    schema_path=self.schema_path,
+                    timeout_sec=generator_timeout,
+                    ollama_url=self.settings.ollama_url,
+                    log_error=self.log_error,
+                )
+                if not isinstance(result, dict):
+                    result = {
+                        "status": "error",
+                        "effective_lens": "none",
+                        "finding": "",
+                        "usage": {},
+                        "error_kind": "invalid_output",
+                        "raw_output": "",
+                    }
+                if persist_reaction:
+                    storage.append_provider_output(
+                        self.settings.paths.data_dir,
+                        request.session,
+                        stage="generator",
+                        provider=provider,
+                        model=model,
+                        result=result,
+                        route_metadata={
+                            "stage": route.stage,
+                            "effective_lens": str(result.get("effective_lens") or "none"),
+                            "route_source": route.source,
+                        },
+                        source_fingerprint=request.source_fingerprint,
+                    )
         if not isinstance(result, dict):
             result = {"status": "error", "finding": "", "usage": {}}
         result["usage"] = _merge_usage(router_usage, result.get("usage"))
@@ -190,16 +243,21 @@ class ReviewCore:
             status = "error"
         if status == "finding" and not finding:
             status = "error"
-        if status == "finding" and not is_taste_finding(finding):
-            status = "error"
         if status == "finding" and effective_lens not in persona_config.PERSONA_NAMES:
             status = "error"
+        contract_deviations = list(result.get("contract_deviations") or [])
+        for deviation in finding_contract_deviations(finding) if status == "finding" else ():
+            if deviation not in contract_deviations:
+                contract_deviations.append(deviation)
         if (
             status == "finding"
             and route.lens
             and effective_lens != route.lens
         ):
-            status = "error"
+            contract_deviations.append("selected_lens_mismatch")
+        if status == "error" and not error_stage:
+            error_stage = "generator" if route.lens else "router"
+        error_kind = str(result.get("error_kind") or ("invalid_output" if status == "error" else ""))
         if status != "finding":
             effective_lens = "none"
         route_fields = {
@@ -261,6 +319,9 @@ class ReviewCore:
                 **route_fields,
                 "review_trigger": request.trigger or request.reason,
                 "status": status,
+                "error_stage": error_stage,
+                "error_kind": error_kind,
+                "contract_deviations": contract_deviations,
                 "input_chars": router_input_chars + len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
@@ -282,6 +343,9 @@ class ReviewCore:
             latency_ms=latency_ms,
             usage=(result.get("usage") or {}) if isinstance(result, dict) else {},
             reaction_ts=reaction_ts,
+            contract_deviations=tuple(contract_deviations),
+            error_stage=error_stage,
+            error_kind=error_kind,
         )
 
     def review_once(

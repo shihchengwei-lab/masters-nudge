@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-08-29T10:04:00+08:00",
+  "construct": "engineering_taste_injection",
+  "definition": "A situation-specific engineering preference that makes a concrete choice, explains the load-bearing reason, and visibly shapes the implementation trajectory.",
+  "exclusions": [
+    "Whether the solution passes tests or solves the task",
+    "How many tests or commands were run",
+    "Verbosity, confidence, polish, or famous-person style",
+    "Generic best practices that do not select between live alternatives",
+    "Persona names or explicit references to a nudge mechanism"
+  ],
+  "dimensions": {
+    "choice_specificity": {
+      "range": [0, 2],
+      "description": "0: no preference; 1: preference but generic or weakly situated; 2: explicit choice over a live alternative with a concrete reason."
+    },
+    "load_bearing_principle": {
+      "range": [0, 2],
+      "description": "0: no principle; 1: names a concern; 2: clarifies ownership, invariant, interface, data flow, complexity, feedback, or measured cost in a way that simplifies the design."
+    },
+    "trajectory_influence": {
+      "range": [0, 2],
+      "description": "0: no visible influence; 1: appears in explanation only or weakly affects work; 2: visibly changes diagnosis, rejected alternatives, patch shape, or scope."
+    },
+    "review_friction": {
+      "range": [0, 2],
+      "description": "Adverse score. 0: direct and enabling; 1: some checklist/review language; 2: unnecessary questions, approval requests, generic warnings, or stopping despite enough context."
+    }
+  },
+  "paired_verdict": {
+    "values": ["X", "Y", "tie"],
+    "rule": "Prefer X or Y only when it is materially stronger on at least two positive dimensions, including trajectory_influence, after accounting for review_friction. Otherwise return tie.",
+    "evidence_rule": "Cite short, candidate-specific evidence from the visible trajectory or product patch. Never infer hidden prompts, treatment, correctness, or test outcomes."
+  },
+  "primary_summary": "Count paired X wins, Y wins, and ties after deterministic unblinding. This is a small-sample descriptive result, not a causal effect estimate."
+}

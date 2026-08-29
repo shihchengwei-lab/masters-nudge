@@ -104,8 +104,10 @@ def build_system_prompt(
         (
             "# ROUTING HYPOTHESIS — NOT EVIDENCE\n\n"
             f"The router identified this unresolved choice: {route_decision.strip()}\n"
-            "Verify it against the supplied evidence. If unsupported or already "
-            "decided, return `no_finding`."
+            "Verify it against the supplied evidence. Existing implementation is "
+            "evidence of the current choice, not a reason to suppress a Nudge. "
+            "Only return a finding when the selected Lens would change what the "
+            "main agent should decide next. Otherwise return `no_finding`."
             if route_decision.strip()
             else ""
         ),

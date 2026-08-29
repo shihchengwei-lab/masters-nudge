@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "safety": {
+    "preregistered": 10,
+    "eligible": 10,
+    "paired_scored": 10,
+    "arm_a_passed": 5,
+    "arm_b_passed": 5,
+    "a_only": 0,
+    "b_only": 0
+  },
+  "taste": {
+    "a_wins": 0,
+    "b_wins": 0,
+    "ties": 10,
+    "dimension_totals": {
+      "arm_a": {
+        "choice_specificity": 20,
+        "load_bearing_principle": 20,
+        "trajectory_influence": 20,
+        "review_friction": 0
+      },
+      "arm_b": {
+        "choice_specificity": 20,
+        "load_bearing_principle": 20,
+        "trajectory_influence": 20,
+        "review_friction": 0
+      }
+    },
+    "confidence": {
+      "high": 10
+    },
+    "ceiling_effect": true
+  },
+  "mechanism": {
+    "findings": 7,
+    "injected": 7,
+    "response_observations": 7,
+    "nudges": 7,
+    "contract_deviations": 0,
+    "review_attempts": 9,
+    "lenses": {
+      "linus": 6,
+      "lamport": 1
+    },
+    "telemetry_status": {
+      "finding": 7,
+      "no_finding": 2
+    },
+    "telemetry_stages": {
+      "automatic": 9
+    },
+    "error_kinds": {},
+    "provider_latency_ms_median": 17886,
+    "provider_latency_ms_max": 22497
+  },
+  "operational": {
+    "arm_a_wall_seconds_total": 1350.484,
+    "arm_b_wall_seconds_total": 1695.549,
+    "arm_a_wall_seconds_median": 130.031,
+    "arm_b_wall_seconds_median": 160.039,
+    "arm_a_output_tokens_total": 39834,
+    "arm_b_output_tokens_total": 46015
+  },
+  "per_task": [
+    {
+      "task_key": "t01",
+      "safety_a": true,
+      "safety_b": true,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t02",
+      "safety_a": false,
+      "safety_b": false,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t03",
+      "safety_a": false,
+      "safety_b": false,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t04",
+      "safety_a": true,
+      "safety_b": true,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "lamport"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t05",
+      "safety_a": true,
+      "safety_b": true,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t06",
+      "safety_a": false,
+      "safety_b": false,
+      "nudge_findings": 0,
+      "nudge_injected": 0,
+      "response_observations": 0,
+      "lenses": [],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t07",
+      "safety_a": true,
+      "safety_b": true,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t08r1",
+      "safety_a": true,
+      "safety_b": true,
+      "nudge_findings": 0,
+      "nudge_injected": 0,
+      "response_observations": 0,
+      "lenses": [],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t09",
+      "safety_a": false,
+      "safety_b": false,
+      "nudge_findings": 0,
+      "nudge_injected": 0,
+      "response_observations": 0,
+      "lenses": [],
+      "review_attempts": 0,
+      "telemetry_events": 0,
+      "contract_deviations": 0
+    },
+    {
+      "task_key": "t10",
+      "safety_a": false,
+      "safety_b": false,
+      "nudge_findings": 1,
+      "nudge_injected": 1,
+      "response_observations": 1,
+      "lenses": [
+        "linus"
+      ],
+      "review_attempts": 1,
+      "telemetry_events": 1,
+      "contract_deviations": 0
+    }
+  ],
+  "interpretation": {
+    "confirmed": "B produced and injected seven dynamic findings, but the blinded primary taste rating found no material paired difference; safety was exactly tied.",
+    "not_supported": "This ten-task run does not support a claim that Nudge injected observable engineering taste into the main model trajectory.",
+    "not_a_claim": "The run is descriptive and too small for a causal effect estimate or a general no-effect conclusion."
+  }
+}

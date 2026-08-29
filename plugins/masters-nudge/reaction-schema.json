@@ -9,9 +9,7 @@
       ]
     },
     "finding": {
-      "type": "string",
-      "maxLength": 52,
-      "pattern": "^.+；別.+，因為.+。$"
+      "type": "string"
     },
     "effective_lens": {
       "type": "string",

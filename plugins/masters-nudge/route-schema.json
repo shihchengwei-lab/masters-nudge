@@ -6,8 +6,7 @@
       "enum": ["finding", "no_finding"]
     },
     "finding": {
-      "type": "string",
-      "maxLength": 52
+      "type": "string"
     },
     "effective_lens": {
       "type": "string",

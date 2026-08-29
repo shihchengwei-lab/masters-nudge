@@ -26,6 +26,9 @@ _RECORD_FIELDS = {
     "route_source",
     "review_trigger",
     "status",
+    "error_stage",
+    "error_kind",
+    "contract_deviations",
     "input_chars",
     "latency_ms",
     "source_fingerprint",
@@ -46,6 +49,12 @@ def _safe_record(record: dict[str, Any], now: datetime) -> dict[str, Any]:
     safe["ts"] = now.isoformat()
     safe["input_chars"] = max(0, int(safe.get("input_chars") or 0))
     safe["latency_ms"] = max(0, int(safe.get("latency_ms") or 0))
+    deviations = safe.get("contract_deviations")
+    safe["contract_deviations"] = [
+        str(value)
+        for value in deviations
+        if str(value).strip()
+    ] if isinstance(deviations, (list, tuple)) else []
     usage = safe.get("usage")
     if not isinstance(usage, dict):
         usage = {}
