@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {"type": "string", "enum": ["finding", "no_finding"]},
+    "finding": {"type": "string", "maxLength": 52},
+    "lens": {
+      "type": "string",
+      "enum": ["simplicity", "reliability", "performance", "none"]
+    }
+  },
+  "required": ["status", "lens", "finding"],
+  "additionalProperties": false
+}

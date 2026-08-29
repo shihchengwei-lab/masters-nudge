@@ -1,4 +1,4 @@
-"""Strict loopback-only Ollama transport for private reviewer calls."""
+"""Strict loopback-only Ollama transport for private Nudge calls."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from urllib.request import (
     build_opener,
 )
 
-from .provider_contract import call_result, parse_reaction_result
+from .provider_contract import call_result, parse_nudge_result
 
 
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
@@ -199,22 +199,9 @@ def inspect_local_ollama(
     return result
 
 
-def _usage_from_chat(response: dict) -> dict[str, int]:
-    usage: dict[str, int] = {}
-    prompt = response.get("prompt_eval_count")
-    output = response.get("eval_count")
-    if isinstance(prompt, (int, float)) and not isinstance(prompt, bool):
-        usage["input_tokens"] = int(prompt)
-    if isinstance(output, (int, float)) and not isinstance(output, bool):
-        usage["output_tokens"] = int(output)
-    if usage:
-        usage["total_tokens"] = sum(usage.values())
-    return usage
-
-
 def call_local_ollama_result(
     system_prompt: str,
-    review_input: str,
+    nudge_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -224,13 +211,13 @@ def call_local_ollama_result(
     opener_factory: Callable = _default_opener,
     parse_result: Callable[[str], dict] | None = None,
 ) -> dict:
-    parser = parse_result or parse_reaction_result
+    parser = parse_result or parse_nudge_result
     try:
         schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
         if not isinstance(schema, dict):
             raise ValueError("schema root is not an object")
     except (OSError, ValueError) as exc:
-        log_error(f"reaction schema unavailable for ollama-local: {exc}")
+        log_error(f"Nudge schema unavailable for Ollama: {exc}")
         return call_result(error_kind="invalid_output")
 
     inspection = inspect_local_ollama(
@@ -240,7 +227,7 @@ def call_local_ollama_result(
         opener_factory=opener_factory,
     )
     if not inspection["ready"]:
-        log_error(f"ollama-local unavailable: {inspection['error']}")
+        log_error(f"Ollama unavailable: {inspection['error']}")
         return call_result(
             error_kind=str(inspection.get("error_kind") or "not_found")
         )
@@ -258,7 +245,7 @@ def call_local_ollama_result(
                 "model": validate_model_name(model),
                 "messages": [
                     {"role": "system", "content": request_system},
-                    {"role": "user", "content": review_input},
+                    {"role": "user", "content": nudge_input},
                 ],
                 "stream": False,
                 "think": False,
@@ -278,12 +265,11 @@ def call_local_ollama_result(
         parsed = parser(raw_output)
         if not isinstance(parsed, dict):
             raise LocalOllamaError("Ollama response parser returned an invalid result")
-        parsed["usage"] = _usage_from_chat(response)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
     except (LocalOllamaError, ValueError) as exc:
-        log_error(f"ollama-local call failed: {exc}")
+        log_error(f"Ollama call failed: {exc}")
         return call_result(
             error_kind=(
                 "timeout" if isinstance(exc, LocalOllamaTimeout) else "invalid_output"

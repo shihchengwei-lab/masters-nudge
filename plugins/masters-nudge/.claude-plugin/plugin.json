@@ -1,8 +1,8 @@
 {
   "name": "masters-nudge",
   "displayName": "Masters’ Nudge",
-  "version": "0.3.0",
-  "description": "A quiet second-opinion workflow lens for Claude Code and Codex.",
+  "version": "0.4.0",
+  "description": "Evidence-bounded engineering nudges before the next agent decision.",
   "author": {
     "name": "shihchengwei-lab",
     "url": "https://github.com/shihchengwei-lab"
@@ -11,7 +11,7 @@
   "repository": "https://github.com/shihchengwei-lab/masters-nudge",
   "license": "MIT",
   "keywords": [
-    "workflow-review",
+    "engineering-taste",
     "second-opinion",
     "coding-agent",
     "hooks"

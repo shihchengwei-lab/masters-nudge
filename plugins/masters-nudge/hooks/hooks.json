@@ -27,18 +27,6 @@
           }
         ]
       }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
-            "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli",
-            "timeout": 120
-          }
-        ]
-      }
     ]
   }
 }

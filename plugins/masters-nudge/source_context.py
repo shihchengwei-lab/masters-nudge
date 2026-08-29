@@ -11,21 +11,22 @@ from typing import Any, Mapping
 TASK_ANCHOR_MAX_CHARS = 2000
 TASK_SOURCES_MAX_CHARS = 8000
 TASK_SOURCE_MAX_CHARS = 6000
-STOP_ASSISTANT_MAX_CHARS = 2500
 PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
 CURRENT_RESULT_SECTION_MAX_CHARS = 5800
 PACKET_TASK_SOURCE_MAX_CHARS = 3200
-CURRENT_RESULT_RECORDS_MAX = 3
 PACKET_RESULT_RECORD_MAX_CHARS = 1600
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
 
 _BACKTICK_REFERENCE_RE = re.compile(r"`([^`\r\n]+)`")
 _MARKDOWN_REFERENCE_RE = re.compile(r"\[[^\]]+\]\(([^)\r\n]+)\)")
+_PLAIN_REFERENCE_RE = re.compile(
+    r"(?<![\w./\\-])((?:(?:[A-Za-z]:)?[./\\])?[\w.-]+"
+    r"(?:[/\\][\w.-]+)*\.[A-Za-z0-9]{1,16})(?![\w./\\-])"
+)
 _PATHISH_REFERENCE_RE = re.compile(
     r"(?:[/\\]|\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$)"
 )
-_CONTENT_READ_RE = re.compile(r"\b(?:get-content|cat|type|sed)\b", re.IGNORECASE)
 
 
 def head_tail(text: str, max_chars: int) -> str:
@@ -51,52 +52,8 @@ def _section(label: str, content: str, max_chars: int) -> str:
     return f"[{label}]\n{content}\n[end {label}]"
 
 
-def _compact(value: Any) -> str:
-    if isinstance(value, str):
-        return value.strip()
-    try:
-        import json
-
-        return json.dumps(value, ensure_ascii=False, sort_keys=True).strip()
-    except (TypeError, ValueError):
-        return str(value or "").strip()
-
-
 def _normalized_reference(value: str) -> str:
     return str(value or "").strip().strip("<>").replace("\\", "/").lower()
-
-
-def _reads_reference(tool_input: Any, source: str) -> bool:
-    """Accept explicit content reads, not navigation that merely names a file."""
-    normalized_source = _normalized_reference(source)
-    if not normalized_source:
-        return False
-    if isinstance(tool_input, Mapping):
-        for key in ("file_path", "path"):
-            candidate = _normalized_reference(tool_input.get(key, ""))
-            if candidate == normalized_source or candidate.endswith(
-                f"/{normalized_source}"
-            ):
-                return True
-        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-    else:
-        command = str(tool_input or "")
-    segments = [
-        segment.strip()
-        for segment in re.split(r"(?:&&|\|\||[;|])", command)
-        if segment.strip()
-    ]
-    if len(segments) != 1:
-        return False
-    source_token = re.compile(
-        rf"(?<![A-Za-z0-9._-]){re.escape(normalized_source)}(?![A-Za-z0-9._-])"
-    )
-    segment = segments[0] if segments else ""
-    normalized_segment = _normalized_reference(segment)
-    return bool(
-        source_token.search(normalized_segment)
-        and _CONTENT_READ_RE.search(segment)
-    )
 
 
 def referenced_task_sources(task_request: str) -> tuple[str, ...]:
@@ -104,6 +61,7 @@ def referenced_task_sources(task_request: str) -> tuple[str, ...]:
     candidates = [
         *(_BACKTICK_REFERENCE_RE.findall(str(task_request or ""))),
         *(_MARKDOWN_REFERENCE_RE.findall(str(task_request or ""))),
+        *(_PLAIN_REFERENCE_RE.findall(str(task_request or ""))),
     ]
     sources: list[str] = []
     seen: set[str] = set()
@@ -150,20 +108,6 @@ def load_referenced_task_sources(
     return loaded
 
 
-def capture_referenced_task_source(
-    task_request: str,
-    tool_input: Any,
-    tool_output: Any,
-) -> tuple[str, str] | None:
-    """Promote a successful read only when it names a task-referenced source."""
-    for source in referenced_task_sources(task_request):
-        if _reads_reference(tool_input, source):
-            content = head_tail(_compact(tool_output), TASK_SOURCE_MAX_CHARS)
-            if content:
-                return source, content
-    return None
-
-
 def render_task_sources(task_sources: Any) -> str:
     if isinstance(task_sources, Mapping):
         parts = [
@@ -195,7 +139,6 @@ def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
             {
                 "seq": seq,
                 "category": category,
-                "scope": str(record.get("scope") or "").strip(),
                 "content": content,
             }
         )
@@ -211,10 +154,11 @@ def _render_result_records(records: list[dict[str, Any]]) -> str:
 
 def _current_results(evidence_records: Any) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    for category in ("change", "verification", "failure"):
-        records.extend(_records(evidence_records, category))
+    limits = {"change": 1, "verification": 2, "failure": 2, "measurement": 2}
+    for category, limit in limits.items():
+        records.extend(_records(evidence_records, category)[-limit:])
     records.sort(key=lambda record: record["seq"])
-    return records[-CURRENT_RESULT_RECORDS_MAX:]
+    return records
 
 
 def _build_packet(
@@ -222,7 +166,6 @@ def _build_packet(
     task_anchor: str,
     task_sources: Any,
     evidence_records: Any,
-    completion_claim: str = "",
 ) -> str:
     contract_lines = [
         "task:",
@@ -233,13 +176,6 @@ def _build_packet(
         contract_lines.extend(("sources:", rendered_sources))
 
     result_lines = [_render_result_records(_current_results(evidence_records))]
-    if completion_claim.strip():
-        result_lines.extend(
-            (
-                "assistant_output:",
-                head_tail(completion_claim, STOP_ASSISTANT_MAX_CHARS),
-            )
-        )
     packet = "\n\n".join(
         (
             _section(
@@ -266,18 +202,4 @@ def build_checkpoint_packet(
         task_anchor=task_anchor,
         task_sources=task_sources,
         evidence_records=evidence_records,
-    )
-
-
-def build_stop_packet(
-    task_anchor: str,
-    last_assistant_message: str,
-    task_sources: Any = "",
-    evidence_records: Any = None,
-) -> str:
-    return _build_packet(
-        task_anchor=task_anchor,
-        task_sources=task_sources,
-        evidence_records=evidence_records,
-        completion_claim=last_assistant_message,
     )

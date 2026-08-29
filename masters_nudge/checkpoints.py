@@ -1,4 +1,4 @@
-"""Host-neutral checkpoint classification and bounded event rendering."""
+"""Recognize observable results worth offering to one Nudge Lens."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import subprocess
+from pathlib import Path
 from typing import Any
 
 import source_context
@@ -13,89 +14,91 @@ import source_context
 from .contracts import ToolCompleted
 
 
-MAX_EVENT_CONTEXT_CHARS = 5000
-SEMANTIC_CHANGE_MAX_CHARS = 1800
-TEST_FAILURE_RE = re.compile(
-    r"\b[1-9]\d*\s+(?:failed|failing)\b"
-    r"|\btests?\s+failed\b"
-    r"|^FAIL(?:ED)?\b"
-    r"|\s[✗✘]\s",
-    re.IGNORECASE | re.MULTILINE,
-)
-RUNTIME_FAILURE_RE = re.compile(
-    r"\bTraceback \(most recent call last\):"
-    r"|\b(?:AssertionError|ModuleNotFoundError|ImportError|"
-    r"TypeError|ValueError|RuntimeError|SyntaxError)(?::|\s*$)",
-    re.IGNORECASE | re.MULTILINE,
-)
-TEST_COMMAND_RE = re.compile(
-    r"(?:^|[;&|\s])(?:"
-    r"pytest|py\.test|unittest|vitest|jest|mocha|rspec|"
-    r"npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
-    r"yarn\s+(?:run\s+)?test|bun\s+test|cargo\s+test|"
-    r"go\s+test|dotnet\s+test|mvn(?:w)?(?:\.cmd)?\s+test|"
-    r"gradle(?:w)?(?:\.bat)?\s+test|flutter\s+test|dart\s+test"
-    r")(?:\s|$)",
+RESULT_MAX_CHARS = 5000
+CHANGE_MAX_CHARS = 2200
+VALIDATION_RE = re.compile(
+    r"\b(?:pytest|unittest|vitest|jest|cargo\s+test|go\s+test|dotnet\s+test|"
+    r"flutter\s+test|npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
+    r"build|verify)\b",
     re.IGNORECASE,
 )
-GOAL_TOOLS = {"create_goal", "update_goal"}
-MEANINGFUL_TOOL_RE = re.compile(
-    r"(?:apply_patch|write|edit|test|verify|benchmark|build|plan|goal)", re.IGNORECASE
-)
-SEMANTIC_MUTATION_RE = re.compile(
-    r"(?:\bapply_patch\b|\bfile_change\b|\bwrite\b|\bedit\b)", re.IGNORECASE
-)
-SEMANTIC_VALIDATION_RE = re.compile(
-    r"\b(?:test|verify|benchmark|build|pytest|unittest|vitest|jest|cargo|dotnet)\b"
-    r"|(?<!\w)(?:test|verify|benchmark|build)(?=[_.-])",
+MEASUREMENT_RE = re.compile(r"\b(?:benchmark|bench|profile|trace)\b", re.IGNORECASE)
+FAILURE_RE = re.compile(
+    r"\b[1-9]\d*\s+(?:failed|failing)\b|\btests? failed\b|"
+    r"Traceback \(most recent call last\):|"
+    r"\b(?:AssertionError|ImportError|TypeError|RuntimeError|SyntaxError):",
     re.IGNORECASE,
 )
-READ_NAVIGATION_RE = re.compile(
-    r"(?:^|\b)(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|"
-    r"read|open|view|search)(?:\b|$)",
+NAVIGATION_RE = re.compile(
+    r"^(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|read|open|view|search)\b",
     re.IGNORECASE,
 )
 
-def compact_json(value: Any) -> str:
+
+def _compact(value: Any) -> str:
     if isinstance(value, str):
         text = value
     else:
         try:
-            text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+            text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
         except (TypeError, ValueError):
-            text = str(value)
-    return source_context.head_tail(text.strip(), MAX_EVENT_CONTEXT_CHARS)
+            text = str(value or "")
+    return source_context.head_tail(text.strip(), RESULT_MAX_CHARS)
 
 
-def stable_fingerprint(reason: str, payload: dict[str, Any]) -> str:
+def _command(event: ToolCompleted) -> str:
+    if isinstance(event.tool_input, dict):
+        return str(
+            event.tool_input.get("command")
+            or event.tool_input.get("cmd")
+            or event.tool_input.get("patch")
+            or ""
+        ).strip()
+    return str(event.tool_input or "").strip()
+
+
+def tool_event_fingerprint(event: ToolCompleted) -> str:
     raw = json.dumps(
-        {"reason": reason, "payload": payload},
+        {
+            "tool": event.tool_name,
+            "input": event.tool_input,
+            "output": event.tool_output,
+            "failed": event.failed,
+        },
         ensure_ascii=False,
         sort_keys=True,
         default=str,
     )
-    return f"{reason}-{hashlib.sha256(raw.encode('utf-8')).hexdigest()[:24]}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
-def tool_event_fingerprint(event: ToolCompleted) -> str:
-    """Identify an exact consecutive native event replay."""
-    return stable_fingerprint(
-        "tool-event",
-        {
-            "tool_name": event.tool_name,
-            "tool_input": event.tool_input,
-            "tool_output": event.tool_output,
-            "failed": event.failed,
-            "failure_known": event.failure_known,
-            "mutating": event.mutating,
-        },
-    )
+def evidence_category(event: ToolCompleted) -> str:
+    command = _command(event)
+    semantic = f"{event.tool_name} {command}"
+    output = _compact(event.tool_output)
+    if event.failure_known and event.failed:
+        return "failure"
+    if NAVIGATION_RE.search(command) and not (
+        VALIDATION_RE.search(semantic) or MEASUREMENT_RE.search(semantic)
+    ):
+        return ""
+    if MEASUREMENT_RE.search(semantic):
+        return "failure" if FAILURE_RE.search(output) else "measurement"
+    if VALIDATION_RE.search(semantic):
+        return "failure" if FAILURE_RE.search(output) else "verification"
+    if event.mutating or re.search(
+        r"(?:apply_patch|file_change|write_file|edit_file|^edit$|^write$)",
+        event.tool_name,
+        re.IGNORECASE,
+    ):
+        return "change"
+    return ""
 
 
-def _git_output(args: list[str], cwd: str) -> str | None:
+def _untracked_files(cwd: str) -> list[str]:
     try:
         result = subprocess.run(
-            ["git", *args],
+            ["git", "ls-files", "--others", "--exclude-standard", "-z"],
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -104,145 +107,77 @@ def _git_output(args: list[str], cwd: str) -> str | None:
             timeout=5,
         )
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return None
-    return result.stdout if result.returncode == 0 else None
+        return []
+    return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
 
 
-def _command(event: ToolCompleted) -> str:
-    value = event.tool_input
-    if isinstance(value, dict):
-        return str(value.get("command") or value.get("cmd") or "")
-    return str(value or "")
+def _requested_path(event: ToolCompleted) -> str:
+    if isinstance(event.tool_input, dict):
+        value = event.tool_input.get("path") or event.tool_input.get("file_path")
+        if value:
+            return str(value).replace("\\", "/")
+    match = re.search(r"\*\*\* Add File:\s*([^\r\n]+)", _command(event))
+    return match.group(1).strip().replace("\\", "/") if match else ""
 
 
-def command_family(event: ToolCompleted) -> str:
-    """Return a stable, low-cardinality family for repetition detection."""
-    command = _command(event).strip()
-    if not command:
-        return event.tool_name.lower() if MEANINGFUL_TOOL_RE.search(event.tool_name) else ""
-    words = re.findall(r"[A-Za-z0-9_.-]+", command.lower())
-    if not words:
-        return event.tool_name.lower()
-    launchers = {"python", "python3", "py", "node", "npx", "npm", "pnpm", "yarn"}
-    width = 3 if words[0] in launchers else 2
-    return " ".join(words[:width])
-
-
-def goal_transition(event: ToolCompleted) -> tuple[str, str]:
-    tool = event.tool_name.lower().split("__")[-1]
-    if tool not in GOAL_TOOLS or not isinstance(event.tool_input, dict):
-        return "", ""
-    if tool == "create_goal":
-        return "created", str(event.tool_input.get("objective") or "")
-    status = str(event.tool_input.get("status") or "").lower()
-    return (status if status in {"complete", "blocked"} else ""), ""
-
-
-def evidence_category(event: ToolCompleted) -> str:
-    """Classify durable evidence; routine navigation intentionally stays out."""
-    output = compact_json(event.tool_output)
-    command = _command(event)
-    semantic_text = f"{event.tool_name} {command}"
-    test_command = bool(TEST_COMMAND_RE.search(command))
-    validation_like = bool(test_command or SEMANTIC_VALIDATION_RE.search(semantic_text))
-    if event.failure_known and event.failed:
-        return "failure"
-    if READ_NAVIGATION_RE.search(semantic_text) and not test_command:
+def _untracked_snapshot(event: ToolCompleted) -> str:
+    if not event.session.cwd:
         return ""
-    if validation_like and (
-        TEST_FAILURE_RE.search(output) or RUNTIME_FAILURE_RE.search(output)
-    ):
-        return "failure"
-    if SEMANTIC_MUTATION_RE.search(semantic_text):
-        return "change"
-    if validation_like:
-        return "verification"
-    return ""
-
-
-def evidence_scope(event: ToolCompleted) -> str:
-    """Identify the validated surface without putting commands in the packet."""
-    category = evidence_category(event)
-    if category not in {"verification", "failure"}:
-        return ""
-    command = _command(event).strip()
-    command = re.sub(
-        r"^(?:[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+)+", "", command
-    )
-    if not command:
-        return ""
-    tokens = re.findall(r"[^\s'\"]+", command)
-    targets: list[str] = []
-    for token in tokens:
-        value = token.strip(" ,;()[]{}")
-        if not value or value.startswith("-"):
+    root = Path(event.session.cwd).resolve()
+    paths = _untracked_files(event.session.cwd)
+    requested = _requested_path(event)
+    paths.sort(key=lambda value: (value.replace("\\", "/") != requested, value))
+    rendered: list[str] = []
+    for relative in paths[:3]:
+        display_path = relative.replace("\\", "/")
+        try:
+            candidate = (root / relative).resolve()
+            candidate.relative_to(root)
+            content = candidate.read_text(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):
             continue
-        normalized = value.replace("\\", "/").lower()
-        if (
-            "::" in normalized
-            or "/test" in normalized
-            or normalized.startswith(("test", "tests/", "testing/"))
-            or re.search(r"\.(?:py|js|jsx|ts|tsx|go|rs|java|rb)(?:::\S+)?$", normalized)
-        ):
-            if normalized not in targets:
-                targets.append(normalized)
-    if targets:
-        semantic = "|".join(targets[:4])
-        return source_context.head_tail(f"validation:{semantic}", 160)
-    family = command_family(event)
-    if not family:
+        rendered.append(
+            f"untracked_file: {display_path}\n"
+            f"{source_context.head_tail(content, 700)}"
+        )
+    return "\n\n".join(rendered)
+
+
+def _working_diff(event: ToolCompleted) -> str:
+    if not event.session.cwd:
         return ""
-    runner = re.search(
-        r"\b(pytest|py\.test|unittest|vitest|jest|mocha|rspec|cargo\s+test|"
-        r"go\s+test|dotnet\s+test|flutter\s+test)\b",
-        command,
-        re.IGNORECASE,
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--unified=1", "HEAD", "--"],
+            cwd=event.session.cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return ""
+    if result.returncode != 0:
+        return ""
+    combined = "\n\n".join(
+        value for value in (result.stdout.strip(), _untracked_snapshot(event)) if value
     )
-    return f"validation-suite:{runner.group(1).lower()}" if runner else f"validation-family:{family}"
-
-
-def _semantic_change_excerpt(event: ToolCompleted) -> str:
-    raw = _command(event).strip()
-    if "apply_patch" in event.tool_name.lower() and raw:
-        lines = []
-        for line in raw.splitlines():
-            if line.startswith(("*** Begin Patch", "*** End Patch", "*** Add File:",
-                                "*** Update File:", "*** Delete File:", "*** Move to:")):
-                continue
-            if line.startswith(("@@", "+", "-")):
-                lines.append(line)
-        return source_context.head_tail("\n".join(lines), SEMANTIC_CHANGE_MAX_CHARS)
-    if event.session.cwd:
-        diff = _git_output(["diff", "--unified=1", "HEAD", "--"], event.session.cwd)
-        if diff:
-            return source_context.head_tail(diff, SEMANTIC_CHANGE_MAX_CHARS)
-    return ""
+    return source_context.head_tail(combined, CHANGE_MAX_CHARS)
 
 
 def render_evidence_record(event: ToolCompleted) -> str:
-    """Render semantic evidence without exposing tool identity or commands."""
+    """Preserve the real command and result; do not infer semantic scope."""
     category = evidence_category(event)
-    output = compact_json(event.tool_output)
+    command = _command(event)
+    result = _compact(event.tool_output)
+    parts: list[str] = []
+    if command:
+        parts.append(f"actual_command:\n{source_context.head_tail(command, 1800)}")
     if category == "change":
-        changed_paths: list[str] = []
-        if "apply_patch" in event.tool_name.lower():
-            raw = _command(event).strip() or compact_json(event.tool_input)
-            for path in re.findall(
-                r"^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$|"
-                r"^\*\*\* Move to:\s*(.+?)\s*$",
-                raw,
-                re.MULTILINE,
-            ):
-                value = next((item.strip() for item in path if item.strip()), "")
-                if value and value not in changed_paths:
-                    changed_paths.append(value)
-        parts = []
-        if changed_paths:
-            parts.append("changed_paths:\n" + "\n".join(f"- {path}" for path in changed_paths))
-        semantic_change = _semantic_change_excerpt(event)
-        if semantic_change:
-            parts.append(f"semantic_change:\n{semantic_change}")
-        if output:
-            parts.append(f"result:\n{output}")
-        return "\n".join(parts)
-    return output
+        diff = _working_diff(event)
+        if diff:
+            parts.append(f"current_diff:\n{diff}")
+    if result:
+        parts.append(f"result:\n{result}")
+    return "\n\n".join(parts)

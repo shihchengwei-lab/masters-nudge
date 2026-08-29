@@ -5,16 +5,31 @@ description: Diagnose a Masters' Nudge installation only when the user explicitl
 
 # Masters' Nudge Doctor
 
-Resolve the plugin root as two directories above this `SKILL.md`. On Claude
-Code, run `masters_nudge_cli.py doctor --host claude
---hook-python-command "${user_config.python_command}" --json` from that root
-using the configured Python executable. On Codex, run
-`masters_nudge_cli.py doctor --host codex --json` with the current Python
-interpreter (`python3`, `python`, or `py -3`).
+Starting from this `SKILL.md`, walk upward to the plugin root containing
+`masters_nudge_cli.py`. Run the internal CLI from that root. On Claude Code, use the configured Python
+executable and run:
 
-Report core readiness separately from the optional floating-window status.
-Do not invoke any reviewer model as part of diagnosis. For `ollama-local`,
-report the loopback endpoint, server availability, cloud-disabled state, and
-local model metadata separately; metadata checks are not a model-quality test.
-If Codex is the host, remind the user that plugin hooks still need review in
-`/hooks`.
+```text
+masters_nudge_cli.py doctor --host claude --hook-python-command <configured-python>
+```
+
+On Codex, use the current Python 3.10+ interpreter and run:
+
+```text
+masters_nudge_cli.py doctor --host codex
+```
+
+The command returns JSON for the Agent, not user-facing prose. Explain the
+result in plain language and do not paste raw JSON unless the user explicitly
+asks for it. Separate these checks:
+
+- Python and packaged runtime files;
+- ability to write local data;
+- selected Provider and its availability;
+- Host Hook registration and control-point precision.
+
+Do not call a Nudge Provider merely to diagnose readiness. For local Ollama,
+report the loopback endpoint, server availability, selected installed model,
+and any diagnostic separately. Availability does not prove model quality. For
+Codex, explain that `PostToolUse` is an approximate control point and remind
+the user to inspect and approve the plugin commands in `/hooks` when needed.
