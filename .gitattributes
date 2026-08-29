@@ -1,10 +1,18 @@
 * text=auto
+.gitattributes text eol=lf
 
 # Shell scripts must stay LF on all platforms — CRLF breaks #! shebangs.
 *.sh text eol=lf
 
 # Python prefers LF.
 *.py text eol=lf
+
+# Documentation and plugin metadata stay LF to avoid cross-platform churn.
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.txt text eol=lf
 
 # Windows batch / cmd stays CRLF.
 *.bat text eol=crlf

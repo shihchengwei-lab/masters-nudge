@@ -45,7 +45,6 @@ def main() -> None:
                 data_dir,
                 session,
                 str(prompt),
-                transcript_path=str(hook.get("transcript_path") or ""),
             )
         except Exception as e:
             log_error(f"turn state save failed: {e}")

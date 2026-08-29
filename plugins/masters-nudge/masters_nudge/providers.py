@@ -1,4 +1,4 @@
-"""Reviewer provider clients, independent of the coding-agent host."""
+"""Nudge provider clients, independent of the coding-agent host."""
 
 from __future__ import annotations
 
@@ -12,40 +12,18 @@ from pathlib import Path
 from typing import Callable
 
 from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
-from .provider_contract import call_result, parse_reaction_result, parse_route_result
-from .runtime import reviewer_environment
+from .provider_contract import call_result, parse_nudge_result, parse_route_result
+from .runtime import provider_environment
 
 
 Logger = Callable[[str], None]
-
-GROK_REVIEWER_DENIED_TOOLS = (
-    "run_terminal_cmd",
-    "grep",
-    "read_file",
-    "search_replace",
-    "list_dir",
-    "web_search",
-    "web_fetch",
-    "todo_write",
-    "task",
-    "Agent",
-)
-GROK_COMPATIBILITY_SOURCES = (
-    "SKILLS",
-    "RULES",
-    "AGENTS",
-    "MCPS",
-    "HOOKS",
-    "SESSIONS",
-)
-
 
 def _noop(_message: str) -> None:
     return None
 
 
-def _reviewer_process_kwargs() -> dict[str, int]:
-    """Keep reviewer CLIs from opening a transient console on Windows."""
+def _provider_process_kwargs() -> dict[str, int]:
+    """Keep Provider CLIs from opening a transient console on Windows."""
     if os.name != "nt":
         return {}
     return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
@@ -56,7 +34,7 @@ def _terminate_process_tree(
     *,
     log_error: Logger = _noop,
 ) -> tuple[str, str]:
-    """Terminate a timed-out reviewer and every descendant it started."""
+    """Terminate a timed-out Provider and every descendant it started."""
     try:
         if os.name == "nt":
             subprocess.run(
@@ -65,14 +43,14 @@ def _terminate_process_tree(
                 text=True,
                 encoding="utf-8",
                 timeout=10,
-                **_reviewer_process_kwargs(),
+                **_provider_process_kwargs(),
             )
         else:
-            # `_run_cli_process` makes the reviewer PID its process-group ID.
+            # `_run_cli_process` makes the Provider PID its process-group ID.
             # The group can outlive its leader, so do not look the PID up first.
             os.killpg(process.pid, signal.SIGKILL)
     except (OSError, subprocess.SubprocessError) as exc:
-        log_error(f"reviewer process-tree cleanup failed: {exc}")
+        log_error(f"Provider process-tree cleanup failed: {exc}")
         try:
             process.kill()
         except OSError:
@@ -101,7 +79,7 @@ def _run_cli_process(
     shell: bool = False,
     log_error: Logger = _noop,
 ) -> subprocess.CompletedProcess:
-    kwargs = _reviewer_process_kwargs()
+    kwargs = _provider_process_kwargs()
     if os.name != "nt":
         kwargs["start_new_session"] = True
     process = subprocess.Popen(
@@ -135,24 +113,14 @@ def _run_cli_process(
     )
 
 
-def grok_subscription_environment() -> dict[str, str]:
-    """Use Grok Build's signed-in subscription session, not API-key billing."""
-    environment = reviewer_environment()
-    environment.pop("XAI_API_KEY", None)
-    for vendor in ("CLAUDE", "CURSOR"):
-        for source in GROK_COMPATIBILITY_SOURCES:
-            environment[f"GROK_{vendor}_{source}_ENABLED"] = "false"
-    return environment
-
-
 def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str:
     try:
         schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        log_error(f"reaction schema unavailable: {exc}")
+        log_error(f"Nudge schema unavailable: {exc}")
         return ""
     if not isinstance(schema, dict):
-        log_error("reaction schema root must be an object")
+        log_error("Nudge schema root must be an object")
         return ""
     return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
@@ -162,65 +130,14 @@ def parse_schema_result(stdout: str, schema_path: Path) -> dict:
     parser = (
         parse_route_result
         if Path(schema_path).name == "route-schema.json"
-        else parse_reaction_result
+        else parse_nudge_result
     )
     return parser(stdout)
 
 
-def parse_usage(stdout: str) -> dict[str, int]:
-    usage_fields = {
-        "input_tokens",
-        "cached_input_tokens",
-        "cache_write_input_tokens",
-        "output_tokens",
-        "reasoning_output_tokens",
-        "total_tokens",
-    }
-    best: dict[str, int] = {}
-    aliases = {
-        "inputTokens": "input_tokens",
-        "outputTokens": "output_tokens",
-        "totalTokens": "total_tokens",
-        "cacheReadInputTokens": "cached_input_tokens",
-        "cacheCreationInputTokens": "cache_write_input_tokens",
-        "cache_read_input_tokens": "cached_input_tokens",
-        "cache_creation_input_tokens": "cache_write_input_tokens",
-        "reasoningTokens": "reasoning_output_tokens",
-        "reasoning_tokens": "reasoning_output_tokens",
-    }
-
-    def visit(value) -> None:
-        nonlocal best
-        if isinstance(value, dict):
-            candidate = {}
-            for key, item in value.items():
-                canonical = aliases.get(key, key)
-                if canonical in usage_fields and isinstance(item, (int, float)):
-                    candidate[canonical] = int(item)
-            if len(candidate) > len(best):
-                best = candidate
-            for item in value.values():
-                visit(item)
-        elif isinstance(value, list):
-            for item in value:
-                visit(item)
-
-    raw = str(stdout or "")
-    try:
-        visit(json.loads(raw))
-    except (TypeError, ValueError):
-        pass
-    for line in raw.splitlines():
-        try:
-            visit(json.loads(line))
-        except (TypeError, ValueError):
-            continue
-    return best
-
-
 def call_claude_result(
     system_prompt: str,
-    review_input: str,
+    nudge_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -241,7 +158,7 @@ def call_claude_result(
             [
                 "claude",
                 "-p",
-                review_input,
+                nudge_input,
                 "--model",
                 model,
                 "--effort",
@@ -259,7 +176,7 @@ def call_claude_result(
                 schema_json,
             ],
             input_text=None,
-            environment=reviewer_environment(),
+            environment=provider_environment(),
             timeout_sec=timeout_sec,
             log_error=log_error,
         )
@@ -268,7 +185,6 @@ def call_claude_result(
             log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
         parsed = parse_schema_result(result.stdout, schema_path)
-        parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
@@ -283,7 +199,6 @@ def call_claude_result(
             partial_stderr = partial_stderr.decode("utf-8", errors="replace")
         parsed = parse_schema_result(str(partial_stdout), schema_path)
         if parsed.get("status") != "error":
-            parsed["usage"] = parse_usage(str(partial_stdout))
             log_error("claude CLI timed out after complete structured output; recovered")
             return parsed
         error_kind = (
@@ -322,146 +237,9 @@ def resolve_codex_bin() -> str | None:
     return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
 
 
-def resolve_grok_bin() -> str | None:
-    direct = shutil.which("grok")
-    if direct and os.path.exists(direct):
-        return direct
-    candidates = [
-        os.path.expanduser(r"~\.grok\bin\grok.exe"),
-        os.path.expanduser(r"~\.grok\bin\grok"),
-        "/usr/local/bin/grok",
-        "/usr/bin/grok",
-    ]
-    return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
-
-
-def parse_grok_reaction_result(stdout: str) -> dict:
-    """Extract schema output from direct or Grok headless JSON envelopes."""
-    return _parse_grok_schema_result(stdout, parse_reaction_result)
-
-
-def _parse_grok_schema_result(stdout: str, parser: Callable[[str], dict]) -> dict:
-    direct = parser(stdout)
-    if direct.get("status") != "error":
-        return direct
-    try:
-        outer = json.loads(str(stdout or ""))
-    except (TypeError, ValueError):
-        return call_result()
-    candidates = []
-    if isinstance(outer, dict):
-        for key in (
-            "structured_output",
-            "structuredOutput",
-            "result",
-            "output",
-            "response",
-            "text",
-        ):
-            if key in outer:
-                candidates.append(outer[key])
-    for value in candidates:
-        if isinstance(value, str):
-            parsed = parser(value)
-        else:
-            try:
-                parsed = parser(json.dumps(value, ensure_ascii=False))
-            except (TypeError, ValueError):
-                continue
-        if parsed.get("status") != "error":
-            return parsed
-    return call_result()
-
-
-def call_grok_result(
-    system_prompt: str,
-    review_input: str,
-    model: str,
-    *,
-    schema_path: Path,
-    timeout_sec: int,
-    log_error: Logger = _noop,
-    grok_bin_resolver: Callable[[], str | None] = resolve_grok_bin,
-) -> dict:
-    grok_bin = grok_bin_resolver()
-    if not grok_bin:
-        log_error("grok CLI not found (checked PATH + ~/.grok/bin)")
-        return call_result(error_kind="not_found")
-    schema_json = load_output_schema_json(schema_path, log_error)
-    if not schema_json:
-        return call_result()
-    prompt = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    prompt.write(review_input)
-    prompt.close()
-    isolated_workspace = tempfile.TemporaryDirectory(prefix="masters-nudge-grok-")
-    try:
-        isolated_cwd = isolated_workspace.name
-        command = [
-            grok_bin,
-            "--prompt-file",
-            prompt.name,
-            "--system-prompt-override",
-            system_prompt,
-            "--json-schema",
-            schema_json,
-            "--output-format",
-            "json",
-            "--disable-web-search",
-            "--disallowed-tools",
-            ",".join(GROK_REVIEWER_DENIED_TOOLS),
-            "--cwd",
-            isolated_cwd,
-            "--no-memory",
-            "--no-subagents",
-            "--max-turns",
-            "1",
-            "--permission-mode",
-            "dontAsk",
-            "--verbatim",
-        ]
-        if str(model or "").strip():
-            command.extend(["--model", str(model).strip()])
-        result = _run_cli_process(
-            command,
-            cwd=isolated_cwd,
-            environment=grok_subscription_environment(),
-            timeout_sec=timeout_sec,
-            log_error=log_error,
-        )
-        parser = (
-            parse_route_result
-            if Path(schema_path).name == "route-schema.json"
-            else parse_reaction_result
-        )
-        parsed = _parse_grok_schema_result(result.stdout, parser)
-        parsed["usage"] = parse_usage(result.stdout)
-        if parsed.get("status") != "error":
-            return parsed
-        if result.returncode != 0:
-            log_error(f"grok CLI exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(
-                usage=parsed["usage"], error_kind="nonzero_exit"
-            )
-        return parsed
-    except subprocess.TimeoutExpired:
-        log_error("grok CLI timeout")
-        return call_result(error_kind="timeout")
-    except FileNotFoundError:
-        log_error(f"grok CLI not executable: {grok_bin}")
-        return call_result(error_kind="not_found")
-    finally:
-        isolated_workspace.cleanup()
-        try:
-            os.unlink(prompt.name)
-        except OSError:
-            pass
-
-
 def call_codex_result(
     system_prompt: str,
-    review_input: str,
+    nudge_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -476,7 +254,7 @@ def call_codex_result(
     if not load_output_schema_json(schema_path, log_error):
         return call_result()
 
-    combined = f"{system_prompt}\n\n---\n\n{review_input}"
+    combined = f"{system_prompt}\n\n---\n\n{nudge_input}"
     output = tempfile.NamedTemporaryFile(
         mode="w", suffix=".txt", delete=False, encoding="utf-8"
     )
@@ -509,25 +287,20 @@ def call_codex_result(
         result = _run_cli_process(
             command_value,
             input_text=combined,
-            environment=reviewer_environment(),
+            environment=provider_environment(),
             timeout_sec=timeout_sec,
             shell=use_shell,
             log_error=log_error,
         )
         if result.returncode != 0:
             log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(
-                usage=parse_usage(result.stdout), error_kind="nonzero_exit"
-            )
+            return call_result(error_kind="nonzero_exit")
         try:
             raw_output = Path(output.name).read_text(encoding="utf-8")
         except Exception as exc:
             log_error(f"codex output read failed: {exc}")
-            return call_result(
-                usage=parse_usage(result.stdout), error_kind="invalid_output"
-            )
+            return call_result(error_kind="invalid_output")
         parsed = parse_schema_result(raw_output, schema_path)
-        parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
@@ -547,7 +320,7 @@ def call_codex_result(
 def dispatch_call_result(
     provider: str,
     system_prompt: str,
-    review_input: str,
+    nudge_input: str,
     model: str,
     *,
     schema_path: Path,
@@ -558,7 +331,7 @@ def dispatch_call_result(
     if provider in ("openai", "codex"):
         return call_codex_result(
             system_prompt,
-            review_input,
+            nudge_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
@@ -567,25 +340,16 @@ def dispatch_call_result(
     if provider == "anthropic":
         return call_claude_result(
             system_prompt,
-            review_input,
+            nudge_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
             log_error=log_error,
         )
-    if provider == "grok":
-        return call_grok_result(
-            system_prompt,
-            review_input,
-            model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            log_error=log_error,
-        )
-    if provider == "ollama-local":
+    if provider == "ollama":
         return call_local_ollama_result(
             system_prompt,
-            review_input,
+            nudge_input,
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
@@ -593,5 +357,5 @@ def dispatch_call_result(
             log_error=log_error,
             parse_result=lambda value: parse_schema_result(value, schema_path),
         )
-    log_error(f"unsupported reviewer provider: {provider!r}")
+    log_error(f"unsupported Nudge Provider: {provider!r}")
     return call_result()

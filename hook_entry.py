@@ -9,8 +9,8 @@ import sys
 from pathlib import Path
 
 from masters_nudge import storage
-from masters_nudge.codex_adapter import CodexAdapter, DELIVERY_MARKER_KEY
-from masters_nudge.core import ReviewCore
+from masters_nudge.codex_adapter import AUDIT_MARKER_KEY, CodexAdapter
+from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import RuntimeSettings, active_guard
 
 
@@ -41,46 +41,18 @@ def _read_payload() -> dict:
 def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
     """Write one code-page-safe hook response, then commit delivery state."""
     public_output = dict(output)
-    delivery = public_output.pop(DELIVERY_MARKER_KEY, None)
+    audit = public_output.pop(AUDIT_MARKER_KEY, None)
     target = stream or sys.stdout
-    try:
-        target.write(json.dumps(public_output, ensure_ascii=True) + "\n")
-        target.flush()
-    except Exception:
-        if isinstance(delivery, dict):
-            try:
-                storage.mark_delivery(
-                    settings.paths.data_dir,
-                    delivery["session"],
-                    delivery["timestamp"],
-                    status="failed",
-                    event_seq=int(delivery.get("event_seq") or 0),
-                    delivered_via=str(delivery.get("event_name") or "hook"),
-                )
-            finally:
-                storage.release_delivery_claim(
-                    settings.paths.data_dir,
-                    delivery["session"],
-                    delivery["timestamp"],
-                    str(delivery.get("claim_token") or ""),
-                )
-        raise
-    if isinstance(delivery, dict):
-        try:
-            storage.mark_emitted(
-                settings.paths.data_dir,
-                delivery["session"],
-                delivery["timestamp"],
-                event_seq=int(delivery.get("event_seq") or 0),
-                delivered_via=str(delivery.get("event_name") or "hook"),
-            )
-        finally:
-            storage.release_delivery_claim(
-                settings.paths.data_dir,
-                delivery["session"],
-                delivery["timestamp"],
-                str(delivery.get("claim_token") or ""),
-            )
+    target.write(json.dumps(public_output, ensure_ascii=True) + "\n")
+    target.flush()
+    if isinstance(audit, dict):
+        storage.append_host_returned_nudge(
+            settings.paths.data_dir,
+            audit["session"],
+            lens=str(audit.get("lens") or ""),
+            finding=str(audit.get("finding") or ""),
+            returned_via=str(audit.get("returned_via") or "PostToolUse"),
+        )
 
 
 def main() -> int:
@@ -99,7 +71,7 @@ def main() -> int:
         return 0
     try:
         payload = _read_payload()
-        core = ReviewCore(settings, log_error=log_error)
+        core = NudgeCore(settings, log_error=log_error)
         adapter = CodexAdapter(core)
         output = adapter.process(payload)
         if output is not None:

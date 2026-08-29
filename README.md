@@ -4,183 +4,107 @@
 
 > **Passing tests settles behavior, not design.**
 
-Masters’ Nudge adds one evidence-grounded engineering preference before a
-Claude Code or Codex agent’s next decision.
+Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-based
+engineering preference before its next decision. It does not solve the task or
+stop the agent. It points at a tradeoff the main model may otherwise overlook.
 
----
-
-## Actual run
+## See an actual run
 
 ![One actual run from passing tests through the main model's next decision](docs/assets/actual-nudge-run.png)
 
-We started with code that already worked: 2 tests passed. But the same discount
-calculation appeared in two places. Nothing was broken yet, so an agent could
-easily stop there. If someone changed only one copy later, however, the two
-places could charge different prices.
+This is not a UI mockup. It records one real CLI run. The code already worked
+and both tests passed, but `web_total` and `invoice_total` each owned the same
+discount formula.
 
-The Nudge pointed out the simpler choice: keep the calculation in one place.
-The main model removed the duplicate copy and made checkout use the existing
-pricing function. The same 2 tests passed again after the change.
+The Hook gave the code and test result to the Provider. The Provider returned
+a Nudge favoring one owner for the formula. The main model judged that advice
+reasonable, extracted `discounted_total`, and ran the same tests again.
 
-The image combines the unedited Nudge, the main model's response, its actual
-file change, and the test results from this run. Automatic selected Simplicity,
-Anthropic `claude-opus-5` produced the Nudge, and OpenAI `gpt-5.6-sol` was the
-main model. This is one observed reaction, not a promise that every Nudge will
-be adopted.
+The screenshot omits only startup warnings, timestamps, and repeated output.
+The Nudge, main-model decision, diff, and test results come from the same run.
+It is one observed reaction, not a promise that every main model will follow a
+Nudge.
 
----
+## Three Lenses
 
-## The three engineering Lenses
-
-| Lens | The decision it focuses |
+| Lens | What it notices |
 |---|---|
-| Simplicity | Which complexity is necessary, and which component should own the responsibility |
-| Reliability | What must remain true when events reorder, retry, or fail partway |
-| Performance | Which measured work on the real execution path should disappear |
+| Simplicity | Unnecessary complexity and the wrong owner for a responsibility |
+| Reliability | What must remain true through reordering, retries, and partial failure |
+| Performance | Measured work on the real execution path that can be removed |
 
-These recurring preferences about ownership, invariants, and measured work are
-what this project calls engineering taste.
+Automatic mode chooses a Lens from the available evidence. You can also ask
+the agent to show the Lens choices and pin one. A pinned Lens still stays quiet
+when the evidence does not support a useful Nudge.
 
----
-
-## Nudge contract
-
-To the main agent, a Nudge is one short, evidence-grounded second opinion.
-The provider returns exactly one JSON outcome:
-
-- `finding`: one concrete engineering preference in one direct Traditional
-  Chinese statement, within 52 characters;
-- `no_finding`: silence when the supplied evidence does not support a useful
-  preference.
-
-A finding states what to favor, preserve, simplify, or remove. It is not a
-question, review narration, complete solution, or generic request to add or run
-tests.
-
-Example:
-
-```text
-直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。
-```
-
-The main agent receives:
-
-```text
-Independent second opinion:
-<one short direction>
-```
-
-Runtime validation is deliberately structural. It checks JSON shape, status
-and field consistency, supported Lens, emptiness, one output object, and the
-52-character limit. It does not use keywords or regular expressions to judge
-engineering taste or rewrite a structurally valid result.
-
-Prior Nudges are not shown to the provider. An exact duplicate of a previously
-injected finding is suppressed only after generation.
-
----
+The expert names inside the Lens prompts are attention cues. They do not give a
+provider another person's ability or make the Nudge more accurate by itself.
 
 ## How it works
 
 ```text
-Observable tool result
-        ↓
-Bounded task-and-evidence packet
-        ↓
-One qualified Lens, or none
-        ↓
-One short Nudge, or no_finding
-        ↓
-The agent’s later context
+Task and observable tool results
+              ↓
+       One qualified Lens
+              ↓
+   One short Nudge, or silence
+              ↓
+    The agent's next context
 ```
 
-Each Nudge is generated from the evidence available at that control point. It
-is not selected from a list of stock sentences. As new context, it can influence
-later generation without changing model weights; the main agent may adopt,
-reinterpret, or ignore it.
+Each Nudge is generated for the current situation; it is not a random stock
+sentence. It is an independent second opinion, not a review, score, question,
+complete solution, or demand to run more tests.
 
-Automatic mode uses a compact Router to select one qualified Lens or `none`.
-The Generator receives the original packet and only the selected Filter; Router
-reasoning is not forwarded. Manual mode pins one Lens but does not waive its
-evidence requirement or force a finding.
+Claude Code provides the intended `PostToolBatch` control point: all tool
+results from one model step are available before the next step. Codex currently
+provides only `PostToolUse`. That is an approximation, so parallel tool results
+may be considered separately. The missing Codex control point is documented in
+[the proposed `PostToolBatch` issue](docs/codex-post-tool-batch-issue-draft.md).
 
-The names behind the Filters are private attention cues in provider prompts,
-not claims that the provider imitates a person or gains that person’s ability.
+Provider errors and the fixed 90-second timeout fail open: the Nudge attempt
+ends and the main agent continues.
 
-Masters’ Nudge is not a reviewer, judge, solver, or Stop gate, and it does not
-claim to improve general problem-solving accuracy.
+## Privacy
 
----
+### What leaves your computer
 
-## Host control points
+The selected Provider receives a bounded packet that may include:
 
-The ideal intervention point is after all tool results from the current model
-step are complete and before the next model request begins.
+- the current task or recovered long-running Goal;
+- content from local files explicitly named by the task, read once when the
+  task begins;
+- recent relevant changes, failures, validations, and measurements;
+- the length-limited command that was run and its result.
 
-| Host | Control point | Precision | Known limitation |
-|---|---|---|---|
-| Claude Code | Native `PostToolBatch` | Exact for the native batch | A batch is marked failed only when its serialized result contains an explicit failure signal |
-| Codex | Synchronous `PostToolUse` | Approximate | Parallel tools may be observed and considered separately because Codex does not expose a native batch boundary |
+The Provider does not receive the complete conversation, hidden model
+reasoning, or unrelated files found by exploring the repository.
 
-Claude Code creates at most one Nudge attempt for one completed tool batch.
-Codex treats each `PostToolUse` as a one-item batch. Masters’ Nudge does not use
-a timer, transcript guess, or delayed resend to imitate a missing Codex batch
-boundary.
+Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
+and is also subject to that Provider's data policy. Choose local Ollama when
+the packet must stay on your machine. Ollama is restricted to a loopback
+address, uses an already installed model, and never falls back to a cloud
+Provider.
 
-Eligible attempts run synchronously so a valid Nudge can enter later context in
-the same turn. Provider work is capped at 90 seconds inside a 120-second Host
-Hook budget. Automatic mode shares the provider budget between Router and
-Generator; manual mode makes one Generator call. Errors and timeouts fail open:
-the attempt ends and the main agent continues.
+## Local records
 
-At `Stop`, the Hook only records whether the main agent responded after an
-earlier Nudge. It does not call the Provider, emit another Nudge, block
-completion, or extend the turn.
+Masters’ Nudge stores the current task state and a small audit record under
+`~/.masters-nudge/data/`. An audit entry records when a Nudge was returned to
+the Host, which Lens produced it, and what it said.
 
----
+This proves only that the Hook returned the Nudge to Claude Code or Codex. It
+does not prove that the main model read, accepted, or acted because of it.
 
-## What the provider sees
+When a new task starts, session data not updated for more than 30 days is
+deleted. Provider and Lens preferences are kept until you change them.
 
-The provider receives only the bounded packet constructed for the current
-control point. Depending on the event, it may contain:
-
-- the current user task anchor;
-- content from local sources explicitly named by the task;
-- recent length-bounded substantive changes;
-- objective failures, validations, tool results, and measurements.
-
-It does not receive:
-
-- the complete transcript;
-- the main model’s undisclosed internal reasoning;
-- the main agent’s running narration or response to a Nudge;
-- prior Nudges;
-- general navigation, search, or browsing output;
-- source exploration not explicitly named by the task;
-- tool names or complete commands.
-
-The Base prompt defines only who the provider is, what it can see, and its
-output contract. The selected Filter supplies the full engineering focus. The
-Router and Generator both work from the original packet; the Generator never
-receives a routing hypothesis.
-
----
-
-## Supported providers
+## Providers
 
 - Anthropic
 - OpenAI
-- xAI through an authenticated Grok CLI
-- Local Ollama
+- local Ollama
 
-Each Nudge attempt is an independent model call, even when the provider family
-matches the main agent’s model family. No provider silently fails over to
-another provider.
-
-Without overrides, Claude Code uses Anthropic `sonnet`, and Codex uses OpenAI
-`gpt-5.6-sol`.
-
----
+Each Nudge uses exactly one selected Provider. There is no silent fallback.
 
 ## Installation
 
@@ -188,8 +112,8 @@ Requirements:
 
 - a plugin-capable Claude Code or Codex CLI installation;
 - Python 3.10+;
-- an authenticated CLI for the selected cloud provider, or an already installed
-  local Ollama model.
+- an authenticated CLI for Anthropic or OpenAI, or a running Ollama server
+  with the selected model already installed.
 
 ### Claude Code
 
@@ -199,8 +123,7 @@ claude plugin install masters-nudge@masters-nudge --config python_command=python
 ```
 
 If `python` is not Python 3.10+, set `python_command` to `python3` or the
-absolute path of the Python executable. The value must contain one executable
-only, with no additional arguments.
+absolute path of a suitable Python executable. Do not add command arguments.
 
 ### Codex
 
@@ -226,90 +149,37 @@ codex plugin add masters-nudge@masters-nudge
 codex plugin remove masters-nudge@masters-nudge
 ```
 
-Restart the Host after an update. Uninstalling preserves existing data under
-`~/.masters-nudge/data/`.
+Restart the Host after an update. Uninstalling does not delete existing local
+data.
 
----
+## Use it through your agent
 
-## Usage and checks
+Hooks run automatically. For manual actions, ask the agent in ordinary
+language:
 
-Hooks run automatically; Masters’ Nudge does not need to be named in every
-prompt. The plugin also includes Skills for these explicit tasks:
+- **“Check whether Masters’ Nudge is ready.”** Checks Python, Provider access,
+  data storage, and Host Hooks without generating a Nudge.
+- **“Switch the Masters’ Nudge Lens.”** Shows Automatic, Simplicity,
+  Reliability, and Performance in plain language, then confirms the saved
+  choice.
+- **“Switch the Masters’ Nudge Provider.”** Shows Anthropic, OpenAI, and local
+  Ollama. Ollama setup verifies the selected installed model and loopback
+  server.
+- **“Show recent Masters’ Nudge records.”** Explains recent audit entries in
+  plain language.
 
-- **“Check whether Masters’ Nudge is ready.”** Checks Python, provider access,
-  data-directory writes, Host Hooks, control-point precision, and optional UI
-  dependencies without calling the Nudge provider.
-- **“Open the Masters’ Nudge floating window.”** Opens the local history and
-  settings window; it requires Pillow and Python with Tkinter.
-- **“Configure Masters’ Nudge to use my local Ollama model
-  `<full-model-name>`.”** Verifies an installed model on loopback Ollama and
-  saves the provider configuration.
-- **“Migrate legacy Masters’ Nudge hooks.”** Shows a dry run before changing
-  clearly identifiable legacy Hooks after explicit approval.
-
-Legacy Lens selections that no longer exist resolve to Automatic mode; they are
-not mapped to a retained Lens.
-
----
-
-## Configuration
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `MASTERS_NUDGE_PROVIDER` | Host-dependent | `anthropic`, `openai`, `grok`, or `ollama-local` |
-| `MASTERS_NUDGE_MODEL` | Host-dependent | Full provider model name |
-| `MASTERS_NUDGE_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback Ollama endpoint |
-| `MASTERS_NUDGE_TIMEOUT` | `90` | Provider timeout in seconds |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | Provider timeout at a tool control point |
-| `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | State, findings, receipts, telemetry, and provider configuration |
-| `MASTERS_NUDGE_STAGE` | unset | `automatic`, `review`, `reliability`, or `performance` |
-| `MASTERS_NUDGE_SPRITE_PATH` | bundled sprite | Optional floating-window spritesheet |
-
-`MASTERS_NUDGE_STAGE` overrides the saved stage in `config.json`. `review`
-selects Simplicity, `reliability` selects Reliability, and `performance`
-selects Performance. When unset, Automatic mode uses the Router.
-
-Provider environment variables override saved settings in `reviewer.json`.
-Malformed provider configuration leaves a diagnostic and ends that attempt.
-
-Local Ollama mode connects only to a loopback endpoint, disables client proxies
-and redirects, uses an already installed model, and never downloads one. If the
-local provider fails, the attempt ends without cloud fallback.
-
----
-
-## Data, privacy, and evidence limits
-
-Tasks, bounded evidence, findings, delivery receipts, provider settings, and
-diagnostic telemetry are stored as plain text under:
-
-```text
-~/.masters-nudge/data/
-```
-
-Telemetry records content-free Host, Hook event, route, status, latency, and
-provider-reported usage metadata.
-
-Injected receipts and later response observations establish delivery order only.
-They do not prove that a Nudge caused a later action. Likewise, Masters’ Nudge
-does not claim to improve general problem-solving accuracy or test pass rates.
-Whether a Filter produces recognizable engineering taste requires separate
-blind evaluation of fixed evidence packets.
-
-Cloud-provider retention and training policies are controlled by each provider.
-
----
+The Skills call an internal JSON command-line interface and translate the
+result. Users do not need to edit environment variables, remember exact names,
+or interpret raw JSON.
 
 ## Development
 
-Repository source is canonical. The checked-in plugin package is generated from
-that source.
+Repository source is canonical. The checked-in plugin package is generated
+from that source.
 
 ```bash
 python -m unittest discover -v
 python tools/build_plugin.py --check
 ```
 
-- Architecture: [docs/architecture.md](docs/architecture.md)
-- Active decisions: [ROADMAP.md](ROADMAP.md)
-- License: [MIT](LICENSE)
+License: [MIT](LICENSE)

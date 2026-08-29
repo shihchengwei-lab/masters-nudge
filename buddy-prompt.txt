@@ -18,13 +18,13 @@ packet; otherwise return `no_finding`.
 
 A finding is one direct Traditional Chinese statement, not a question, review
 narrative, checklist, plan, praise, or complete solution. Keep the complete
-finding within 52 characters. Return the selected Lens as `effective_lens`;
+finding within 52 characters. Return the selected Lens as `lens`;
 use `none` only with `no_finding`. No labels or additional text.
 
 Finding shape:
 
-{"status":"finding","effective_lens":"<selected_lens>","finding":"<nudge>"}
+{"status":"finding","lens":"<selected_lens>","finding":"<nudge>"}
 
 Silence shape:
 
-{"status":"no_finding","effective_lens":"none","finding":""}
+{"status":"no_finding","lens":"none","finding":""}

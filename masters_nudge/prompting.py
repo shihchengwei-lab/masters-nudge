@@ -1,4 +1,4 @@
-"""Host-neutral prompt assembly and delivery formatting."""
+"""Prompt assembly and agent-visible Nudge formatting."""
 
 from __future__ import annotations
 
@@ -6,38 +6,37 @@ from pathlib import Path
 from typing import Callable
 
 import lens_router
-import persona_config
 
 
-MAX_REACTION_CHARS = 52
-INDEPENDENT_OPINION_LABEL = "獨立第二意見："
+MAX_NUDGE_CHARS = 52
+NUDGE_LABEL = "獨立第二意見："
 
 AUTOMATIC_ROUTING_PROMPT = """# AUTOMATIC LENS ROUTER
 
 Use only the supplied task anchor and observable evidence. Select exactly one
 Lens only when its minimum evidence is present:
 
-- linus: a current-task mechanism or ownership path contains a wrapper,
-  adapter, fallback, compatibility path, workaround, duplicate owner, or
-  accumulating patch whose necessity can be judged from the packet.
-- lamport: the packet states an invariant, at least two reorderable events,
+- simplicity: a current mechanism or ownership path contains a wrapper,
+  fallback, compatibility path, workaround, duplicate owner, or accumulating
+  patch whose necessity can be judged from the packet.
+- reliability: the packet states an invariant, at least two reorderable events,
   and a concrete retry, interruption, redelivery, or partial-success path.
-- carmack: profiler, benchmark, or trace numbers locate actual cost on a
+- performance: profiler, benchmark, or trace numbers locate actual cost on a
   concrete execution path.
 
-An abstraction alone does not qualify linus. Async or network vocabulary alone
-does not qualify lamport. A performance task without measurements does not
-qualify carmack. Route by evidence, not lifecycle stage, task topic, tool name,
-test presence, failure presence, persona rotation, or novelty.
+An abstraction alone does not qualify simplicity. Async or network vocabulary
+alone does not qualify reliability. A performance task without measurements
+does not qualify performance. Route by evidence, not task topic, tool name,
+test presence, failure presence, rotation, or novelty.
 
-Return only the selected Lens or silence. Do not give advice, explain the
-route, identify a blind spot, or produce a Nudge.
+Return only the selected Lens or silence. Do not give advice or explain the
+route.
 
-{"status":"finding","effective_lens":"linus"}
+{"status":"finding","lens":"simplicity"}
 
 or
 
-{"status":"no_finding","effective_lens":"none"}
+{"status":"no_finding","lens":"none"}
 """
 
 
@@ -46,44 +45,39 @@ def build_router_prompt() -> str:
 
 
 def delivery_text(finding: str) -> str:
-    """Identify reviewer provenance without changing the stored finding."""
-    return f"{INDEPENDENT_OPINION_LABEL}\n{str(finding or '').strip()}"
+    return f"{NUDGE_LABEL}\n{str(finding or '').strip()}"
 
 
 def build_system_prompt(
     *,
     prompt_file: Path,
     persona_dir: Path,
-    route: lens_router.ReviewRoute,
+    route: lens_router.NudgeRoute,
     log_error: Callable[[str], None] | None = None,
 ) -> str:
-    """Compose the base contract with exactly one selected Lens."""
     logger = log_error or (lambda _message: None)
     try:
         base_prompt = prompt_file.read_text(encoding="utf-8").strip()
     except Exception as exc:
         logger(f"prompt file read failed: {exc}")
         return ""
-
-    selected_lens = str(route.lens or "").strip().lower()
-    if selected_lens not in persona_config.LENS_PERSONAS:
+    if route.lens not in lens_router.LENS_PERSONAS or not route.persona:
         logger("generator requires one selected lens")
         return ""
-    persona_file = persona_dir / f"{selected_lens}.txt"
     try:
-        overlay = persona_file.read_text(encoding="utf-8").strip()
+        overlay = (persona_dir / f"{route.persona}.txt").read_text(
+            encoding="utf-8"
+        ).strip()
     except Exception as exc:
-        logger(f"persona prompt read failed ({selected_lens}): {exc}")
+        logger(f"lens prompt read failed ({route.lens}): {exc}")
         return ""
-
     return (
         f"{base_prompt}\n\n"
-        f"# LENS CONTEXT: {selected_lens}\n\n{overlay}\n\n"
-        f"# SELECTED LENS\n\nUse only `{selected_lens}` and return it as "
-        "`effective_lens` when there is a finding.\n"
+        f"# LENS CONTEXT: {route.lens}\n\n{overlay}\n\n"
+        f"# SELECTED LENS\n\nUse only `{route.lens}` and return it as `lens` "
+        "when there is a finding.\n"
     )
 
 
-def build_review_input(source_packet: str) -> str:
-    """Pass the bounded packet through without hidden context or exclusions."""
+def build_nudge_input(source_packet: str) -> str:
     return str(source_packet or "")

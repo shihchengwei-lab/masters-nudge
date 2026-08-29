@@ -1,4 +1,4 @@
-"""Stable, host-neutral contracts used by adapters and the reviewer core."""
+"""Small host-neutral contracts used by the Nudge runtime."""
 
 from __future__ import annotations
 
@@ -8,24 +8,15 @@ from typing import Literal, TypeAlias
 
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
-ReviewStatus: TypeAlias = Literal["finding", "no_finding", "error"]
+NudgeStatus: TypeAlias = Literal["finding", "no_finding", "error"]
 
 
 @dataclass(frozen=True)
 class SessionRef:
     host: HostName
     session_id: str
-    turn_id: str = ""
     cwd: str = ""
     repo_root: str = ""
-
-
-@dataclass(frozen=True)
-class PromptSubmitted:
-    session: SessionRef
-    prompt: str
-    transcript_path: str = ""
-    kind: Literal["prompt_submitted"] = "prompt_submitted"
 
 
 @dataclass(frozen=True)
@@ -36,46 +27,15 @@ class ToolCompleted:
     tool_output: object = ""
     failed: bool = False
     failure_known: bool = False
-    interrupted: bool = False
     mutating: bool = False
     native_event_name: str = "PostToolUse"
-    kind: Literal["tool_completed"] = "tool_completed"
 
 
 @dataclass(frozen=True)
-class TurnStopped:
-    session: SessionRef
-    final_claim: str
-    stop_hook_active: bool = False
-    transcript_path: str = ""
-    kind: Literal["turn_stopped"] = "turn_stopped"
-
-
-@dataclass(frozen=True)
-class ReviewRequest:
-    schema_version: int
-    kind: Literal["checkpoint"]
-    reason: str
-    session: SessionRef
-    source_packet: str
-    source_fingerprint: str
-    source_event_seq: int = 0
-    trigger: str = ""
-    hook_event: str = ""
-
-
-@dataclass(frozen=True)
-class ReviewOutcome:
-    status: ReviewStatus
+class NudgeOutcome:
+    status: NudgeStatus
     finding: str = ""
-    effective_lens: str = ""
-    provider: str = ""
-    model: str = ""
-    latency_ms: int = 0
-    usage: dict[str, int] = field(default_factory=dict)
-    reaction_ts: str = ""
-    error_stage: str = ""
-    error_kind: str = ""
+    lens: str = ""
 
 
 def safe_identifier(value: str, fallback: str = "unknown", limit: int = 160) -> str:

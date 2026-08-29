@@ -1,36 +1,27 @@
 #!/usr/bin/env python3
-"""Resolve an automatic route or one explicit user-selected lens."""
+"""Map one public Lens to its private attention cue."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Mapping
 
-import persona_config
+from masters_nudge.lenses import LENSES
+
+
+AUTOMATIC_LENS = "automatic"
+LENS_PERSONAS = {
+    lens: spec.persona for lens, spec in LENSES.items() if spec.persona
+}
 
 
 @dataclass(frozen=True)
-class ReviewRoute:
-    stage: str
-    lens: str
-    source: str
+class NudgeRoute:
+    lens: str = ""
+    persona: str = ""
 
 
-def resolve_review_route(
-    base_dir: Path,
-    *,
-    environ: Mapping[str, str] | None = None,
-) -> ReviewRoute:
-    """Honor an explicit override; automatic mode leaves lens choice open."""
-    selection = persona_config.resolve_stage(base_dir, environ=environ)
-    if (
-        selection.source in {"environment", "config"}
-        and selection.persona in persona_config.PERSONA_NAMES
-    ):
-        return ReviewRoute(selection.stage, selection.persona, selection.source)
-    return ReviewRoute(
-        persona_config.AUTOMATIC_STAGE,
-        "",
-        selection.source,
-    )
+def resolve_nudge_route(selected_lens: str) -> NudgeRoute:
+    """Automatic mode leaves selection to the Provider router."""
+    lens = str(selected_lens or AUTOMATIC_LENS).strip().lower()
+    persona = LENS_PERSONAS.get(lens, "")
+    return NudgeRoute(lens if persona else "", persona)
