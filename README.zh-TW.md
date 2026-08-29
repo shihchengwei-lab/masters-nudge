@@ -2,63 +2,39 @@
 
 繁體中文 | [English](README.md)
 
-> 在 LLM agent 仍能採取行動時，加入一項獨立的工程取捨。
+> **測試通過，只能確定行為；不能替 Agent 選擇設計。**
 
-Masters’ Nudge 是給 Claude Code 與 Codex 使用的動態 context steering
-plugin。工具產生可觀察結果後，系統會把受限的證據封包交給獨立的 Nudge
-provider。Provider 套用一個聚焦的工程 Lens，產生一則短方向，或選擇沉默；
-有效的 Nudge 會在主要 agent 後續決策前加入 context。
-
-Masters’ Nudge 不是 reviewer、裁判、完整解題者或 Stop gate，也不負責讓主要
-模型變得更會解題。Masters’ Nudge 的範圍更窄：讓另一套工程品味在適當時機，
-對生成路徑投下一票。
+Masters’ Nudge 在 Claude Code 或 Codex Agent 的下一個決策前，加入一項有證據的
+工程取捨。
 
 ---
 
-## 運作方式
+## 實際執行
 
-```text
-使用者交付任務給主要 agent
-        ↓
-主要 agent 採取行動，工具產生可觀察結果
-        ↓
-Host adapter 建立受限的任務與證據封包
-        ↓
-Automatic 模式選出一個合格 Lens，或不選
-        ↓
-Generator 獨立形成一項工程取捨
-        ↓
-Harness 驗證並注入一則短 Nudge
-        ↓
-主要 agent 帶著新的 context 繼續工作
-```
+![從測試通過到主模型下一個決策的一次實際執行](docs/assets/actual-nudge-run.png)
 
-LLM 會依目前的 context 生成下一個 token。加入一個短的語義錨點，可以在不改變
-模型權重的情況下，移動後續 token 的機率與生成路徑。這是影響，不是控制：主要
-agent 可以採納、重新解讀或忽略 Nudge。
+我們先準備一段今天能正常運作的程式：2 個測試通過。但同一套折扣算法出現在兩個
+地方。因為眼前沒有錯誤，Agent 很可能就停下；問題是未來如果只改到其中一份，
+兩邊算出的金額可能不同。
 
-每則 Nudge 都依控制點當下的證據動態生成，不是從預先寫好的句子清單中隨機挑選。
+Nudge 提醒主模型：折扣只算一次就好。主模型真的刪掉重複的那份，讓結帳功能直接
+使用原本的折扣計算。修改後，同樣的 2 個測試再次通過。
+
+圖片把這次執行中未改寫的 Nudge、主模型回應、實際檔案修改與測試結果排在一起。
+這次由 Automatic 選到 Simplicity，Anthropic `claude-opus-5` 產生 Nudge，OpenAI
+`gpt-5.6-sol` 擔任主模型。這是一次真實反應，不保證每則 Nudge 都會被採納。
 
 ---
 
 ## 三個工程 Lens
 
-目前版本只保留三個通用 coding agent 預設行為不一定穩定提供的聚焦面向：
+| Lens | 聚焦的決策 |
+|---|---|
+| Simplicity | 哪些複雜度有必要，以及責任應由哪個元件擁有 |
+| Reliability | 事件換序、重試或中途失敗時，什麼仍必須成立 |
+| Performance | 真實 execution path 上，哪些已量到的工作應該消失 |
 
-| Lens | 聚焦方向 | 最低證據門檻 |
-|---|---|---|
-| Simplicity | 必要複雜度與單一責任 | 當前機制或責任路徑中出現 wrapper、adapter、fallback、相容路徑、workaround、重複 owner 或累積修補，而且封包足以判斷存在的必要性 |
-| Reliability | 不變量、事件順序、重試與部分失敗 | 明確的不變量、至少兩個可換序事件，以及具體的重試、中斷、重送或部分成功路徑 |
-| Performance | 實際執行成本與少做工作 | profiler、benchmark 或 trace 數字能把成本定位到具體 execution path |
-
-Automatic 模式由精簡 Router 選出一個合格 Lens 或 `none`。Router 會看到原始任務、
-證據封包與三個門檻，但不提供建議；Router 的理由也不會傳給 Generator。
-
-手動模式可固定 Simplicity、Reliability 或 Performance，並跳過 Router，但不會取消
-該 Lens 的證據要求，也不會強迫 Provider 產生 finding。
-
-Filter 背後的人名只是 provider prompt 內部的注意力提示，不表示 Provider 會模仿
-某個人物，也不表示 Provider 因此取得某個人物的能力。
+本專案把這些關於責任、不變量與實際成本的持續性偏好稱為工程品味。
 
 ---
 
@@ -92,6 +68,36 @@ Runtime 驗證刻意只處理結構：JSON schema、狀態與欄位一致性、�
 
 Provider 不會看到過去的 Nudge。系統只在生成完成後，攔下與先前注入內容完全相同
 的 finding。
+
+---
+
+## 運作方式
+
+```text
+可觀察的工具結果
+        ↓
+受限的任務與證據封包
+        ↓
+一個合格 Lens，或不選
+        ↓
+一則短 Nudge，或 no_finding
+        ↓
+進入 Agent 後續 context
+```
+
+每則 Nudge 都依控制點當下的證據生成，不是從預先寫好的句子清單中挑選。Nudge
+作為新的 context，可以在不改變模型權重的情況下影響後續生成；主要 Agent 可以
+採納、重新解讀或忽略 Nudge。
+
+Automatic 模式由精簡 Router 選出一個合格 Lens 或 `none`。Generator 只收到原始
+封包與選中的 Filter，不會收到 Router 的理由。手動模式固定一個 Lens，但不會取消
+證據要求，也不會強迫 Provider 產生 finding。
+
+Filter 背後的人名只是 provider prompt 內部的注意力提示，不表示 Provider 會模仿
+某個人物，也不表示 Provider 因此取得某個人物的能力。
+
+Masters’ Nudge 不是 reviewer、裁判、完整解題者或 Stop gate，也不宣稱提升通用
+解題正確率。
 
 ---
 

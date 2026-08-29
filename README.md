@@ -2,70 +2,44 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-> Add one independent engineering preference while an LLM agent is still able to act on it.
+> **Passing tests settles behavior, not design.**
 
-Masters’ Nudge is a dynamic context-steering plugin for Claude Code and Codex.
-After observable tool results, it sends a bounded evidence packet to an
-independent Nudge provider. The provider applies one focused engineering Lens
-and returns one short direction—or stays silent. A valid Nudge is added to the
-main agent’s context before a later decision.
-
-Masters’ Nudge is not a reviewer, judge, solver, or Stop gate. It does not try
-to make the main model generally better at solving tasks. Its narrower purpose
-is to give another engineering taste one timely vote in the generation path.
+Masters’ Nudge adds one evidence-grounded engineering preference before a
+Claude Code or Codex agent’s next decision.
 
 ---
 
-## How it works
+## Actual run
 
-```text
-The user gives the main agent a task
-        ↓
-The main agent acts and tools produce observable results
-        ↓
-The Host adapter builds a bounded task-and-evidence packet
-        ↓
-Automatic mode routes to one qualified Lens, or none
-        ↓
-The Generator independently forms one engineering preference
-        ↓
-The Harness validates and injects one short Nudge
-        ↓
-The main agent continues with that new context
-```
+![One actual run from passing tests through the main model's next decision](docs/assets/actual-nudge-run.png)
 
-An LLM generates each next token from its current context. Adding a short
-semantic anchor can therefore shift subsequent token probabilities and the
-generation path without changing model weights. The result is influence, not
-control: the main agent may adopt, reinterpret, or ignore the Nudge.
+We started with code that already worked: 2 tests passed. But the same discount
+calculation appeared in two places. Nothing was broken yet, so an agent could
+easily stop there. If someone changed only one copy later, however, the two
+places could charge different prices.
 
-Each Nudge is generated dynamically from the evidence available at that
-control point. It is not selected from a list of stock sentences.
+The Nudge pointed out the simpler choice: keep the calculation in one place.
+The main model removed the duplicate copy and made checkout use the existing
+pricing function. The same 2 tests passed again after the change.
+
+The image combines the unedited Nudge, the main model's response, its actual
+file change, and the test results from this run. Automatic selected Simplicity,
+Anthropic `claude-opus-5` produced the Nudge, and OpenAI `gpt-5.6-sol` was the
+main model. This is one observed reaction, not a promise that every Nudge will
+be adopted.
 
 ---
 
 ## The three engineering Lenses
 
-The current implementation keeps three Lenses whose focus is not reliably
-supplied by a general coding agent’s default behavior:
+| Lens | The decision it focuses |
+|---|---|
+| Simplicity | Which complexity is necessary, and which component should own the responsibility |
+| Reliability | What must remain true when events reorder, retry, or fail partway |
+| Performance | Which measured work on the real execution path should disappear |
 
-| Lens | Focus | Minimum evidence |
-|---|---|---|
-| Simplicity | Necessary complexity and single ownership | A current mechanism or ownership path containing a wrapper, adapter, fallback, compatibility path, workaround, duplicate owner, or accumulating patch whose necessity can be judged from the packet |
-| Reliability | Invariants, event order, retries, and partial failure | A stated invariant, at least two reorderable events, and a concrete retry, interruption, redelivery, or partial-success path |
-| Performance | Actual execution cost and doing less work | Profiler, benchmark, or trace numbers that locate cost on a concrete execution path |
-
-Automatic mode uses a compact Router to select one qualified Lens or `none`.
-The Router sees the original task-and-evidence packet and the three thresholds.
-It does not produce advice, and its reasoning is not forwarded to the
-Generator.
-
-Manual mode pins Simplicity, Reliability, or Performance and skips the Router.
-It does not waive the selected Lens’s evidence requirement or force a finding.
-
-The names behind the Filters are private attention cues in provider prompts,
-not public claims that the provider imitates a person or gains that person’s
-ability.
+These recurring preferences about ownership, invariants, and measured work are
+what this project calls engineering taste.
 
 ---
 
@@ -103,6 +77,38 @@ engineering taste or rewrite a structurally valid result.
 
 Prior Nudges are not shown to the provider. An exact duplicate of a previously
 injected finding is suppressed only after generation.
+
+---
+
+## How it works
+
+```text
+Observable tool result
+        ↓
+Bounded task-and-evidence packet
+        ↓
+One qualified Lens, or none
+        ↓
+One short Nudge, or no_finding
+        ↓
+The agent’s later context
+```
+
+Each Nudge is generated from the evidence available at that control point. It
+is not selected from a list of stock sentences. As new context, it can influence
+later generation without changing model weights; the main agent may adopt,
+reinterpret, or ignore it.
+
+Automatic mode uses a compact Router to select one qualified Lens or `none`.
+The Generator receives the original packet and only the selected Filter; Router
+reasoning is not forwarded. Manual mode pins one Lens but does not waive its
+evidence requirement or force a finding.
+
+The names behind the Filters are private attention cues in provider prompts,
+not claims that the provider imitates a person or gains that person’s ability.
+
+Masters’ Nudge is not a reviewer, judge, solver, or Stop gate, and it does not
+claim to improve general problem-solving accuracy.
 
 ---
 

@@ -93,6 +93,39 @@ class SoftwareNudgeContractTests(unittest.TestCase):
         self.assertNotIn("一則短問題", chinese)
         self.assertNotIn("開放問句", chinese)
 
+    def test_readmes_lead_with_design_choice_before_mechanism(self):
+        english = (HERE / "README.md").read_text(encoding="utf-8")
+        chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
+        english_words = " ".join(english.split())
+        chinese_words = "".join(chinese.split())
+        screenshot = HERE / "docs" / "assets" / "actual-nudge-run.png"
+
+        self.assertIn("Passing tests settles behavior, not design.", english)
+        self.assertIn("測試通過，只能確定行為；不能替 Agent 選擇設計。", chinese)
+        for text in (english, chinese):
+            mechanism = (
+                text.index("## How it works")
+                if "## How it works" in text
+                else text.index("## 運作方式")
+            )
+            self.assertLess(text.index("docs/assets/actual-nudge-run.png"), mechanism)
+        self.assertIn("Actual run", english)
+        self.assertIn("實際執行", chinese)
+        self.assertIn("2 tests passed", english)
+        self.assertIn("2 個測試通過", chinese)
+        self.assertIn(
+            "same discount calculation appeared in two places", english_words
+        )
+        self.assertIn("同一套折扣算法出現在兩個地方", chinese_words)
+        self.assertIn("main model removed the duplicate copy", english_words)
+        self.assertIn("主模型真的刪掉重複的那份", chinese_words)
+        self.assertNotIn("illustrative, not benchmark evidence", english)
+        self.assertNotIn("示意，不是 benchmark 證據", chinese)
+        self.assertNotIn("docs/assets/actual-nudge-run.jpg", english)
+        self.assertNotIn("docs/assets/actual-nudge-run.jpg", chinese)
+        self.assertTrue(screenshot.is_file())
+        self.assertEqual(screenshot.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+
     def test_readmes_describe_stop_as_observation_only(self):
         english = (HERE / "README.md").read_text(encoding="utf-8")
         chinese = (HERE / "README.zh-TW.md").read_text(encoding="utf-8")
