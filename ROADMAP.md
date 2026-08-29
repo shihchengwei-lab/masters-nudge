@@ -1,6 +1,6 @@
 # Roadmap
 
-This file lists unfinished work and exclusion decisions that remain in force. Shipped behavior belongs in [CHANGELOG.md](CHANGELOG.md); retained evaluation evidence belongs in [evaluation/README.md](evaluation/README.md).
+This file lists unfinished work and exclusion decisions that remain in force. Shipped behavior belongs in [CHANGELOG.md](CHANGELOG.md). Historical benchmark artifacts were intentionally removed from the product branch.
 
 ## Active items
 
@@ -9,7 +9,7 @@ This file lists unfinished work and exclusion decisions that remain in force. Sh
 The product is plugin-only. Before claiming compatibility with a later Claude Code or Codex host version:
 
 - perform a fresh Claude Code marketplace install and exercise prompt, checkpoint, Stop, doctor, migration, and optional window flows;
-- perform a fresh Codex marketplace install, review hook trust, and exercise prompt, tool, synchronous Stop continuation, doctor, and migration flows;
+- perform a fresh Codex marketplace install, review hook trust, and exercise prompt, per-tool checkpoint, observation-only Stop, doctor, and migration flows;
 - run the generated-package check and the supported Python test matrix on Windows, Linux, and macOS;
 - record host versions, commands, exit status, and any unverified GUI or provider behavior.
 
@@ -17,11 +17,11 @@ The product is plugin-only. Before claiming compatibility with a later Claude Co
 
 ### 2. Natural-trace reaction quality and impact
 
-This is future research, not a release acceptance gate. Design any experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. The historical prerelease benchmark remains in [the evidence index](evaluation/README.md) and does not establish an effect.
+This is future research, not a release acceptance gate. Design any experiment around consented, anonymized natural work traces, a declared quality floor, fixed main-model and task conditions, repeated matched runs, executable outcome checks where possible, and blinded human adjudication only where no honest oracle exists. Removed prerelease benchmark artifacts did not establish an effect and must not be treated as retained evidence.
 
 **Research boundary:** Do not collect or publish natural traces until consent, redaction, retention, and reviewer access rules are approved. Do not claim outcome improvement without a repeatable controlled difference.
 
-### 3. Optional reviewer quality
+### 3. Optional Nudge provider quality
 
 This is future research, not a release acceptance gate.
 

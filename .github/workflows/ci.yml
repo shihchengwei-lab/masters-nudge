@@ -45,7 +45,7 @@ jobs:
 
           printf '%s\n' '{"hook_event_name":"UserPromptSubmit","session_id":"claude-ci","turn_id":"t","cwd":".","prompt":"smoke"}' \
             | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_prompt.py"
-          printf '%s\n' '{"hook_event_name":"PostToolUse","session_id":"claude-ci","turn_id":"t","cwd":".","tool_name":"Read","tool_input":{},"tool_response":{}}' \
+          printf '%s\n' '{"hook_event_name":"PostToolBatch","session_id":"claude-ci","turn_id":"t","cwd":".","tool_calls":[{"tool_name":"Read","tool_input":{},"tool_response":{}}]}' \
             | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_checkpoint.py"
           printf '%s\n' '{"hook_event_name":"Stop","session_id":"claude-empty","turn_id":"t","cwd":"."}' \
             | MASTERS_NUDGE_DATA_DIR="$smoke_root/data" sh "$plugin_root/hooks/run_python.sh" "$plugin_root/claude_stop.py"
@@ -81,8 +81,8 @@ jobs:
           @{hook_event_name="UserPromptSubmit"; session_id="claude-ci"; turn_id="t"; cwd="."; prompt="smoke"} `
             | ConvertTo-Json -Compress `
             | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\claude_prompt.py"
-          @{hook_event_name="PostToolUse"; session_id="claude-ci"; turn_id="t"; cwd="."; tool_name="Read"; tool_input=@{}; tool_response=@{}} `
-            | ConvertTo-Json -Compress `
+          @{hook_event_name="PostToolBatch"; session_id="claude-ci"; turn_id="t"; cwd="."; tool_calls=@(@{tool_name="Read"; tool_input=@{}; tool_response=@{}})} `
+            | ConvertTo-Json -Depth 5 -Compress `
             | & "$pluginRoot\hooks\run_python.cmd" "$pluginRoot\claude_checkpoint.py"
           @{hook_event_name="Stop"; session_id="claude-empty"; turn_id="t"; cwd="."} `
             | ConvertTo-Json -Compress `

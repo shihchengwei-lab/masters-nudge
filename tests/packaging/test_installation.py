@@ -583,6 +583,22 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertNotIn('assert data["core_ready"]', workflow)
         self.assertNotIn("-not $doctor.core_ready", workflow)
         self.assertIn('data["python"]["ready"]', workflow)
+        self.assertIn(
+            'hook_event_name":"PostToolBatch","session_id":"claude-ci"',
+            workflow,
+        )
+        self.assertIn(
+            'hook_event_name="PostToolBatch"; session_id="claude-ci"',
+            workflow,
+        )
+        self.assertNotIn(
+            'hook_event_name":"PostToolUse","session_id":"claude-ci"',
+            workflow,
+        )
+        self.assertNotIn(
+            'hook_event_name="PostToolUse"; session_id="claude-ci"',
+            workflow,
+        )
         self.assertIn('data["data"]["writable"]', workflow)
         self.assertIn("$doctor.python.ready", workflow)
         self.assertIn("$doctor.data.writable", workflow)
