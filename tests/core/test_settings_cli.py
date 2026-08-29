@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import masters_nudge_cli
 from masters_nudge import management
-from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
+from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSettings
 from masters_nudge.settings import (
     DEFAULT_OLLAMA_URL,
     load_user_settings,
@@ -21,6 +21,17 @@ from masters_nudge.settings import (
 
 
 class SettingsTests(unittest.TestCase):
+    def test_default_config_lives_outside_expiring_session_data(self):
+        with tempfile.TemporaryDirectory() as raw:
+            home = Path(raw)
+            paths = RuntimePaths.resolve(environ={"USERPROFILE": raw})
+
+            self.assertEqual(paths.data_dir, home / ".masters-nudge" / "data")
+            self.assertEqual(paths.settings_dir, home / ".masters-nudge")
+            save_lens(paths.settings_dir, "simplicity")
+            self.assertTrue((home / ".masters-nudge" / "config.json").is_file())
+            self.assertFalse((paths.data_dir / "config.json").exists())
+
     def test_one_config_preserves_lens_and_provider(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

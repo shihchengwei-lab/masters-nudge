@@ -32,6 +32,7 @@ HOST_DEFAULT_PROVIDERS = {
 class RuntimePaths:
     runtime_dir: Path
     data_dir: Path
+    settings_dir: Path
     error_log: Path
 
     @classmethod
@@ -48,11 +49,12 @@ class RuntimePaths:
         except RuntimeError:
             user_home = Path.cwd()
         explicit_data = str(environment.get("MASTERS_NUDGE_DATA_DIR") or "").strip()
-        data_dir = (
-            Path(explicit_data).expanduser()
-            if explicit_data
-            else user_home / ".masters-nudge" / "data"
-        )
+        if explicit_data:
+            data_dir = Path(explicit_data).expanduser()
+            settings_dir = data_dir
+        else:
+            settings_dir = user_home / ".masters-nudge"
+            data_dir = settings_dir / "data"
         explicit_runtime = str(
             environment.get("MASTERS_NUDGE_RUNTIME_DIR") or ""
         ).strip()
@@ -63,7 +65,7 @@ class RuntimePaths:
             if runtime_dir is not None
             else user_home / ".masters-nudge" / "runtime"
         )
-        return cls(resolved_runtime, data_dir, data_dir / "error.log")
+        return cls(resolved_runtime, data_dir, settings_dir, data_dir / "error.log")
 
 
 @dataclass(frozen=True)
@@ -90,7 +92,7 @@ class RuntimeSettings:
         default_provider = HOST_DEFAULT_PROVIDERS.get(
             str(host or "").strip().lower(), "openai"
         )
-        configured = load_user_settings(paths.data_dir)
+        configured = load_user_settings(paths.settings_dir)
         if configured.error:
             provider = INVALID_CONFIG_PROVIDER
             model = ""

@@ -10,7 +10,7 @@
     {
       "name": "masters-nudge",
       "description": "Evidence-bounded engineering nudges before the next agent decision.",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "source": "./plugins/masters-nudge"
     }
   ]

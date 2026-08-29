@@ -19,7 +19,7 @@ class RoutingTests(unittest.TestCase):
         return RuntimeSettings(
             "openai",
             "test-model",
-            RuntimePaths(ROOT, data_dir, data_dir / "error.log"),
+            RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log"),
             lens=lens,
         )
 

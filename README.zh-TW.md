@@ -87,7 +87,7 @@ Nudge 內容。
 採納，或因為 Nudge 才採取後續行動。
 
 每次開始新任務時，系統會刪除超過 30 天沒有更新的工作階段資料。Provider 與 Lens
-偏好會保留，直到你再次修改。
+偏好另外存在 `~/.masters-nudge/config.json`，會保留到你再次修改。
 
 ## 支援的 Provider
 

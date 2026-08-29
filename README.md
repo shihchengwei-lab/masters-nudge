@@ -96,7 +96,8 @@ This proves only that the Hook returned the Nudge to Claude Code or Codex. It
 does not prove that the main model read, accepted, or acted because of it.
 
 When a new task starts, session data not updated for more than 30 days is
-deleted. Provider and Lens preferences are kept until you change them.
+deleted. Provider and Lens preferences live separately in
+`~/.masters-nudge/config.json` and are kept until you change them.
 
 ## Providers
 

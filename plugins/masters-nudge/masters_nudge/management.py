@@ -186,12 +186,12 @@ def list_lenses() -> dict:
 
 def get_lens(*, environ: Mapping[str, str] | None = None) -> dict:
     paths = RuntimePaths.resolve(environ=environ)
-    selected = resolve_lens(paths.data_dir)
-    settings = load_user_settings(paths.data_dir)
+    selected = resolve_lens(paths.settings_dir)
+    settings = load_user_settings(paths.settings_dir)
     return {
         "lens": selected.lens,
         "source": selected.source,
-        "path": str(config_path(paths.data_dir)),
+        "path": str(config_path(paths.settings_dir)),
         "error": settings.error,
     }
 
@@ -201,11 +201,11 @@ def set_lens(lens: str, *, environ: Mapping[str, str] | None = None) -> dict:
     result = {
         "saved": False,
         "lens": str(lens or "").strip().lower(),
-        "path": str(config_path(paths.data_dir)),
+        "path": str(config_path(paths.settings_dir)),
         "error": "",
     }
     try:
-        save_lens(paths.data_dir, lens)
+        save_lens(paths.settings_dir, lens)
         result["saved"] = True
     except (OSError, ValueError) as exc:
         result["error"] = str(exc)
@@ -220,7 +220,7 @@ def get_provider(
     *, host: str = "", environ: Mapping[str, str] | None = None
 ) -> dict:
     paths = RuntimePaths.resolve(environ=environ)
-    settings = load_user_settings(paths.data_dir)
+    settings = load_user_settings(paths.settings_dir)
     selected_host = str(host or "").strip().lower()
     if selected_host not in {"", "claude", "codex"}:
         raise ValueError(f"unsupported host: {host}")
@@ -233,7 +233,7 @@ def get_provider(
         "model": resolved.model if resolved else settings.model,
         "ollama_url": settings.ollama_url,
         "source": "invalid_config" if settings.error else "config" if settings.provider else "host_default",
-        "path": str(config_path(paths.data_dir)),
+        "path": str(config_path(paths.settings_dir)),
         "error": settings.error,
     }
 
@@ -254,7 +254,7 @@ def configure_provider(
         "model": str(model or "").strip(),
         "ollama_url": str(ollama_url or DEFAULT_OLLAMA_URL).strip(),
         "diagnostic": {},
-        "path": str(config_path(paths.data_dir)),
+        "path": str(config_path(paths.settings_dir)),
         "error": "",
     }
     try:
@@ -271,7 +271,7 @@ def configure_provider(
             if not diagnostic.get("ready"):
                 raise ValueError(str(diagnostic.get("error") or "local Ollama is not ready"))
         save_provider(
-            paths.data_dir,
+            paths.settings_dir,
             selected,
             model=result["model"],
             ollama_url=result["ollama_url"],
@@ -289,11 +289,11 @@ def reset_provider_config(*, environ: Mapping[str, str] | None = None) -> dict:
         "provider": "",
         "model": "",
         "ollama_url": DEFAULT_OLLAMA_URL,
-        "path": str(config_path(paths.data_dir)),
+        "path": str(config_path(paths.settings_dir)),
         "error": "",
     }
     try:
-        reset_provider(paths.data_dir)
+        reset_provider(paths.settings_dir)
         result["reset"] = True
     except OSError as exc:
         result["error"] = str(exc)
