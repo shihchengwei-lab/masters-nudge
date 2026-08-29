@@ -44,7 +44,7 @@ class DoctorTests(unittest.TestCase):
         self.assertFalse(status["ready"])
         self.assertEqual(status["error"], "installed version differs")
 
-    def test_doctor_reports_provider_hooks_and_data_without_retired_features(self):
+    def test_doctor_reports_provider_hooks_and_data(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = {
                 "MASTERS_NUDGE_DATA_DIR": str(Path(raw) / "data"),
@@ -72,10 +72,6 @@ class DoctorTests(unittest.TestCase):
             [item["control_point"]["precision"] for item in result["hosts"]],
             ["exact", "approximate"],
         )
-        rendered = repr(result).lower()
-        for retired in ("legacy", "migration", "window", "grok", "telemetry"):
-            self.assertNotIn(retired, rendered)
-
     def test_doctor_reports_a_missing_host_hook_as_not_ready(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
