@@ -20,9 +20,6 @@ class RoutingSimplificationTests(unittest.TestCase):
 
     def test_each_manual_stage_forces_its_existing_lens(self):
         for stage, lens in (
-            ("design", "jeff"),
-            ("build", "beck"),
-            ("evolve", "fowler"),
             ("review", "linus"),
             ("reliability", "lamport"),
             ("performance", "carmack"),

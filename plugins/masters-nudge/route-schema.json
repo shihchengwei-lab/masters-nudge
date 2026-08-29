@@ -5,14 +5,11 @@
       "type": "string",
       "enum": ["finding", "no_finding"]
     },
-    "finding": {
-      "type": "string"
-    },
     "effective_lens": {
       "type": "string",
-      "enum": ["jeff", "linus", "fowler", "beck", "lamport", "carmack", "none"]
+      "enum": ["linus", "lamport", "carmack", "none"]
     }
   },
-  "required": ["status", "effective_lens", "finding"],
+  "required": ["status", "effective_lens"],
   "additionalProperties": false
 }

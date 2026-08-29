@@ -13,28 +13,13 @@ import review_telemetry
 from . import providers, storage
 from .contracts import ReviewOutcome, ReviewRequest
 from .prompting import (
+    MAX_REACTION_CHARS,
     build_router_prompt,
     build_review_input,
     build_system_prompt,
 )
-from .provider_contract import finding_contract_deviations
 from .runtime import REVIEW_TIMEOUT_SEC, RuntimeSettings
 
-
-CHECKPOINT_PROMPT = """
-
-# CURRENT STATE CHECKPOINT
-
-Current timing: the main agent has reached a state checkpoint.
-"""
-
-STRATEGY_PROMPT = """
-
-# TRAJECTORY CHECKPOINT
-
-Current timing: the main agent has made its first semantic change or repeated
-the same failure family. Focus on the unresolved choice, not review completion.
-"""
 
 ProviderDispatch = Callable[..., dict]
 
@@ -80,16 +65,12 @@ class ReviewCore:
         route = lens_router.resolve_review_route(
             self.settings.paths.data_dir,
         )
-        timing_prompt = (
-            CHECKPOINT_PROMPT if request.kind == "checkpoint" else STRATEGY_PROMPT
-        )
         effective_timeout = min(
             timeout_sec or self.settings.timeout_sec,
             REVIEW_TIMEOUT_SEC,
         )
         review_started = time.perf_counter()
         deadline = review_started + effective_timeout
-        route_decision = ""
         router_usage: dict[str, int] = {}
         router_latency_ms = 0
         router_input_chars = 0
@@ -133,7 +114,6 @@ class ReviewCore:
             )
             routed_status = str(routed.get("status") or "error")
             routed_lens = str(routed.get("effective_lens") or "none").lower()
-            route_decision = str(routed.get("finding") or "").strip()
             if routed_status == "no_finding":
                 result = {
                     **routed,
@@ -145,7 +125,6 @@ class ReviewCore:
             elif (
                 routed_status == "finding"
                 and routed_lens in persona_config.PERSONA_NAMES
-                and route_decision
             ):
                 route = lens_router.ReviewRoute(
                     "automatic", routed_lens, "automatic_router"
@@ -163,8 +142,6 @@ class ReviewCore:
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
             route=route,
-            route_decision=route_decision,
-            timing_prompt=timing_prompt,
             log_error=self.log_error,
         ) if result is None else ""
         if result is None and not system_prompt:
@@ -174,14 +151,7 @@ class ReviewCore:
                 provider=provider,
                 model=model,
             )
-        review_input = build_review_input(
-            request.source_packet,
-            storage.read_recent_injected_findings(
-                self.settings.paths.data_dir,
-                request.session,
-                limit=3,
-            ),
-        )
+        review_input = build_review_input(request.source_packet)
 
         started = time.perf_counter()
         if result is None:
@@ -243,21 +213,23 @@ class ReviewCore:
             status = "error"
         if status == "finding" and not finding:
             status = "error"
+        if status == "finding" and len(finding) > MAX_REACTION_CHARS:
+            status = "error"
         if status == "finding" and effective_lens not in persona_config.PERSONA_NAMES:
             status = "error"
-        contract_deviations = list(result.get("contract_deviations") or [])
-        for deviation in finding_contract_deviations(finding) if status == "finding" else ():
-            if deviation not in contract_deviations:
-                contract_deviations.append(deviation)
         if (
             status == "finding"
             and route.lens
             and effective_lens != route.lens
         ):
-            contract_deviations.append("selected_lens_mismatch")
+            status = "error"
         if status == "error" and not error_stage:
             error_stage = "generator" if route.lens else "router"
         error_kind = str(result.get("error_kind") or ("invalid_output" if status == "error" else ""))
+        if status == "finding" and storage.was_finding_injected(
+            self.settings.paths.data_dir, request.session, finding
+        ):
+            status = "no_finding"
         if status != "finding":
             effective_lens = "none"
         route_fields = {
@@ -318,10 +290,10 @@ class ReviewCore:
                 "configuration_source": configuration_source,
                 **route_fields,
                 "review_trigger": request.trigger or request.reason,
+                "hook_event": request.hook_event,
                 "status": status,
                 "error_stage": error_stage,
                 "error_kind": error_kind,
-                "contract_deviations": contract_deviations,
                 "input_chars": router_input_chars + len(system_prompt) + len(review_input),
                 "latency_ms": latency_ms,
                 "source_fingerprint": request.source_fingerprint,
@@ -343,7 +315,6 @@ class ReviewCore:
             latency_ms=latency_ms,
             usage=(result.get("usage") or {}) if isinstance(result, dict) else {},
             reaction_ts=reaction_ts,
-            contract_deviations=tuple(contract_deviations),
             error_stage=error_stage,
             error_kind=error_kind,
         )

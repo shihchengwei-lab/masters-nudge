@@ -38,8 +38,10 @@ class SoftwareNudgeContractTests(unittest.TestCase):
     def test_base_prompt_defines_an_independent_opinion_without_reasoning_scaffolds(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        for heading in ("# ROLE", "# EVIDENCE", "# NUDGE", "# OUTPUT"):
-            self.assertIn(heading, prompt)
+        self.assertEqual(
+            [line for line in prompt.splitlines() if line.startswith("# ")],
+            ["# ROLE", "# VIEW", "# OUTPUT"],
+        )
         self.assertNotIn("# FINDING GATE", prompt)
         for scaffold in (
             "ALTERNATIVE",
@@ -50,30 +52,27 @@ class SoftwareNudgeContractTests(unittest.TestCase):
             "alternative causal assumption",
         ):
             self.assertNotIn(scaffold, prompt)
-        self.assertIn("Missing evidence means unknown", prompt)
-        self.assertIn("Do not invent requirements", prompt)
+        self.assertIn("Anything absent is unknown", prompt)
+        self.assertIn("Do not invent hidden work", prompt)
         self.assertIn("independent second opinion", prompt)
 
     def test_prompt_keeps_one_grounded_taste_direction(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
 
-        self.assertIn("State what to favor", prompt)
-        self.assertIn("A direct preference is the result", prompt)
-        self.assertIn("it is not a question", normalized)
-        self.assertIn("<favor>；別<alternative>，因為<reason>。", prompt)
+        self.assertIn("one concrete engineering preference", prompt)
+        self.assertIn("one direct Traditional Chinese statement", prompt)
+        self.assertIn("not a question", normalized)
         self.assertNotIn("ask one concrete question", prompt)
         self.assertNotIn("one complete question", prompt)
-        self.assertIn("at most 52", prompt)
+        self.assertIn("within 52 characters", prompt)
 
-    def test_prompt_treats_recent_nudges_as_exclusions_not_examples(self):
+    def test_prompt_does_not_receive_or_describe_prior_nudges(self):
         prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
 
-        self.assertIn("a separate exclusion set", prompt)
-        self.assertIn("not evidence, suggestions, or examples", prompt)
-        self.assertIn("Do not repeat, paraphrase,", prompt)
-        self.assertIn("continue, or imitate", prompt)
-        self.assertIn("Otherwise return `no_finding`", prompt)
+        self.assertNotIn("recent nudge", prompt.lower())
+        self.assertNotIn("exclusion", prompt.lower())
+        self.assertIn("otherwise return `no_finding`", prompt.lower())
 
     def test_prompt_entry_has_no_legacy_queue_wrapper(self):
         self.assertFalse(hasattr(inject, "build_context_text"))
@@ -132,7 +131,7 @@ class SoftwareNudgeContractTests(unittest.TestCase):
 
 
 class SoftwareColdStartTests(unittest.TestCase):
-    def test_review_provider_receives_current_packet_and_recent_injected_nudges(self):
+    def test_review_provider_receives_only_the_current_packet(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "cold", cwd=str(root), repo_root=str(root))
@@ -175,13 +174,7 @@ class SoftwareColdStartTests(unittest.TestCase):
             )
 
         self.assertIn("CURRENT SOFTWARE STATE", seen["input"])
-        self.assertIn("[recent injected nudges — exclusions, not evidence]", seen["input"])
-        self.assertIn("舊問題不應進入下一次 Provider 輸入？", seen["input"])
-        self.assertIn("不是證據、建議或範例", seen["input"])
-        self.assertLess(
-            seen["input"].index("舊問題不應進入下一次 Provider 輸入？"),
-            seen["input"].index("CURRENT SOFTWARE STATE"),
-        )
+        self.assertNotIn("舊問題不應進入下一次 Provider 輸入？", seen["input"])
 
     def test_checkpoint_packet_does_not_accept_previous_findings(self):
         packet = source_context.build_checkpoint_packet(
@@ -479,7 +472,9 @@ class SoftwareColdStartTests(unittest.TestCase):
 
         self.assertEqual([], turn["evidence_records"])
         self.assertEqual({}, turn["task_sources"])
-        self.assertEqual("", progress["recent"][-1]["evidence_category"])
+        self.assertEqual(1, progress["event_seq"])
+        self.assertTrue(progress["last_event_fingerprint"])
+        self.assertNotIn("recent", progress)
         self.assertIsNone(observed.checkpoint)
 
     def test_packet_omits_generic_source_inspections(self):
@@ -577,7 +572,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 {"seq": 4, "category": "failure", "content": "failure-marker"},
             ],
         )
-        lenses = ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
+        lenses = ("linus", "lamport", "carmack")
         markers = (
             "change-marker",
             "verify-marker",
@@ -585,7 +580,7 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
         )
 
         ordered_packets = {
-            lens: build_review_input(packet, ())
+            lens: build_review_input(packet)
             for lens in lenses
         }
 
@@ -625,26 +620,12 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
                 persist_reaction=False,
             )
 
-        self.assertIn("# CURRENT STATE CHECKPOINT", seen["system_prompt"])
-        self.assertNotIn("# ATTENTION LENS", seen["system_prompt"])
-        self.assertGreater(
-            seen["system_prompt"].rfind("# LENS FOCUS"),
-            seen["system_prompt"].rfind("# CURRENT STATE CHECKPOINT"),
-        )
-        self.assertGreater(
-            seen["system_prompt"].rfind("# NUDGE"),
-            seen["system_prompt"].rfind("# LENS FOCUS"),
-        )
-        final_focus = seen["system_prompt"].split("# LENS FOCUS", 1)[1]
-        self.assertIn(
-            "Trace the direct control flow, ownership, and necessary complexity.",
-            final_focus,
-        )
-        self.assertTrue(seen["system_prompt"].rstrip().endswith("No labels."))
-        self.assertNotIn(
-            "When several candidates pass the finding gate",
-            seen["system_prompt"],
-        )
+        self.assertIn("# ROLE", seen["system_prompt"])
+        self.assertIn("# VIEW", seen["system_prompt"])
+        self.assertIn("# OUTPUT", seen["system_prompt"])
+        self.assertIn("# LENS CONTEXT: linus", seen["system_prompt"])
+        self.assertIn("# SELECTED LENS", seen["system_prompt"])
+        self.assertNotIn("packet-marker", seen["system_prompt"])
         self.assertEqual("packet-marker", seen["review_input"])
 
     def test_automatic_route_is_stable_without_preselecting(self):
@@ -680,13 +661,15 @@ class SoftwareEvidenceRoutingTests(unittest.TestCase):
 
         self.assertEqual("", route.lens)
 
-    def test_explicit_design_stage_routes_to_design_lens(self):
+    def test_retired_design_stage_falls_back_to_automatic(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            persona_config.save_stage(root, "design")
+            (root / persona_config.CONFIG_FILE).write_text(
+                json.dumps({"stage": "design"}), encoding="utf-8"
+            )
             route = lens_router.resolve_review_route(root, environ={})
 
-        self.assertEqual("jeff", route.lens)
+        self.assertEqual("", route.lens)
 
     def test_routing_does_not_own_a_standalone_intervention_classifier(self):
         self.assertFalse(hasattr(checkpoints, "classify_tool"))
@@ -714,240 +697,6 @@ class SoftwareSemanticStateTests(unittest.TestCase):
 
         self.assertEqual(checkpoints.evidence_scope(first), checkpoints.evidence_scope(second))
         self.assertIn("tests/test_contract.py::test_public", checkpoints.evidence_scope(first))
-
-    def test_one_failure_is_evidence_but_not_an_immediate_interruption(self):
-        progress = {
-            "last_strategy_event_seq": 0,
-            "recent": [
-                {"event_seq": 1, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_unrelated_failures_do_not_form_a_repeated_failure_family(self):
-        progress = {
-            "last_strategy_event_seq": 0,
-            "recent": [
-                {"event_seq": 1, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-                {"event_seq": 2, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/b.py"},
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_same_failure_family_triggers_after_repetition(self):
-        progress = {
-            "last_strategy_event_seq": 0,
-            "recent": [
-                {"event_seq": 1, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-                {"event_seq": 2, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-            ],
-        }
-
-        review = checkpoints.classify_strategy(progress)
-        self.assertEqual("repeated-failure-family", review["trigger"])
-
-    def test_injected_nudge_waits_for_a_complete_semantic_cycle(self):
-        progress = {
-            "recent": [
-                {"event_seq": 11, "evidence_category": "change"},
-                {"event_seq": 12, "evidence_category": "inspection"},
-            ]
-        }
-        self.assertFalse(checkpoints.semantic_cycle_after(progress, 10))
-        progress["recent"].append(
-            {"event_seq": 13, "evidence_category": "verification"}
-        )
-        self.assertTrue(checkpoints.semantic_cycle_after(progress, 10))
-
-    def test_tool_count_alone_does_not_trigger_a_strategy_review(self):
-        progress = {
-            "event_seq": 8,
-            "last_strategy_event_seq": 0,
-            "recent": [
-                {
-                    "event_seq": index,
-                    "tool": f"verify_step_{index}",
-                    "command_family": f"verify_step_{index}",
-                    "meaningful": True,
-                    "failed": False,
-                    "mutating": False,
-                }
-                for index in range(1, 9)
-            ],
-        }
-
-        self.assertIsNone(
-            checkpoints.classify_strategy(progress)
-        )
-
-    def test_first_change_triggers_before_the_completed_semantic_cycle(self):
-        progress = {
-            "event_seq": 2,
-            "last_strategy_event_seq": 0,
-            "midturn_review_attempts": 0,
-            "recent": [
-                {
-                    "event_seq": 1,
-                    "tool": "apply_patch",
-                    "command_family": "apply_patch",
-                    "meaningful": True,
-                    "failed": False,
-                    "mutating": True,
-                    "evidence_category": "change",
-                },
-                {
-                    "event_seq": 2,
-                    "tool": "exec_command",
-                    "command_family": "python -m unittest",
-                    "meaningful": True,
-                    "failed": False,
-                    "mutating": True,
-                    "evidence_category": "verification",
-                },
-            ],
-        }
-
-        review = checkpoints.classify_strategy(progress)
-
-        self.assertEqual(review["trigger"], "first-change")
-        self.assertNotIn("routing_concern", review)
-
-    def test_later_validated_progress_requires_two_new_semantic_cycles(self):
-        progress = {
-            "last_strategy_event_seq": 2,
-            "midturn_review_attempts": 1,
-            "recent": [
-                {"event_seq": 3, "meaningful": True,
-                 "evidence_category": "change"},
-                {"event_seq": 4, "meaningful": True,
-                 "evidence_category": "verification"},
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-        progress["recent"].extend(
-            [
-                {"event_seq": 5, "meaningful": True,
-                 "evidence_category": "change"},
-                {"event_seq": 6, "meaningful": True,
-                 "evidence_category": "failure"},
-            ]
-        )
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_three_midturn_attempts_exhaust_the_shared_budget(self):
-        progress = {
-            "last_strategy_event_seq": 0,
-            "midturn_review_attempts": 3,
-            "recent": [
-                {"event_seq": 1, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-                {"event_seq": 2, "meaningful": True, "failed": True,
-                 "evidence_category": "failure", "failure_family": "tests/a.py"},
-                {"event_seq": 3, "meaningful": True,
-                 "evidence_category": "change"},
-                {"event_seq": 4, "meaningful": True,
-                 "evidence_category": "verification"},
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_goal_transition_does_not_create_a_late_nudge(self):
-        progress = {
-            "last_strategy_event_seq": 0,
-            "midturn_review_attempts": 3,
-            "recent": [
-                {"event_seq": 1, "meaningful": True,
-                 "goal_transition": "complete"},
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_semantic_cycle_counter_ignores_inspection_and_extra_validation(self):
-        progress = {
-            "recent": [
-                {"event_seq": 1, "evidence_category": "verification"},
-                {"event_seq": 2, "evidence_category": "change"},
-                {"event_seq": 3, "evidence_category": "inspection"},
-                {"event_seq": 4, "evidence_category": "verification"},
-                {"event_seq": 5, "evidence_category": "verification"},
-                {"event_seq": 6, "evidence_category": "change"},
-                {"event_seq": 7, "evidence_category": "failure"},
-            ]
-        }
-
-        self.assertEqual(
-            checkpoints.completed_semantic_cycles_after(progress, 0), 2
-        )
-
-    def test_repeated_command_does_not_trigger_without_state_change(self):
-        progress = {
-            "event_seq": 3,
-            "last_strategy_event_seq": 0,
-            "goal_objective": "只修登入失敗",
-            "recent": [
-                {
-                    "event_seq": index,
-                    "tool": "exec_command",
-                    "command_family": "python -m unittest",
-                    "meaningful": True,
-                    "failed": False,
-                    "mutating": True,
-                }
-                for index in range(1, 4)
-            ],
-        }
-
-        self.assertIsNone(checkpoints.classify_strategy(progress))
-
-    def test_first_unverified_change_opens_the_taste_window(self):
-        recent = [
-            {
-                "event_seq": index,
-                "tool": "exec_command",
-                "command_family": "python -m unittest",
-                "meaningful": True,
-                "failed": False,
-                "mutating": False,
-            }
-            for index in range(11, 14)
-        ]
-        progress = {
-            "event_seq": 13,
-            "last_strategy_event_seq": 10,
-            "recent": recent,
-        }
-
-        progress["recent"] = [
-            {
-                "event_seq": 11,
-                "meaningful": True,
-                "failed": False,
-                "mutating": True,
-                "evidence_category": "change",
-            },
-            {
-                "event_seq": 12,
-                "meaningful": True,
-                "failed": False,
-                "mutating": True,
-                "evidence_category": "change",
-            },
-        ]
-        progress["event_seq"] = 12
-
-        review = checkpoints.classify_strategy(progress)
-        self.assertEqual(review["trigger"], "first-change")
 
     def test_storage_does_not_select_or_supersede_queued_findings(self):
         with tempfile.TemporaryDirectory() as raw:

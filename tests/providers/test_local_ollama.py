@@ -246,7 +246,7 @@ class LocalCallTests(unittest.TestCase):
                 "content": json.dumps(
                     {
                         "status": "finding",
-                        "effective_lens": "beck",
+                        "effective_lens": "linus",
                         "finding": "固定可觀察行為；別替內部做法蓋章，因為契約才是邊界。",
                     },
                     ensure_ascii=False,
@@ -275,7 +275,7 @@ class LocalCallTests(unittest.TestCase):
         self.assertFalse(payload["stream"])
         self.assertFalse(payload["think"])
         self.assertEqual(payload["options"]["temperature"], 0)
-        self.assertNotIn("maxLength", payload["format"]["properties"]["finding"])
+        self.assertEqual(payload["format"]["properties"]["finding"]["maxLength"], 52)
         self.assertNotIn("pattern", payload["format"]["properties"]["finding"])
         self.assertIn("evidence packet", payload["messages"][1]["content"])
         self.assertIn("JSON schema", payload["messages"][0]["content"])

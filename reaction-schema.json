@@ -9,15 +9,13 @@
       ]
     },
     "finding": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 52
     },
     "effective_lens": {
       "type": "string",
       "enum": [
-        "jeff",
         "linus",
-        "fowler",
-        "beck",
         "lamport",
         "carmack",
         "none"

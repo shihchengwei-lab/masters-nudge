@@ -22,6 +22,22 @@ def _load_build_plugin():
 
 
 class PackageManifestTests(unittest.TestCase):
+    def test_package_contains_only_the_three_retained_filter_prompts(self):
+        from masters_nudge.plugin_inventory import package_files
+
+        personas = {
+            path for path in package_files() if path.startswith("personas/")
+        }
+
+        self.assertEqual(
+            personas,
+            {
+                "personas/linus.txt",
+                "personas/lamport.txt",
+                "personas/carmack.txt",
+            },
+        )
+
     def test_manifest_entries_are_unique_and_well_formed(self):
         paths = [entry.path for entry in PACKAGE_MANIFEST]
         self.assertEqual(len(paths), len(set(paths)))

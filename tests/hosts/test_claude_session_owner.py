@@ -66,10 +66,12 @@ class TestClaudeSessionOwner(unittest.TestCase):
     def test_checkpoint_reuses_normalized_event_session(self):
         hook = {
             "session_id": "session-1",
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest tests/test_path.py"},
-            "error": "1 failed",
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [{
+                "tool_name": "Bash",
+                "tool_input": {"command": "pytest tests/test_path.py"},
+                "tool_response": "Exit code 1\n1 failed",
+            }],
         }
         session = SessionRef("claude_code", "session-1")
         outcome = ReviewOutcome(
@@ -85,12 +87,11 @@ class TestClaudeSessionOwner(unittest.TestCase):
                 claude_checkpoint.ReviewCore, "review_once", return_value=outcome
             ) as review,
         ):
-            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
-            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            prepared = claude_checkpoint.prepare_hook(hook)
 
         self.assertIs(prepared.session, session)
         self.assertIs(review.call_args.args[0].session, session)
-        self.assertEqual(session_from_hook.call_count, 2)
+        self.assertEqual(session_from_hook.call_count, 1)
         self.assertEqual(session_from_hook.call_args_list[0].args[0], hook)
 
     def test_stop_source_context_accepts_the_callers_session(self):

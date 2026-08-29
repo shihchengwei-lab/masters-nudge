@@ -61,6 +61,12 @@ def _print_doctor(result: dict) -> None:
             print(f"  legacy hooks: {legacy['error']}")
         if item["host"] == "codex":
             print("  trust: review this plugin in /hooks")
+        control = item["control_point"]
+        print(
+            f"  control point: {control['event']} ({control['precision']})"
+        )
+        if control["limitation"]:
+            print(f"  limitation: {control['limitation']}")
     ui = result["ui"]
     print(
         "Optional window: " + ("ready" if ui["ready"] else "missing Pillow or Tkinter")

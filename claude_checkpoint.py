@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-"""Mid-work Masters' Nudge checkpoint hook.
-
-Classifies high-value PostToolUse/PostToolUseFailure events, waits for the same
-side-review model as the Stop hook, and returns additionalContext directly to
-the main Claude agent in that event.
-"""
+"""Claude PostToolBatch checkpoint hook for Masters' Nudge."""
 
 from __future__ import annotations
 
 import json
 import hashlib
+import re
 import sys
 from typing import Any
 
@@ -29,36 +25,68 @@ from masters_nudge.contracts import (
 from masters_nudge.core import ReviewCore
 from masters_nudge.runtime import active_guard
 
-MUTATING_TOOLS = {"Edit", "Write", "Bash", "PowerShell"}
+MUTATING_TOOLS = {"edit", "write", "bash", "powershell"}
+EXIT_CODE_RE = re.compile(r"^Exit code\s+(-?\d+)\b", re.IGNORECASE)
 
 
-def normalize_tool_event(hook: dict[str, Any]) -> ToolCompleted | None:
-    """Translate a Claude hook payload into the host-neutral tool event."""
-    event_name = hook.get("hook_event_name", "")
-    tool_name = hook.get("tool_name", "")
-    tool_input = hook.get("tool_input") or {}
-    if event_name not in {"PostToolUse", "PostToolUseFailure"}:
-        return None
-    failed = event_name == "PostToolUseFailure"
-    output = hook.get("error", "") if failed else hook.get("tool_response", "")
-    return ToolCompleted(
-        claude_adapter.session_from_hook(hook),
-        str(tool_name),
-        tool_input=tool_input,
-        tool_output=output,
-        failed=failed,
-        failure_known=failed,
-        interrupted=bool(hook.get("is_interrupt")),
-        mutating=tool_name in MUTATING_TOOLS,
-        native_event_name=str(event_name),
-    )
+def _response_failure(response: Any) -> tuple[bool, bool]:
+    if isinstance(response, dict):
+        if isinstance(response.get("is_error"), bool):
+            return bool(response["is_error"]), True
+        exit_code = response.get("exit_code")
+        if isinstance(exit_code, int):
+            return exit_code != 0, True
+    if isinstance(response, list):
+        flags = [
+            block.get("is_error")
+            for block in response
+            if isinstance(block, dict) and isinstance(block.get("is_error"), bool)
+        ]
+        if flags:
+            return any(flags), True
+    match = EXIT_CODE_RE.match(str(response or "").strip())
+    if match:
+        return int(match.group(1)) != 0, True
+    return False, False
+
+
+def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
+    """Translate one documented Claude PostToolBatch payload in call order."""
+    if hook.get("hook_event_name") != "PostToolBatch":
+        return []
+    calls = hook.get("tool_calls")
+    if not isinstance(calls, list):
+        return []
+    session = claude_adapter.session_from_hook(hook)
+    events: list[ToolCompleted] = []
+    for call in calls:
+        if not isinstance(call, dict):
+            continue
+        tool_name = str(call.get("tool_name") or "")
+        if not tool_name:
+            continue
+        response = call.get("tool_response", "")
+        failed, known = _response_failure(response)
+        events.append(
+            ToolCompleted(
+                session,
+                tool_name,
+                tool_input=call.get("tool_input") or {},
+                tool_output=response,
+                failed=failed,
+                failure_known=known,
+                interrupted=bool(hook.get("is_interrupt")),
+                mutating=tool_name.lower() in MUTATING_TOOLS,
+                native_event_name="PostToolBatch",
+            )
+        )
+    return events
 
 
 def review_checkpoint(
     event: dict[str, str],
     *,
     session: SessionRef,
-    review_kind: str = "checkpoint",
     source_event_seq: int = 0,
 ) -> ReviewOutcome | None:
     settings = claude_adapter.runtime_settings()
@@ -75,18 +103,19 @@ def review_checkpoint(
 
     request = ReviewRequest(
         schema_version=1,
-        kind=review_kind,
+        kind="checkpoint",
         reason=event["reason"],
         session=session,
         source_packet=source_packet,
         source_fingerprint=hashlib.sha256(
             (
-                f"{review_kind}:{event.get('trigger') or event['reason']}\n"
+                f"checkpoint:{event.get('trigger') or event['reason']}\n"
                 f"{source_packet}"
             ).encode("utf-8")
         ).hexdigest(),
         source_event_seq=source_event_seq,
         trigger=str(event.get("trigger") or event["reason"]),
+        hook_event="PostToolBatch",
     )
     return ReviewCore(
         settings,
@@ -113,12 +142,14 @@ def build_hook_output(
 
 
 def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None:
-    tool_event = normalize_tool_event(hook)
-    if tool_event is None:
+    tool_events = normalize_tool_batch(hook)
+    if not tool_events:
         return None
     settings = claude_adapter.runtime_settings()
-    session = tool_event.session
-    observed = shared_evidence.observe_tool_event(settings.paths.data_dir, tool_event)
+    session = tool_events[0].session
+    observed = shared_evidence.observe_tool_batch(
+        settings.paths.data_dir, tool_events
+    )
     event = observed.checkpoint
     if event is None:
         return None
@@ -126,7 +157,6 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         outcome = review_checkpoint(
             event,
             session=session,
-            review_kind=observed.review_kind,
             source_event_seq=observed.event_seq,
         )
         if outcome is None or outcome.status != "finding" or not outcome.finding:
@@ -138,7 +168,7 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
             return None
         return claude_adapter.PreparedDelivery(
             output=build_hook_output(
-                str(hook.get("hook_event_name") or "PostToolUse"), outcome.finding
+                "PostToolBatch", outcome.finding
             ),
             session=session,
             reaction_ts=outcome.reaction_ts,

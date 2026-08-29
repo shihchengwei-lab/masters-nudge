@@ -12,12 +12,9 @@ import persona_config
 class TestStageSpec(unittest.TestCase):
     def test_stage_specs_are_the_single_source_for_public_stage_data(self):
         expected = {
-            "design": ("Design", "系統結構、因果與成本", "jeff"),
-            "build": ("Build", "小步驟、測試與回饋", "beck"),
-            "evolve": ("Evolve", "重構與變更成本", "fowler"),
-            "review": ("Review", "簡化與責任歸屬", "linus"),
-            "reliability": ("Reliability", "狀態、順序與失敗", "lamport"),
-            "performance": ("Performance", "執行路徑與效能", "carmack"),
+            "review": ("Simplicity", "必要複雜度與單一責任", "linus"),
+            "reliability": ("Reliability", "不變量、順序與部分失敗", "lamport"),
+            "performance": ("Performance", "實際執行成本與少做工作", "carmack"),
         }
 
         self.assertEqual(expected, {

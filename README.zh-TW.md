@@ -2,173 +2,82 @@
 
 繁體中文 | [English](README.md)
 
-> 在 LLM agent 工作途中，動態加入一個新的語義錨點。
+> 在 LLM agent 仍能採取行動時，加入一項獨立的工程取捨。
 
-Masters’ Nudge 是給 Claude Code 與 Codex 使用的動態 context steering plugin。
+Masters’ Nudge 是給 Claude Code 與 Codex 使用的動態 context steering
+plugin。工具產生可觀察結果後，系統會把受限的證據封包交給獨立的 Nudge
+provider。Provider 套用一個聚焦的工程 Lens，產生一則短方向，或選擇沉默；
+有效的 Nudge 會在主要 agent 後續決策前加入 context。
 
-它在選定的 checkpoint 收集主要 agent 當下留下的有限證據，交給獨立的 Nudge provider。Provider 透過指定的 Lens 聚焦問題，產生一則短 Nudge，再由 Harness 寫入主要 agent 的 context。
-
-短方向是 Nudge 的外在形式。底層動作是把一個新的語義錨點放進 context，讓主要 agent 在新的條件下繼續生成。
+Masters’ Nudge 不是 reviewer、裁判、完整解題者或 Stop gate，也不負責讓主要
+模型變得更會解題。Masters’ Nudge 的範圍更窄：讓另一套工程品味在適當時機，
+對生成路徑投下一票。
 
 ---
 
-## 運作迴圈
+## 運作方式
 
 ```text
-使用者提出任務
+使用者交付任務給主要 agent
         ↓
-主要 agent 工作，留下可觀察結果
+主要 agent 採取行動，工具產生可觀察結果
         ↓
-Hook 收集當下任務與有限證據
+Host adapter 建立受限的任務與證據封包
         ↓
-Checkpoint policy 判斷是否進行 review
+Automatic 模式選出一個合格 Lens，或不選
         ↓
-Nudge provider 透過指定 Lens 聚焦
+Generator 獨立形成一項工程取捨
         ↓
-產生一則短方向，或回傳 no_finding
+Harness 驗證並注入一則短 Nudge
         ↓
-Harness 將 Nudge 作為新錨點寫入 context
-        ↓
-主要 agent 在新的 context 下繼續工作
-        ↺
+主要 agent 帶著新的 context 繼續工作
 ```
 
-每則 Nudge 都根據當下證據動態生成。
+LLM 會依目前的 context 生成下一個 token。加入一個短的語義錨點，可以在不改變
+模型權重的情況下，移動後續 token 的機率與生成路徑。這是影響，不是控制：主要
+agent 可以採納、重新解讀或忽略 Nudge。
 
-同一個 Lens 在不同任務、不同階段或不同結果下，可以產生完全不同的錨點。
+每則 Nudge 都依控制點當下的證據動態生成，不是從預先寫好的句子清單中隨機挑選。
 
 ---
 
-## 底層機制
+## 三個工程 Lens
 
-LLM 依目前的 context，計算下一個 token 的條件機率。
+目前版本只保留三個通用 coding agent 預設行為不一定穩定提供的聚焦面向：
 
-Nudge 進入 context 後，它的 token 也會參與後續生成，使下一個 token 的機率分布與後續生成路徑產生偏移。
+| Lens | 聚焦方向 | 最低證據門檻 |
+|---|---|---|
+| Simplicity | 必要複雜度與單一責任 | 當前機制或責任路徑中出現 wrapper、adapter、fallback、相容路徑、workaround、重複 owner 或累積修補，而且封包足以判斷存在的必要性 |
+| Reliability | 不變量、事件順序、重試與部分失敗 | 明確的不變量、至少兩個可換序事件，以及具體的重試、中斷、重送或部分成功路徑 |
+| Performance | 實際執行成本與少做工作 | profiler、benchmark 或 trace 數字能把成本定位到具體 execution path |
 
-這裡的「錨點」就是加入 context 的一小段 token。它把一個新的檢查方向放進模型後續生成可以回指的條件中。
+Automatic 模式由精簡 Router 選出一個合格 Lens 或 `none`。Router 會看到原始任務、
+證據封包與三個門檻，但不提供建議；Router 的理由也不會傳給 Generator。
 
-```text
-原本的 context
-        +
-一個新的語義錨點
-        ↓
-新的 token 分布
-        ↓
-可能不同的生成路徑
-```
+手動模式可固定 Simplicity、Reliability 或 Performance，並跳過 Router，但不會取消
+該 Lens 的證據要求，也不會強迫 Provider 產生 finding。
 
-Masters’ Nudge 目前把這個錨點壓縮成一則短方向。
-
-Nudge 直接說明此刻應優先、保留、簡化或移除什麼，但不展開完整解法。主要 agent 會自行把這個方向與原本的任務、證據和生成路徑混合，再決定下一步輸出。
-
-這個控制點位於推論階段的 context，模型權重保持不變。
-
-錨點的內容、注入時點、主要 agent 當下的工作狀態，以及既有 context，都會影響最後形成的偏移。
+Filter 背後的人名只是 provider prompt 內部的注意力提示，不表示 Provider 會模仿
+某個人物，也不表示 Provider 因此取得某個人物的能力。
 
 ---
 
-## 為什麼叫 Masters’ Nudge
-
-`Masters` 指的是放在 Nudge provider 前方的聚焦濾鏡。
-
-廣為人知的人名是這層濾鏡的外在形式。底層利用的是人物名稱與相關概念在模型訓練材料中的密集關聯。
-
-這個設計建立在一個實務假設上：
-
-知名人物在模型訓練材料中通常有大量相關文本。人物名稱會與他們反覆關心的問題、判斷方式、取捨原則、案例和表達語彙共同出現。
-
-可以把這種關係簡化理解成：人物名稱與特定問題意識，在模型內部形成相近的語義向量區域。
-
-當人物名稱出現在 provider prompt 中，相關的判斷方式更容易被喚起，provider 的生成也更容易聚焦到那些關注點。
-
-```text
-當下證據
-    +
-Master filter
-    ↓
-Nudge provider
-    ↓
-聚焦到相近的語義區域
-    ↓
-產生一則短 Nudge
-    ↓
-成為主要 agent context 中的新錨點
-```
-
-Master filter 只提供給 Nudge provider。
-
-Provider 透過這層濾鏡閱讀當下證據，選出最值得帶入主要 agent context 的方向，再把它壓縮成一則 Nudge。
-
-主要 agent 只會收到最後產生的方向，不會看到人物名稱、角色設定或完整的 reviewer prompt。
-
-專案名稱描述的就是這條路徑：
-
-> **Masters 聚焦 provider，provider 產生 Nudge，Nudge 成為主要 agent context 中的新錨點。**
-
-這個專案的承重點，是 Lens 能否讓 provider 從證據中選出有價值的方向，以及最後的 Nudge 能否影響主要 agent 當下的生成路徑。
-
-人名是 Lens 的一種壓縮表示法。同一個位置也可以放入明確的工程準則、道德哲學、合規要求、科學方法或其他評估框架。
-
----
-
-## Lens 決定聚焦方向
-
-Lens 定義 Nudge provider 應該注意什麼。
-
-它可以聚焦於：
-
-- 軟體工程品味；
-- 系統邊界與責任歸屬；
-- 狀態、事件順序與不變量；
-- 執行成本與效能；
-- 道德取捨；
-- 合規證據；
-- 科學上的反例與可證偽條件。
-
-不同 Lens 會從同一份證據中選出不同的語義錨點。
-
-目前的實作把錨點表達成簡潔的取捨偏好：
-
-```text
-工程 Lens：
-讓狀態只歸一個 owner，其餘元件只負責傳遞。
-
-道德 Lens：
-讓被移轉的代價留在決策視野內。
-
-合規 Lens：
-讓每項合規宣告直接連到證據。
-
-科學 Lens：
-優先做能區分兩個解釋的實驗。
-```
-
-目前這個 repository 實作的是軟體工程版本。其他 Lens 可以沿用相同的 Hook、checkpoint 與注入迴圈。
-
----
-
-## 一則 Nudge 的形狀
-
-目前的輸出契約把語義錨點壓縮成一則短方向。
+## Nudge 輸出契約
 
 對主要 agent 而言，Nudge 是一則簡短、以證據為錨點的獨立第二意見。
+Provider 每次只回傳一個 JSON 結果：
 
-Reviewer 每次回傳兩種結果之一。
+- `finding`：用一則繁體中文直接陳述一項具體工程取捨，最長 52 個字元；
+- `no_finding`：現有證據不足以支持有用取捨時保持沉默。
 
-### `finding`
+Finding 直接說明此刻應優先、保留、簡化或移除什麼。Finding 不是問題、review
+敘事、完整解法，也不是泛泛要求新增、執行或通過測試。
 
-一則有效的 Nudge：
+例如：
 
-- 根據目前提供的證據；
-- 聚焦一個有證據支持的偏好或取捨；
-- 直接說明此刻應優先、保留、簡化或移除什麼；
-- 使用 `<優先選擇>；別<替代方案>，因為<理由>。`；
-- 不向主要 agent 提問，也不描述 Reviewer 的檢查流程；
-- 一次只包含一個想法；
-- 最長 52 個字元。
-
-例如：`直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。`
-這個範例是 28 個字元。單純要求新增、執行或通過測試，不算工程偏好；除非會改變實作、介面、責任歸屬或行為邊界，否則必須回傳 `no_finding`。
+```text
+直接記錄輸入來源；別用值猜測，因為相同值不代表相同來源。
+```
 
 主要 agent 會收到：
 
@@ -177,156 +86,75 @@ Reviewer 每次回傳兩種結果之一。
 <一則短方向>
 ```
 
-### `no_finding`
+Runtime 驗證刻意只處理結構：JSON schema、狀態與欄位一致性、合法 Lens、空值、
+單一輸出物件與 52 字元上限。程式不使用關鍵字或 regex 判斷工程品味，也不改寫
+結構合法的結果。
 
-當目前證據沒有支持值得加入的新方向時，Reviewer 可以回傳 `no_finding`，主要 agent 照原本的路徑繼續工作。
-
-`no_finding` 的實際機率通常偏低。
-
-LLM 在收到 review 任務後，傾向產生一個可以交付的意見，不傾向回答「沒有意見」。即使證據不足，它仍可能勉強選出一個方向。
-
-因此，`no_finding` 提供的是一個明確的沉默出口，不應預期它和 `finding` 一樣常見。
-
-結構驗證器負責檢查輸出格式、內容數量與長度。符合契約的 Nudge 才會進入主要 agent 的 context。
+Provider 不會看到過去的 Nudge。系統只在生成完成後，攔下與先前注入內容完全相同
+的 finding。
 
 ---
 
-## 與其他控制方式的差別
+## Host 控制點
 
-| 控制方式 | 介入方式 |
-|---|---|
-| 固定 System Prompt | 在任務開始前持續施加固定的行為偏向 |
-| Temperature | 全域改變 token 取樣的分散程度 |
-| 完整 Reviewer | 產生另一套分析、建議或解法 |
-| Masters’ Nudge | 根據當下狀態，加入一個短而局部的語義錨點 |
+理想的介入時點是：目前模型步驟的工具結果已全部完成，下一次模型 request 尚未開始。
 
-固定 System Prompt 適合放置長期規則。
+| Host | 控制點 | 精確度 | 已知限制 |
+|---|---|---|---|
+| Claude Code | 原生 `PostToolBatch` | 對原生 batch 精確 | 只有序列化結果含明確失敗訊號時，才把 batch 標記為失敗 |
+| Codex | 同步 `PostToolUse` | 近似 | Codex 沒有原生 batch 邊界，因此平行工具可能被分開觀測與判斷 |
 
-Temperature 適合調整整體取樣方式。
+Claude Code 對一個完成的工具 batch 最多建立一次 Nudge attempt。Codex 把每個
+`PostToolUse` 視為單項 batch。Masters’ Nudge 不使用 timer、transcript 猜測或
+延遲補送來假裝不存在的 Codex batch 邊界。
 
-完整 Reviewer 適合交付另一份分析結果。
+符合條件的 attempt 會同步執行，讓有效 Nudge 能在同一回合進入後續 context。
+Provider 工作時間最多 90 秒，外層 Host Hook 預留 120 秒。Automatic 模式由
+Router 與 Generator 共用 Provider 時限；手動模式只呼叫一次 Generator。錯誤或
+逾時採 fail-open：結束這次 attempt，主要 agent 繼續工作。
 
-Masters’ Nudge 則把介入放在工作途中：先讀取主要 agent 已經做到哪裡，再決定此刻要把哪個方向放進 context。
-
-目前的實作使用簡短陳述承載這個偏好。
-
----
-
-## Harness 把一次 Prompt 變成迴圈
-
-單次 Prompt 可以請另一個模型產生一個新的思考方向。
-
-Harness 負責讓這個方向在固定流程中反覆運作：
-
-1. 保存使用者任務；
-2. 收集可觀察證據；
-3. 判斷 checkpoint；
-4. 在 Automatic 模式由精簡 Router 選擇一個 Lens；
-5. 呼叫只看得到該 Lens 的 Generator；
-6. 驗證 Nudge 格式；
-7. 將 Nudge 作為新錨點寫入主要 agent 的 context；
-8. 記錄 review、投遞與後續反應。
-
-這層工程結構把一次性的 Prompt 技巧，變成可重複、可替換、可觀察的動態介入機制。
+在 `Stop` 時，Hook 只記錄主要 agent 是否回應先前的 Nudge；不會呼叫 Provider、
+產生另一則 Nudge、阻擋完成或延長回合。
 
 ---
 
-## 可插拔的超我
+## Provider 看得到什麼
 
-可以用一個簡化的比喻理解這個架構：
+Provider 只收到目前控制點建立的受限封包。依事件不同，封包可能包含：
 
-- **主要 LLM 是本我**：提供持續生成、解題與行動的動力；
-- **Harness 是自我**：管理工具、證據、時機與工作流程；
-- **Nudge 是超我**：在特定時點帶入額外的語義錨點。
+- 目前的使用者任務錨點；
+- 任務明確指定的本機來源內容；
+- 最近且受長度限制的實質變更；
+- 客觀的失敗、驗證、工具結果與量測。
 
-更換 Lens，就等於更換這個超我關注的事情。
+Provider 不會收到：
 
-它可以加入工程品味的錨點，也可以加入道德、合規、安全或科學證據的錨點。主要模型與 Harness 保持不變，介入方向可以動態替換。
+- 完整 transcript；
+- 主要模型未公開的內部思考；
+- 主要 agent 進行中的說明或對 Nudge 的反應；
+- 過去的 Nudge；
+- 一般導覽、搜尋或瀏覽輸出；
+- 未被任務明確指定的原始碼探索；
+- 工具名稱或完整命令。
 
-這裡借用的是架構中的角色分工，不是對模型心理狀態的主張。
-
----
-
-## 張力與收斂
-
-主要 agent 工作一段時間後，會形成一條逐漸收斂的生成路徑。
-
-Nudge 把另一個語義錨點加入同一個 context，使主要 agent 同時面對原本的路徑與新的方向。
-
-當 Nudge 命中薄弱的設計選擇時，這股張力可以：
-
-- 用明確狀態取代猜測；
-- 把責任移回真正擁有資料的元件；
-- 刪除特例，而不是再延伸一層；
-- 選擇更小、更容易讀懂的表示方式；
-- 在第一個語意結果出現後，校正下一個實作選擇。
-
-當 Nudge 與充分證據衝突，或在錯誤時點重新打開問題時，張力也可能表現為：
-
-- 已經解決的問題被重新展開；
-- 主要目標失焦；
-- 工作方向來回擺盪；
-- 生成路徑持續發散而無法收斂。
-
-這個機制的效果來自張力，也受張力限制。
-
-Harness 透過少數 checkpoint、有限證據、單一方向、52 字元上限與 `no_finding`，控制每次介入的範圍。
+Base prompt 只定義 Provider 是什麼、看得到什麼，以及輸出契約。選中的 Filter
+承擔完整工程聚焦。Router 與 Generator 都使用原始封包；Generator 不會收到
+routing hypothesis。
 
 ---
 
-## 目前的軟體工程版本
-
-Repository 目前提供六種工程 Lens：
-
-| Lens | 聚焦方向 |
-|---|---|
-| Design | 上游限制、責任歸屬與下游成本 |
-| Build | 最短回饋路徑、可觀察行為與停止條件 |
-| Evolve | 重複知識、變更擴散與正確歸屬 |
-| Review | 控制流程、必要複雜度與所有權 |
-| Reliability | 狀態、事件順序、不變量與局部失敗 |
-| Performance | 實際執行成本與不必要工作 |
-
-Automatic 模式使用兩次受限呼叫。精簡 Router 只看 Lens 定義、不看完整 persona，找出尚未解決的工程選擇並選定一個 Lens；Generator 只看該 Lens，再產生 Nudge。手動模式略過 Router，直接呼叫固定 Lens 的 Generator。
-
-手動設定可以固定使用六種 Lens 中的任一種：Design、Build、Evolve、Review、Reliability 或 Performance。
-
----
-
-## 支援環境
-
-### Host
-
-- Claude Code
-- Codex CLI
-
-兩個 Host 使用不同的事件 adapter，再建立相同格式的受限 `ReviewRequest`，交給共同的 review core。
-
-### Nudge provider
+## 支援的 Provider
 
 - Anthropic
 - OpenAI
 - xAI，透過已登入的 Grok CLI
 - 本機 Ollama
 
-Reviewer 每次都是獨立的模型呼叫，即使它使用與主要 agent 相同的 provider。
+每次 Nudge attempt 都是獨立的模型呼叫，即使 Provider 與主要 agent 使用同一個
+模型家族。Provider 失敗時，不會在未告知的情況下切換到另一個 Provider。
 
----
-
-## Review checkpoint
-
-目前的 Hook 會在下列時點考慮產生 Nudge：
-
-- 每回合第一次語意變更完成後；
-- 相同可觀察範圍的失敗類型重複發生後。
-
-目標狀態轉換、成功驗證與一般進度不會開啟 review。修改後事件會記錄實際結果，讓 Router 與 Generator 看得到第一個已改變的狀態。
-
-符合條件的 review 會同步執行，讓 Nudge 在同一回合進入主要 agent 的後續 context。
-
-在 `Stop` 時，Hook 只記錄主要 agent 是否已回應先前注入的 Nudge；不會呼叫 Provider、產生新 Nudge 或阻擋收尾。
-
-Provider 工作時間最多 90 秒，外層 Host Hook 預留 120 秒。Automatic 模式由 Router 與 Generator 共用這段時間；手動模式只呼叫一次 Generator。任一階段發生錯誤或逾時時，這次介入結束，主要 agent 繼續工作。
+未覆寫設定時，Claude Code 使用 Anthropic `sonnet`；Codex 使用 OpenAI
+`gpt-5.6-sol`。
 
 ---
 
@@ -336,7 +164,7 @@ Provider 工作時間最多 90 秒，外層 Host Hook 預留 120 秒。Automatic
 
 - 支援 plugin 的 Claude Code 或 Codex CLI；
 - Python 3.10+；
-- 已登入所選雲端 Nudge provider 對應的 CLI；使用本機 Ollama 時不需要雲端登入。
+- 已登入所選雲端 Provider 對應的 CLI，或已安裝本機 Ollama 模型。
 
 ### Claude Code
 
@@ -345,9 +173,8 @@ claude plugin marketplace add shihchengwei-lab/masters-nudge
 claude plugin install masters-nudge@masters-nudge --config python_command=python
 ```
 
-若 `python` 不是 Python 3.10+，請將 `python_command` 改成 `python3` 或 Python 執行檔的絕對路徑。
-
-設定值只能包含一個執行檔，不能附加參數。
+若 `python` 不是 Python 3.10+，請把 `python_command` 改成 `python3` 或 Python
+執行檔的絕對路徑。設定值只能包含一個執行檔，不能附加其他參數。
 
 ### Codex
 
@@ -356,11 +183,7 @@ codex plugin marketplace add shihchengwei-lab/masters-nudge
 codex plugin add masters-nudge@masters-nudge
 ```
 
-安裝後請開啟新的 task。
-
-Codex 使用者需進入 `/hooks`，檢查命令並批准 plugin hooks。
-
-Plugin 封裝與 Hook 核准方式以目前的 [OpenAI plugin 文件](https://developers.openai.com/plugins/build/plugins)與 [Codex Hooks 文件](https://learn.chatgpt.com/docs/hooks)為準。
+安裝後請開啟新的 task。在 Codex 中開啟 `/hooks`，檢查並批准 plugin 命令。
 
 ### 更新或移除
 
@@ -376,137 +199,77 @@ codex plugin add masters-nudge@masters-nudge
 codex plugin remove masters-nudge@masters-nudge
 ```
 
-更新後請重新啟動 Host。
-
-解除安裝會保留 `~/.masters-nudge/data/` 中的既有資料。
+更新後請重新啟動 Host。解除安裝會保留 `~/.masters-nudge/data/` 中的既有資料。
 
 ---
 
 ## 使用與檢查
 
-Hooks 會自動執行，不需要在每個 Prompt 中手動呼叫 Masters’ Nudge。
+Hooks 會自動執行，不需要在每個 Prompt 中指名 Masters’ Nudge。Plugin 也提供處理
+下列明確任務的 Skills：
 
-以下說法會啟用 plugin 內建的 Skills：
+- **「檢查 Masters’ Nudge 是否準備完成。」** 檢查 Python、Provider 存取、資料
+  目錄寫入、Host Hooks、控制點精確度與選用 UI 依賴，不會呼叫 Nudge provider。
+- **「開啟 Masters’ Nudge 浮動視窗。」** 開啟本機歷史與設定視窗；需要 Pillow，
+  以及包含 Tkinter 的 Python。
+- **「將 Masters’ Nudge 設定成使用我的本機 Ollama 模型
+  `<完整模型名>`。」** 驗證 loopback Ollama 上已安裝的模型，並保存 Provider 設定。
+- **「遷移舊版 Masters’ Nudge hooks。」** 先顯示 dry run；取得明確同意後，才修改
+  可以清楚辨識的舊版 Hooks。
 
-- **「檢查 Masters’ Nudge 是否準備完成。」**  
-  檢查 runtime、provider、資料目錄寫入權限、Hooks 與選用的 UI 依賴，不會呼叫 Reviewer。
-
-- **「開啟 Masters’ Nudge 浮動視窗。」**  
-  開啟本機歷史視窗；需要 Pillow，以及包含 Tkinter 的 Python。
-
-- **「將 Masters’ Nudge 設定成使用我的本機 Ollama 模型 `<完整模型名>`。」**  
-  驗證 loopback Ollama 上已安裝的模型，並保存設定。
-
-- **「遷移舊版 Masters’ Nudge hooks。」**  
-  先顯示 dry run，取得明確同意後，再處理可以明確辨識的舊版 Hook。
-
-遷移前會在 Host 設定旁建立帶有時間戳的備份。需要人工判斷的舊設定會留在診斷結果中，既有 review 資料會保留。
+已退休的 Lens 設定會回到 Automatic 模式，不會映射成仍保留的 Lens。
 
 ---
 
 ## 設定
 
-未覆寫時：
-
-- Claude Code 使用 Anthropic `sonnet`；
-- Codex 使用 OpenAI `gpt-5.6-sol`。
-
-常用環境變數：
-
 | 變數 | 預設值 | 用途 |
 |---|---|---|
 | `MASTERS_NUDGE_PROVIDER` | 依 Host 決定 | `anthropic`、`openai`、`grok` 或 `ollama-local` |
-| `MASTERS_NUDGE_MODEL` | 依 Host 決定 | Reviewer 的完整模型名稱 |
+| `MASTERS_NUDGE_MODEL` | 依 Host 決定 | Provider 的完整模型名稱 |
 | `MASTERS_NUDGE_OLLAMA_URL` | `http://127.0.0.1:11434` | Loopback Ollama endpoint |
-| `MASTERS_NUDGE_TIMEOUT` | `90` | 回合結束時的 Reviewer 逾時秒數 |
-| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 工作途中的 Reviewer 逾時秒數 |
-| `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | Logs、state、receipts、telemetry 與 reviewer 設定 |
-| `MASTERS_NUDGE_STAGE` | 未設定 | 選擇 `automatic`、`design`、`build`、`evolve`、`review`、`reliability` 或 `performance` |
+| `MASTERS_NUDGE_TIMEOUT` | `90` | Provider 逾時秒數 |
+| `MASTERS_NUDGE_CHECKPOINT_TIMEOUT` | `90` | 工具控制點的 Provider 逾時秒數 |
+| `MASTERS_NUDGE_DATA_DIR` | `~/.masters-nudge/data` | 狀態、findings、receipts、telemetry 與 Provider 設定 |
+| `MASTERS_NUDGE_STAGE` | 未設定 | `automatic`、`review`、`reliability` 或 `performance` |
 | `MASTERS_NUDGE_SPRITE_PATH` | 內建 sprite | 選用浮動視窗的 spritesheet |
 
-Provider 環境變數優先於 `reviewer.json` 中保存的設定。
+`MASTERS_NUDGE_STAGE` 優先於 `config.json` 保存的階段。`review` 選擇
+Simplicity，`reliability` 選擇 Reliability，`performance` 選擇 Performance；
+未設定時由 Automatic 模式使用 Router。
 
-`MASTERS_NUDGE_STAGE` 優先於 `config.json` 中的工程階段。未指定時使用 Automatic 模式；指定工程階段時，Reviewer 固定使用對應 Lens。
+Provider 環境變數優先於 `reviewer.json` 中保存的設定。損壞的 Provider 設定會留下
+診斷並結束該次 attempt。
 
-損壞或無法解析的 Reviewer 設定會留下診斷，並結束該次 review。
-
-### 本機 Ollama
-
-本機模式只連接 loopback HTTP endpoint，並停用 client proxy 與 redirect。
-
-設定流程會確認 Ollama 已關閉 cloud 功能，並檢查模型 metadata。Masters’ Nudge 使用已經安裝的模型，不會自行下載模型。
-
-本機 Provider 發生錯誤時，這次 review 直接結束，不會轉送到雲端 Provider。
+本機 Ollama 模式只連接 loopback endpoint，停用 client proxy 與 redirect，使用
+已安裝的模型，不會自行下載。本機 Provider 失敗時，attempt 直接結束，不會改送雲端。
 
 ---
 
-## 資料與隱私
+## 資料、隱私與證據界線
 
-Reviewer 只會收到 Hook 建立的受限證據封包。
-
-依觸發事件不同，封包可能包含：
-
-- 最新的使用者任務要求；
-- 從任務明確指定的本機來源讀到的內容；
-- 最新且受長度限制的實質變更；
-- 驗證與失敗的語意結果；
-- Stop 邊界的當下最終宣告。
-
-最多三則先前已注入的 Nudge，會作為避免重複的排除集合送給 Reviewer。
-
-Reviewer prompt 與所選 Lens 屬於生成指令，不屬於證據。
-
-下列內容不會進入 Reviewer 封包：
-
-- 完整 transcript；
-- 主要模型未公開的內部思考；
-- 一般搜尋與瀏覽輸出；
-- 未被任務明確指定的一般原始碼探索；
-- 外部報告；
-- 工具名稱與完整命令；
-- 主要 agent 進行中的說明或對 Nudge 的反應。
-
-任務、證據、Nudge、投遞 receipts、Provider 設定與診斷 telemetry，會以純文字保存在：
+任務、受限證據、findings、投遞 receipts、Provider 設定與診斷 telemetry，會以
+純文字保存在：
 
 ```text
 ~/.masters-nudge/data/
 ```
 
-Telemetry 記錄路由、狀態、延遲，以及 Provider 回報的用量 metadata。
+Telemetry 記錄不含內容的 Host、Hook event、route、status、latency，以及 Provider
+回報的用量 metadata。
 
-Review 排程與 receipt 狀態記錄在[架構文件](docs/architecture.md)。
+Injected receipts 與後續 response observations 只能證明投遞順序。
+這些記錄不能證明 Nudge 導致後續行動。Masters’ Nudge 也不宣稱能提升通用解題
+正確率或測試通過率。Filter 能否產生可辨識的工程品味，需要另以固定證據封包進行
+盲測評估。
 
 雲端 Provider 的資料保留與訓練政策由各 Provider 決定。
 
 ---
 
-## 歷史測試材料
-
-Repository 保留了一次 prerelease A/B snapshot：
-
-- 四個先前未使用的 SWE-bench Verified tasks；
-- Arm A 關閉 plugin hooks，通過 2/4；
-- Arm B 啟用當時的 plugin snapshot，通過 3/4；
-- Arm B 共產生並注入六則 Reviewer findings；
-- 其中一個 task 在兩組之間出現不同結果。
-
-這份 snapshot 來自 commit `ac090a9f34ff76b826ceedb10361f7d7a3bd4ed3`，記錄的是當時版本，不代表目前 source tree 的驗證結果。
-
-四個固定順序 task 只能提供描述性的行為材料。目前材料不足以建立穩定效果、證明泛化，或把其中一個 task 的結果歸因於 Nudge。
-
-Injected receipts 與後續 response observations 只能證明投遞順序。它們不能單獨證明 Nudge 造成後續行動。
-
-完整 protocol、結果、排除項目與宣告範圍：
-
-- [Historical prerelease benchmark](evaluation/README.md)
-
----
-
 ## 開發
 
-Repository 中的 plugin package 由原始碼產生。
-
-送出變更前執行：
+Repository 原始碼是唯一實作來源；版控中的 plugin package 由原始碼產生。
 
 ```bash
 python -m unittest discover -v

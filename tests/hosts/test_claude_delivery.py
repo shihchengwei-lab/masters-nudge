@@ -51,10 +51,12 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
     def test_reviewer_finding_stays_queued_until_wire_output_flushes(self):
         hook = {
             "session_id": "session-1",
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest tests/test_path.py"},
-            "error": "1 failed",
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [{
+                "tool_name": "Bash",
+                "tool_input": {"command": "pytest tests/test_path.py"},
+                "tool_response": "Exit code 1\n1 failed",
+            }],
         }
         outcome = ReviewOutcome(
             status="finding",
@@ -64,8 +66,7 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         with mock.patch.object(
             claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
-            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
-            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            prepared = claude_checkpoint.prepare_hook(hook)
 
         self.assertIsNotNone(prepared)
         session = SessionRef("claude_code", "session-1")
@@ -129,10 +130,12 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
     def test_wire_failure_records_failed_and_releases_delivery_claim(self):
         hook = {
             "session_id": "session-1",
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest tests/test_path.py"},
-            "error": "1 failed",
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [{
+                "tool_name": "Bash",
+                "tool_input": {"command": "pytest tests/test_path.py"},
+                "tool_response": "Exit code 1\n1 failed",
+            }],
         }
         outcome = ReviewOutcome(
             status="finding",
@@ -142,8 +145,7 @@ class TestClaudeCheckpointDeliveryBoundary(unittest.TestCase):
         with mock.patch.object(
             claude_checkpoint.ReviewCore, "review_once", return_value=outcome
         ):
-            self.assertIsNone(claude_checkpoint.prepare_hook(hook))
-            prepared = claude_checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            prepared = claude_checkpoint.prepare_hook(hook)
 
         stream = mock.Mock()
         stream.flush.side_effect = OSError("broken pipe")

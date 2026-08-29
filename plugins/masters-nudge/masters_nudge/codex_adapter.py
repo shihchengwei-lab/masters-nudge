@@ -328,16 +328,17 @@ class CodexAdapter:
         )
         request = ReviewRequest(
             schema_version=1,
-            kind=observed.review_kind,
+            kind="checkpoint",
             reason=checkpoint["reason"],
             session=event.session,
             source_packet=source_packet,
             source_fingerprint=_fingerprint(
-                f"{observed.review_kind}:{checkpoint.get('trigger') or checkpoint['reason']}\n"
+                f"checkpoint:{checkpoint.get('trigger') or checkpoint['reason']}\n"
                 f"{source_packet}"
             ),
             source_event_seq=observed.event_seq,
             trigger=str(checkpoint.get("trigger") or checkpoint["reason"]),
+            hook_event=event.native_event_name,
         )
         try:
             outcome = self.core.review_once(

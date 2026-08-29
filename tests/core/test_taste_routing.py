@@ -10,7 +10,7 @@ import lens_router
 from masters_nudge import checkpoints, prompting, storage
 from masters_nudge.contracts import ReviewRequest, SessionRef, ToolCompleted
 from masters_nudge.core import ReviewCore
-from masters_nudge.provider_contract import parse_reaction_result
+from masters_nudge.provider_contract import parse_reaction_result, parse_route_result
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
@@ -40,7 +40,7 @@ class TasteRouteTests(unittest.TestCase):
     def test_router_prompt_contains_no_full_persona_overlay(self):
         prompt = prompting.build_router_prompt()
 
-        for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack"):
+        for persona in ("linus", "lamport", "carmack"):
             overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                 encoding="utf-8"
             ).strip()
@@ -54,33 +54,23 @@ class TasteRouteTests(unittest.TestCase):
             route=route,
         )
 
-        for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack"):
+        for persona in ("linus", "lamport", "carmack"):
             overlay = (HERE / "personas" / f"{persona}.txt").read_text(
                 encoding="utf-8"
             ).strip()
             self.assertEqual(prompt.count(overlay), 1 if persona == "linus" else 0)
 
-    def test_generator_only_speaks_when_lens_changes_the_next_decision(self):
+    def test_generator_receives_no_router_hypothesis(self):
         route = lens_router.ReviewRoute("automatic", "linus", "automatic_router")
         prompt = prompting.build_system_prompt(
             prompt_file=HERE / "buddy-prompt.txt",
             persona_dir=HERE / "personas",
             route=route,
-            route_decision="如何決定欄位責任",
         )
 
-        self.assertNotIn("already decided", prompt)
-        self.assertIn(
-            "Existing implementation is evidence of the current choice",
-            prompt,
-        )
-        self.assertIn(
-            "Only return a finding when the selected Lens would change what "
-            "the main agent should decide next",
-            prompt,
-        )
-        self.assertIn("Otherwise return `no_finding`", prompt)
-        self.assertNotIn("preserve, redirect, or narrow", prompt)
+        self.assertNotIn("ROUTING HYPOTHESIS", prompt)
+        self.assertNotIn("如何決定欄位責任", prompt)
+        self.assertIn("# LENS CONTEXT: linus", prompt)
 
     def test_structured_finding_carries_the_selected_lens(self):
         parsed = parse_reaction_result(
@@ -97,9 +87,9 @@ class TasteRouteTests(unittest.TestCase):
         self.assertEqual(len(finding), 39)
         self.assertLessEqual(len(finding), prompting.MAX_REACTION_CHARS)
 
-    def test_semantic_contract_miss_is_delivered_and_observable(self):
+    def test_semantic_wording_is_not_mechanically_judged(self):
         raw = (
-            '{"status":"finding","effective_lens":"beck",'
+            '{"status":"finding","effective_lens":"linus",'
             '"finding":"先執行新增的回歸測試再收尾。"}'
         )
 
@@ -108,22 +98,17 @@ class TasteRouteTests(unittest.TestCase):
         self.assertEqual(parsed["status"], "finding")
         self.assertEqual(parsed["finding"], "先執行新增的回歸測試再收尾。")
         self.assertEqual(parsed["raw_output"], raw)
-        self.assertEqual(
-            parsed["contract_deviations"],
-            ["tradeoff_shape_mismatch"],
-        )
+        self.assertNotIn("contract_deviations", parsed)
 
     def test_router_decision_does_not_use_the_nudge_output_contract(self):
-        parsed = parse_reaction_result(
-            '{"status":"finding","effective_lens":"linus",'
-            '"finding":"如何記錄輸入值的來源"}',
-            require_taste=False,
+        parsed = parse_route_result(
+            '{"status":"finding","effective_lens":"linus"}'
         )
 
         self.assertEqual(parsed["status"], "finding")
-        self.assertEqual(parsed["contract_deviations"], [])
+        self.assertEqual(parsed["finding"], "")
 
-    def test_over_52_character_finding_is_delivered_and_observable(self):
+    def test_over_52_character_finding_is_rejected(self):
         finding = "保留清楚的責任邊界與明確來源；別讓中介層持續替上下游猜測所有未宣告的意圖，因為隱性補償會把真正的介面錯誤長期藏起來並向更多呼叫端擴散。"
 
         parsed = parse_reaction_result(
@@ -131,9 +116,7 @@ class TasteRouteTests(unittest.TestCase):
             f'"finding":"{finding}"}}'
         )
 
-        self.assertEqual(parsed["status"], "finding")
-        self.assertEqual(parsed["finding"], finding)
-        self.assertIn("over_52_characters", parsed["contract_deviations"])
+        self.assertEqual(parsed["status"], "error")
 
     def test_no_finding_has_no_fake_lens(self):
         parsed = parse_reaction_result(
@@ -155,7 +138,6 @@ class TasteRouteTests(unittest.TestCase):
                     return {
                         "status": "finding",
                         "effective_lens": "linus",
-                        "finding": "是否直接記錄 PK 的來源",
                         "usage": {},
                     }
                 return {
@@ -222,7 +204,7 @@ class TasteRouteTests(unittest.TestCase):
         self.assertEqual(calls[0][1], "reaction-schema.json")
         self.assertIn("Linus Torvalds", calls[0][0])
 
-    def test_core_delivers_semantic_contract_miss_when_dispatch_bypasses_parser(self):
+    def test_core_delivers_structurally_valid_wording_when_dispatch_bypasses_parser(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             (root / "config.json").write_text('{"stage":"review"}\n', encoding="utf-8")
@@ -249,10 +231,7 @@ class TasteRouteTests(unittest.TestCase):
 
         self.assertEqual(outcome.status, "finding")
         self.assertEqual(outcome.finding, "先跑完整測試再收尾。")
-        self.assertEqual(
-            outcome.contract_deviations,
-            ("tradeoff_shape_mismatch",),
-        )
+        self.assertFalse(hasattr(outcome, "contract_deviations"))
 
     def test_automatic_route_uses_the_shared_remaining_deadline(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -265,7 +244,6 @@ class TasteRouteTests(unittest.TestCase):
                     return {
                         "status": "finding",
                         "effective_lens": "linus",
-                        "finding": "輸入來源的表示方式",
                         "usage": {},
                     }
                 return {
@@ -304,7 +282,6 @@ class TasteRouteTests(unittest.TestCase):
                     return {
                         "status": "finding",
                         "effective_lens": "linus",
-                        "finding": "輸入來源的表示方式",
                         "raw_output": '{"stage":"router"}',
                         "usage": {},
                     }
@@ -313,7 +290,6 @@ class TasteRouteTests(unittest.TestCase):
                     "effective_lens": "linus",
                     "finding": "先跑完整測試再收尾。",
                     "raw_output": '{"stage":"generator"}',
-                    "contract_deviations": ["tradeoff_shape_mismatch"],
                     "usage": {},
                 }
 
@@ -342,10 +318,7 @@ class TasteRouteTests(unittest.TestCase):
             ["router", "generator"],
         )
         self.assertEqual(diagnostics[0]["raw_output"], '{"stage":"router"}')
-        self.assertEqual(
-            diagnostics[1]["contract_deviations"],
-            ["tradeoff_shape_mismatch"],
-        )
+        self.assertNotIn("contract_deviations", diagnostics[1])
 
     def test_automatic_review_sums_router_and_generator_usage(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -359,7 +332,6 @@ class TasteRouteTests(unittest.TestCase):
                     return {
                         "status": "finding",
                         "effective_lens": "linus",
-                        "finding": "輸入來源的表示方式",
                         "usage": {"input_tokens": 10, "output_tokens": 2},
                     }
                 return {
@@ -422,53 +394,6 @@ class TasteTimingTests(unittest.TestCase):
         )
 
         self.assertEqual(checkpoints.evidence_category(event), "change")
-    def test_first_semantic_change_opens_the_taste_window(self):
-        review = checkpoints.classify_strategy(
-            {
-                "last_strategy_event_seq": 0,
-                "midturn_review_attempts": 0,
-                "recent": [
-                    {"event_seq": 1, "evidence_category": "change", "failed": False}
-                ],
-            }
-        )
-
-        self.assertEqual(review["trigger"], "first-change")
-
-    def test_successful_validation_does_not_open_a_review_window(self):
-        review = checkpoints.classify_strategy(
-            {
-                "last_strategy_event_seq": 0,
-                "midturn_review_attempts": 1,
-                "recent": [
-                    {"event_seq": 1, "evidence_category": "change", "failed": False},
-                    {
-                        "event_seq": 2,
-                        "evidence_category": "verification",
-                        "failed": False,
-                    },
-                ],
-            }
-        )
-
-        self.assertIsNone(review)
-
-    def test_goal_complete_does_not_create_a_late_nudge(self):
-        review = checkpoints.classify_strategy(
-            {
-                "last_strategy_event_seq": 0,
-                "midturn_review_attempts": 1,
-                "recent": [
-                    {
-                        "event_seq": 1,
-                        "goal_transition": "complete",
-                        "evidence_category": "",
-                    }
-                ],
-            }
-        )
-
-        self.assertIsNone(review)
 
 
 if __name__ == "__main__":

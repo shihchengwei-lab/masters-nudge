@@ -360,9 +360,9 @@ class LongGoalReplayTests(unittest.TestCase):
             adapter.process(event)
 
             self.assertEqual(len(core.calls), 1)
-            self.assertEqual(core.calls[0].trigger, "first-change")
+            self.assertEqual(core.calls[0].trigger, "evidence-ready")
 
-    def test_repeated_command_family_without_state_change_does_not_review(self):
+    def test_each_new_verification_result_opens_one_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -379,9 +379,12 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"exit_code": 0, "output": f"pass {index}"},
                     }
                 )
-            self.assertEqual(core.calls, [])
+            self.assertEqual(len(core.calls), 3)
+            self.assertEqual(
+                {call.trigger for call in core.calls}, {"evidence-ready"}
+            )
 
-    def test_second_same_surface_failure_triggers_one_strategy_review(self):
+    def test_each_failure_result_opens_one_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -398,10 +401,10 @@ class LongGoalReplayTests(unittest.TestCase):
                         "error": output,
                     }
                 )
-            self.assertEqual([call.kind for call in core.calls], ["strategy"])
-            self.assertEqual(core.calls[-1].trigger, "repeated-failure-family")
+            self.assertEqual([call.kind for call in core.calls], ["checkpoint"] * 2)
+            self.assertEqual(core.calls[-1].trigger, "evidence-ready")
 
-    def test_first_change_reviews_once_without_progress_reviews(self):
+    def test_each_new_change_and_verification_can_be_reviewed(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -420,17 +423,17 @@ class LongGoalReplayTests(unittest.TestCase):
 
             adapter.process(event("apply_patch", "apply_patch first", "changed"))
             adapter.process(event("exec_command", "python -m pytest tests/a.py", "1 passed"))
-            self.assertEqual([call.trigger for call in core.calls], ["first-change"])
+            self.assertEqual([call.trigger for call in core.calls], ["evidence-ready"] * 2)
 
             adapter.process(event("apply_patch", "apply_patch second", "changed"))
             adapter.process(event("exec_command", "python -m pytest tests/b.py", "1 passed"))
-            self.assertEqual(len(core.calls), 1)
+            self.assertEqual(len(core.calls), 4)
 
             adapter.process(event("apply_patch", "apply_patch third", "changed"))
             adapter.process(event("exec_command", "python -m pytest tests/c.py", "1 passed"))
             self.assertEqual(
                 [call.trigger for call in core.calls],
-                ["first-change"],
+                ["evidence-ready"] * 6,
             )
 
     def test_goal_completion_does_not_create_a_late_review(self):
@@ -479,7 +482,7 @@ class LongGoalReplayTests(unittest.TestCase):
             self.assertEqual(core.calls, [])
             self.assertIsNone(output)
 
-    def test_eight_healthy_events_do_not_schedule_without_semantic_change(self):
+    def test_each_new_semantic_result_can_open_a_review(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(settings_for(root))
@@ -496,13 +499,13 @@ class LongGoalReplayTests(unittest.TestCase):
                         "tool_response": {"success": True},
                     }
                 )
-            self.assertEqual(core.calls, [])
+            self.assertEqual(len(core.calls), 8)
+            self.assertEqual(
+                {call.trigger for call in core.calls}, {"evidence-ready"}
+            )
 
     def test_manual_stage_forces_each_existing_lens(self):
         cases = (
-            ("design", "jeff"),
-            ("build", "beck"),
-            ("evolve", "fowler"),
             ("review", "linus"),
             ("reliability", "lamport"),
             ("performance", "carmack"),

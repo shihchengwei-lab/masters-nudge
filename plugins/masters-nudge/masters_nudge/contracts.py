@@ -8,7 +8,6 @@ from typing import Literal, TypeAlias
 
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
-ReviewKind: TypeAlias = Literal["checkpoint", "strategy"]
 ReviewStatus: TypeAlias = Literal["finding", "no_finding", "error"]
 
 
@@ -55,13 +54,14 @@ class TurnStopped:
 @dataclass(frozen=True)
 class ReviewRequest:
     schema_version: int
-    kind: ReviewKind
+    kind: Literal["checkpoint"]
     reason: str
     session: SessionRef
     source_packet: str
     source_fingerprint: str
     source_event_seq: int = 0
     trigger: str = ""
+    hook_event: str = ""
 
 
 @dataclass(frozen=True)
@@ -74,7 +74,6 @@ class ReviewOutcome:
     latency_ms: int = 0
     usage: dict[str, int] = field(default_factory=dict)
     reaction_ts: str = ""
-    contract_deviations: tuple[str, ...] = ()
     error_stage: str = ""
     error_kind: str = ""
 

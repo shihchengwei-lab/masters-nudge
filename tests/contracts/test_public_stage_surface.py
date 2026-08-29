@@ -22,22 +22,16 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
         self.assertEqual(
             [
                 "Automatic · 依目前決策壓力選擇濾鏡",
-                "Design · 系統結構、因果與成本",
-                "Build · 小步驟、測試與回饋",
-                "Evolve · 重構與變更成本",
-                "Review · 簡化與責任歸屬",
-                "Reliability · 狀態、順序與失敗",
-                "Performance · 執行路徑與效能",
+                "Simplicity · 必要複雜度與單一責任",
+                "Reliability · 不變量、順序與部分失敗",
+                "Performance · 實際執行成本與少做工作",
             ],
             buddy_window.selector_options(),
         )
         expected = {
-            "jeff": "● Design · 系統結構、因果與成本",
-            "beck": "● Build · 小步驟、測試與回饋",
-            "fowler": "● Evolve · 重構與變更成本",
-            "linus": "● Review · 簡化與責任歸屬",
-            "lamport": "● Reliability · 狀態、順序與失敗",
-            "carmack": "● Performance · 執行路徑與效能",
+            "linus": "● Simplicity · 必要複雜度與單一責任",
+            "lamport": "● Reliability · 不變量、順序與部分失敗",
+            "carmack": "● Performance · 實際執行成本與少做工作",
         }
         for persona, label in expected.items():
             with self.subTest(persona=persona):
@@ -67,11 +61,8 @@ class TestStageOnlyPublicSurface(unittest.TestCase):
             invalid.stage, invalid.persona, invalid.source
         ))
 
-    def test_stage_environment_accepts_all_six_public_lenses(self):
+    def test_stage_environment_accepts_three_public_lenses(self):
         expected = {
-            "design": "jeff",
-            "build": "beck",
-            "evolve": "fowler",
             "review": "linus",
             "reliability": "lamport",
             "performance": "carmack",

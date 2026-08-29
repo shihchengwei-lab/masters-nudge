@@ -63,24 +63,16 @@ BUBBLE_BORDER = "#4a4a6a"
 TS_FG = "#6a6a8a"
 
 LENS_BADGES = {
-    "jeff": (persona_config.persona_label("jeff"), "#56CFE1"),
     "linus": (persona_config.persona_label("linus"), "#FF6B6B"),
-    "fowler": (persona_config.persona_label("fowler"), "#C77DFF"),
-    "beck": (persona_config.persona_label("beck"), "#80ED99"),
     "lamport": (persona_config.persona_label("lamport"), "#72A1FF"),
     "carmack": (persona_config.persona_label("carmack"), "#FFB86C"),
-    "evaluation": ("Shadow evaluation", "#FFD166"),
 }
 UNKNOWN_LENS_BADGE = ("未記錄", "#A0A0B8")
 
 LENS_BACKGROUNDS = {
-    "jeff": "#17343B",
     "linus": "#3A2228",
-    "fowler": "#30233D",
-    "beck": "#1D3528",
     "lamport": "#222B4A",
     "carmack": "#3A2E1D",
-    "evaluation": "#3A321D",
 }
 
 

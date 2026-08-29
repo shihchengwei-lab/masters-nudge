@@ -17,7 +17,7 @@ import review_telemetry
 import claude_checkpoint as checkpoint_hook
 import claude_stop as buddy
 import hook_entry
-from masters_nudge import checkpoints, providers, storage
+from masters_nudge import evidence, providers, storage
 from masters_nudge.codex_adapter import CodexAdapter, build_hook_output, normalize_event
 from masters_nudge.contracts import (
     PromptSubmitted,
@@ -155,29 +155,26 @@ class NamespacedStorageTests(unittest.TestCase):
             self.assertEqual(entry["workspace"], os.path.normcase(str(root.resolve())))
 
 class ClaudeCompatibilityTests(unittest.TestCase):
-    def test_both_hosts_trigger_validated_progress_after_the_same_semantic_cycle(self):
-        claude_events = [
-            checkpoint_hook.normalize_tool_event(
-                {
-                    "hook_event_name": "PostToolUse",
-                    "session_id": "claude-session",
-                    "turn_id": "turn",
-                    "tool_name": "Edit",
-                    "tool_input": {"file_path": "module.py"},
-                    "tool_response": "updated",
-                }
-            ),
-            checkpoint_hook.normalize_tool_event(
-                {
-                    "hook_event_name": "PostToolUse",
-                    "session_id": "claude-session",
-                    "turn_id": "turn",
-                    "tool_name": "Bash",
-                    "tool_input": {"command": "python -m unittest tests.test_module"},
-                    "tool_response": "OK",
-                }
-            ),
-        ]
+    def test_claude_batches_while_codex_uses_approximate_single_tool_points(self):
+        claude_events = checkpoint_hook.normalize_tool_batch(
+            {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "claude-session",
+                "turn_id": "turn",
+                "tool_calls": [
+                    {
+                        "tool_name": "Edit",
+                        "tool_input": {"file_path": "module.py"},
+                        "tool_response": "updated",
+                    },
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": "python -m unittest tests.test_module"},
+                        "tool_response": "OK",
+                    },
+                ],
+            }
+        )
         codex_events = [
             normalize_event(
                 {
@@ -201,30 +198,22 @@ class ClaudeCompatibilityTests(unittest.TestCase):
             ),
         ]
 
-        triggers = []
-        for events in (claude_events, codex_events):
-            categories = [
-                checkpoints.evidence_category(event)
-                for event in events
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            claude = evidence.observe_tool_batch(root, claude_events)
+            codex = [
+                evidence.observe_tool_event(root, event)
+                for event in codex_events
                 if isinstance(event, ToolCompleted)
             ]
-            progress = {
-                "last_strategy_event_seq": 0,
-                "midturn_review_attempts": 0,
-                "recent": [
-                    {
-                        "event_seq": index,
-                        "meaningful": True,
-                        "failed": category == "failure",
-                        "evidence_category": category,
-                    }
-                    for index, category in enumerate(categories, start=1)
-                ],
-            }
-            review = checkpoints.classify_strategy(progress)
-            triggers.append(review["trigger"] if review else "")
 
-        self.assertEqual(triggers, ["first-change", "first-change"])
+        self.assertEqual(claude.event_seq, 1)
+        self.assertEqual(claude.checkpoint["trigger"], "evidence-ready")
+        self.assertEqual([item.event_seq for item in codex], [1, 2])
+        self.assertEqual(
+            [item.checkpoint["trigger"] for item in codex],
+            ["evidence-ready", "evidence-ready"],
+        )
 
     def test_stop_adapter_does_not_call_provider_or_write_a_new_reaction(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -533,6 +522,7 @@ class CodexAdapterTests(unittest.TestCase):
                     "error": {"exit_code": 1, "output": "1 failed"},
                 }
             )
+            calls_before_stop = len(core.calls)
             output = adapter.process(
                 {
                     "hook_event_name": "Stop",
@@ -544,24 +534,24 @@ class CodexAdapterTests(unittest.TestCase):
                 }
             )
         self.assertIsNone(output)
-        self.assertEqual(core.calls, [])
+        self.assertEqual(len(core.calls), calls_before_stop)
         session = SessionRef("codex_cli", "s", "t", str(self.root))
         state = storage.load_turn_state(self.settings.paths.data_dir, session)
         self.assertIn("token check", str(state.get("task_sources") or {}))
 
-    def test_repeated_test_failure_returns_additional_context(self):
+    def test_test_failure_returns_additional_context_at_the_approximate_point(self):
         core = FakeCore(
             self.settings,
             ReviewOutcome(
                 "finding",
                 "失敗已證明目前步驟的前提不成立。",
-                "beck",
+                "linus",
                 reaction_ts="checkpoint-reaction",
             ),
         )
         adapter = CodexAdapter(core)  # type: ignore[arg-type]
         with mock.patch.dict(os.environ, {}, clear=True):
-            first = adapter.process(
+            output = adapter.process(
                 {
                     "hook_event_name": "PostToolUse",
                     "session_id": "s",
@@ -572,25 +562,14 @@ class CodexAdapterTests(unittest.TestCase):
                     "tool_response": {"exit_code": 1, "output": "1 failed"},
                 }
             )
-            output = adapter.process(
-                {
-                    "hook_event_name": "PostToolUse",
-                    "session_id": "s",
-                    "turn_id": "t",
-                    "cwd": str(self.root),
-                    "tool_name": "shell_command",
-                    "tool_input": {"command": "pytest -vv tests/test_login.py"},
-                    "tool_response": {"exit_code": 1, "output": "2 failed"},
-                }
-            )
-        self.assertIsNone(first)
+        self.assertIsNotNone(output)
         self.assertEqual(
             output["hookSpecificOutput"]["hookEventName"], "PostToolUse"
         )
         self.assertIn("失敗已證明", output["hookSpecificOutput"]["additionalContext"])
         request, persist, timeout = core.calls[0]
-        self.assertEqual(request.reason, "strategy-review")
-        self.assertEqual(request.trigger, "repeated-failure-family")
+        self.assertEqual(request.reason, "evidence-review")
+        self.assertEqual(request.trigger, "evidence-ready")
         self.assertNotIn("review_event:", request.source_packet)
         self.assertIn("[current result]", request.source_packet)
         self.assertIn("1 failed", request.source_packet)
@@ -673,12 +652,7 @@ class CodexAdapterTests(unittest.TestCase):
             "tool_response": {"exit_code": 1, "output": "1 failed"},
         }
         with mock.patch.dict(os.environ, {}, clear=True):
-            self.assertIsNone(adapter.process(payload))
-            output = adapter.process({
-                **payload,
-                "tool_input": {"command": "pytest -vv tests/test_math.py"},
-                "tool_response": {"exit_code": 1, "output": "2 failed"},
-            })
+            output = adapter.process(payload)
         session = SessionRef("codex_cli", "s", "t", str(self.root))
         self.assertEqual(
             {}, storage.load_delivery_state(self.settings.paths.data_dir, session)["receipts"]
@@ -698,9 +672,9 @@ class CodexAdapterTests(unittest.TestCase):
             adapter.process(followup_payload)
         delivery = storage.load_delivery_state(self.settings.paths.data_dir, session)
         receipt = next(iter(delivery["receipts"].values()))
-        self.assertEqual(receipt["response_observation"]["kind"], "semantic-event")
+        self.assertEqual(receipt["response_observation"]["kind"], "semantic-batch")
         self.assertEqual(
-            receipt["response_observation"]["observation"]["evidence_category"],
+            receipt["response_observation"]["observation"]["evidence_categories"],
             "verification",
         )
 
@@ -795,12 +769,7 @@ class CodexAdapterTests(unittest.TestCase):
         }
 
         with mock.patch.dict(os.environ, {}, clear=True):
-            self.assertIsNone(adapter.process(payload))
-            first = adapter.process({
-                **payload,
-                "tool_input": {"command": "pytest -vv tests/test_retry.py"},
-                "tool_response": {"exit_code": 1, "output": "2 failed"},
-            })
+            first = adapter.process(payload)
             with self.assertRaises(OSError):
                 hook_entry._emit_output(first, self.settings, BrokenStream())
             later = adapter.process({
@@ -1248,7 +1217,7 @@ class GrokProviderTests(unittest.TestCase):
 
     def test_grok_runs_one_tool_free_schema_constrained_turn(self):
         payload = json.dumps(
-            {"result": {"status": "finding", "effective_lens": "beck", "finding": "固定停止條件；別繼續擴張，因為現有證據已足夠。"}},
+            {"result": {"status": "finding", "effective_lens": "linus", "finding": "固定停止條件；別繼續擴張，因為現有證據已足夠。"}},
             ensure_ascii=False,
             indent=2,
         )
@@ -1369,12 +1338,12 @@ class GrokProviderTests(unittest.TestCase):
         raw = json.dumps(
             {
                 "text": json.dumps(
-                    {"status": "finding", "effective_lens": "beck", "finding": "保留原始失敗；別先改判定，因為需要最短回饋。"},
+                    {"status": "finding", "effective_lens": "linus", "finding": "保留原始失敗；別先改判定，因為需要最短回饋。"},
                     ensure_ascii=False,
                 ),
                 "structuredOutput": {
                     "status": "finding",
-                    "effective_lens": "beck",
+                    "effective_lens": "linus",
                     "finding": "保留原始失敗；別先改判定，因為需要最短回饋。",
                 },
                 "usage": {

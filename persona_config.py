@@ -28,21 +28,16 @@ class StageSpec:
 
 
 LENS_PERSONAS = {
-    "jeff": "Jeff Dean",
     "linus": "Linus Torvalds",
-    "fowler": "Martin Fowler",
-    "beck": "Kent Beck",
     "lamport": "Leslie Lamport",
     "carmack": "John Carmack",
 }
 STAGE_SPECS = {
-    "design": StageSpec("Design", "系統結構、因果與成本", "jeff"),
-    "build": StageSpec("Build", "小步驟、測試與回饋", "beck"),
-    "evolve": StageSpec("Evolve", "重構與變更成本", "fowler"),
-    "review": StageSpec("Review", "簡化與責任歸屬", "linus"),
-    "reliability": StageSpec("Reliability", "狀態、順序與失敗", "lamport"),
-    "performance": StageSpec("Performance", "執行路徑與效能", "carmack"),
+    "review": StageSpec("Simplicity", "必要複雜度與單一責任", "linus"),
+    "reliability": StageSpec("Reliability", "不變量、順序與部分失敗", "lamport"),
+    "performance": StageSpec("Performance", "實際執行成本與少做工作", "carmack"),
 }
+RETIRED_STAGES = frozenset({"design", "build", "evolve"})
 PERSONA_NAMES = dict(LENS_PERSONAS)
 PERSONA_PUBLIC_LABELS = {
     spec.persona: spec.label for spec in STAGE_SPECS.values()
@@ -88,6 +83,8 @@ def resolve_stage(
             return StageSelection(
                 env_stage, STAGE_SPECS[env_stage].persona, "environment"
             )
+        if env_stage in RETIRED_STAGES:
+            return StageSelection(AUTOMATIC_STAGE, "", "retired_environment")
         return StageSelection(AUTOMATIC_STAGE, "", "invalid_environment")
 
     try:
@@ -104,6 +101,8 @@ def resolve_stage(
         return StageSelection(
             config_stage, STAGE_SPECS[config_stage].persona, "config"
         )
+    if config_stage in RETIRED_STAGES:
+        return StageSelection(AUTOMATIC_STAGE, "", "retired_config")
     return StageSelection(AUTOMATIC_STAGE, "", "default")
 
 

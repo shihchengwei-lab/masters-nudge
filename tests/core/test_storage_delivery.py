@@ -21,11 +21,7 @@ class StorageDeliveryTests(unittest.TestCase):
             storage.record_tool_progress(
                 data_dir,
                 old,
-                failed=False,
-                evidence_category="change",
-            )
-            storage.mark_strategy_reviewed(
-                data_dir, old, event_seq=1, midturn=True
+                event_fingerprint="old-event",
             )
             storage.append_reaction(
                 data_dir,
@@ -41,9 +37,7 @@ class StorageDeliveryTests(unittest.TestCase):
             reactions = storage.read_reaction_entries(data_dir, new)
 
         self.assertEqual(progress["event_seq"], 0)
-        self.assertEqual(progress["last_strategy_event_seq"], 0)
-        self.assertEqual(progress["midturn_review_attempts"], 0)
-        self.assertEqual(progress["recent"], [])
+        self.assertEqual(progress["last_event_fingerprint"], "")
         self.assertNotIn("goal_objective", progress)
         self.assertEqual([entry["reaction"] for entry in reactions], ["old finding"])
 
@@ -55,23 +49,12 @@ class StorageDeliveryTests(unittest.TestCase):
             progress = storage.record_tool_progress(
                 data_dir,
                 session,
-                failed=True,
-                evidence_category="failure",
-                failure_family="validation:auth",
                 event_fingerprint="event-1",
             )
 
-        self.assertEqual(
-            {
-                "event_seq",
-                "failed",
-                "goal_transition",
-                "evidence_category",
-                "failure_family",
-                "event_fingerprint",
-            },
-            set(progress["recent"][0]),
-        )
+        self.assertEqual(progress["event_seq"], 1)
+        self.assertEqual(progress["last_event_fingerprint"], "event-1")
+        self.assertNotIn("recent", progress)
         self.assertNotIn("goal_objective", progress)
 
     def test_new_turn_does_not_confirm_an_old_emitted_finding(self):

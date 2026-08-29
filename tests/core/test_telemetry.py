@@ -22,6 +22,7 @@ class ReviewTelemetryTests(unittest.TestCase):
                     "model": "model-1",
                     "input_chars": 20,
                     "latency_ms": 30,
+                    "hook_event": "PostToolBatch",
                     "usage": {"input_tokens": 10},
                     "finding": "must never be persisted",
                     "shadow_candidates": ["no_new_evidence"],
@@ -38,6 +39,7 @@ class ReviewTelemetryTests(unittest.TestCase):
 
             self.assertEqual(result, {"recorded": True})
             self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["hook_event"], "PostToolBatch")
             self.assertNotIn("finding", records[0])
             self.assertNotIn("shadow_candidates", records[0])
             self.assertFalse((root / "shadow-evaluation.json").exists())

@@ -39,7 +39,7 @@ class TestBranding(unittest.TestCase):
         import claude_checkpoint as checkpoint
 
         output = checkpoint.build_hook_output(
-            "PostToolUseFailure", "測試結果跟宣告不一致"
+            "PostToolBatch", "測試結果跟宣告不一致"
         )
         context = output["hookSpecificOutput"]["additionalContext"]
         self.assertEqual(context, "獨立第二意見：\n測試結果跟宣告不一致")
@@ -83,9 +83,9 @@ class TestBranding(unittest.TestCase):
 
         colors = [
             buddy_window.lens_background(persona)
-            for persona in ("jeff", "linus", "fowler", "beck", "lamport", "carmack")
+            for persona in ("linus", "lamport", "carmack")
         ]
-        self.assertEqual(len(set(colors)), 6)
+        self.assertEqual(len(set(colors)), 3)
         self.assertEqual(buddy_window.lens_background("unknown"), buddy_window.BG)
         self.assertEqual(buddy_window.lens_background("unknown"), buddy_window.BG)
         for color in colors:
@@ -94,18 +94,12 @@ class TestBranding(unittest.TestCase):
 
 class TestPersonaPromptSelection(unittest.TestCase):
     PERSONAS = {
-        "jeff": "Jeff Dean",
         "linus": "Linus Torvalds",
-        "fowler": "Martin Fowler",
-        "beck": "Kent Beck",
         "lamport": "Leslie Lamport",
         "carmack": "John Carmack",
     }
     PERSONA_CONTEXT_HASHES = {
-        "beck": "023fea5ac9b018acf7b6677f381bb88791d9770fd1ccd387faf87d06655c0321",
         "carmack": "5bc75ce9a99c2390287a59e42865f6b0d9e8a8334b4ac6e7d0321f9db0065023",
-        "fowler": "4240eb302181121533ef1380221524a544c10191d7d338c1ae15629f2cc92d51",
-        "jeff": "51c4eaddbe12d7567f098f342a15d16616a3c9201339d958bd6de79744d07796",
         "lamport": "f423252423dbd4580aa30e9c5203ff2817d2c575ba631b5401bded871560a9a9",
         "linus": "f955b3d61dc5d2f1158b7ff79ffd3e404cd7c8798ccab46992836e58a0f4d482",
     }
@@ -138,17 +132,11 @@ class TestPersonaPromptSelection(unittest.TestCase):
 
     def test_each_persona_has_a_distinct_focus_context(self):
         concept_anchors = {
-            "jeff": "constraint、ownership 或 source of truth",
-            "beck": "從假設到回饋的距離",
-            "fowler": "某份知識可能沒有清楚的家",
             "linus": "把決定往後延",
             "lamport": "所有可能發生的事件順序",
             "carmack": "抽象描述不會讓成本消失",
         }
         scene_anchors = {
-            "jeff": "換一支顏色的筆",
-            "beck": "未來工作全部翻到背面",
-            "fowler": "頁邊貼上一張小標籤",
             "linus": "用粗筆寫下「多了什麼？」",
             "lamport": "卡的邊緣仔細對齊",
             "carmack": "把架構圖推到一旁",
@@ -185,8 +173,6 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 self.assertIn("不要描述檢查流程", output_contract)
 
     def test_each_persona_output_contract_has_two_short_positive_examples(self):
-        from masters_nudge.provider_contract import finding_contract_deviations
-
         for persona in self.PERSONAS:
             with self.subTest(persona=persona):
                 overlay = (HERE / "personas" / f"{persona}.txt").read_text(
@@ -200,7 +186,7 @@ class TestPersonaPromptSelection(unittest.TestCase):
                 ]
                 self.assertEqual(len(examples), 2)
                 for example in examples:
-                    self.assertEqual(finding_contract_deviations(example), [])
+                    self.assertLessEqual(len(example), 52)
 
     def test_persona_directory_contains_exactly_the_supported_overlays(self):
         files = {path.stem for path in (HERE / "personas").glob("*.txt")}
@@ -216,26 +202,15 @@ class TestPersonaPromptSelection(unittest.TestCase):
         )
         self.assertNotIn("這輪沒看到明顯問題。", base_prompt)
 
-    def test_base_prompt_only_speaks_when_lens_changes_the_next_decision(self):
+    def test_base_prompt_defines_identity_view_and_output_only(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(base_prompt.split())
 
-        self.assertIn(
-            "Existing implementation is evidence of a current choice",
-            normalized,
-        )
-        self.assertIn(
-            "Only return a finding when the selected Lens would change what "
-            "the main agent should decide next",
-            normalized,
-        )
-        self.assertIn(
-            "replace the current direction, remove an unnecessary part, or "
-            "move responsibility to a better owner",
-            normalized,
-        )
-        self.assertIn("Otherwise return `no_finding`", normalized)
-        self.assertNotIn("preserve, redirect, or narrow", normalized)
+        self.assertIn("# ROLE", normalized)
+        self.assertIn("# VIEW", normalized)
+        self.assertIn("# OUTPUT", normalized)
+        self.assertNotIn("change what the main agent should decide", normalized)
+        self.assertNotIn("underexplored", normalized)
 
     def test_base_prompt_examples_do_not_use_old_imperative_phrases(self):
         base_prompt = (HERE / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -260,11 +235,10 @@ class TestPersonaPromptSelection(unittest.TestCase):
             task_sources="ISSUE.md\n登入逾時時不得遺失 session",
         )
 
-        self.assertIn("Use only the supplied packet", base_prompt)
-        self.assertIn("original task", base_prompt)
-        self.assertIn("current observable result", base_prompt)
-        self.assertIn("Recent injected Nudges", base_prompt)
-        self.assertIn("a separate exclusion set", base_prompt)
+        self.assertIn("only the supplied bounded packet", base_prompt)
+        self.assertIn("task anchor", base_prompt)
+        self.assertIn("observable", base_prompt)
+        self.assertNotIn("Recent injected Nudges", base_prompt)
         self.assertIn("[contract]", packet)
         self.assertIn("[current result]", packet)
         self.assertNotIn("runtime_output:", packet)
@@ -589,12 +563,12 @@ class TestCheckpointDelivery(unittest.TestCase):
 
     def test_output_is_labeled_nudge_additional_context(self):
         result = self.checkpoint.build_hook_output(
-            "PostToolUseFailure", "先確認失敗根因。"
+            "PostToolBatch", "先確認失敗根因。"
         )
 
         self.assertEqual(
             result["hookSpecificOutput"]["hookEventName"],
-            "PostToolUseFailure",
+            "PostToolBatch",
         )
         self.assertEqual(
             result["hookSpecificOutput"]["additionalContext"],
@@ -608,10 +582,12 @@ class TestCheckpointDelivery(unittest.TestCase):
     def test_reviewer_failure_returns_no_output_and_closes_attempt(self):
         hook = {
             "session_id": "session-1",
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest tests/test_path.py"},
-            "error": "1 failed",
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [{
+                "tool_name": "Bash",
+                "tool_input": {"command": "pytest tests/test_path.py"},
+                "tool_response": "Exit code 1\n1 failed",
+            }],
         }
         from masters_nudge.contracts import ReviewOutcome
 
@@ -621,7 +597,7 @@ class TestCheckpointDelivery(unittest.TestCase):
             return_value=ReviewOutcome(status="error"),
         ):
             self.assertIsNone(self.checkpoint.prepare_hook(hook))
-            result = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            result = self.checkpoint.prepare_hook(hook)
 
         self.assertIsNone(result)
         from masters_nudge import storage
@@ -642,10 +618,12 @@ class TestCheckpointDelivery(unittest.TestCase):
     def test_successful_nudge_is_deduplicated(self):
         hook = {
             "session_id": "session-1",
-            "hook_event_name": "PostToolUseFailure",
-            "tool_name": "Bash",
-            "tool_input": {"command": "pytest tests/test_path.py"},
-            "error": "1 failed",
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [{
+                "tool_name": "Bash",
+                "tool_input": {"command": "pytest tests/test_path.py"},
+                "tool_response": "Exit code 1\n1 failed",
+            }],
         }
         from masters_nudge.contracts import ReviewOutcome
 
@@ -658,15 +636,14 @@ class TestCheckpointDelivery(unittest.TestCase):
                 reaction_ts="reaction-1",
             ),
         ) as review:
-            self.assertIsNone(self.checkpoint.prepare_hook(hook))
-            first = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
-            second = self.checkpoint.prepare_hook({**hook, "error": "2 failed"})
+            first = self.checkpoint.prepare_hook(hook)
+            second = self.checkpoint.prepare_hook(hook)
 
         self.assertIsNotNone(first)
         self.assertIsNone(second)
         review.assert_called_once()
 
-    def test_claude_reviews_the_first_change_before_validation(self):
+    def test_claude_reviews_one_native_batch_once(self):
         from masters_nudge import storage
         from masters_nudge.contracts import ReviewOutcome, SessionRef
 
@@ -679,10 +656,19 @@ class TestCheckpointDelivery(unittest.TestCase):
         hook = {
             "session_id": "strategy",
             "cwd": self.tmpdir.name,
-            "hook_event_name": "PostToolUse",
-            "tool_name": "Edit",
-            "tool_input": {"file_path": "app.py"},
-            "tool_response": {"success": True},
+            "hook_event_name": "PostToolBatch",
+            "tool_calls": [
+                {
+                    "tool_name": "Edit",
+                    "tool_input": {"file_path": "app.py"},
+                    "tool_response": "updated",
+                },
+                {
+                    "tool_name": "Edit",
+                    "tool_input": {"file_path": "second.py"},
+                    "tool_response": "updated",
+                },
+            ],
         }
 
         with mock.patch.object(
@@ -691,16 +677,13 @@ class TestCheckpointDelivery(unittest.TestCase):
             return_value=ReviewOutcome("no_finding"),
         ) as review:
             self.checkpoint.prepare_hook(hook)
-            self.checkpoint.prepare_hook(
-                {**hook, "tool_input": {"file_path": "second.py"}}
-            )
 
         review.assert_called_once()
-        self.assertEqual(review.call_args.args[0]["trigger"], "first-change")
+        self.assertEqual(review.call_args.args[0]["trigger"], "evidence-ready")
         progress = storage.load_progress_state(
             self.settings.paths.data_dir, session
         )
-        self.assertEqual(2, progress["event_seq"])
+        self.assertEqual(1, progress["event_seq"])
 
     def test_generate_nudge_uses_task_anchor_and_event_packet_not_full_transcript(self):
         from masters_nudge import prompting, providers, storage
@@ -708,7 +691,7 @@ class TestCheckpointDelivery(unittest.TestCase):
         hook = {
             "session_id": "session-1",
             "transcript_path": "/session.jsonl",
-            "hook_event_name": "PostToolUseFailure",
+            "hook_event_name": "PostToolBatch",
         }
         event = {
             "reason": "error",
@@ -1000,10 +983,9 @@ class TestLensRouter(unittest.TestCase):
         import persona_config
 
         expected = {
-            "design": "jeff",
-            "build": "beck",
-            "evolve": "fowler",
             "review": "linus",
+            "reliability": "lamport",
+            "performance": "carmack",
         }
         for stage, lens in expected.items():
             with self.subTest(stage=stage):
@@ -1228,7 +1210,7 @@ class TestFloatingWindowLayout(unittest.TestCase):
         window.bubble_label.config.assert_called_with(text=timeout_message)
         window.ts_label.config.assert_called_with(text="10:01:00")
 
-    def test_selector_offers_automatic_then_six_manual_stages(self):
+    def test_selector_offers_automatic_then_three_manual_stages(self):
         import buddy_window
 
         options = buddy_window.selector_options()
@@ -1236,21 +1218,15 @@ class TestFloatingWindowLayout(unittest.TestCase):
             options,
             [
                 "Automatic · 依目前決策壓力選擇濾鏡",
-                "Design · 系統結構、因果與成本",
-                "Build · 小步驟、測試與回饋",
-                "Evolve · 重構與變更成本",
-                "Review · 簡化與責任歸屬",
-                "Reliability · 狀態、順序與失敗",
-                "Performance · 執行路徑與效能",
+                "Simplicity · 必要複雜度與單一責任",
+                "Reliability · 不變量、順序與部分失敗",
+                "Performance · 實際執行成本與少做工作",
             ],
         )
         for label, stage in zip(
             options,
             (
                 "automatic",
-                "design",
-                "build",
-                "evolve",
                 "review",
                 "reliability",
                 "performance",
@@ -1273,17 +1249,16 @@ class TestFloatingWindowLayout(unittest.TestCase):
             "self.review_frames_remaining = len(self.review_frames)", source
         )
 
-    def test_six_lenses_have_distinct_functional_badges_with_unknown_fallback(self):
+    def test_three_lenses_have_distinct_functional_badges_with_unknown_fallback(self):
         import buddy_window
 
         expected_names = {
-            "jeff": "Design · 系統結構、因果與成本",
-            "linus": "Review · 簡化與責任歸屬",
-            "fowler": "Evolve · 重構與變更成本",
-            "beck": "Build · 小步驟、測試與回饋",
-            "lamport": "Reliability · 狀態、順序與失敗",
-            "carmack": "Performance · 執行路徑與效能",
+            "linus": "Simplicity · 必要複雜度與單一責任",
+            "lamport": "Reliability · 不變量、順序與部分失敗",
+            "carmack": "Performance · 實際執行成本與少做工作",
         }
+        self.assertEqual(set(buddy_window.LENS_BADGES), set(expected_names))
+        self.assertEqual(set(buddy_window.LENS_BACKGROUNDS), set(expected_names))
         colors = set()
         for persona, expected_name in expected_names.items():
             with self.subTest(persona=persona):

@@ -28,10 +28,10 @@ from .runtime import RuntimePaths, RuntimeSettings, reviewer_config_path
 
 
 LEGACY_PERSONA_STAGES = {
-    "general": "build",
-    "jeff": "design",
-    "beck": "build",
-    "fowler": "evolve",
+    "general": "automatic",
+    "jeff": "automatic",
+    "beck": "automatic",
+    "fowler": "automatic",
     "linus": "review",
     "lamport": "reliability",
     "carmack": "performance",
@@ -42,9 +42,6 @@ class _SourceChangedError(RuntimeError):
     pass
 STAGES = {
     "automatic",
-    "design",
-    "build",
-    "evolve",
     "review",
     "reliability",
     "performance",
@@ -546,7 +543,7 @@ def inspect_legacy_environment(environment: Mapping[str, str]) -> list[dict[str,
                 {
                     "legacy": legacy,
                     "replacement": "MASTERS_NUDGE_STAGE",
-                    "note": "choose design|build|evolve|review|reliability|performance, or automatic; do not copy the persona value",
+                    "note": "choose review|reliability|performance, or automatic; do not copy the persona value",
                 }
             )
     return sorted(mappings, key=lambda item: item["legacy"])
@@ -924,6 +921,15 @@ def doctor(
                     config_path_for(name, environment), name
                 ),
                 "trust": "review in /hooks" if name == "codex" else "not required",
+                "control_point": {
+                    "event": "PostToolBatch" if name == "claude" else "PostToolUse",
+                    "precision": "exact" if name == "claude" else "approximate",
+                    "limitation": (
+                        ""
+                        if name == "claude"
+                        else "parallel tools may be observed and reviewed separately"
+                    ),
+                },
             }
         )
     data_dir = RuntimeSettings.from_env(root, environ=environment).paths.data_dir

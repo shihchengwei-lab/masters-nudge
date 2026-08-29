@@ -513,7 +513,7 @@ class PluginPackagingTests(unittest.TestCase):
         claude = json.loads(claude_text)["hooks"]
 
         self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse", "Stop"})
-        self.assertIn("PostToolUseFailure", claude)
+        self.assertEqual(set(claude), {"UserPromptSubmit", "PostToolBatch", "Stop"})
         self.assertIn("${PLUGIN_ROOT}", codex_text)
         self.assertIn("$env:PLUGIN_ROOT", codex_text)
         self.assertIn("${CLAUDE_PLUGIN_ROOT}", claude_text)
@@ -535,7 +535,7 @@ class PluginPackagingTests(unittest.TestCase):
         self.assertNotIn(
             "--detach-stop", codex["Stop"][0]["hooks"][0]["command"]
         )
-        for event_name in ("PostToolUse", "PostToolUseFailure", "Stop"):
+        for event_name in ("PostToolBatch", "Stop"):
             handler = claude[event_name][0]["hooks"][0]
             self.assertEqual(handler["timeout"], HOOK_TIMEOUT_SEC)
             self.assertNotIn("async", handler)
@@ -861,7 +861,7 @@ class LegacyMigrationTests(unittest.TestCase):
 
             dry_run = migrate_legacy("claude", environ=environment)
             self.assertEqual(dry_run["lifecycle"]["status"], "would_migrate")
-            self.assertEqual(dry_run["lifecycle"]["stage"], "build")
+            self.assertEqual(dry_run["lifecycle"]["stage"], "automatic")
             self.assertEqual(dry_run["logs"]["items"][0]["status"], "would_copy")
             self.assertFalse((root / ".masters-nudge" / "data").exists())
 
@@ -870,7 +870,7 @@ class LegacyMigrationTests(unittest.TestCase):
             self.assertEqual(applied["lifecycle"]["status"], "migrated")
             self.assertEqual(
                 json.loads((data_dir / "config.json").read_text(encoding="utf-8")),
-                {"stage": "build"},
+                {"stage": "automatic"},
             )
             copied = data_dir / "claude_code--session-1.log"
             self.assertEqual(copied.read_bytes(), legacy_log.read_bytes())
@@ -1025,7 +1025,7 @@ class LegacyMigrationTests(unittest.TestCase):
         self.assertEqual(mapping["legacy"], "BUDDY_PERSONA")
         self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
         self.assertIn(
-            "design|build|evolve|review|reliability|performance", mapping["note"]
+            "review|reliability|performance", mapping["note"]
         )
         self.assertTrue(result["manual_required"])
 
@@ -1044,7 +1044,7 @@ class LegacyMigrationTests(unittest.TestCase):
         self.assertEqual(mapping["legacy"], "MASTERS_NUDGE_PERSONA")
         self.assertEqual(mapping["replacement"], "MASTERS_NUDGE_STAGE")
         self.assertIn(
-            "design|build|evolve|review|reliability|performance", mapping["note"]
+            "review|reliability|performance", mapping["note"]
         )
         self.assertTrue(result["manual_required"])
 
@@ -1199,6 +1199,16 @@ class DoctorTests(unittest.TestCase):
             self.assertEqual(len(calls), 2)
             self.assertTrue(all(item["local"]["ready"] for item in result["hosts"]))
             self.assertTrue(all(item["provider_cli"] == "" for item in result["hosts"]))
+            controls = {
+                item["host"]: item["control_point"] for item in result["hosts"]
+            }
+            self.assertEqual(
+                controls["claude"],
+                {"event": "PostToolBatch", "precision": "exact", "limitation": ""},
+            )
+            self.assertEqual(controls["codex"]["event"], "PostToolUse")
+            self.assertEqual(controls["codex"]["precision"], "approximate")
+            self.assertIn("parallel tools", controls["codex"]["limitation"])
 
     def test_doctor_handles_invalid_local_inspection_result(self):
         with tempfile.TemporaryDirectory() as raw:

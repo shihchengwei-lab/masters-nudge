@@ -193,7 +193,7 @@ class ProviderErrorContractTests(unittest.TestCase):
     def test_claude_timeout_recovers_complete_structured_output(self):
         payload = (
             '{"structured_output":{"status":"finding",'
-            '"effective_lens":"beck",'
+            '"effective_lens":"linus",'
             '"finding":"保留可觀察失敗；別放寬判定，因為兩者代表不同契約。"},'
             '"usage":{"input_tokens":7,"output_tokens":4}}'
         )

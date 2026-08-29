@@ -24,7 +24,6 @@ EVIDENCE_CATEGORY_LIMITS = {
     "verification": 6,
     "failure": 8,
 }
-PROGRESS_EVENT_LIMIT = 12
 ATOMIC_REPLACE_ATTEMPTS = 5
 DELIVERY_CLAIM_STALE_SEC = 120
 REVIEW_ATTEMPT_STALE_SEC = 300
@@ -328,9 +327,7 @@ def _new_progress_state(session: SessionRef) -> dict[str, Any]:
         "session_id": session.session_id,
         "turn_id": session.turn_id,
         "event_seq": 0,
-        "last_strategy_event_seq": 0,
-        "midturn_review_attempts": 0,
-        "recent": [],
+        "last_event_fingerprint": "",
     }
 
 
@@ -502,7 +499,6 @@ def append_provider_output(
     """Preserve one provider-stage result for local prompt diagnostics."""
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
-    deviations = result.get("contract_deviations")
     entry: dict[str, Any] = {
         "schema_version": 1,
         "ts": _reaction_timestamp(),
@@ -517,9 +513,6 @@ def append_provider_output(
         **route_metadata,
         "status": str(result.get("status") or "error"),
         "error_kind": str(result.get("error_kind") or ""),
-        "contract_deviations": [
-            str(value) for value in deviations if str(value).strip()
-        ] if isinstance(deviations, (list, tuple)) else [],
         "raw_output": str(result.get("raw_output") or ""),
         "source_fingerprint": str(source_fingerprint or ""),
         "generated_at": datetime.now().isoformat(),
@@ -612,6 +605,23 @@ def read_recent_injected_findings(
         )
     injected.sort(key=lambda item: (item[0], item[1]))
     return tuple(finding for _injected_at, _order, finding in injected[-limit:])
+
+
+def was_finding_injected(
+    data_dir: Path, session: SessionRef, finding: str
+) -> bool:
+    """Match only exact prior Nudge content without exposing it to a Provider."""
+    normalized = str(finding or "").strip()
+    if not normalized:
+        return False
+    target = hashlib.sha256(normalized.encode("utf-8")).digest()
+    receipts = load_delivery_state(data_dir, session)["receipts"]
+    for prior in read_recent_injected_findings(
+        data_dir, session, limit=max(1, len(receipts))
+    ):
+        if hashlib.sha256(prior.encode("utf-8")).digest() == target:
+            return True
+    return False
 
 
 def latest_intervention_state(
@@ -809,49 +819,17 @@ def record_tool_progress(
     data_dir: Path,
     session: SessionRef,
     *,
-    failed: bool,
-    goal_transition: str = "",
-    evidence_category: str = "",
-    failure_family: str = "",
     event_fingerprint: str = "",
 ) -> dict[str, Any]:
     path = state_path(data_dir, session, "progress")
     state = load_progress_state(data_dir, session)
     event_seq = int(state.get("event_seq") or 0) + 1
-    recent = state.get("recent") if isinstance(state.get("recent"), list) else []
-    recent.append(
-        {
-            "event_seq": event_seq,
-            "failed": bool(failed),
-            "goal_transition": goal_transition,
-            "evidence_category": evidence_category,
-            "failure_family": failure_family,
-            "event_fingerprint": event_fingerprint,
-        }
-    )
     state.update(
         {
             "schema_version": 1,
             "event_seq": event_seq,
-            "recent": recent[-PROGRESS_EVENT_LIMIT:],
+            "last_event_fingerprint": event_fingerprint,
         }
     )
     _atomic_write(path, state)
     return state
-
-
-def mark_strategy_reviewed(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    event_seq: int,
-    midturn: bool = False,
-) -> None:
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    state["last_strategy_event_seq"] = int(event_seq or 0)
-    if midturn:
-        state["midturn_review_attempts"] = (
-            int(state.get("midturn_review_attempts") or 0) + 1
-        )
-    _atomic_write(path, state)

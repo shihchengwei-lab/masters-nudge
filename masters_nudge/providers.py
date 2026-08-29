@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
-from .provider_contract import call_result, parse_reaction_result
+from .provider_contract import call_result, parse_reaction_result, parse_route_result
 from .runtime import reviewer_environment
 
 
@@ -158,11 +158,13 @@ def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str
 
 
 def parse_schema_result(stdout: str, schema_path: Path) -> dict:
-    """Apply semantic taste validation only to final Nudge output."""
-    return parse_reaction_result(
-        stdout,
-        require_taste=Path(schema_path).name == "reaction-schema.json",
+    """Apply the structural contract selected by the schema path."""
+    parser = (
+        parse_route_result
+        if Path(schema_path).name == "route-schema.json"
+        else parse_reaction_result
     )
+    return parser(stdout)
 
 
 def parse_usage(stdout: str) -> dict[str, int]:
@@ -333,11 +335,13 @@ def resolve_grok_bin() -> str | None:
     return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
 
 
-def parse_grok_reaction_result(
-    stdout: str, *, require_taste: bool = True
-) -> dict:
+def parse_grok_reaction_result(stdout: str) -> dict:
     """Extract schema output from direct or Grok headless JSON envelopes."""
-    direct = parse_reaction_result(stdout, require_taste=require_taste)
+    return _parse_grok_schema_result(stdout, parse_reaction_result)
+
+
+def _parse_grok_schema_result(stdout: str, parser: Callable[[str], dict]) -> dict:
+    direct = parser(stdout)
     if direct.get("status") != "error":
         return direct
     try:
@@ -358,13 +362,10 @@ def parse_grok_reaction_result(
                 candidates.append(outer[key])
     for value in candidates:
         if isinstance(value, str):
-            parsed = parse_reaction_result(value, require_taste=require_taste)
+            parsed = parser(value)
         else:
             try:
-                parsed = parse_reaction_result(
-                    json.dumps(value, ensure_ascii=False),
-                    require_taste=require_taste,
-                )
+                parsed = parser(json.dumps(value, ensure_ascii=False))
             except (TypeError, ValueError):
                 continue
         if parsed.get("status") != "error":
@@ -429,10 +430,12 @@ def call_grok_result(
             timeout_sec=timeout_sec,
             log_error=log_error,
         )
-        parsed = parse_grok_reaction_result(
-            result.stdout,
-            require_taste=Path(schema_path).name == "reaction-schema.json",
+        parser = (
+            parse_route_result
+            if Path(schema_path).name == "route-schema.json"
+            else parse_reaction_result
         )
+        parsed = _parse_grok_schema_result(result.stdout, parser)
         parsed["usage"] = parse_usage(result.stdout)
         if parsed.get("status") != "error":
             return parsed

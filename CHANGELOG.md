@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — 2026-08-29
+
+### Changed
+
+- Reduced the active engineering Filters to Simplicity, Reliability, and Performance; retired selections now resolve to Automatic.
+- Made the Provider an independent second opinion over only the bounded task-and-evidence packet. Router reasoning and prior Nudges no longer enter Generator input.
+- Replaced semantic output policing with structural validation and exact post-generation duplicate suppression.
+- Moved Claude checkpoints to native `PostToolBatch`; Codex remains on synchronous `PostToolUse` and is documented as an approximate control point.
+- Made Stop observation-only on both Hosts and added the actual hook event to diagnostic telemetry.
+
+### Removed
+
+- Jeff, Beck, and Fowler Filter prompts and package entries.
+- Strategy-cycle scheduling, repeated-failure routing, semantic regex gates, and repository benchmark artifacts.
+
 ## 0.3.0 — 2026-08-26
 
 ### Added
@@ -24,7 +39,3 @@
 - Manual installers, public hook snippets, legacy source wrappers, `BUDDY_*` aliases, detached review workers, and legacy runtime/data fallbacks.
 - Retired Shader, Three.js/WebGPU black-hole, and Riemann specializations from the product branch. Their historical artifacts remain in [`evidence-archive-2026-08-22`](https://github.com/shihchengwei-lab/masters-nudge/releases/tag/evidence-archive-2026-08-22).
 - Inactive shadow cost evaluation, automatic candidate machinery, automatic Provider fallback, and automatic local-model installation.
-
-### Evidence
-
-- Retain one historical prerelease benchmark snapshot in [evaluation](evaluation/README.md). It is descriptive evidence from a fixed source commit, not validation of the current tree or a claim that Nudge improves outcomes.
