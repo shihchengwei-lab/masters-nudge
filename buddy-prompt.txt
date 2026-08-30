@@ -13,8 +13,8 @@ context, requirements, or the main agent's reasoning.
 # OUTPUT
 
 Return exactly one JSON object matching the supplied schema. Return `finding`
-only when the selected Lens forms one concrete engineering preference from the
-packet; otherwise return `no_finding`.
+only when the selected Lens forms one concrete engineering preference supported
+by the packet; otherwise return `no_finding`.
 
 A finding is one direct Traditional Chinese statement, not a question, review
 narrative, checklist, plan, praise, or complete solution. Keep the complete
