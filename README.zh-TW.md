@@ -31,8 +31,9 @@ Lens 就是觀察問題的角度。
 | Reliability | 事件換序、重試或中途失敗時，什麼仍必須成立 |
 | Performance | 真實執行路徑上，哪些已量到的工作可以移除 |
 
-Automatic 模式會依現有證據選擇 Lens。你也可以請 Agent 顯示選項，再固定使用其中
-一個 Lens。手動選擇不會強迫 Provider 硬擠出 Nudge；證據不足時仍會保持沉默。
+Automatic 模式會請 Provider 依現有證據選擇 Lens。你也可以請 Agent 顯示選項，再
+固定使用其中一個 Lens。無論哪種模式，證據不足時，Provider 都會被要求回傳
+`no_finding`。
 
 Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得該人物的能力，也不會
 憑空讓 Nudge 更準確。
@@ -49,14 +50,19 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
       Agent 的下一段脈絡
 ```
 
-每則 Nudge 都依目前情況生成，不是隨機抽一句罐頭訊息。Nudge 是獨立第二意見，
-不是 review、評分、問題、完整解法，也不是一律要求多跑測試。
+每次只會把一則 52 字內的繁體中文工程取捨放進 Agent 的下一段脈絡。Nudge 依目前
+情況生成，不是隨機抽一句罐頭訊息，也不是 review、評分、問題或完整解法；Provider
+不會接管任務。
 
 Claude Code 提供理想的 `PostToolBatch` 控制點：同一個模型步驟的工具結果都完成後，
 下一步開始前才判斷。Codex 目前只有 `PostToolUse`，只是近似控制點；平行工具的結果
 可能被分開判斷。
 
-Provider 發生錯誤或超過固定 90 秒時，這次 Nudge 直接結束，主要 Agent 照常繼續。
+一次 Host 回報只要包含符合條件的修改、驗證、失敗或量測，就會同步啟動一個 Nudge
+流程。Claude Code 以每批 `PostToolBatch` 為單位；Codex 以每個 `PostToolUse` 為
+單位。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫兩次，兩次共用 90 秒。
+Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，這次 Nudge 直接結束，主要
+Agent 照常繼續。
 
 ## 隱私
 
@@ -66,11 +72,13 @@ Provider 發生錯誤或超過固定 90 秒時，這次 Nudge 直接結束，主
 
 - 目前任務，或從長任務找回的 Goal；
 - 任務明確指定的本機檔案內容，只在任務開始時讀取一次；
-- 最近且相關的修改、失敗、驗證與量測；
+- 目前已由 Git 追蹤、但尚未提交之變更的節錄，可能包含目前任務以外的檔案；
+- 最多三個未被 Git 排除之未追蹤檔案的部分內容；
+- 最近的失敗、驗證與量測；
 - 實際執行過、經長度限制的命令及結果。
 
-Provider 不會收到完整對話、模型未公開的內部思考，也不會收到探索專案時碰到的無關
-檔案。
+Provider 不會收到完整對話或模型未公開的內部思考；系統也不會自動傳送完整
+repository。
 
 Anthropic 與 OpenAI 是雲端 Provider，這份資料會離開你的電腦，並受該 Provider
 的資料政策約束。如果資料不能離開電腦，請選本機 Ollama。Ollama 只允許連到本機

@@ -33,9 +33,10 @@ Nudge.
 | Reliability | What must remain true through reordering, retries, and partial failure |
 | Performance | Measured work on the real execution path that can be removed |
 
-Automatic mode chooses a Lens from the available evidence. You can also ask
-the agent to show the Lens choices and pin one. A pinned Lens still stays quiet
-when the evidence does not support a useful Nudge.
+Automatic mode asks the Provider to choose a Lens from the available evidence.
+You can also ask the agent to show the Lens choices and pin one. In either mode,
+the Provider is instructed to return `no_finding` when the evidence does not
+support a useful Nudge.
 
 The expert names inside the Lens prompts are attention cues. They do not give a
 provider another person's ability or make the Nudge more accurate by itself.
@@ -52,17 +53,22 @@ Task and observable tool results
     The agent's next context
 ```
 
-Each Nudge is generated for the current situation; it is not a random stock
-sentence. It is an independent second opinion, not a review, score, question,
-complete solution, or demand to run more tests.
+Each Nudge is one direct Traditional Chinese engineering preference within 52
+characters, placed in the agent's next context. It is generated for the current
+situation, not selected from stock text. It is not a review, score, question,
+or complete solution, and the Provider does not take over the task.
 
 Claude Code provides the intended `PostToolBatch` control point: all tool
 results from one model step are available before the next step. Codex currently
 provides only `PostToolUse`. That is an approximation, so parallel tool results
 may be considered separately.
 
-Provider errors and the fixed 90-second timeout fail open: the Nudge attempt
-ends and the main agent continues.
+One Host checkpoint containing an eligible change, validation, failure, or
+measurement synchronously starts one Nudge flow. Claude Code works per
+`PostToolBatch`; Codex works per `PostToolUse`. A pinned Lens makes at most one
+Provider call. Automatic mode makes at most two calls that share 90 seconds. A
+slower Provider directly adds to the agent's wait; on an error or timeout, the
+Nudge attempt ends and the main agent continues.
 
 ## Privacy
 
@@ -73,11 +79,15 @@ The selected Provider receives a bounded packet that may include:
 - the current task or recovered long-running Goal;
 - content from local files explicitly named by the task, read once when the
   task begins;
-- recent relevant changes, failures, validations, and measurements;
+- excerpts from current uncommitted changes to Git-tracked files, which may
+  include files outside the current task;
+- partial content from up to three untracked files that Git does not ignore;
+- recent failures, validations, and measurements;
 - the length-limited command that was run and its result.
 
-The Provider does not receive the complete conversation, hidden model
-reasoning, or unrelated files found by exploring the repository.
+The Provider does not receive the complete conversation or hidden model
+reasoning, and the system does not automatically send a complete copy of the
+repository.
 
 Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
 and is also subject to that Provider's data policy. Choose local Ollama when
