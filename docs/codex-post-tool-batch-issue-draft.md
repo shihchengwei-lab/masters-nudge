@@ -1,63 +1,36 @@
-# Codex issue draft: add a pre-model `PostToolBatch` hook
-
-Status: local draft only; not submitted.
-
-## Suggested title
-
-Add `PostToolBatch` after one model step's tools finish and before the next model request
+# Add a hook after all tool calls from one assistant response complete
 
 ## Problem
 
-`PostToolUse` is a useful synchronous control point for a single tool call. When
-one model step launches parallel tools, however, each callback sees only one
-result. A hook cannot know that the complete set is ready without timers,
-transcript guesses, or host-specific aggregation. Those workarounds either act
-on partial evidence or delay context until the intended decision boundary has
-already passed.
+Codex currently invokes `PostToolUse` once per tool result. When one assistant
+response issues parallel tool calls, each hook invocation sees only a partial
+set of results.
 
-## Proposed hook
+A hook cannot reliably act on the complete set before the next model inference
+without guessing batch boundaries.
 
-Trigger `PostToolBatch` exactly once after every tool call selected by one model
-step has resolved, and before Codex constructs the next model request.
+## Requested behavior
 
-Suggested input:
+Add a batch-level hook that runs exactly once after all tool calls from one
+assistant response have completed and before the next model inference.
 
-```json
-{
-  "hook_event_name": "PostToolBatch",
-  "session_id": "...",
-  "turn_id": "...",
-  "cwd": "...",
-  "tool_calls": [
-    {
-      "tool_name": "...",
-      "tool_input": {},
-      "tool_use_id": "...",
-      "tool_response": {}
-    }
-  ]
-}
-```
+The hook input should include every tool call and its result, including failures,
+cancellations, and interruptions. Context returned by the hook should be
+included in the immediately following model inference.
 
-Requirements:
-
-- preserve the model step's tool-call order;
-- include success, failure, cancellation, and interruption results;
-- run once for a one-tool step as well as a parallel batch;
-- accept `hookSpecificOutput.additionalContext` for the next model request;
-- remain synchronous and fail open if the hook errors or times out;
-- document whether hosted and local tools are included.
-
-## Why this is distinct from `PostToolUse`
-
-The requested boundary is not a convenience alias. It guarantees that evidence
-from the current model step is complete while the next model decision is still
-changeable. Per-tool callbacks cannot provide both properties for parallel tool
-calls.
+The same event should be emitted for assistant responses containing a single
+tool call, so consumers have one consistent control point.
 
 ## Acceptance example
 
-If one model step launches three tools in parallel, Codex emits three existing
-`PostToolUse` events as today and one ordered `PostToolBatch` containing all
-three results. Context returned by `PostToolBatch` is present in the immediately
-following model request. No batch event is emitted early or more than once.
+If one assistant response launches three tools in parallel:
+
+1. Codex emits the existing `PostToolUse` event for each result.
+2. After all three resolve, Codex emits one batch-level event containing all
+   three calls and results.
+3. Context returned by that event is present in the immediately following model
+   inference.
+
+The batch-level event is not emitted early or more than once.
+
+Related: #21753 tracks `PostToolBatch` as a missing hook at the umbrella level.

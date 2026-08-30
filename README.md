@@ -59,8 +59,7 @@ complete solution, or demand to run more tests.
 Claude Code provides the intended `PostToolBatch` control point: all tool
 results from one model step are available before the next step. Codex currently
 provides only `PostToolUse`. That is an approximation, so parallel tool results
-may be considered separately. The missing Codex control point is documented in
-[the proposed `PostToolBatch` issue](docs/codex-post-tool-batch-issue-draft.md).
+may be considered separately.
 
 Provider errors and the fixed 90-second timeout fail open: the Nudge attempt
 ends and the main agent continues.

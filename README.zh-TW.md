@@ -54,8 +54,7 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
 
 Claude Code 提供理想的 `PostToolBatch` 控制點：同一個模型步驟的工具結果都完成後，
 下一步開始前才判斷。Codex 目前只有 `PostToolUse`，只是近似控制點；平行工具的結果
-可能被分開判斷。缺少的 Codex 控制點已整理成
-[`PostToolBatch` Issue 草稿](docs/codex-post-tool-batch-issue-draft.md)。
+可能被分開判斷。
 
 Provider 發生錯誤或超過固定 90 秒時，這次 Nudge 直接結束，主要 Agent 照常繼續。
 
