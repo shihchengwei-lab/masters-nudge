@@ -19,6 +19,9 @@ from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 class NudgeContractTests(unittest.TestCase):
     def test_outcome_contains_only_the_decision_needed_by_the_hook(self):
         self.assertEqual(
@@ -69,6 +72,16 @@ class NudgeContractTests(unittest.TestCase):
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
+    def test_prompt_waits_for_a_check_after_the_latest_change(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "Do not form a finding about the latest change until the packet shows a\n"
+            "subsequent check of that change.",
+            prompt,
+        )
+        self.assertIn("Successful application alone is not a check.", prompt)
+
     def test_exact_native_event_replay_is_the_only_duplicate_guard(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
