@@ -67,6 +67,20 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(set(claude), {"UserPromptSubmit", "PostToolBatch"})
         self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolBatch"})
 
+    def test_codex_post_tool_batch_has_no_unsupported_context_limit(self):
+        hooks = json.loads(
+            (PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8")
+        )["hooks"]["PostToolBatch"]
+
+        self.assertTrue(hooks)
+        self.assertTrue(
+            all(
+                "additionalContextLimit" not in handler
+                for group in hooks
+                for handler in group["hooks"]
+            )
+        )
+
     def test_packaged_runtime_uses_nudge_not_review_contract_names(self):
         text = "\n".join(
             path.read_text(encoding="utf-8")
