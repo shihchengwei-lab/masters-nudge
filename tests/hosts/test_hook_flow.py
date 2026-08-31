@@ -105,6 +105,28 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertEqual(len(audit), 1)
         self.assertEqual(audit[0]["returned_via"], "PostToolBatch")
 
+    def test_post_tool_batch_rejects_a_partially_malformed_batch(self):
+        with tempfile.TemporaryDirectory() as raw:
+            core = FakeCore(Path(raw))
+            output = CodexAdapter(core).process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "malformed-batch",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_response": {"success": True},
+                        },
+                        {"tool_name": "exec_command", "tool_input": {"cmd": "test"}},
+                    ],
+                }
+            )
+
+        self.assertIsNone(output)
+        self.assertEqual(core.calls, [])
+
     def test_failed_wire_write_does_not_create_an_audit_entry(self):
         class BrokenStream:
             def write(self, _value):

@@ -63,15 +63,47 @@ class DoctorTests(unittest.TestCase):
             ):
                 result = management.doctor(ROOT, "all", environ=environment)
 
-        self.assertTrue(result["core_ready"])
+        self.assertFalse(result["core_ready"])
         self.assertEqual(
             [item["control_point"]["event"] for item in result["hosts"]],
             ["PostToolBatch", "PostToolBatch"],
         )
         self.assertEqual(
             [item["control_point"]["precision"] for item in result["hosts"]],
-            ["exact", "exact"],
+            ["exact", "unverified"],
         )
+        self.assertEqual(
+            [item["control_point"]["verified"] for item in result["hosts"]],
+            [True, False],
+        )
+        self.assertIn(
+            "plugin installation does not prove",
+            result["hosts"][1]["control_point"]["limitation"],
+        )
+
+    def test_codex_plugin_installation_does_not_prove_native_batch_support(self):
+        with tempfile.TemporaryDirectory() as raw:
+            environment = {
+                "MASTERS_NUDGE_DATA_DIR": str(Path(raw) / "data"),
+                "PATH": "",
+            }
+            with (
+                mock.patch.object(management, "runtime_files", return_value=()),
+                mock.patch.object(management, "_provider_cli", return_value="provider-cli"),
+                mock.patch.object(management, "_provider_authenticated", return_value=True),
+                mock.patch.object(
+                    management,
+                    "_hook_status",
+                    return_value={"ready": True, "version": "test", "error": ""},
+                ),
+                mock.patch.object(management, "_python_version", return_value=(3, 12, 0)),
+            ):
+                result = management.doctor(ROOT, "codex", environ=environment)
+
+        self.assertFalse(result["core_ready"])
+        self.assertTrue(result["hosts"][0]["hook_ready"])
+        self.assertFalse(result["hosts"][0]["control_point"]["verified"])
+
     def test_doctor_reports_a_missing_host_hook_as_not_ready(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

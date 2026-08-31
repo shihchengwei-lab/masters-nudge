@@ -61,6 +61,10 @@ or complete solution, and the Provider does not take over the task.
 Claude Code and the supported Codex build provide the intended `PostToolBatch`
 control point: all tool results from one model step are available before the
 next step. Codex builds without this event are not supported by this version.
+Codex does not currently expose a read-only Hook capability query, so plugin
+installation alone cannot verify this event. The Doctor therefore reports Codex
+precision as unverified; establish exactness separately with an isolated smoke
+run.
 
 One `PostToolBatch` checkpoint containing an eligible change, validation,
 failure, or measurement synchronously starts one Nudge flow. A pinned Lens

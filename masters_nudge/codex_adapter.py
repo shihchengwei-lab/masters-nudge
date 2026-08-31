@@ -109,24 +109,32 @@ def _failure_signal(value: Any) -> tuple[bool, bool]:
     return False, False
 
 
-def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted]:
+def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
     event_name = str(payload.get("hook_event_name") or "")
-    tool_calls = payload.get("tool_calls")
-    if event_name != POST_TOOL_BATCH_EVENT or not isinstance(tool_calls, list):
+    if event_name != POST_TOOL_BATCH_EVENT:
         return []
+    tool_calls = payload.get("tool_calls")
+    if not isinstance(tool_calls, list):
+        return None
     session = _session(payload)
     events: list[ToolCompleted] = []
     for item in tool_calls:
-        if not isinstance(item, dict):
-            continue
-        response = item.get("tool_response", "")
+        if (
+            not isinstance(item, dict)
+            or not isinstance(item.get("tool_name"), str)
+            or not item["tool_name"].strip()
+            or "tool_input" not in item
+            or "tool_response" not in item
+        ):
+            return None
+        response = item["tool_response"]
         known, failed = _failure_signal(response)
-        tool_name = str(item.get("tool_name") or "unknown")
+        tool_name = item["tool_name"]
         events.append(
             ToolCompleted(
                 session,
                 tool_name,
-                tool_input=item.get("tool_input") or {},
+                tool_input=item["tool_input"],
                 tool_output=response,
                 failed=failed,
                 failure_known=known,
@@ -162,6 +170,9 @@ class CodexAdapter:
                 storage.start_turn(self.data_dir, session, anchor)
             return None
         events = normalize_tool_batch(payload)
+        if events is None:
+            self.core.log_error("Codex PostToolBatch ignored: malformed tool_calls")
+            return None
         if not events:
             return None
         state = storage.load_turn_state(self.data_dir, session)

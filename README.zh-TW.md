@@ -57,6 +57,9 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
 Claude Code 與受支援的 Codex build 都提供理想的 `PostToolBatch` 控制點：同一個
 模型步驟的工具結果都完成後，下一步開始前才判斷。不提供此事件的 Codex build
 不受這個版本支援。
+Codex 目前沒有唯讀查詢 Hook capability 的指令，因此 plugin 已安裝不等於此事件
+已驗證。Doctor 會把 Codex precision 回報為 `unverified`；是否 exact 必須另以隔離
+smoke 確認。
 
 一次 `PostToolBatch` 只要包含符合條件的修改、驗證、失敗或量測，就會同步啟動一個
 Nudge 流程。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫兩次，兩次共用 90 秒。

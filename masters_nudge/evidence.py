@@ -48,7 +48,3 @@ def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvide
             content=checkpoints.render_evidence_record(event),
         )
     return ToolEvidence(state, eligible, fingerprint)
-
-
-def observe_tool_event(data_dir: Path, event: ToolCompleted) -> ToolEvidence:
-    return observe_tool_batch(data_dir, [event])

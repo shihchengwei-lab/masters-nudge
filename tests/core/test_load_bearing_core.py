@@ -14,7 +14,7 @@ from subprocess import CompletedProcess
 from unittest import mock
 
 import source_context
-from masters_nudge import checkpoints, contracts, plugin_inventory, storage
+from masters_nudge import checkpoints, contracts, evidence, plugin_inventory, storage
 from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 
@@ -63,6 +63,9 @@ class NudgeContractTests(unittest.TestCase):
             tuple(inspect.signature(plugin_inventory.runtime_files).parameters),
             (),
         )
+
+    def test_batch_only_runtime_has_no_single_event_observer(self):
+        self.assertFalse(hasattr(evidence, "observe_tool_event"))
 
 
 class EvidenceBoundaryTests(unittest.TestCase):

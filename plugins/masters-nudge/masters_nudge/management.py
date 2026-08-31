@@ -176,6 +176,25 @@ def _hook_status(
     return {"ready": False, "version": "", "error": "plugin is not installed"}
 
 
+def _control_point_status(host: str) -> dict[str, object]:
+    if host == "claude":
+        return {
+            "event": POST_TOOL_BATCH_EVENT,
+            "precision": "exact",
+            "verified": True,
+            "limitation": "",
+        }
+    return {
+        "event": POST_TOOL_BATCH_EVENT,
+        "precision": "unverified",
+        "verified": False,
+        "limitation": (
+            "plugin installation does not prove that this Codex build emits "
+            "PostToolBatch; verify the control point with an isolated smoke run"
+        ),
+    }
+
+
 def list_lenses() -> dict:
     return {
         "lenses": [
@@ -362,6 +381,7 @@ def doctor(
             else sys.executable
         )
         hook_version = _python_version(hook_python)
+        control_point = _control_point_status(name)
         host_results.append(
             {
                 "host": name,
@@ -382,11 +402,7 @@ def doctor(
                 "expected_hook_version": expected_plugin_version,
                 "hook_error": hook["error"],
                 "trust": "inspect in /hooks" if name == "codex" else "not required",
-                "control_point": {
-                    "event": POST_TOOL_BATCH_EVENT,
-                    "precision": "exact",
-                    "limitation": "",
-                },
+                "control_point": control_point,
             }
         )
     data_dir = RuntimePaths.resolve(root, environ=environment).data_dir
@@ -400,6 +416,7 @@ def doctor(
             item["provider_ready"]
             and item["hook_python_ready"]
             and item["hook_ready"]
+            and item["control_point"]["verified"]
             for item in host_results
         )
     )
