@@ -58,17 +58,15 @@ characters, placed in the agent's next context. It is generated for the current
 situation, not selected from stock text. It is not a review, score, question,
 or complete solution, and the Provider does not take over the task.
 
-Claude Code provides the intended `PostToolBatch` control point: all tool
-results from one model step are available before the next step. Codex currently
-provides only `PostToolUse`. That is an approximation, so parallel tool results
-may be considered separately.
+Claude Code and the supported Codex build provide the intended `PostToolBatch`
+control point: all tool results from one model step are available before the
+next step. Codex builds without this event are not supported by this version.
 
-One Host checkpoint containing an eligible change, validation, failure, or
-measurement synchronously starts one Nudge flow. Claude Code works per
-`PostToolBatch`; Codex works per `PostToolUse`. A pinned Lens makes at most one
-Provider call. Automatic mode makes at most two calls that share 90 seconds. A
-slower Provider directly adds to the agent's wait; on an error or timeout, the
-Nudge attempt ends and the main agent continues.
+One `PostToolBatch` checkpoint containing an eligible change, validation,
+failure, or measurement synchronously starts one Nudge flow. A pinned Lens
+makes at most one Provider call. Automatic mode makes at most two calls that
+share 90 seconds. A slower Provider directly adds to the agent's wait; on an
+error or timeout, the Nudge attempt ends and the main agent continues.
 
 ## Privacy
 

@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from typing import Callable, Mapping
 
+from .contracts import POST_TOOL_BATCH_EVENT
 from .local_ollama import DEFAULT_OLLAMA_URL, inspect_local_ollama
 from .plugin_inventory import runtime_files
 from .runtime import RuntimePaths, RuntimeSettings
@@ -382,9 +383,9 @@ def doctor(
                 "hook_error": hook["error"],
                 "trust": "inspect in /hooks" if name == "codex" else "not required",
                 "control_point": {
-                    "event": "PostToolBatch" if name == "claude" else "PostToolUse",
-                    "precision": "exact" if name == "claude" else "approximate",
-                    "limitation": "" if name == "claude" else "parallel tools may be observed separately",
+                    "event": POST_TOOL_BATCH_EVENT,
+                    "precision": "exact",
+                    "limitation": "",
                 },
             }
         )

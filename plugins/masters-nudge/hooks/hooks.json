@@ -14,7 +14,7 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "PostToolBatch": [
       {
         "matcher": "*",
         "hooks": [

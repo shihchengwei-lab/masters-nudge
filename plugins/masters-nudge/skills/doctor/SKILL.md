@@ -31,5 +31,5 @@ asks for it. Separate these checks:
 Do not call a Nudge Provider merely to diagnose readiness. For local Ollama,
 report the loopback endpoint, server availability, selected installed model,
 and any diagnostic separately. Availability does not prove model quality. For
-Codex, explain that `PostToolUse` is an approximate control point and remind
-the user to inspect and approve the plugin commands in `/hooks` when needed.
+Codex, report `PostToolBatch` as an exact batch boundary and remind the user to
+inspect and approve the plugin commands in `/hooks` when needed.

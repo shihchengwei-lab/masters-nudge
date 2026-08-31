@@ -10,9 +10,9 @@ from typing import Any
 import source_context
 
 from . import prompting, storage
-from .contracts import SessionRef, ToolCompleted, find_git_root
+from .contracts import POST_TOOL_BATCH_EVENT, SessionRef, ToolCompleted, find_git_root
 from .core import NudgeCore
-from .evidence import observe_tool_event
+from .evidence import observe_tool_batch
 from .runtime import PROVIDER_TIMEOUT_SEC, active_guard
 
 
@@ -109,24 +109,32 @@ def _failure_signal(value: Any) -> tuple[bool, bool]:
     return False, False
 
 
-def normalize_tool_event(payload: dict[str, Any]) -> ToolCompleted | None:
+def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted]:
     event_name = str(payload.get("hook_event_name") or "")
-    if event_name not in {"PostToolUse", "PostToolUseFailure"}:
-        return None
-    explicit_failure = event_name == "PostToolUseFailure"
-    response = payload.get("error", "") if explicit_failure else payload.get("tool_response", "")
-    known, failed = (True, True) if explicit_failure else _failure_signal(response)
-    tool_name = str(payload.get("tool_name") or "unknown")
-    return ToolCompleted(
-        _session(payload),
-        tool_name,
-        tool_input=payload.get("tool_input") or {},
-        tool_output=response,
-        failed=failed,
-        failure_known=known,
-        mutating=tool_name.lower().split("__")[-1] in MUTATING_TOOLS,
-        native_event_name=event_name,
-    )
+    tool_calls = payload.get("tool_calls")
+    if event_name != POST_TOOL_BATCH_EVENT or not isinstance(tool_calls, list):
+        return []
+    session = _session(payload)
+    events: list[ToolCompleted] = []
+    for item in tool_calls:
+        if not isinstance(item, dict):
+            continue
+        response = item.get("tool_response", "")
+        known, failed = _failure_signal(response)
+        tool_name = str(item.get("tool_name") or "unknown")
+        events.append(
+            ToolCompleted(
+                session,
+                tool_name,
+                tool_input=item.get("tool_input") or {},
+                tool_output=response,
+                failed=failed,
+                failure_known=known,
+                mutating=tool_name.lower().split("__")[-1] in MUTATING_TOOLS,
+                native_event_name=event_name,
+            )
+        )
+    return events
 
 
 def build_hook_output(event_name: str, finding: str) -> dict[str, Any]:
@@ -153,15 +161,15 @@ class CodexAdapter:
             if anchor:
                 storage.start_turn(self.data_dir, session, anchor)
             return None
-        event = normalize_tool_event(payload)
-        if event is None:
+        events = normalize_tool_batch(payload)
+        if not events:
             return None
         state = storage.load_turn_state(self.data_dir, session)
         if not state.get("task_anchor"):
             anchor = _task_anchor(payload)
             if anchor:
                 storage.start_turn(self.data_dir, session, anchor)
-        observed = observe_tool_event(self.data_dir, event)
+        observed = observe_tool_batch(self.data_dir, events)
         if not observed.eligible:
             return None
         packet = source_context.build_checkpoint_packet(
@@ -176,11 +184,11 @@ class CodexAdapter:
             return None
         if outcome.status != "finding" or not outcome.finding:
             return None
-        output = build_hook_output(event.native_event_name, outcome.finding)
+        output = build_hook_output(event_name, outcome.finding)
         output[AUDIT_MARKER_KEY] = {
             "session": session,
             "lens": outcome.lens,
             "finding": outcome.finding,
-            "returned_via": event.native_event_name,
+            "returned_via": event_name,
         }
         return output

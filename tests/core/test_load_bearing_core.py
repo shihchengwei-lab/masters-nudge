@@ -220,7 +220,7 @@ class HostReturnedAuditTests(unittest.TestCase):
                 session,
                 lens="reliability",
                 finding="讓重試保留同一個責任擁有者。",
-                returned_via="PostToolUse",
+                returned_via="PostToolBatch",
             )
             settings = root / "config.json"
             settings.write_text('{"lens":"automatic"}\n', encoding="utf-8")

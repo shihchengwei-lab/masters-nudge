@@ -65,7 +65,7 @@ class PackageTests(unittest.TestCase):
         codex = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
 
         self.assertEqual(set(claude), {"UserPromptSubmit", "PostToolBatch"})
-        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse"})
+        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolBatch"})
 
     def test_packaged_runtime_uses_nudge_not_review_contract_names(self):
         text = "\n".join(

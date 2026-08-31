@@ -35,7 +35,24 @@ class FakeCore:
 
 
 class CodexHookFlowTests(unittest.TestCase):
-    def test_post_tool_use_returns_nudge_and_audits_after_flush(self):
+    def test_post_tool_use_is_not_treated_as_a_batch(self):
+        with tempfile.TemporaryDirectory() as raw:
+            core = FakeCore(Path(raw))
+            output = CodexAdapter(core).process(
+                {
+                    "hook_event_name": "PostToolUse",
+                    "session_id": "old-control-point",
+                    "cwd": raw,
+                    "tool_name": "apply_patch",
+                    "tool_input": {"patch": "*** Update File: app.py"},
+                    "tool_response": {"success": True},
+                }
+            )
+
+        self.assertIsNone(output)
+        self.assertEqual(core.calls, [])
+
+    def test_post_tool_batch_returns_one_nudge_for_the_complete_batch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = FakeCore(root)
@@ -50,15 +67,28 @@ class CodexHookFlowTests(unittest.TestCase):
             )
             output = adapter.process(
                 {
-                    "hook_event_name": "PostToolUse",
+                    "hook_event_name": "PostToolBatch",
                     "session_id": "codex-flow",
                     "cwd": raw,
-                    "tool_name": "apply_patch",
-                    "tool_input": {"patch": "*** Update File: app.py"},
-                    "tool_response": {"success": True},
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_response": {"success": True},
+                        },
+                        {
+                            "tool_name": "exec_command",
+                            "tool_input": {"cmd": "python -m unittest"},
+                            "tool_response": "Process exited with code 0",
+                        },
+                    ],
                 }
             )
             self.assertIsNotNone(output)
+            self.assertEqual(len(core.calls), 1)
+            self.assertIn("*** Update File: app.py", core.calls[0])
+            self.assertIn("python -m unittest", core.calls[0])
+            self.assertIn("Process exited with code 0", core.calls[0])
             self.assertEqual(storage.recent_nudges(root), [])
 
             stream = io.StringIO()
@@ -73,7 +103,7 @@ class CodexHookFlowTests(unittest.TestCase):
         )
         self.assertNotIn("_masters_nudge", public_text)
         self.assertEqual(len(audit), 1)
-        self.assertEqual(audit[0]["returned_via"], "PostToolUse")
+        self.assertEqual(audit[0]["returned_via"], "PostToolBatch")
 
     def test_failed_wire_write_does_not_create_an_audit_entry(self):
         class BrokenStream:
@@ -97,12 +127,16 @@ class CodexHookFlowTests(unittest.TestCase):
             )
             output = adapter.process(
                 {
-                    "hook_event_name": "PostToolUse",
+                    "hook_event_name": "PostToolBatch",
                     "session_id": "failed-wire",
                     "cwd": raw,
-                    "tool_name": "apply_patch",
-                    "tool_input": {"patch": "*** Update File: app.py"},
-                    "tool_response": {"success": True},
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_response": {"success": True},
+                        }
+                    ],
                 }
             )
 

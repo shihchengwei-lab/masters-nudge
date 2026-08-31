@@ -9,6 +9,7 @@ from typing import Literal, TypeAlias
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
 NudgeStatus: TypeAlias = Literal["finding", "no_finding", "error"]
+POST_TOOL_BATCH_EVENT = "PostToolBatch"
 
 
 @dataclass(frozen=True)
@@ -28,7 +29,7 @@ class ToolCompleted:
     failed: bool = False
     failure_known: bool = False
     mutating: bool = False
-    native_event_name: str = "PostToolUse"
+    native_event_name: str = POST_TOOL_BATCH_EVENT
 
 
 @dataclass(frozen=True)

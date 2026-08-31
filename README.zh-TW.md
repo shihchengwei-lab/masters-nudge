@@ -54,13 +54,12 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
 情況生成，不是隨機抽一句罐頭訊息，也不是 review、評分、問題或完整解法；Provider
 不會接管任務。
 
-Claude Code 提供理想的 `PostToolBatch` 控制點：同一個模型步驟的工具結果都完成後，
-下一步開始前才判斷。Codex 目前只有 `PostToolUse`，只是近似控制點；平行工具的結果
-可能被分開判斷。
+Claude Code 與受支援的 Codex build 都提供理想的 `PostToolBatch` 控制點：同一個
+模型步驟的工具結果都完成後，下一步開始前才判斷。不提供此事件的 Codex build
+不受這個版本支援。
 
-一次 Host 回報只要包含符合條件的修改、驗證、失敗或量測，就會同步啟動一個 Nudge
-流程。Claude Code 以每批 `PostToolBatch` 為單位；Codex 以每個 `PostToolUse` 為
-單位。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫兩次，兩次共用 90 秒。
+一次 `PostToolBatch` 只要包含符合條件的修改、驗證、失敗或量測，就會同步啟動一個
+Nudge 流程。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫兩次，兩次共用 90 秒。
 Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，這次 Nudge 直接結束，主要
 Agent 照常繼續。
 

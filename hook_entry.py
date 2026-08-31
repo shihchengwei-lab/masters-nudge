@@ -10,6 +10,7 @@ from pathlib import Path
 
 from masters_nudge import storage
 from masters_nudge.codex_adapter import AUDIT_MARKER_KEY, CodexAdapter
+from masters_nudge.contracts import POST_TOOL_BATCH_EVENT
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import RuntimeSettings, active_guard
 
@@ -51,7 +52,7 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
             audit["session"],
             lens=str(audit.get("lens") or ""),
             finding=str(audit.get("finding") or ""),
-            returned_via=str(audit.get("returned_via") or "PostToolUse"),
+            returned_via=str(audit.get("returned_via") or POST_TOOL_BATCH_EVENT),
         )
 
 
