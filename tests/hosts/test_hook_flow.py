@@ -157,6 +157,11 @@ class CodexHookFlowTests(unittest.TestCase):
                             "tool_name": "apply_patch",
                             "tool_input": {"patch": "*** Update File: app.py"},
                             "tool_response": {"success": True},
+                        },
+                        {
+                            "tool_name": "exec_command",
+                            "tool_input": {"cmd": "python -m unittest"},
+                            "tool_response": "Process exited with code 0",
                         }
                     ],
                 }
@@ -166,6 +171,12 @@ class CodexHookFlowTests(unittest.TestCase):
                 hook_entry._emit_output(output, core.settings, stream=BrokenStream())
 
             self.assertEqual(storage.recent_nudges(root), [])
+            self.assertEqual(
+                storage.load_turn_state(root, SessionRef("codex_cli", "failed-wire", cwd=raw))[
+                    "previous_findings"
+                ],
+                [],
+            )
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
@@ -186,6 +197,11 @@ class ClaudeHookFlowTests(unittest.TestCase):
                         "tool_name": "Edit",
                         "tool_input": {"file_path": "app.py"},
                         "tool_response": "updated",
+                    },
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": "python -m unittest"},
+                        "tool_response": "1 test passed",
                     }
                 ],
             }
@@ -207,10 +223,12 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 stream = io.StringIO()
                 claude_adapter.emit_json_delivery(prepared, stream=stream)
                 audit = storage.recent_nudges(root)
+                findings = storage.load_turn_state(root, session)["previous_findings"]
 
         self.assertIn("讓單一欄位直接擁有責任。", stream.getvalue())
         self.assertEqual(len(audit), 1)
         self.assertEqual(audit[0]["returned_via"], "PostToolBatch")
+        self.assertEqual(findings, ["讓單一欄位直接擁有責任。"])
 
 
 if __name__ == "__main__":

@@ -66,11 +66,12 @@ installation alone cannot verify this event. The Doctor therefore reports Codex
 precision as unverified; establish exactness separately with an isolated smoke
 run.
 
-One `PostToolBatch` checkpoint containing an eligible change, validation,
-failure, or measurement synchronously starts one Nudge flow. A pinned Lens
-makes at most one Provider call. Automatic mode makes at most two calls that
-share 90 seconds. A slower Provider directly adds to the agent's wait; on an
-error or timeout, the Nudge attempt ends and the main agent continues.
+Changes are recorded for the next check. One `PostToolBatch` checkpoint
+containing a validation, failure, or measurement synchronously starts one
+Nudge flow. A pinned Lens makes at most one Provider call. Automatic mode makes
+at most two calls that share 90 seconds. A slower Provider directly adds to the
+agent's wait; on an error or timeout, the Nudge attempt ends and the main agent
+continues.
 
 ## Privacy
 

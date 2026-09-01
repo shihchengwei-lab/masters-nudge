@@ -189,6 +189,7 @@ class CodexAdapter:
             workspace_snapshot=str(
                 observed.turn_state.get("workspace_snapshot") or ""
             ),
+            previous_findings=observed.turn_state.get("previous_findings") or [],
             evidence_records=observed.turn_state.get("evidence_records") or [],
         )
         try:

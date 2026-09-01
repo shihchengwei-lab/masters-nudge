@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import subprocess
@@ -56,21 +55,6 @@ def _command(event: ToolCompleted) -> str:
             or ""
         ).strip()
     return str(event.tool_input or "").strip()
-
-
-def tool_event_fingerprint(event: ToolCompleted) -> str:
-    raw = json.dumps(
-        {
-            "tool": event.tool_name,
-            "input": event.tool_input,
-            "output": event.tool_output,
-            "failed": event.failed,
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-        default=str,
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
 def evidence_category(event: ToolCompleted) -> str:

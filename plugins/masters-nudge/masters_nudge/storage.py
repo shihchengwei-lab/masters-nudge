@@ -96,6 +96,7 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "task_anchor": "",
         "task_sources": {},
         "workspace_snapshot": "",
+        "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
     }
@@ -143,15 +144,6 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
         }
     )
     _atomic_write(state_path(data_dir, session, "turn"), state)
-    _atomic_write(
-        state_path(data_dir, session, "progress"),
-        {
-            "schema_version": 1,
-            "host": session.host,
-            "session_id": session.session_id,
-            "last_event_fingerprint": "",
-        },
-    )
 
 
 def record_evidence(
@@ -200,26 +192,6 @@ def record_workspace_snapshot(
     return state
 
 
-def record_event(data_dir: Path, session: SessionRef, fingerprint: str) -> bool:
-    """Return true once for an exact consecutive native event replay."""
-    if not fingerprint:
-        return False
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    if state.get("last_event_fingerprint") == fingerprint:
-        return False
-    state.update(
-        {
-            "schema_version": 1,
-            "host": session.host,
-            "session_id": session.session_id,
-            "last_event_fingerprint": fingerprint,
-        }
-    )
-    _atomic_write(path, state)
-    return True
-
-
 def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
@@ -241,6 +213,25 @@ def append_host_returned_nudge(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    state = load_turn_state(data_dir, session)
+    findings = [
+        str(value).strip()
+        for value in state.get("previous_findings", [])
+        if str(value).strip()
+    ]
+    findings.append(entry["finding"])
+    retained: list[str] = []
+    used = 0
+    for value in reversed(findings):
+        cost = len(value) + 2
+        if retained and used + cost > source_context.PREVIOUS_FINDINGS_MAX_CHARS:
+            break
+        retained.append(
+            source_context.head_tail(value, source_context.PREVIOUS_FINDINGS_MAX_CHARS)
+        )
+        used += cost
+    state["previous_findings"] = list(reversed(retained))
+    _atomic_write(state_path(data_dir, session, "turn"), state)
     return entry
 
 

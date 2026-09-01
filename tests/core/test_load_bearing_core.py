@@ -85,6 +85,14 @@ class EvidenceBoundaryTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
+            "Surface the strongest live tradeoff not already covered by previous findings.",
+            prompt,
+        )
+        self.assertNotIn(
+            "Surface the strongest live engineering tradeoff visible in the packet.",
+            prompt,
+        )
+        self.assertIn(
             "The selected persona supplies the engineering value being defended,\n"
             "not authority over the main agent.",
             prompt,
@@ -130,14 +138,63 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
         self.assertIn("Successful application alone is not a check.", prompt)
 
-    def test_exact_native_event_replay_is_the_only_duplicate_guard(self):
+    def test_identical_native_batches_are_both_recorded(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            session = SessionRef("codex_cli", "replay")
+            session = SessionRef("codex_cli", "repeat", cwd=raw, repo_root=raw)
+            storage.start_turn(root, session, "重複執行相同驗證")
+            event = ToolCompleted(
+                session,
+                "Bash",
+                tool_input={"command": "pytest -q"},
+                tool_output="10 passed",
+            )
 
-            self.assertTrue(storage.record_event(root, session, "event-123"))
-            self.assertFalse(storage.record_event(root, session, "event-123"))
-            self.assertTrue(storage.record_event(root, session, "event-456"))
+            first = evidence.observe_tool_batch(root, [event])
+            second = evidence.observe_tool_batch(root, [event])
+
+        self.assertTrue(first.eligible)
+        self.assertTrue(second.eligible)
+        self.assertEqual(second.turn_state["evidence_seq"], 2)
+        self.assertEqual(
+            [record["content"] for record in second.turn_state["evidence_records"]],
+            ["actual_command:\npytest -q\n\nresult:\n10 passed"] * 2,
+        )
+
+    def test_change_only_is_recorded_without_triggering_a_nudge(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "change", cwd=raw, repo_root=raw)
+            storage.start_turn(root, session, "先修改再驗證")
+
+            changed = evidence.observe_tool_batch(
+                root,
+                [
+                    ToolCompleted(
+                        session,
+                        "apply_patch",
+                        tool_input={"patch": "*** Begin Patch"},
+                        tool_output="Done!",
+                        mutating=True,
+                    )
+                ],
+            )
+            checked = evidence.observe_tool_batch(
+                root,
+                [
+                    ToolCompleted(
+                        session,
+                        "Bash",
+                        tool_input={"command": "pytest -q"},
+                        tool_output="1 passed",
+                    )
+                ],
+            )
+
+        self.assertFalse(changed.eligible)
+        self.assertEqual(changed.turn_state["evidence_records"][0]["category"], "change")
+        self.assertTrue(checked.eligible)
+        self.assertEqual(checked.turn_state["evidence_records"][-1]["category"], "verification")
 
     def test_packet_contains_the_actual_command_and_result(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -286,6 +343,61 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
 
 class HostReturnedAuditTests(unittest.TestCase):
+    def test_delivered_findings_become_bounded_turn_deduplication_context(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("claude_code", "history", cwd=raw)
+            storage.start_turn(root, session, "避免重複意見")
+            storage.append_host_returned_nudge(
+                root,
+                session,
+                lens="simplicity",
+                finding="讓單一欄位直接擁有責任。",
+                returned_via="PostToolBatch",
+            )
+            storage.append_host_returned_nudge(
+                root,
+                session,
+                lens="reliability",
+                finding="重試必須保留同一個完成狀態。",
+                returned_via="PostToolBatch",
+            )
+            state = storage.load_turn_state(root, session)
+            packet = source_context.build_checkpoint_packet(
+                task_anchor=state["task_anchor"],
+                previous_findings=state["previous_findings"],
+            )
+
+        self.assertEqual(
+            state["previous_findings"],
+            ["讓單一欄位直接擁有責任。", "重試必須保留同一個完成狀態。"],
+        )
+        self.assertIn("[previous findings]", packet)
+        self.assertIn("- 讓單一欄位直接擁有責任。", packet)
+        self.assertIn("- 重試必須保留同一個完成狀態。", packet)
+
+    def test_turn_deduplication_context_keeps_newest_findings_within_packet_budget(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("claude_code", "bounded", cwd=raw)
+            storage.start_turn(root, session, "限制去重內容")
+            for index in range(20):
+                storage.append_host_returned_nudge(
+                    root,
+                    session,
+                    lens="simplicity",
+                    finding=f"finding-{index:02d}-" + "x" * 40,
+                    returned_via="PostToolBatch",
+                )
+            findings = storage.load_turn_state(root, session)["previous_findings"]
+
+        self.assertLessEqual(
+            sum(len(value) + 2 for value in findings),
+            source_context.PREVIOUS_FINDINGS_MAX_CHARS,
+        )
+        self.assertNotIn("finding-00-" + "x" * 40, findings)
+        self.assertEqual(findings[-1], "finding-19-" + "x" * 40)
+
     def test_host_return_creates_one_plain_audit_entry(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

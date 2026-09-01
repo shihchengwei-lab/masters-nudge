@@ -15,6 +15,7 @@ PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
 CURRENT_RESULT_SECTION_MAX_CHARS = 5800
 CURRENT_WORKSPACE_MAX_CHARS = 2200
+PREVIOUS_FINDINGS_MAX_CHARS = 600
 PACKET_TASK_SOURCE_MAX_CHARS = 3200
 PACKET_RESULT_RECORD_MAX_CHARS = 1600
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
@@ -168,11 +169,22 @@ def _current_results(evidence_records: Any) -> list[dict[str, Any]]:
     return records
 
 
+def _render_previous_findings(previous_findings: Any) -> str:
+    if not isinstance(previous_findings, list):
+        return ""
+    values = [str(value).strip() for value in previous_findings if str(value).strip()]
+    return head_tail(
+        "\n".join(f"- {value}" for value in values),
+        PREVIOUS_FINDINGS_MAX_CHARS,
+    )
+
+
 def _build_packet(
     *,
     task_anchor: str,
     task_sources: Any,
     workspace_snapshot: str,
+    previous_findings: Any,
     evidence_records: Any,
 ) -> str:
     contract_lines = [
@@ -184,12 +196,19 @@ def _build_packet(
         contract_lines.extend(("sources:", rendered_sources))
 
     result_lines = [_render_result_records(_current_results(evidence_records))]
+    findings = _render_previous_findings(previous_findings)
     packet = "\n\n".join(
-        (
+        part
+        for part in (
             _section(
                 "contract",
                 "\n".join(contract_lines),
                 CONTRACT_SECTION_MAX_CHARS,
+            ),
+            _section(
+                "previous findings",
+                findings,
+                PREVIOUS_FINDINGS_MAX_CHARS,
             ),
             _section(
                 "current workspace",
@@ -202,6 +221,7 @@ def _build_packet(
                 CURRENT_RESULT_SECTION_MAX_CHARS,
             ),
         )
+        if part
     )
     return head_tail(packet, PACKET_MAX_CHARS)
 
@@ -210,11 +230,13 @@ def build_checkpoint_packet(
     task_anchor: str,
     task_sources: Any = "",
     workspace_snapshot: str = "",
+    previous_findings: Any = None,
     evidence_records: Any = None,
 ) -> str:
     return _build_packet(
         task_anchor=task_anchor,
         task_sources=task_sources,
         workspace_snapshot=workspace_snapshot,
+        previous_findings=previous_findings,
         evidence_records=evidence_records,
     )

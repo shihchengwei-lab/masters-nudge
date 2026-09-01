@@ -61,8 +61,9 @@ Codex 目前沒有唯讀查詢 Hook capability 的指令，因此 plugin 已安�
 已驗證。Doctor 會把 Codex precision 回報為 `unverified`；是否 exact 必須另以隔離
 smoke 確認。
 
-一次 `PostToolBatch` 只要包含符合條件的修改、驗證、失敗或量測，就會同步啟動一個
-Nudge 流程。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫兩次，兩次共用 90 秒。
+修改會先記錄，留給下一次檢查判斷。一次 `PostToolBatch` 只要包含驗證、失敗或量測，
+就會同步啟動一個 Nudge 流程。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫
+兩次，兩次共用 90 秒。
 Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，這次 Nudge 直接結束，主要
 Agent 照常繼續。
 
