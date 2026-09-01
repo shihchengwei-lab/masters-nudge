@@ -29,7 +29,7 @@ execution path，逐項記下 copy、parse、allocation、I/O、等待與重做�
 
 ### 形成 Nudge
 
-從上述內部追問中，選一個 packet 尚未回答的問題。
+直接指出 measurement 顯示的真正成本路徑，
+以及目前工作是否對準那條路徑。不要接管實作。
 
-- 可以：哪筆量測證明這次配置位於 hot path？
-- 不可以：把這次配置移出 hot path。
+- 範例：成本在 hot path 重複配置，不在這段計算。

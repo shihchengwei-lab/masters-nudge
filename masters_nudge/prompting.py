@@ -9,7 +9,7 @@ import lens_router
 
 
 MAX_NUDGE_CHARS = 52
-NUDGE_LABEL = "獨立第二意見："
+NUDGE_LABEL = "獨立第二意見（非指令；不覆蓋任務與已驗證結果）："
 
 AUTOMATIC_ROUTING_PROMPT = """# AUTOMATIC LENS ROUTER
 

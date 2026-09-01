@@ -14,7 +14,14 @@ from subprocess import CompletedProcess
 from unittest import mock
 
 import source_context
-from masters_nudge import checkpoints, contracts, evidence, plugin_inventory, storage
+from masters_nudge import (
+    checkpoints,
+    contracts,
+    evidence,
+    plugin_inventory,
+    prompting,
+    storage,
+)
 from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 
@@ -74,48 +81,44 @@ class NudgeContractTests(unittest.TestCase):
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
-    def test_prompt_uses_the_persona_only_to_choose_what_to_inspect(self):
+    def test_prompt_requests_one_grounded_engineering_judgment(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "The selected persona changes what you inspect, not how you speak.",
+            "The selected persona supplies the engineering value being defended,\n"
+            "not authority over the main agent.",
             prompt,
         )
         self.assertIn(
-            "only for one short Traditional Chinese question supported by the packet;",
+            "A finding is one direct Traditional Chinese engineering judgment stating\n"
+            "one preference and its packet-visible reason.",
             prompt,
         )
-        self.assertIn("Do not suggest a fix.", prompt)
-        self.assertNotIn("not a question", prompt)
-        self.assertNotIn("one concrete engineering preference", prompt)
+        self.assertIn("It is not a question, command, or complete solution.", prompt)
+        self.assertNotIn("only for one short Traditional Chinese question", prompt)
+        self.assertNotIn("Do not suggest a fix.", prompt)
 
-    def test_personas_contrast_a_question_with_a_prescriptive_fix(self):
+    def test_personas_demonstrate_a_judgment_instead_of_a_question_or_command(self):
         expected = {
-            "linus.txt": (
-                "可以：這層拿掉後，哪個必要行為會消失？",
-                "不可以：刪掉這層 wrapper，直接走原本路徑。",
-            ),
-            "lamport.txt": (
-                "可以：第二次 signal 後，新狀態仍會被刷新嗎？",
-                "不可以：改成可重入 guard，別永久封鎖刷新。",
-            ),
-            "carmack.txt": (
-                "可以：哪筆量測證明這次配置位於 hot path？",
-                "不可以：把這次配置移出 hot path。",
-            ),
+            "linus.txt": "這層只轉交責任，沒有新增行為，owner 反而更模糊。",
+            "lamport.txt": "完成與取消分開擁有狀態，會留下雙重完成的路徑。",
+            "carmack.txt": "成本在 hot path 重複配置，不在這段計算。",
         }
 
-        for filename, examples in expected.items():
+        for filename, example in expected.items():
             with self.subTest(persona=filename):
                 persona = (ROOT / "personas" / filename).read_text(encoding="utf-8")
-                self.assertIn(
-                    "從上述內部追問中，選一個 packet 尚未回答的問題。",
-                    persona,
-                )
-                self.assertIn(examples[0], persona)
-                self.assertIn(examples[1], persona)
-                self.assertNotIn("Nudge 直接說明", persona)
-                self.assertNotIn("不要向主模型提問", persona)
+                self.assertIn(example, persona)
+                self.assertIn("不要接管實作。", persona)
+                self.assertNotIn("選一個 packet 尚未回答的問題", persona)
+                self.assertNotIn("- 不可以：", persona)
+
+    def test_delivery_marks_the_nudge_as_non_authoritative(self):
+        self.assertEqual(
+            prompting.delivery_text("這層只轉交責任。"),
+            "獨立第二意見（非指令；不覆蓋任務與已驗證結果）：\n"
+            "這層只轉交責任。",
+        )
 
     def test_prompt_waits_for_a_check_after_the_latest_change(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
