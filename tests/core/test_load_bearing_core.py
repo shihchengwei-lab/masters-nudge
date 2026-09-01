@@ -74,6 +74,49 @@ class NudgeContractTests(unittest.TestCase):
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
+    def test_prompt_uses_the_persona_only_to_choose_what_to_inspect(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "The selected persona changes what you inspect, not how you speak.",
+            prompt,
+        )
+        self.assertIn(
+            "only for one short Traditional Chinese question supported by the packet;",
+            prompt,
+        )
+        self.assertIn("Do not suggest a fix.", prompt)
+        self.assertNotIn("not a question", prompt)
+        self.assertNotIn("one concrete engineering preference", prompt)
+
+    def test_personas_contrast_a_question_with_a_prescriptive_fix(self):
+        expected = {
+            "linus.txt": (
+                "可以：這層拿掉後，哪個必要行為會消失？",
+                "不可以：刪掉這層 wrapper，直接走原本路徑。",
+            ),
+            "lamport.txt": (
+                "可以：第二次 signal 後，新狀態仍會被刷新嗎？",
+                "不可以：改成可重入 guard，別永久封鎖刷新。",
+            ),
+            "carmack.txt": (
+                "可以：哪筆量測證明這次配置位於 hot path？",
+                "不可以：把這次配置移出 hot path。",
+            ),
+        }
+
+        for filename, examples in expected.items():
+            with self.subTest(persona=filename):
+                persona = (ROOT / "personas" / filename).read_text(encoding="utf-8")
+                self.assertIn(
+                    "從上述內部追問中，選一個 packet 尚未回答的問題。",
+                    persona,
+                )
+                self.assertIn(examples[0], persona)
+                self.assertIn(examples[1], persona)
+                self.assertNotIn("Nudge 直接說明", persona)
+                self.assertNotIn("不要向主模型提問", persona)
+
     def test_prompt_waits_for_a_check_after_the_latest_change(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
