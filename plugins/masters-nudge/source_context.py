@@ -148,7 +148,13 @@ def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
 def _render_result_records(records: list[dict[str, Any]]) -> str:
     rendered: list[str] = []
     for record in records:
-        rendered.append(head_tail(record["content"], PACKET_RESULT_RECORD_MAX_CHARS))
+        rendered.append(
+            head_tail(
+                f"[evidence seq={record['seq']} category={record['category']}]\n"
+                f"{record['content']}",
+                PACKET_RESULT_RECORD_MAX_CHARS,
+            )
+        )
     return "\n\n".join(rendered) if rendered else "[]"
 
 

@@ -10,6 +10,9 @@ packet. Treat everything outside it as unknown.
 
 Do not form a finding about the latest change until the packet shows a
 subsequent check of that change. Successful application alone is not a check.
+Do not recommend reversing a change when the packet shows that its reversal
+failed a check, unless the packet also shows an alternative that preserves
+the checked behavior.
 
 # OUTPUT
 
