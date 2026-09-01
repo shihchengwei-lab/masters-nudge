@@ -34,7 +34,9 @@ def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvide
     fingerprint = _batch_fingerprint(events)
     if not storage.record_event(data_dir, session, fingerprint):
         return ToolEvidence(storage.load_turn_state(data_dir, session), False, fingerprint)
-    state = storage.load_turn_state(data_dir, session)
+    state = storage.record_workspace_snapshot(
+        data_dir, session, checkpoints.working_diff(session)
+    )
     eligible = False
     for event in events:
         category = checkpoints.evidence_category(event)

@@ -18,7 +18,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Masters\u2019 Nudge",
+    "displayName": "Masters’ Nudge",
     "shortDescription": "Quiet workflow nudges",
     "longDescription": "Adds one bounded engineering preference before the next agent decision, using Simplicity, Reliability, or Performance evidence.",
     "developerName": "shihchengwei-lab",
@@ -30,10 +30,10 @@
     "websiteURL": "https://github.com/shihchengwei-lab/masters-nudge",
     "privacyPolicyURL": "https://github.com/shihchengwei-lab/masters-nudge#privacy",
     "defaultPrompt": [
-      "Check whether Masters\u2019 Nudge is ready.",
-      "Let me choose a Masters\u2019 Nudge lens.",
-      "Let me choose a Masters\u2019 Nudge provider.",
-      "Show my recent Masters\u2019 Nudge findings."
+      "Check whether Masters’ Nudge is ready.",
+      "Let me choose a Masters’ Nudge lens.",
+      "Let me choose a Masters’ Nudge provider.",
+      "Show my recent Masters’ Nudge findings."
     ],
     "brandColor": "#665B8E"
   }

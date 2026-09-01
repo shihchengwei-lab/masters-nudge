@@ -95,6 +95,7 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "session_id": session.session_id,
         "task_anchor": "",
         "task_sources": {},
+        "workspace_snapshot": "",
         "evidence_seq": 0,
         "evidence_records": [],
     }
@@ -182,6 +183,19 @@ def record_evidence(
         )
     retained.sort(key=lambda record: int(record.get("seq") or 0))
     state.update({"evidence_seq": sequence, "evidence_records": retained})
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state
+
+
+def record_workspace_snapshot(
+    data_dir: Path,
+    session: SessionRef,
+    snapshot: str,
+) -> dict[str, Any]:
+    state = load_turn_state(data_dir, session)
+    state["workspace_snapshot"] = source_context.head_tail(
+        snapshot, source_context.CURRENT_WORKSPACE_MAX_CHARS
+    )
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 

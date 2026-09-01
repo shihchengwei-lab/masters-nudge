@@ -14,6 +14,7 @@ TASK_SOURCE_MAX_CHARS = 6000
 PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
 CURRENT_RESULT_SECTION_MAX_CHARS = 5800
+CURRENT_WORKSPACE_MAX_CHARS = 2200
 PACKET_TASK_SOURCE_MAX_CHARS = 3200
 PACKET_RESULT_RECORD_MAX_CHARS = 1600
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
@@ -171,6 +172,7 @@ def _build_packet(
     *,
     task_anchor: str,
     task_sources: Any,
+    workspace_snapshot: str,
     evidence_records: Any,
 ) -> str:
     contract_lines = [
@@ -190,6 +192,11 @@ def _build_packet(
                 CONTRACT_SECTION_MAX_CHARS,
             ),
             _section(
+                "current workspace",
+                workspace_snapshot,
+                CURRENT_WORKSPACE_MAX_CHARS,
+            ),
+            _section(
                 "current result",
                 "\n".join(result_lines),
                 CURRENT_RESULT_SECTION_MAX_CHARS,
@@ -202,10 +209,12 @@ def _build_packet(
 def build_checkpoint_packet(
     task_anchor: str,
     task_sources: Any = "",
+    workspace_snapshot: str = "",
     evidence_records: Any = None,
 ) -> str:
     return _build_packet(
         task_anchor=task_anchor,
         task_sources=task_sources,
+        workspace_snapshot=workspace_snapshot,
         evidence_records=evidence_records,
     )

@@ -53,6 +53,7 @@ class RoutingTests(unittest.TestCase):
 
         self.assertEqual(outcome.status, "finding")
         self.assertEqual(outcome.lens, "simplicity")
+        self.assertEqual(outcome.decision_stage, "generator")
         self.assertEqual(len(calls), 2)
         self.assertEqual([call[1] for call in calls], ["EVIDENCE-PACKET"] * 2)
         self.assertGreaterEqual(calls[0][2], calls[1][2])
@@ -75,6 +76,7 @@ class RoutingTests(unittest.TestCase):
                 ).nudge_once("EVIDENCE-PACKET")
 
                 self.assertEqual(outcome.status, "no_finding")
+                self.assertEqual(outcome.decision_stage, "generator")
                 self.assertEqual(len(calls), 1)
                 self.assertIn(f"# LENS CONTEXT: {lens}", calls[0][0])
                 self.assertEqual(calls[0][1], "EVIDENCE-PACKET")
@@ -92,6 +94,7 @@ class RoutingTests(unittest.TestCase):
             ).nudge_once("packet")
 
         self.assertEqual(outcome.status, "no_finding")
+        self.assertEqual(outcome.decision_stage, "router")
         self.assertEqual(len(calls), 1)
 
 

@@ -98,6 +98,7 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
         task_sources=state.get("task_sources") or {},
+        workspace_snapshot=str(state.get("workspace_snapshot") or ""),
         evidence_records=state.get("evidence_records") or [],
     )
     try:

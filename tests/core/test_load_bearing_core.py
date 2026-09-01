@@ -26,7 +26,7 @@ class NudgeContractTests(unittest.TestCase):
     def test_outcome_contains_only_the_decision_needed_by_the_hook(self):
         self.assertEqual(
             [field.name for field in fields(NudgeOutcome)],
-            ["status", "finding", "lens"],
+            ["status", "finding", "lens", "decision_stage"],
         )
 
     def test_core_accepts_the_packet_directly(self):
@@ -36,7 +36,9 @@ class NudgeContractTests(unittest.TestCase):
         self.assertIsNone(parameters["timeout_sec"].default)
 
     def test_silence_needs_no_fake_finding_or_lens(self):
-        self.assertEqual(NudgeOutcome("no_finding"), NudgeOutcome("no_finding", "", ""))
+        self.assertEqual(
+            NudgeOutcome("no_finding"), NudgeOutcome("no_finding", "", "", "")
+        )
 
     def test_contracts_do_not_keep_unconsumed_event_fields_or_types(self):
         with self.subTest(contract="PromptSubmitted"):
@@ -118,6 +120,62 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertIn("pytest tests/test_owner.py -q", packet)
         self.assertIn("1 passed in 0.12s", packet)
 
+    def test_common_direct_test_commands_are_verification_evidence(self):
+        session = SessionRef("codex_cli", "validation")
+        for command in (
+            "npx eslint lib/*.js",
+            "npx mocha test/unit.js",
+            "node --test test/unit.js",
+        ):
+            with self.subTest(command=command):
+                event = ToolCompleted(
+                    session,
+                    "Bash",
+                    tool_input={"command": command},
+                    tool_output="1 passing",
+                )
+                self.assertEqual(checkpoints.evidence_category(event), "verification")
+
+    def test_failed_navigation_is_not_failure_evidence(self):
+        event = ToolCompleted(
+            SessionRef("codex_cli", "navigation"),
+            "Bash",
+            tool_input={"command": "rg missing-symbol src"},
+            tool_output="",
+            failed=True,
+            failure_known=True,
+        )
+
+        self.assertEqual(checkpoints.evidence_category(event), "")
+
+    def test_verification_packet_binds_the_latest_workspace_snapshot(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "snapshot", cwd=raw, repo_root=raw)
+            storage.start_turn(root, session, "確認修改後的驗證")
+            event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "pytest -q"},
+                tool_output="1 passed in 0.12s",
+            )
+            with mock.patch.object(
+                checkpoints,
+                "working_diff",
+                return_value="diff --git a/app.py b/app.py\n+owner = direct",
+            ):
+                observed = evidence.observe_tool_batch(root, [event])
+            packet = source_context.build_checkpoint_packet(
+                task_anchor=observed.turn_state["task_anchor"],
+                task_sources=observed.turn_state["task_sources"],
+                workspace_snapshot=observed.turn_state["workspace_snapshot"],
+                evidence_records=observed.turn_state["evidence_records"],
+            )
+
+        self.assertIn("[current workspace]", packet)
+        self.assertIn("+owner = direct", packet)
+        self.assertIn("pytest -q", packet)
+
     def test_only_a_small_number_of_recent_results_is_retained(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -138,14 +196,8 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertLessEqual(len(verification), 3)
         self.assertEqual(verification[-1]["content"], "verification-11")
 
-    def test_change_evidence_contains_the_current_working_diff(self):
-        event = ToolCompleted(
-            SessionRef("codex_cli", "diff", cwd="C:/workspace"),
-            "apply_patch",
-            tool_input={"patch": "*** Update File: app.py"},
-            tool_output={"status": "completed"},
-            mutating=True,
-        )
+    def test_workspace_snapshot_contains_the_current_working_diff(self):
+        session = SessionRef("codex_cli", "diff", cwd="C:/workspace")
         with mock.patch.object(
             checkpoints.subprocess,
             "run",
@@ -156,9 +208,8 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 "",
             ),
         ):
-            rendered = checkpoints.render_evidence_record(event)
+            rendered = checkpoints.working_diff(session)
 
-        self.assertIn("current_diff:", rendered)
         self.assertIn("+owner = direct", rendered)
 
     def test_change_evidence_contains_an_untracked_new_file(self):
@@ -181,15 +232,8 @@ class EvidenceBoundaryTests(unittest.TestCase):
             (root / "new_owner.py").write_text(
                 "owner = 'direct'\n", encoding="utf-8"
             )
-            event = ToolCompleted(
-                SessionRef("codex_cli", "untracked", cwd=raw, repo_root=raw),
-                "file_change",
-                tool_input={"path": "new_owner.py"},
-                tool_output={"status": "completed"},
-                mutating=True,
-            )
-
-            rendered = checkpoints.render_evidence_record(event)
+            session = SessionRef("codex_cli", "untracked", cwd=raw, repo_root=raw)
+            rendered = checkpoints.working_diff(session)
 
         self.assertIn("new_owner.py", rendered)
         self.assertIn("owner = 'direct'", rendered)

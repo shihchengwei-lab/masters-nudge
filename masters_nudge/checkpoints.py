@@ -17,8 +17,9 @@ from .contracts import ToolCompleted
 RESULT_MAX_CHARS = 5000
 CHANGE_MAX_CHARS = 2200
 VALIDATION_RE = re.compile(
-    r"\b(?:pytest|unittest|vitest|jest|cargo\s+test|go\s+test|dotnet\s+test|"
-    r"flutter\s+test|npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
+    r"\b(?:pytest|unittest|vitest|jest|eslint|mocha|node\s+--test|"
+    r"npx\s+(?:eslint|mocha|jest|vitest)|cargo\s+test|go\s+test|dotnet\s+test|"
+    r"flutter\s+test|(?:npm|pnpm|yarn)\s+(?:run\s+)?(?:test|lint)|"
     r"build|verify)\b",
     re.IGNORECASE,
 )
@@ -76,12 +77,12 @@ def evidence_category(event: ToolCompleted) -> str:
     command = _command(event)
     semantic = f"{event.tool_name} {command}"
     output = _compact(event.tool_output)
-    if event.failure_known and event.failed:
-        return "failure"
     if NAVIGATION_RE.search(command) and not (
         VALIDATION_RE.search(semantic) or MEASUREMENT_RE.search(semantic)
     ):
         return ""
+    if event.failure_known and event.failed:
+        return "failure"
     if MEASUREMENT_RE.search(semantic):
         return "failure" if FAILURE_RE.search(output) else "measurement"
     if VALIDATION_RE.search(semantic):
@@ -111,22 +112,12 @@ def _untracked_files(cwd: str) -> list[str]:
     return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
 
 
-def _requested_path(event: ToolCompleted) -> str:
-    if isinstance(event.tool_input, dict):
-        value = event.tool_input.get("path") or event.tool_input.get("file_path")
-        if value:
-            return str(value).replace("\\", "/")
-    match = re.search(r"\*\*\* Add File:\s*([^\r\n]+)", _command(event))
-    return match.group(1).strip().replace("\\", "/") if match else ""
-
-
-def _untracked_snapshot(event: ToolCompleted) -> str:
-    if not event.session.cwd:
+def _untracked_snapshot(session) -> str:
+    if not session.cwd:
         return ""
-    root = Path(event.session.cwd).resolve()
-    paths = _untracked_files(event.session.cwd)
-    requested = _requested_path(event)
-    paths.sort(key=lambda value: (value.replace("\\", "/") != requested, value))
+    root = Path(session.cwd).resolve()
+    paths = _untracked_files(session.cwd)
+    paths.sort()
     rendered: list[str] = []
     for relative in paths[:3]:
         display_path = relative.replace("\\", "/")
@@ -143,13 +134,13 @@ def _untracked_snapshot(event: ToolCompleted) -> str:
     return "\n\n".join(rendered)
 
 
-def _working_diff(event: ToolCompleted) -> str:
-    if not event.session.cwd:
+def working_diff(session) -> str:
+    if not session.cwd:
         return ""
     try:
         result = subprocess.run(
             ["git", "diff", "--unified=1", "HEAD", "--"],
-            cwd=event.session.cwd,
+            cwd=session.cwd,
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -161,7 +152,7 @@ def _working_diff(event: ToolCompleted) -> str:
     if result.returncode != 0:
         return ""
     combined = "\n\n".join(
-        value for value in (result.stdout.strip(), _untracked_snapshot(event)) if value
+        value for value in (result.stdout.strip(), _untracked_snapshot(session)) if value
     )
     return source_context.head_tail(combined, CHANGE_MAX_CHARS)
 
@@ -174,10 +165,6 @@ def render_evidence_record(event: ToolCompleted) -> str:
     parts: list[str] = []
     if command:
         parts.append(f"actual_command:\n{source_context.head_tail(command, 1800)}")
-    if category == "change":
-        diff = _working_diff(event)
-        if diff:
-            parts.append(f"current_diff:\n{diff}")
     if result:
         parts.append(f"result:\n{result}")
     return "\n\n".join(parts)

@@ -186,6 +186,9 @@ class CodexAdapter:
         packet = source_context.build_checkpoint_packet(
             task_anchor=str(observed.turn_state.get("task_anchor") or ""),
             task_sources=observed.turn_state.get("task_sources") or {},
+            workspace_snapshot=str(
+                observed.turn_state.get("workspace_snapshot") or ""
+            ),
             evidence_records=observed.turn_state.get("evidence_records") or [],
         )
         try:

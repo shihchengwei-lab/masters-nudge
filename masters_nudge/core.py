@@ -76,11 +76,11 @@ class NudgeCore:
             )
             status = str(routed.get("status") or "error")
             if status == "no_finding":
-                return NudgeOutcome("no_finding")
+                return NudgeOutcome("no_finding", decision_stage="router")
             routed_lens = str(routed.get("lens") or "").lower()
             route = lens_router.resolve_nudge_route(routed_lens)
             if status != "finding" or not route.lens:
-                return NudgeOutcome("error")
+                return NudgeOutcome("error", decision_stage="router")
 
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
@@ -90,7 +90,7 @@ class NudgeCore:
         )
         remaining = deadline - time.perf_counter()
         if not system_prompt or remaining <= 0:
-            return NudgeOutcome("error")
+            return NudgeOutcome("error", decision_stage="generator")
         result = self._call(
             system_prompt,
             build_nudge_input(source_packet),
@@ -101,12 +101,12 @@ class NudgeCore:
         finding = str(result.get("finding") or "").strip()
         returned_lens = str(result.get("lens") or "").lower()
         if status == "no_finding":
-            return NudgeOutcome("no_finding")
+            return NudgeOutcome("no_finding", decision_stage="generator")
         if (
             status != "finding"
             or not finding
             or len(finding) > MAX_NUDGE_CHARS
             or returned_lens != route.lens
         ):
-            return NudgeOutcome("error")
-        return NudgeOutcome("finding", finding, route.lens)
+            return NudgeOutcome("error", decision_stage="generator")
+        return NudgeOutcome("finding", finding, route.lens, "generator")

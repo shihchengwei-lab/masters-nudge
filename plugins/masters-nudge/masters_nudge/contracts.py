@@ -9,6 +9,7 @@ from typing import Literal, TypeAlias
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
 NudgeStatus: TypeAlias = Literal["finding", "no_finding", "error"]
+DecisionStage: TypeAlias = Literal["", "router", "generator"]
 POST_TOOL_BATCH_EVENT = "PostToolBatch"
 
 
@@ -37,6 +38,7 @@ class NudgeOutcome:
     status: NudgeStatus
     finding: str = ""
     lens: str = ""
+    decision_stage: DecisionStage = ""
 
 
 def safe_identifier(value: str, fallback: str = "unknown", limit: int = 160) -> str:
