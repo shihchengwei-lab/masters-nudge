@@ -51,7 +51,7 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(len(first), 64)
         self.assertNotEqual(first, second)
 
-    def test_review_tool_batch_owns_completed_generator_silence(self):
+    def test_review_tool_batch_reuses_only_exact_completed_generator_silence(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "core-review", cwd=raw)
@@ -77,13 +77,40 @@ class RoutingTests(unittest.TestCase):
 
             first = core.review_tool_batch([event])
             repeated = core.review_tool_batch([event])
-            state = storage.load_turn_state(root, session)
+            repeated_state = storage.load_turn_state(root, session)
+
+            changed_event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="Process exited with code 1",
+                failed=True,
+                failure_known=True,
+            )
+            changed_evidence = core.review_tool_batch([changed_event])
+            changed_settings = RuntimeSettings(
+                "openai",
+                "changed-model",
+                RuntimePaths(ROOT, root, root, root / "error.log"),
+                lens="simplicity",
+            )
+            changed_contract = NudgeCore(
+                changed_settings,
+                dispatch=dispatch,
+            ).review_tool_batch([changed_event])
+            final_state = storage.load_turn_state(root, session)
 
         self.assertEqual(first.decision_stage, "generator")
         self.assertIsNone(repeated)
-        self.assertEqual(calls, ["generator"])
-        self.assertEqual(state["evidence_seq"], 1)
-        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
+        self.assertEqual(repeated_state["evidence_seq"], 1)
+        self.assertEqual(
+            repeated_state["last_completed_review"]["reuse_count"], 1
+        )
+        self.assertEqual(changed_evidence.decision_stage, "generator")
+        self.assertEqual(changed_contract.decision_stage, "generator")
+        self.assertEqual(calls, ["generator", "generator", "generator"])
+        self.assertEqual(final_state["evidence_seq"], 3)
+        self.assertEqual(final_state["last_completed_review"]["reuse_count"], 0)
 
     def test_automatic_route_then_generator_share_one_deadline(self):
         with tempfile.TemporaryDirectory() as raw:
