@@ -742,6 +742,32 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
         self.assertIn("npm run test:eventsource", packet)
 
+    def test_packet_preserves_the_caller_requested_by_a_navigation_command(self):
+        fixture = __import__("json").loads(
+            (ROOT / "tests" / "fixtures" / "r1_seq4_actor_source.json").read_text(
+                encoding="utf-8"
+            )
+        )
+
+        result_content = source_context._render_result_records(
+            source_context._current_results(fixture["evidence_records"]),
+            workspace_available=True,
+        )
+        rendered = source_context.render_actor_source_context(
+            fixture["actor_source_records"],
+            query="\n".join(
+                (
+                    fixture["task_anchor"],
+                    fixture["workspace_snapshot"],
+                    result_content,
+                )
+            ),
+            max_chars=fixture["actor_source_max_chars"],
+        )
+
+        self.assertLessEqual(len(rendered), fixture["actor_source_max_chars"])
+        self.assertIn(fixture["must_preserve"], rendered)
+
 
 class HostReturnedAuditTests(unittest.TestCase):
     def test_delivered_findings_become_bounded_turn_deduplication_context(self):

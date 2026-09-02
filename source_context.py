@@ -215,14 +215,14 @@ def _actor_source_candidates(
     actor_source_records: Any,
     *,
     query: str,
-) -> list[tuple[int, int, str, frozenset[str]]]:
+) -> list[tuple[int, int, int, str, frozenset[str]]]:
     if not isinstance(actor_source_records, list):
         return []
     query_tokens = _context_tokens(query)
     if not query_tokens:
         return []
     folded_query = query.casefold()
-    candidates: list[tuple[int, int, str, frozenset[str]]] = []
+    candidates: list[tuple[int, int, int, str, frozenset[str]]] = []
     for record in actor_source_records:
         if not isinstance(record, Mapping):
             continue
@@ -238,6 +238,7 @@ def _actor_source_candidates(
         marker = "\n\nresult:\n"
         if content.startswith("actual_command:\n") and marker in content:
             command, result = content[len("actual_command:\n") :].split(marker, 1)
+        command_tokens = _context_tokens(command)
         lines = result.splitlines()
         intervals: list[tuple[int, int]] = []
         for index, line in enumerate(lines):
@@ -262,17 +263,24 @@ def _actor_source_candidates(
             covered = {
                 token for token in query_tokens if token in excerpt.casefold()
             }
-            score = sum(
+            query_score = sum(
                 min(len(token), 24) * min(folded_query.count(token), 8)
                 for token in covered
+            )
+            command_score = sum(
+                min(len(token), 24)
+                for token in command_tokens
+                if token in excerpt.casefold()
             )
             rendered = (
                 f"[actor source seq={sequence}]\n"
                 f"command: {head_tail(command, 320)}\n"
                 f"{excerpt}"
             )
-            candidates.append((score, sequence, rendered, frozenset(covered)))
-    candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+            candidates.append(
+                (query_score, command_score, sequence, rendered, frozenset(covered))
+            )
+    candidates.sort(key=lambda item: (item[0], item[2]), reverse=True)
     return candidates
 
 
@@ -283,14 +291,22 @@ def render_actor_source_context(
     max_chars: int = ACTOR_SOURCE_SECTION_MAX_CHARS,
 ) -> str:
     """Select coherent excerpts only from source text already shown to the actor."""
+    candidates = _actor_source_candidates(actor_source_records, query=query)
+    if candidates:
+        newest_sequence = max(candidate[2] for candidate in candidates)
+        newest_candidate = max(
+            (candidate for candidate in candidates if candidate[2] == newest_sequence),
+            key=lambda candidate: (candidate[1], candidate[0]),
+        )
+        candidates = [
+            newest_candidate,
+            *(candidate for candidate in candidates if candidate is not newest_candidate),
+        ]
     selected: list[str] = []
     seen_excerpts: set[str] = set()
     covered_tokens: set[str] = set()
     used = 0
-    for _score, _sequence, candidate, candidate_tokens in _actor_source_candidates(
-        actor_source_records,
-        query=query,
-    ):
+    for _query_score, _command_score, _sequence, candidate, candidate_tokens in candidates:
         excerpt_key = candidate.split("\n", 2)[-1].strip().casefold()
         if (
             not excerpt_key
