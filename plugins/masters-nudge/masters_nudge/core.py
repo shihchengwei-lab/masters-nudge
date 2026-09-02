@@ -9,9 +9,10 @@ import time
 from typing import Callable
 
 import lens_router
+import source_context
 
-from . import providers
-from .contracts import NudgeOutcome
+from . import evidence, providers, storage
+from .contracts import NudgeOutcome, ToolCompleted
 from .prompting import (
     MAX_NUDGE_CHARS,
     build_nudge_input,
@@ -71,6 +72,51 @@ class NudgeCore:
             separators=(",", ":"),
         ).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()
+
+    def review_tool_batch(
+        self, events: list[ToolCompleted]
+    ) -> NudgeOutcome | None:
+        """Run one host-neutral review flow for a completed tool batch."""
+        contract_signature = self.review_contract_signature()
+        observed = evidence.observe_tool_batch(
+            self.settings.paths.data_dir,
+            events,
+            contract_signature=contract_signature,
+        )
+        if observed.reused_generator_no_finding or not observed.eligible:
+            return None
+        state = observed.turn_state
+        packet = source_context.build_checkpoint_packet(
+            task_anchor=str(state.get("task_anchor") or ""),
+            task_sources=state.get("task_sources") or {},
+            workspace_snapshot=str(state.get("workspace_snapshot") or ""),
+            previous_findings=state.get("previous_findings") or [],
+            evidence_records=state.get("evidence_records") or [],
+        )
+        session = events[0].session
+        observe_stage = storage.provider_stage_observer(
+            self.settings.paths.data_dir,
+            session,
+            evidence_seq=int(state.get("evidence_seq") or 0),
+            provider=self.settings.provider,
+            model=self.settings.model,
+            configured_lens=self.settings.lens,
+        )
+        outcome = self.nudge_once(
+            packet,
+            timeout_sec=PROVIDER_TIMEOUT_SEC,
+            observe_stage=observe_stage,
+        )
+        if outcome.status == "no_finding" and outcome.decision_stage == "generator":
+            storage.record_completed_generator_no_finding(
+                self.settings.paths.data_dir,
+                session,
+                evidence_seq=int(state.get("evidence_seq") or 0),
+                workspace_snapshot=str(state.get("workspace_snapshot") or ""),
+                checkpoint_signature=observed.checkpoint_signature,
+                contract_signature=contract_signature,
+            )
+        return outcome
 
     def _call(
         self,

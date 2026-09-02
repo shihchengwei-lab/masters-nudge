@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 
 import lens_router
+from masters_nudge import storage
+from masters_nudge.contracts import SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
@@ -48,6 +50,40 @@ class RoutingTests(unittest.TestCase):
 
         self.assertEqual(len(first), 64)
         self.assertNotEqual(first, second)
+
+    def test_review_tool_batch_owns_completed_generator_silence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "core-review", cwd=raw)
+            storage.start_turn(root, session, "檢查驗證結果")
+            calls = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append("generator")
+                return {"status": "no_finding", "lens": "none", "finding": ""}
+
+            core = NudgeCore(
+                self.settings(root, "simplicity"),
+                dispatch=dispatch,
+            )
+            event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="Process exited with code 0",
+                failed=False,
+                failure_known=True,
+            )
+
+            first = core.review_tool_batch([event])
+            repeated = core.review_tool_batch([event])
+            state = storage.load_turn_state(root, session)
+
+        self.assertEqual(first.decision_stage, "generator")
+        self.assertIsNone(repeated)
+        self.assertEqual(calls, ["generator"])
+        self.assertEqual(state["evidence_seq"], 1)
+        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
 
     def test_automatic_route_then_generator_share_one_deadline(self):
         with tempfile.TemporaryDirectory() as raw:

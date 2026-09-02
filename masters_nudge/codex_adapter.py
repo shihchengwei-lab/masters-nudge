@@ -7,13 +7,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-import source_context
-
 from . import prompting, storage
 from .contracts import POST_TOOL_BATCH_EVENT, SessionRef, ToolCompleted, find_git_root
 from .core import NudgeCore
-from .evidence import observe_tool_batch
-from .runtime import PROVIDER_TIMEOUT_SEC, active_guard
+from .runtime import active_guard
 
 
 MUTATING_TOOLS = {"apply_patch", "file_change", "edit", "write"}
@@ -180,54 +177,12 @@ class CodexAdapter:
             anchor = _task_anchor(payload)
             if anchor:
                 storage.start_turn(self.data_dir, session, anchor)
-        contract_signature = self.core.review_contract_signature()
-        observed = observe_tool_batch(
-            self.data_dir,
-            events,
-            contract_signature=contract_signature,
-        )
-        if observed.reused_generator_no_finding:
-            return None
-        if not observed.eligible:
-            return None
-        packet = source_context.build_checkpoint_packet(
-            task_anchor=str(observed.turn_state.get("task_anchor") or ""),
-            task_sources=observed.turn_state.get("task_sources") or {},
-            workspace_snapshot=str(
-                observed.turn_state.get("workspace_snapshot") or ""
-            ),
-            previous_findings=observed.turn_state.get("previous_findings") or [],
-            evidence_records=observed.turn_state.get("evidence_records") or [],
-        )
-        observe_stage = storage.provider_stage_observer(
-            self.data_dir,
-            session,
-            evidence_seq=int(observed.turn_state.get("evidence_seq") or 0),
-            provider=self.core.settings.provider,
-            model=self.core.settings.model,
-            configured_lens=self.core.settings.lens,
-        )
         try:
-            outcome = self.core.nudge_once(
-                packet,
-                timeout_sec=PROVIDER_TIMEOUT_SEC,
-                observe_stage=observe_stage,
-            )
+            outcome = self.core.review_tool_batch(events)
         except Exception as exc:
             self.core.log_error(f"Codex Nudge failed: {exc}")
             return None
-        if outcome.status == "no_finding" and outcome.decision_stage == "generator":
-            storage.record_completed_generator_no_finding(
-                self.data_dir,
-                session,
-                evidence_seq=int(observed.turn_state.get("evidence_seq") or 0),
-                workspace_snapshot=str(
-                    observed.turn_state.get("workspace_snapshot") or ""
-                ),
-                checkpoint_signature=observed.checkpoint_signature,
-                contract_signature=contract_signature,
-            )
-        if outcome.status != "finding" or not outcome.finding:
+        if outcome is None or outcome.status != "finding" or not outcome.finding:
             return None
         output = build_hook_output(event_name, outcome.finding)
         output[AUDIT_MARKER_KEY] = {

@@ -15,6 +15,7 @@ import hook_entry
 from masters_nudge import claude_adapter, storage
 from masters_nudge.codex_adapter import CodexAdapter
 from masters_nudge.contracts import NudgeOutcome, SessionRef
+from masters_nudge.core import NudgeCore
 
 
 class FakeCore:
@@ -42,6 +43,9 @@ class FakeCore:
             finding="讓單一欄位直接擁有責任。",
             lens="simplicity",
         )
+
+    def review_tool_batch(self, events):
+        return NudgeCore.review_tool_batch(self, events)
 
 
 class SilentCore(FakeCore):
@@ -326,8 +330,8 @@ class ClaudeHookFlowTests(unittest.TestCase):
             with (
                 mock.patch.object(claude_adapter, "RUNTIME", settings),
                 mock.patch.object(
-                    claude_checkpoint,
-                    "nudge_checkpoint",
+                    NudgeCore,
+                    "nudge_once",
                     return_value=NudgeOutcome(
                         "no_finding", decision_stage="generator"
                     ),
@@ -379,9 +383,9 @@ class ClaudeHookFlowTests(unittest.TestCase):
                     }
                 ],
             }
-            def checkpoint(_packet, observed_session, evidence_seq):
-                self.assertEqual(observed_session, session)
-                self.assertEqual(evidence_seq, 2)
+            def checkpoint(_core, packet, timeout_sec=None, observe_stage=None):
+                self.assertIn("evidence seq=2", packet)
+                self.assertIsNotNone(observe_stage)
                 return NudgeOutcome(
                     "finding",
                     finding="讓單一欄位直接擁有責任。",
@@ -391,8 +395,9 @@ class ClaudeHookFlowTests(unittest.TestCase):
             with (
                 mock.patch.object(claude_adapter, "RUNTIME", settings),
                 mock.patch.object(
-                    claude_checkpoint,
-                    "nudge_checkpoint",
+                    NudgeCore,
+                    "nudge_once",
+                    autospec=True,
                     side_effect=checkpoint,
                 ),
             ):
