@@ -117,15 +117,17 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 self.assertNotIn("選一個 packet 尚未回答的問題", persona)
                 self.assertNotIn("- 不可以：", persona)
 
-    def test_linus_scene_checks_what_each_mechanism_actually_defends(self):
+    def test_personas_keep_the_scene_and_questions_without_a_guideline_list(self):
         persona = (ROOT / "personas" / "linus.txt").read_text(encoding="utf-8")
 
-        self.assertIn("沿著 packet 顯示的實際 control flow 往前走", persona)
-        self.assertIn("拿掉這段，哪條路會失去保證？", persona)
-        self.assertIn("若兩段守的是不同入口", persona)
-        self.assertIn("又讓多少分支真正消失", persona)
-        self.assertIn("拿掉這一層，哪個可見 caller 會失去行為？", persona)
-        self.assertIn("這個新概念消滅的分支，比它新增的責任多嗎？", persona)
+        self.assertIn("沿實際 control flow 讀完改動，再對照 repository 既有 seam", persona)
+        self.assertIn("不同入口各自承重時，不為整齊硬合併", persona)
+        self.assertIn("這個新概念保護了什麼行為？", persona)
+        self.assertIn("沿既有 seam 做，能少掉什麼？", persona)
+        for filename in ("linus.txt", "lamport.txt", "carmack.txt"):
+            with self.subTest(persona=filename):
+                text = (ROOT / "personas" / filename).read_text(encoding="utf-8")
+                self.assertNotIn("### 關注面向", text)
 
     def test_delivery_marks_the_nudge_as_non_authoritative(self):
         self.assertEqual(
@@ -153,7 +155,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
             prompt,
         )
 
-    def test_identical_completed_checkpoint_is_admitted_only_once_but_recorded(self):
+    def test_observer_records_candidates_without_owning_review_admission(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "repeat", cwd=raw, repo_root=raw)
@@ -165,217 +167,43 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 tool_output="10 passed",
             )
 
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-1"),
-            ):
-                first = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v1"
-                )
-                storage.record_completed_review(
-                    root,
-                    session,
-                    workspace_revision_signature=first.workspace_revision_signature,
-                    checkpoint_signature=first.checkpoint_signature,
-                )
-                second = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v1"
-                )
+            first = evidence.observe_tool_batch(root, [event])
+            second = evidence.observe_tool_batch(root, [event])
 
-        self.assertTrue(first.eligible)
-        self.assertFalse(second.eligible)
+        self.assertTrue(first.candidate)
+        self.assertTrue(second.candidate)
+        self.assertFalse(first.has_failure)
         self.assertEqual(second.turn_state["evidence_seq"], 2)
         self.assertEqual(
             [record["content"] for record in second.turn_state["evidence_records"]],
             ["actual_command:\npytest -q\n\nresult:\n10 passed"] * 2,
         )
 
-    def test_new_result_contract_or_revision_starts_a_new_checkpoint(self):
+    def test_review_slots_follow_two_progress_steps_and_one_failure_reserve(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            session = SessionRef("codex_cli", "reuse", cwd=raw, repo_root=raw)
-            storage.start_turn(root, session, "重複執行相同驗證")
-            event = ToolCompleted(
-                session,
-                "Bash",
-                tool_input={"command": "pytest -q"},
-                tool_output="10 passed",
+            session = SessionRef("codex_cli", "budget", cwd=raw)
+            storage.start_turn(root, session, "每輪兩次一般機會，加一次失敗保留機會")
+
+            _, first = storage.claim_review_slot(root, session, has_failure=False)
+            _, repeated = storage.claim_review_slot(root, session, has_failure=False)
+            storage.record_evidence(root, session, category="change", content="edit 1")
+            _, second = storage.claim_review_slot(root, session, has_failure=False)
+            storage.record_evidence(root, session, category="change", content="edit 2")
+            _, successful_third = storage.claim_review_slot(
+                root, session, has_failure=False
             )
+            state, reserve = storage.claim_review_slot(root, session, has_failure=True)
+            _, exhausted = storage.claim_review_slot(root, session, has_failure=True)
 
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-1"),
-            ):
-                first = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v1"
-                )
-                storage.record_completed_review(
-                    root,
-                    session,
-                    workspace_revision_signature=first.workspace_revision_signature,
-                    checkpoint_signature=first.checkpoint_signature,
-                )
-                repeated = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v1"
-                )
-                failure = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "Bash",
-                            tool_input={"command": "pytest -q"},
-                            tool_output="1 failed",
-                            failed=True,
-                            failure_known=True,
-                        )
-                    ],
-                    contract_signature="contract-v1",
-                )
-                changed_contract = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v2"
-                )
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-2"),
-            ):
-                changed_revision = evidence.observe_tool_batch(
-                    root, [event], contract_signature="contract-v1"
-                )
-
-        self.assertTrue(first.eligible)
-        self.assertFalse(repeated.eligible)
-        self.assertTrue(failure.eligible)
-        self.assertTrue(changed_contract.eligible)
-        self.assertTrue(changed_revision.eligible)
-
-    def test_distinct_completed_verification_in_same_revision_is_admitted(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "richer-check", cwd=raw)
-            storage.start_turn(root, session, "先跑聚焦測試，再跑完整測試")
-            focused = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "pytest focused.py"},
-                tool_output="1 passed",
-            )
-            complete = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "pytest"},
-                tool_output="20 passed",
-            )
-
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-1"),
-            ):
-                first = evidence.observe_tool_batch(
-                    root, [focused], contract_signature="contract-v1"
-                )
-                storage.record_completed_review(
-                    root,
-                    session,
-                    workspace_revision_signature=first.workspace_revision_signature,
-                    checkpoint_signature=first.checkpoint_signature,
-                )
-                richer = evidence.observe_tool_batch(
-                    root, [complete], contract_signature="contract-v1"
-                )
-
-        self.assertTrue(first.eligible)
-        self.assertTrue(richer.eligible)
-        self.assertNotEqual(first.checkpoint_signature, richer.checkpoint_signature)
-
-    def test_new_actor_source_reopens_the_same_completed_check(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "new-source", cwd=raw)
-            storage.start_turn(root, session, "看完既有 seam 後再檢查")
-            check = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "pytest -q"},
-                tool_output="10 passed",
-            )
-            source = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "Get-Content existing.py"},
-                tool_output="error.aborted = false",
-            )
-
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-1"),
-            ):
-                first = evidence.observe_tool_batch(
-                    root, [check], contract_signature="contract-v1"
-                )
-                storage.record_completed_review(
-                    root,
-                    session,
-                    workspace_revision_signature=first.workspace_revision_signature,
-                    checkpoint_signature=first.checkpoint_signature,
-                )
-                observed_source = evidence.observe_tool_batch(
-                    root, [source], contract_signature="contract-v1"
-                )
-                after_source = evidence.observe_tool_batch(
-                    root, [check], contract_signature="contract-v1"
-                )
-
-        self.assertFalse(observed_source.eligible)
-        self.assertTrue(after_source.eligible)
-        self.assertNotEqual(first.checkpoint_signature, after_source.checkpoint_signature)
-
-    def test_repeated_mixed_batch_does_not_reopen_on_duplicate_source(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "duplicate-source", cwd=raw)
-            storage.start_turn(root, session, "檢查既有 seam")
-            batch = [
-                ToolCompleted(
-                    session,
-                    "exec_command",
-                    tool_input={"cmd": "Get-Content existing.py"},
-                    tool_output="error.aborted = false",
-                ),
-                ToolCompleted(
-                    session,
-                    "exec_command",
-                    tool_input={"cmd": "pytest -q"},
-                    tool_output="10 passed",
-                ),
-            ]
-
-            with mock.patch.object(
-                checkpoints,
-                "workspace_state",
-                return_value=checkpoints.WorkspaceState("", "revision-1"),
-            ):
-                first = evidence.observe_tool_batch(
-                    root, batch, contract_signature="contract-v1"
-                )
-                storage.record_completed_review(
-                    root,
-                    session,
-                    workspace_revision_signature=first.workspace_revision_signature,
-                    checkpoint_signature=first.checkpoint_signature,
-                )
-                repeated = evidence.observe_tool_batch(
-                    root, batch, contract_signature="contract-v1"
-                )
-
-        self.assertTrue(first.eligible)
-        self.assertFalse(repeated.eligible)
-        self.assertEqual(first.checkpoint_signature, repeated.checkpoint_signature)
+        self.assertTrue(first)
+        self.assertFalse(repeated)
+        self.assertTrue(second)
+        self.assertFalse(successful_third)
+        self.assertTrue(reserve)
+        self.assertFalse(exhausted)
+        self.assertEqual(state["review_attempts"], 3)
+        self.assertEqual(state["last_review_change_generation"], 2)
 
     def test_change_only_is_recorded_without_triggering_a_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -407,57 +235,41 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 ],
             )
 
-        self.assertFalse(changed.eligible)
+        self.assertFalse(changed.candidate)
         self.assertEqual(changed.turn_state["evidence_records"][0]["category"], "change")
-        self.assertTrue(checked.eligible)
+        self.assertTrue(checked.candidate)
         self.assertEqual(checked.turn_state["evidence_records"][-1]["category"], "verification")
 
-    def test_non_git_change_starts_a_new_observed_generation(self):
+    def test_new_turn_resets_review_budget(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            session = SessionRef("codex_cli", "fallback", cwd=raw)
-            storage.start_turn(root, session, "修改後重新驗證")
-            check = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "pytest -q"},
-                tool_output="1 passed",
-            )
-            first = evidence.observe_tool_batch(
-                root, [check], contract_signature="contract-v1"
-            )
-            storage.record_completed_review(
-                root,
-                session,
-                workspace_revision_signature=first.workspace_revision_signature,
-                checkpoint_signature=first.checkpoint_signature,
-            )
-            repeated = evidence.observe_tool_batch(
-                root, [check], contract_signature="contract-v1"
-            )
-            evidence.observe_tool_batch(
-                root,
-                [
-                    ToolCompleted(
-                        session,
-                        "apply_patch",
-                        tool_input={"patch": "*** Begin Patch"},
-                        tool_output="Done!",
-                        mutating=True,
-                    )
-                ],
-                contract_signature="contract-v1",
-            )
-            after_change = evidence.observe_tool_batch(
-                root, [check], contract_signature="contract-v1"
+            session = SessionRef("codex_cli", "reset", cwd=raw)
+            storage.start_turn(root, session, "first")
+            storage.claim_review_slot(root, session, has_failure=False)
+            storage.start_turn(root, session, "second")
+            state, admitted = storage.claim_review_slot(
+                root, session, has_failure=False
             )
 
-        self.assertFalse(repeated.eligible)
-        self.assertTrue(after_change.eligible)
-        self.assertNotEqual(
-            first.workspace_revision_signature,
-            after_change.workspace_revision_signature,
-        )
+        self.assertTrue(admitted)
+        self.assertEqual(state["review_attempts"], 1)
+        self.assertEqual(state["change_generation"], 0)
+
+    def test_removed_signature_admission_state_has_no_compatibility_wrapper(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "shape", cwd=raw)
+            storage.start_turn(root, session, "inspect state")
+            state = storage.load_turn_state(root, session)
+
+        for obsolete in (
+            "workspace_revision_signature",
+            "review_admission",
+            "checkpoint_signature",
+        ):
+            self.assertNotIn(obsolete, state)
+        self.assertFalse(hasattr(storage, "review_admitted"))
+        self.assertFalse(hasattr(storage, "record_completed_review"))
 
     def test_packet_contains_the_actual_command_and_result(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -545,7 +357,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
             observed = evidence.observe_tool_batch(root, [event])
 
-        self.assertFalse(observed.eligible)
+        self.assertFalse(observed.candidate)
         self.assertEqual(observed.turn_state["evidence_seq"], 0)
         self.assertEqual(observed.turn_state["evidence_records"], [])
         self.assertEqual(len(observed.turn_state["actor_source_records"]), 1)
@@ -589,8 +401,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 checkpoints,
                 "workspace_state",
                 return_value=checkpoints.WorkspaceState(
-                    "diff --git a/app.py b/app.py\n+owner = direct",
-                    "revision-1",
+                    "diff --git a/app.py b/app.py\n+owner = direct"
                 ),
             ):
                 observed = evidence.observe_tool_batch(root, [event])
@@ -726,36 +537,6 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
         self.assertIn("new_owner.py", rendered)
         self.assertIn("owner = 'direct'", rendered)
-
-    def test_revision_signature_covers_untracked_files_hidden_from_the_packet(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "tests@example.invalid"],
-                cwd=root,
-                check=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Masters Nudge Tests"],
-                cwd=root,
-                check=True,
-            )
-            (root / "anchor.txt").write_text("anchor\n", encoding="utf-8")
-            subprocess.run(["git", "add", "anchor.txt"], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
-            for name in ("a.txt", "b.txt", "c.txt"):
-                (root / name).write_text(name, encoding="utf-8")
-            hidden = root / "z.txt"
-            hidden.write_text("first", encoding="utf-8")
-            session = SessionRef("codex_cli", "full-revision", cwd=raw)
-
-            first = checkpoints.workspace_state(session)
-            hidden.write_text("second", encoding="utf-8")
-            second = checkpoints.workspace_state(session)
-
-        self.assertEqual(first.snapshot, second.snapshot)
-        self.assertNotEqual(first.revision_signature, second.revision_signature)
 
     def test_current_workspace_owns_state_and_historical_patch_body_is_omitted(self):
         packet = source_context.build_checkpoint_packet(

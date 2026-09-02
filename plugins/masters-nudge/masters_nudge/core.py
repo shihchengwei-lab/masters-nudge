@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Callable
 
 import source_context
 
 from . import evidence, providers, storage
 from .contracts import NudgeOutcome, ToolCompleted
-from .lenses import LENSES
 from .prompting import MAX_NUDGE_CHARS, build_nudge_input, build_system_prompt
 from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
@@ -34,48 +31,23 @@ class NudgeCore:
         self.persona_dir = runtime / "personas"
         self.schema_path = runtime / "nudge-schema.json"
 
-    def review_contract_signature(self) -> str:
-        """Identify the effective Provider contract whose silence may be reused."""
-        spec = LENSES.get(self.settings.lens)
-        if spec is None:
-            self.log_error("review contract requires one selected lens")
-            return ""
-        try:
-            contract = {
-                "provider": self.settings.provider,
-                "model": self.settings.model,
-                "lens": self.settings.lens,
-                "ollama_url": self.settings.ollama_url,
-                "buddy_prompt": self.prompt_file.read_text(encoding="utf-8"),
-                "nudge_schema": self.schema_path.read_text(encoding="utf-8"),
-                "persona": (self.persona_dir / f"{spec.persona}.txt").read_text(
-                    encoding="utf-8"
-                ),
-            }
-        except OSError as exc:
-            self.log_error(f"review contract unavailable: {exc}")
-            return ""
-        encoded = json.dumps(
-            contract,
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        ).encode("utf-8")
-        return hashlib.sha256(encoded).hexdigest()
-
     def review_tool_batch(
         self, events: list[ToolCompleted]
     ) -> NudgeOutcome | None:
         """Run one host-neutral review flow for a completed tool batch."""
-        contract_signature = self.review_contract_signature()
         observed = evidence.observe_tool_batch(
             self.settings.paths.data_dir,
             events,
-            contract_signature=contract_signature,
         )
-        if not observed.eligible:
+        if not observed.candidate:
             return None
-        state = observed.turn_state
+        state, admitted = storage.claim_review_slot(
+            self.settings.paths.data_dir,
+            events[0].session,
+            has_failure=observed.has_failure,
+        )
+        if not admitted:
+            return None
         packet = source_context.build_checkpoint_packet(
             task_anchor=str(state.get("task_anchor") or ""),
             task_sources=state.get("task_sources") or {},
@@ -84,15 +56,7 @@ class NudgeCore:
             previous_findings=state.get("previous_findings") or [],
             evidence_records=state.get("evidence_records") or [],
         )
-        outcome = self.nudge_once(packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
-        if outcome.status in {"finding", "no_finding"}:
-            storage.record_completed_review(
-                self.settings.paths.data_dir,
-                events[0].session,
-                workspace_revision_signature=observed.workspace_revision_signature,
-                checkpoint_signature=observed.checkpoint_signature,
-            )
-        return outcome
+        return self.nudge_once(packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
 
     def _call(
         self,

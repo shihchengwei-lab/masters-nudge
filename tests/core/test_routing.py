@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,46 +37,10 @@ class RoutingTests(unittest.TestCase):
             },
         )
 
-    def test_review_contract_signature_tracks_only_the_effective_contract(self):
+    def test_review_tool_batch_uses_two_progress_slots_and_one_failure_reserve(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            runtime = root / "runtime"
-            (runtime / "personas").mkdir(parents=True)
-            shutil.copy(ROOT / "buddy-prompt.txt", runtime / "buddy-prompt.txt")
-            shutil.copy(ROOT / "nudge-schema.json", runtime / "nudge-schema.json")
-            for persona in ("linus", "lamport", "carmack"):
-                shutil.copy(
-                    ROOT / "personas" / f"{persona}.txt",
-                    runtime / "personas" / f"{persona}.txt",
-                )
-            core = NudgeCore(self.settings(root, "simplicity", runtime_dir=runtime))
-            first = core.review_contract_signature()
-            (runtime / "personas" / "lamport.txt").write_text(
-                "unselected persona changed\n", encoding="utf-8"
-            )
-            unrelated = core.review_contract_signature()
-            (runtime / "personas" / "linus.txt").write_text(
-                "selected persona changed\n", encoding="utf-8"
-            )
-            selected = core.review_contract_signature()
-            changed_model = NudgeCore(
-                RuntimeSettings(
-                    "openai",
-                    "another-model",
-                    RuntimePaths(runtime, root, root, root / "error.log"),
-                    lens="simplicity",
-                )
-            ).review_contract_signature()
-
-        self.assertEqual(len(first), 64)
-        self.assertEqual(first, unrelated)
-        self.assertNotEqual(first, selected)
-        self.assertNotEqual(selected, changed_model)
-
-    def test_review_tool_batch_suppresses_only_the_identical_checkpoint(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "core-review", cwd=raw)
+            session = SessionRef("codex_cli", "budget", cwd=raw)
             storage.start_turn(root, session, "檢查驗證結果")
             calls = []
 
@@ -86,52 +49,49 @@ class RoutingTests(unittest.TestCase):
                 return {"status": "no_finding", "lens": "none", "finding": ""}
 
             core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
-            event = ToolCompleted(
+            check = ToolCompleted(
                 session,
                 "exec_command",
                 tool_input={"cmd": "python -m unittest"},
                 tool_output="Process exited with code 0",
-                failed=False,
-                failure_known=True,
             )
-
-            first = core.review_tool_batch([event])
-            repeated = core.review_tool_batch([event])
-            repeated_state = storage.load_turn_state(root, session)
-
-            changed_event = ToolCompleted(
+            change = lambda name: ToolCompleted(
+                session,
+                "apply_patch",
+                tool_input={"patch": name},
+                tool_output="Done!",
+                mutating=True,
+            )
+            failure = ToolCompleted(
                 session,
                 "exec_command",
                 tool_input={"cmd": "python -m unittest"},
-                tool_output="Process exited with code 1",
+                tool_output="1 failed",
                 failed=True,
                 failure_known=True,
             )
-            changed_evidence = core.review_tool_batch([changed_event])
-            changed_settings = RuntimeSettings(
-                "openai",
-                "changed-model",
-                RuntimePaths(ROOT, root, root, root / "error.log"),
-                lens="simplicity",
-            )
-            changed_contract = NudgeCore(
-                changed_settings, dispatch=dispatch
-            ).review_tool_batch([changed_event])
+
+            first = core.review_tool_batch([check])
+            repeated = core.review_tool_batch([check])
+            core.review_tool_batch([change("edit-1")])
+            second = core.review_tool_batch([check])
+            core.review_tool_batch([change("edit-2")])
+            successful_third = core.review_tool_batch([check])
+            reserve = core.review_tool_batch([failure])
+            exhausted = core.review_tool_batch([failure])
             final_state = storage.load_turn_state(root, session)
 
         self.assertEqual(first.status, "no_finding")
         self.assertIsNone(repeated)
-        self.assertEqual(repeated_state["evidence_seq"], 2)
-        self.assertEqual(
-            len(repeated_state["review_admission"]["checkpoint_signature"]), 64
-        )
-        self.assertEqual(changed_evidence.status, "no_finding")
-        self.assertEqual(changed_contract.status, "no_finding")
+        self.assertEqual(second.status, "no_finding")
+        self.assertIsNone(successful_third)
+        self.assertEqual(reserve.status, "no_finding")
+        self.assertIsNone(exhausted)
         self.assertEqual(calls, ["generator", "generator", "generator"])
-        self.assertEqual(final_state["evidence_seq"], 4)
-        self.assertIn("checkpoint_signature", final_state["review_admission"])
+        self.assertEqual(final_state["review_attempts"], 3)
+        self.assertEqual(final_state["last_review_change_generation"], 2)
 
-    def test_no_finding_does_not_block_a_distinct_completed_check(self):
+    def test_a_distinct_completed_check_without_new_change_does_not_call(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "richer-review", cwd=raw)
@@ -160,10 +120,10 @@ class RoutingTests(unittest.TestCase):
             second = core.review_tool_batch([complete])
 
         self.assertEqual(first.status, "no_finding")
-        self.assertEqual(second.status, "no_finding")
-        self.assertEqual(calls, ["generator", "generator"])
+        self.assertIsNone(second)
+        self.assertEqual(calls, ["generator"])
 
-    def test_provider_error_leaves_the_decision_open_for_retry(self):
+    def test_provider_error_consumes_the_attempt(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "retry", cwd=raw)
@@ -186,8 +146,8 @@ class RoutingTests(unittest.TestCase):
             second = core.review_tool_batch([event])
 
         self.assertEqual(first.status, "error")
-        self.assertEqual(second.status, "error")
-        self.assertEqual(calls, ["generator", "generator"])
+        self.assertIsNone(second)
+        self.assertEqual(calls, ["generator"])
 
     def test_finding_also_completes_the_decision(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -219,7 +179,7 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
 
-    def test_an_identical_multi_class_batch_is_reviewed_once(self):
+    def test_an_identical_multi_class_batch_uses_only_one_progress_slot(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "multi-class", cwd=raw)
@@ -251,7 +211,7 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(first.status, "no_finding")
         self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
-        self.assertIn("checkpoint_signature", state["review_admission"])
+        self.assertEqual(state["review_attempts"], 1)
 
     def test_each_lens_calls_one_generator_with_its_persona(self):
         persona_markers = {

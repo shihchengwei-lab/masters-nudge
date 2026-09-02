@@ -98,14 +98,14 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "task_anchor": "",
         "task_sources": {},
         "workspace_snapshot": "",
-        "workspace_revision_signature": "",
         "change_generation": 0,
+        "review_attempts": 0,
+        "last_review_change_generation": -1,
         "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
         "actor_source_seq": 0,
         "actor_source_records": [],
-        "review_admission": {},
     }
 
 
@@ -220,64 +220,40 @@ def record_actor_source(
     return state
 
 
-def record_workspace_state(
+def record_workspace_snapshot(
     data_dir: Path,
     session: SessionRef,
     snapshot: str,
-    revision_signature: str,
 ) -> dict[str, Any]:
     state = load_turn_state(data_dir, session)
     state["workspace_snapshot"] = source_context.head_tail(
         snapshot, source_context.CURRENT_WORKSPACE_MAX_CHARS
     )
-    state["workspace_revision_signature"] = (
-        revision_signature
-        or f"observed-change:{int(state.get('change_generation') or 0)}"
-    )
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 
 
-def review_admitted(
+def claim_review_slot(
     data_dir: Path,
     session: SessionRef,
     *,
-    checkpoint_signature: str,
+    has_failure: bool,
 ) -> tuple[dict[str, Any], bool]:
-    """Suppress only an identical completed checkpoint delivered again."""
+    """Claim one of two progress reviews or the final failure reserve."""
     state = load_turn_state(data_dir, session)
-    if not checkpoint_signature:
-        return state, True
-    admission = state.get("review_admission")
-    repeated = (
-        isinstance(admission, dict)
-        and admission.get("checkpoint_signature") == checkpoint_signature
-    )
-    return state, not repeated
-
-
-def record_completed_review(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    workspace_revision_signature: str,
-    checkpoint_signature: str,
-) -> dict[str, Any]:
-    """Remember one checkpoint only while its workspace state is current."""
-    state = load_turn_state(data_dir, session)
-    if (
-        not workspace_revision_signature
-        or not checkpoint_signature
-        or state.get("workspace_revision_signature")
-        != workspace_revision_signature
-    ):
-        return state
-    state["review_admission"] = {
-        "workspace_revision_signature": workspace_revision_signature,
-        "checkpoint_signature": checkpoint_signature,
-    }
+    attempts = int(state.get("review_attempts") or 0)
+    generation = int(state.get("change_generation") or 0)
+    last_generation = int(state.get("last_review_change_generation", -1))
+    if attempts >= 3:
+        return state, False
+    if attempts > 0 and generation <= last_generation:
+        return state, False
+    if attempts == 2 and not has_failure:
+        return state, False
+    state["review_attempts"] = attempts + 1
+    state["last_review_change_generation"] = generation
     _atomic_write(state_path(data_dir, session, "turn"), state)
-    return state
+    return state, True
 
 
 def append_host_returned_nudge(

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import subprocess
@@ -41,15 +40,6 @@ NAVIGATION_RE = re.compile(
 @dataclass(frozen=True)
 class WorkspaceState:
     snapshot: str
-    revision_signature: str
-
-
-def _file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def _compact(value: Any) -> str:
@@ -148,23 +138,20 @@ def _untracked_files(cwd: str) -> list[str]:
     return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
 
 
-def _untracked_state(session) -> tuple[list[str], list[tuple[str, str]]]:
+def _untracked_state(session) -> list[str]:
     if not session.cwd:
-        return [], []
+        return []
     root = Path(session.cwd).resolve()
     paths = _untracked_files(session.cwd)
     paths.sort()
     rendered: list[str] = []
-    signatures: list[tuple[str, str]] = []
     for index, relative in enumerate(paths):
         display_path = relative.replace("\\", "/")
         try:
             candidate = (root / relative).resolve()
             candidate.relative_to(root)
-            signature = _file_sha256(candidate)
         except (OSError, ValueError):
             continue
-        signatures.append((display_path, signature))
         if index < 3:
             try:
                 content = candidate.read_text(encoding="utf-8", errors="replace")
@@ -172,7 +159,7 @@ def _untracked_state(session) -> tuple[list[str], list[tuple[str, str]]]:
                 continue
             bounded = source_context.head_tail(content, 700)
             rendered.append(f"untracked_file: {display_path}\n{bounded}")
-    return rendered, signatures
+    return rendered
 
 
 def _git_diff_units(raw_diff: str) -> list[str]:
@@ -241,7 +228,7 @@ def render_workspace_diff(raw_diff: str, max_chars: int) -> str:
 
 def workspace_state(session) -> WorkspaceState:
     if not session.cwd:
-        return WorkspaceState("", "")
+        return WorkspaceState("")
     try:
         result = subprocess.run(
             ["git", "diff", "--binary", "--unified=1", "HEAD", "--"],
@@ -253,25 +240,13 @@ def workspace_state(session) -> WorkspaceState:
             timeout=5,
         )
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return WorkspaceState("", "")
+        return WorkspaceState("")
     if result.returncode != 0:
-        return WorkspaceState("", "")
-    untracked_units, untracked_signatures = _untracked_state(session)
+        return WorkspaceState("")
+    untracked_units = _untracked_state(session)
     units = _git_diff_units(result.stdout)
     units.extend(untracked_units)
-    revision = json.dumps(
-        {
-            "tracked_diff": result.stdout,
-            "untracked_files": untracked_signatures,
-        },
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return WorkspaceState(
-        _render_bounded_units(units, CHANGE_MAX_CHARS),
-        hashlib.sha256(revision).hexdigest(),
-    )
+    return WorkspaceState(_render_bounded_units(units, CHANGE_MAX_CHARS))
 
 
 def working_diff(session) -> str:

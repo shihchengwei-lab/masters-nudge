@@ -29,9 +29,6 @@ class FakeCore:
         self.calls: list[str] = []
         self.log_error = lambda _message: None
 
-    def review_contract_signature(self) -> str:
-        return "test-contract"
-
     def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
         self.calls.append(source_packet)
         return NudgeOutcome(
@@ -104,7 +101,7 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(len(core.calls), 1)
         self.assertEqual(state["evidence_seq"], 2)
-        self.assertIn("checkpoint_signature", state["review_admission"])
+        self.assertEqual(state["review_attempts"], 1)
 
     def test_pending_command_does_not_consume_the_completed_checkpoint(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -154,7 +151,7 @@ class CodexHookFlowTests(unittest.TestCase):
             adapter.process(completed)
 
         self.assertEqual(pending_state["evidence_seq"], 0)
-        self.assertEqual(pending_state["review_admission"], {})
+        self.assertEqual(pending_state["review_attempts"], 0)
         self.assertEqual(len(core.calls), 1)
 
     def test_navigation_is_saved_without_calling_the_provider(self):
@@ -375,7 +372,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(checkpoint.call_count, 1)
         self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(len(state["review_admission"]["checkpoint_signature"]), 64)
+        self.assertEqual(state["review_attempts"], 1)
 
     def test_post_tool_batch_returns_nudge_and_audits_after_flush(self):
         with tempfile.TemporaryDirectory() as raw:
