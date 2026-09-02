@@ -19,9 +19,11 @@ CHANGE_MAX_CHARS = source_context.WORKSPACE_SNAPSHOT_MAX_CHARS
 VALIDATION_RE = re.compile(
     r"\b(?:pytest|unittest|vitest|jest|eslint|mocha|node\s+--test|"
     r"npx\s+(?:eslint|mocha|jest|vitest)|cargo\s+test|go\s+test|dotnet\s+test|"
-    r"flutter\s+test|(?:npm|pnpm|yarn)\s+(?:run\s+)?(?:test|lint)|"
-    r"build|verify)\b",
+    r"flutter\s+test|(?:npm|pnpm|yarn)\s+(?:run\s+)?(?:test|lint|build|verify))\b",
     re.IGNORECASE,
+)
+STANDALONE_VALIDATION_RE = re.compile(
+    r"(?:^|[;&|]\s*)(?:build|verify)(?=\s|$)", re.IGNORECASE
 )
 MEASUREMENT_RE = re.compile(r"\b(?:benchmark|bench|profile|trace)\b", re.IGNORECASE)
 FAILURE_RE = re.compile(
@@ -76,7 +78,7 @@ def evidence_category(event: ToolCompleted) -> str:
         return "failure"
     if MEASUREMENT_RE.search(semantic):
         return "failure" if FAILURE_RE.search(output) else "measurement"
-    if VALIDATION_RE.search(semantic):
+    if _is_validation(event):
         return "failure" if FAILURE_RE.search(output) else "verification"
     if event.mutating or re.search(
         r"(?:apply_patch|file_change|write_file|edit_file|^edit$|^write$)",
@@ -91,9 +93,15 @@ def is_navigation(event: ToolCompleted) -> bool:
     if not event.completed:
         return False
     command = _command(event)
+    return bool(NAVIGATION_RE.search(command)) and not _is_validation(event)
+
+
+def _is_validation(event: ToolCompleted) -> bool:
+    command = _command(event)
     semantic = f"{event.tool_name} {command}"
-    return bool(NAVIGATION_RE.search(command)) and not (
-        bool(VALIDATION_RE.search(semantic)) or bool(MEASUREMENT_RE.search(semantic))
+    return bool(
+        VALIDATION_RE.search(semantic)
+        or STANDALONE_VALIDATION_RE.search(command)
     )
 
 

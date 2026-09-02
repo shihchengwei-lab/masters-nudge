@@ -120,10 +120,17 @@ class EvidenceBoundaryTests(unittest.TestCase):
     def test_personas_keep_the_scene_and_questions_without_a_guideline_list(self):
         persona = (ROOT / "personas" / "linus.txt").read_text(encoding="utf-8")
 
-        self.assertIn("沿實際 control flow 讀完改動，再對照 repository 既有 seam", persona)
-        self.assertIn("不同入口各自承重時，不為整齊硬合併", persona)
-        self.assertIn("這個新概念保護了什麼行為？", persona)
-        self.assertIn("沿既有 seam 做，能少掉什麼？", persona)
+        self.assertIn("使同一種行為走同一條普通路徑", persona)
+        self.assertIn("問題本身需要的複雜度留下", persona)
+        self.assertIn("沿著實際 control flow 把改動讀到底", persona)
+        self.assertIn("現有程式已在哪裡表達這個行為？", persona)
+        self.assertIn("相似機制守的是同一責任，還是不同入口的契約？", persona)
+        self.assertIn(
+            "這個 special case 是問題本身需要的，還是目前資料與 control flow 製造的？",
+            persona,
+        )
+        self.assertNotIn("能少掉什麼", persona)
+        self.assertNotIn("最值得主模型停一下", persona)
         for filename in ("linus.txt", "lamport.txt", "carmack.txt"):
             with self.subTest(persona=filename):
                 text = (ROOT / "personas" / filename).read_text(encoding="utf-8")
@@ -342,6 +349,50 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
 
         self.assertEqual(checkpoints.evidence_category(event), "")
+
+    def test_navigation_search_terms_do_not_turn_the_v8_command_into_verification(self):
+        event = ToolCompleted(
+            SessionRef("codex_cli", "v8-navigation"),
+            "exec_command",
+            tool_input={
+                "cmd": (
+                    'rg -n "interface DispatcherOptions|constructor \\(opts" '
+                    "types lib/dispatcher; "
+                    "$lines=Get-Content lib/web/eventsource/eventsource.js; "
+                    "$lines[105..310]; "
+                    "Get-Content test/eventsource/eventsource-constructor.js; "
+                    "rg -n 'build|acceptance|TASK' .github scripts"
+                )
+            },
+            tool_output="types/dispatcher.d.ts:18:interface DispatcherOptions",
+        )
+
+        self.assertTrue(checkpoints.is_navigation(event))
+        self.assertEqual(checkpoints.evidence_category(event), "")
+        self.assertIn(
+            "interface DispatcherOptions",
+            checkpoints.render_actor_source_record(event),
+        )
+
+    def test_direct_build_command_remains_verification(self):
+        event = ToolCompleted(
+            SessionRef("codex_cli", "direct-build"),
+            "exec_command",
+            tool_input={"cmd": "npm run build:node"},
+            tool_output="build completed",
+        )
+
+        self.assertEqual(checkpoints.evidence_category(event), "verification")
+
+    def test_navigation_followed_by_an_actual_build_remains_verification(self):
+        event = ToolCompleted(
+            SessionRef("codex_cli", "navigation-then-build"),
+            "exec_command",
+            tool_input={"cmd": "Get-Content package.json; npm run build:node"},
+            tool_output="build completed",
+        )
+
+        self.assertEqual(checkpoints.evidence_category(event), "verification")
 
     def test_navigation_is_retained_as_actor_source_without_becoming_evidence(self):
         with tempfile.TemporaryDirectory() as raw:
