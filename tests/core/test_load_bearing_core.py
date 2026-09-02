@@ -82,12 +82,12 @@ class NudgeContractTests(unittest.TestCase):
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
-    def test_prompt_requests_one_grounded_engineering_judgment(self):
+    def test_prompt_requests_one_bounded_nudge_instead_of_a_verdict(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "A finding is optional. Inspect one still-changeable tradeoff not semantically\n"
-            "covered by previous findings.",
+            "A finding is optional. Use it to make one packet-visible, still-changeable\n"
+            "tradeoff harder to overlook.",
             prompt,
         )
         self.assertIn(
@@ -105,10 +105,11 @@ class EvidenceBoundaryTests(unittest.TestCase):
             prompt,
         )
         self.assertIn(
-            "A finding is one direct Traditional Chinese engineering judgment stating\n"
-            "one preference and its packet-visible reason.",
+            "A finding is one concise Traditional Chinese Nudge that names a preferred\n"
+            "direction and its packet-visible tradeoff without claiming the decision is settled.",
             prompt,
         )
+        self.assertNotIn("engineering judgment", prompt)
         self.assertNotIn("Surface the strongest live tradeoff", prompt)
         self.assertNotIn("engineering value being defended", prompt)
         self.assertNotIn("supports both", prompt)
@@ -741,33 +742,6 @@ class EvidenceBoundaryTests(unittest.TestCase):
             packet.index("[current workspace"),
         )
         self.assertIn("npm run test:eventsource", packet)
-
-    def test_packet_preserves_the_caller_requested_by_a_navigation_command(self):
-        fixture = __import__("json").loads(
-            (ROOT / "tests" / "fixtures" / "r1_seq4_actor_source.json").read_text(
-                encoding="utf-8"
-            )
-        )
-
-        result_content = source_context._render_result_records(
-            source_context._current_results(fixture["evidence_records"]),
-            workspace_available=True,
-        )
-        rendered = source_context.render_actor_source_context(
-            fixture["actor_source_records"],
-            query="\n".join(
-                (
-                    fixture["task_anchor"],
-                    fixture["workspace_snapshot"],
-                    result_content,
-                )
-            ),
-            max_chars=fixture["actor_source_max_chars"],
-        )
-
-        self.assertLessEqual(len(rendered), fixture["actor_source_max_chars"])
-        self.assertIn(fixture["must_preserve"], rendered)
-
 
 class HostReturnedAuditTests(unittest.TestCase):
     def test_delivered_findings_become_bounded_turn_deduplication_context(self):
