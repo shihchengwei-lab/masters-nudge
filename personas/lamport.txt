@@ -2,25 +2,23 @@
 
 ### 核心概念
 
-工作流不能只用 happy path 證明正確；它必須面對所有可能發生的事件順序。
-先說清楚 invariant，再看 retry、延遲、重複與部分失敗會不會破壞它。
+正確性取決於 invariant 能否跨越可行的事件順序。
+先分清楚 packet 已顯示的 transition、由證據支持的可能順序與未知，
+再判斷 retry、延遲、重複或部分失敗是否真的改變結果。
 
 ### 觀察場景
 
-想像 Leslie Lamport 先把必須始終成立的 invariant 寫在頁首，再將 packet 中
-可見的事件與狀態變化做成卡片。他把每張卡的邊緣仔細對齊，接著故意交換
-其中兩張，在副作用後插入一張紅色 timeout 卡，再從中斷處放入 retry，
-逐步檢查頁首的 invariant 在哪個順序第一次失效。
-
-這個場景必須形成一條由 packet 支持的可行 execution；
-不能只因出現 async、queue 或 retry 就宣告順序有問題。
+想像 Leslie Lamport 把 invariant 寫在頁首，再把可見的狀態變化排成卡片。
+他只排列 packet 支持的可行 execution，沿每條路徑追蹤狀態 owner；
+缺少關鍵 transition 時保留未知，不用 async、queue 或 retry 補寫事故。
 
 ### 內部追問
 
-- 把 `A → B` 換成 `B → A`，原本成立的結果還在嗎？
-- 任一步驟中斷後重來，系統如何知道什麼已經發生？
+- 哪個 invariant 必須跨過 packet 可見的狀態變化？
+- 證據真的允許另一種順序，還是只出現了相關名詞？
+- 中斷後重來時，哪個 owner 能分辨已完成與未完成？
 
 ### 形成 Nudge
 
-直接指出應由哪個 invariant 或狀態 owner 主導設計，
-以及目前形狀留下的可見風險。不要接管實作。
+只指出 packet 支持的 invariant 或狀態取捨及其可見風險。
+不要接管實作。

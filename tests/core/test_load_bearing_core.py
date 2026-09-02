@@ -86,16 +86,22 @@ class EvidenceBoundaryTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "Surface the strongest live tradeoff not already covered by previous findings.",
-            prompt,
-        )
-        self.assertNotIn(
-            "Surface the strongest live engineering tradeoff visible in the packet.",
+            "A finding is optional. Inspect one still-changeable tradeoff not semantically\n"
+            "covered by previous findings.",
             prompt,
         )
         self.assertIn(
-            "The selected persona supplies the engineering value being defended,\n"
-            "not authority over the main agent.",
+            "The selected persona directs what relationship to inspect,\n"
+            "not the conclusion to reach or authority over the main agent.",
+            prompt,
+        )
+        self.assertIn(
+            "Leave missing\n"
+            "context unknown; it does not prevent a finding about a visible tradeoff.",
+            prompt,
+        )
+        self.assertIn(
+            "The same engineering tradeoff remains covered when only its wording changes.",
             prompt,
         )
         self.assertIn(
@@ -103,7 +109,10 @@ class EvidenceBoundaryTests(unittest.TestCase):
             "one preference and its packet-visible reason.",
             prompt,
         )
-        self.assertNotIn("Generic advice must return no_finding.", prompt)
+        self.assertNotIn("Surface the strongest live tradeoff", prompt)
+        self.assertNotIn("engineering value being defended", prompt)
+        self.assertNotIn("supports both", prompt)
+        self.assertNotIn("may materially alter", prompt)
         self.assertIn("It is not a question, command, or complete solution.", prompt)
         self.assertNotIn("only for one short Traditional Chinese question", prompt)
         self.assertNotIn("Do not suggest a fix.", prompt)
@@ -117,20 +126,28 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 self.assertNotIn("選一個 packet 尚未回答的問題", persona)
                 self.assertNotIn("- 不可以：", persona)
 
-    def test_personas_keep_the_scene_and_questions_without_a_guideline_list(self):
-        persona = (ROOT / "personas" / "linus.txt").read_text(encoding="utf-8")
+    def test_personas_inspect_evidence_without_preselecting_the_answer(self):
+        linus = (ROOT / "personas" / "linus.txt").read_text(encoding="utf-8")
+        lamport = (ROOT / "personas" / "lamport.txt").read_text(encoding="utf-8")
+        carmack = (ROOT / "personas" / "carmack.txt").read_text(encoding="utf-8")
 
-        self.assertIn("使同一種行為走同一條普通路徑", persona)
-        self.assertIn("問題本身需要的複雜度留下", persona)
-        self.assertIn("沿著實際 control flow 把改動讀到底", persona)
-        self.assertIn("現有程式已在哪裡表達這個行為？", persona)
-        self.assertIn("相似機制守的是同一責任，還是不同入口的契約？", persona)
-        self.assertIn(
-            "這個 special case 是問題本身需要的，還是目前資料與 control flow 製造的？",
-            persona,
-        )
-        self.assertNotIn("能少掉什麼", persona)
-        self.assertNotIn("最值得主模型停一下", persona)
+        self.assertIn("複雜度以行為需要為準，不以表面整齊為準", linus)
+        self.assertIn("沿 packet 可見的 control flow", linus)
+        self.assertIn("責任確實相同時共用路徑，責任不同時保留邊界", linus)
+        self.assertIn("現有的承重路徑是否已足夠？", linus)
+        self.assertNotIn("同一種行為走同一條普通路徑", linus)
+        self.assertNotIn("special case 消失", linus)
+        self.assertNotIn("沿著實際 control flow 把改動讀到底", linus)
+
+        self.assertIn("只排列 packet 支持的可行 execution", lamport)
+        self.assertIn("缺少關鍵 transition 時保留未知", lamport)
+        self.assertNotIn("面對所有可能發生的事件順序", lamport)
+
+        self.assertIn("先區分量測、推論與未知", carmack)
+        self.assertIn("成本是否必要，不能由重複本身決定", carmack)
+        self.assertNotIn("哪些 allocation、copy、轉換、I/O 或機制根本不必發生", carmack)
+        self.assertNotIn("最後點住最大的數字", carmack)
+
         for filename in ("linus.txt", "lamport.txt", "carmack.txt"):
             with self.subTest(persona=filename):
                 text = (ROOT / "personas" / filename).read_text(encoding="utf-8")
