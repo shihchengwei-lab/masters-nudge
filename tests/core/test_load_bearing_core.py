@@ -18,7 +18,6 @@ from masters_nudge import (
     checkpoints,
     contracts,
     evidence,
-    plugin_inventory,
     prompting,
     storage,
 )
@@ -47,9 +46,7 @@ class NudgeContractTests(unittest.TestCase):
             NudgeOutcome("no_finding"), NudgeOutcome("no_finding", "", "")
         )
 
-    def test_contracts_do_not_keep_unconsumed_event_fields_or_types(self):
-        with self.subTest(contract="PromptSubmitted"):
-            self.assertFalse(hasattr(contracts, "PromptSubmitted"))
+    def test_host_neutral_contracts_expose_only_consumed_fields(self):
         with self.subTest(contract="SessionRef"):
             self.assertEqual(
                 [field.name for field in fields(SessionRef)],
@@ -70,16 +67,6 @@ class NudgeContractTests(unittest.TestCase):
                     "native_event_name",
                 ],
             )
-
-    def test_runtime_inventory_has_no_ignored_installation_parameter(self):
-        self.assertEqual(
-            tuple(inspect.signature(plugin_inventory.runtime_files).parameters),
-            (),
-        )
-
-    def test_batch_only_runtime_has_no_single_event_observer(self):
-        self.assertFalse(hasattr(evidence, "observe_tool_event"))
-
 
 class EvidenceBoundaryTests(unittest.TestCase):
     def test_prompt_requests_one_bounded_nudge_instead_of_a_verdict(self):
@@ -279,22 +266,6 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertTrue(admitted)
         self.assertEqual(state["review_attempts"], 1)
         self.assertEqual(state["change_generation"], 0)
-
-    def test_removed_signature_admission_state_has_no_compatibility_wrapper(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "shape", cwd=raw)
-            storage.start_turn(root, session, "inspect state")
-            state = storage.load_turn_state(root, session)
-
-        for obsolete in (
-            "workspace_revision_signature",
-            "review_admission",
-            "checkpoint_signature",
-        ):
-            self.assertNotIn(obsolete, state)
-        self.assertFalse(hasattr(storage, "review_admitted"))
-        self.assertFalse(hasattr(storage, "record_completed_review"))
 
     def test_packet_contains_the_actual_command_and_result(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -31,9 +31,9 @@ Lens 就是觀察問題的角度。
 | Reliability | 事件換序、重試或中途失敗時，什麼仍必須成立 |
 | Performance | 真實執行路徑上，哪些已量到的工作可以移除 |
 
-Automatic 模式會請 Provider 依現有證據選擇 Lens。你也可以請 Agent 顯示選項，再
-固定使用其中一個 Lens。無論哪種模式，證據不足時，Provider 都會被要求回傳
-`no_finding`。
+選擇一個 Lens 後會持續使用，直到你主動更換。預設是 Simplicity，沒有 Automatic
+Router。Checkpoint 通過呼叫資格時，選定的 Lens 只會呼叫 Provider 一次；資料不足以
+支持有用的 Nudge 時，Provider 會回傳 `no_finding`。
 
 Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得該人物的能力，也不會
 憑空讓 Nudge 更準確。
@@ -41,18 +41,20 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
 ## 如何運作
 
 ```text
-任務與可觀察的工具結果
+任務與目前 workspace
+Agent 已看過的周圍原始碼
+本次觸發呼叫的 checkpoint
             ↓
-      一個合適的 Lens
+      一個選定的 Lens
             ↓
    一則短 Nudge，或保持沉默
             ↓
       Agent 的下一段脈絡
 ```
 
-每次只會把一則 52 字內的繁體中文工程取捨放進 Agent 的下一段脈絡。Nudge 依目前
-情況生成，不是隨機抽一句罐頭訊息，也不是 review、評分、問題或完整解法；Provider
-不會接管任務。
+每次只會把一則 52 字內的繁體中文 Nudge 放進 Agent 的下一段脈絡。Nudge 會指出偏好
+方向與 packet 中看得見的代價，但不宣稱決策已經定案。內容依目前情況生成，不是隨機
+抽一句罐頭訊息，也不是 review、評分、問題或完整解法；Provider 不會接管任務。
 
 Claude Code 與受支援的 Codex build 都提供理想的 `PostToolBatch` 控制點：同一個
 模型步驟的工具結果都完成後，下一步開始前才判斷。不提供此事件的 Codex build
@@ -61,11 +63,17 @@ Codex 目前沒有唯讀查詢 Hook capability 的指令，因此 plugin 已安�
 已驗證。Doctor 會把 Codex precision 回報為 `unverified`；是否 exact 必須另以隔離
 smoke 確認。
 
-修改會先記錄，留給下一次檢查判斷。一次 `PostToolBatch` 只要包含驗證、失敗或量測，
-就會同步啟動一個 Nudge 流程。手動 Lens 最多呼叫 Provider 一次；Automatic 最多呼叫
-兩次，兩次共用 90 秒。
-Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，這次 Nudge 直接結束，主要
-Agent 照常繼續。
+修改會先記錄，留給下一次檢查判斷。一次 `PostToolBatch` 包含驗證、失敗或量測時，
+可能同步啟動一個 Nudge 流程。每個回合最多有兩次不同修改世代的推進機會，另保留
+一次只供失敗 checkpoint 使用的最後機會。每個通過資格的 checkpoint 只呼叫
+Provider 一次，上限 90 秒。Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，
+這次 Nudge 直接結束，主要 Agent 照常繼續。
+
+Provider packet 以目前 workspace 表示當前狀態，checkpoint 證據則只包含本次觸發
+呼叫的 batch。更早的工具結果仍留在本機稽核狀態，不會重播給 Provider。Agent 先前
+看過的原始碼節錄只提供額外的非權威脈絡；這些內容來自受長度限制且已扁平化的 Hook
+output，可能漏掉關鍵 caller 或契約。Masters’ Nudge 不宣稱能重建完整的 repository
+review。
 
 ## 隱私
 
@@ -77,8 +85,11 @@ Agent 照常繼續。
 - 任務明確指定的本機檔案內容，只在任務開始時讀取一次；
 - 目前已由 Git 追蹤、但尚未提交之變更的節錄，可能包含目前任務以外的檔案；
 - 最多三個未被 Git 排除之未追蹤檔案的部分內容；
-- 最近的失敗、驗證與量測；
-- 實際執行過、經長度限制的命令及結果。
+- 從 Agent 已看過的原始碼 navigation 結果中選出的節錄；
+- 本次觸發呼叫之 batch 的驗證、失敗與量測；
+- 沒有 authoritative Git workspace snapshot 時，本次 batch 的 change；
+- 用來避免重複相同 tradeoff 的先前 Nudge；
+- 與上述節錄及目前 checkpoint 相連、經長度限制的命令與結果。
 
 Provider 不會收到完整對話或模型未公開的內部思考；系統也不會自動傳送完整
 repository。
@@ -156,8 +167,8 @@ Hooks 會自動執行。需要手動操作時，直接用白話告訴 Agent：
 
 - **「檢查 Masters’ Nudge 是否準備完成。」** 檢查 Python、Provider 存取、資料
   儲存與 Host Hooks，不會產生 Nudge。
-- **「切換 Masters’ Nudge Lens。」** 用白話列出 Automatic、Simplicity、
-  Reliability、Performance，再確認保存後的選擇。
+- **「切換 Masters’ Nudge Lens。」** 用白話列出 Simplicity、Reliability、
+  Performance，再確認保存後的選擇。
 - **「切換 Masters’ Nudge Provider。」** 列出 Anthropic、OpenAI、本機 Ollama；
   設定 Ollama 時會確認已安裝的模型與本機服務。
 - **「顯示最近的 Masters’ Nudge 紀錄。」** 用白話解釋近期稽核紀錄。

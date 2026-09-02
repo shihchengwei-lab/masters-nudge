@@ -33,17 +33,6 @@ class PackageTests(unittest.TestCase):
 
     def test_package_has_only_the_supported_surface(self):
         paths = set(package_files())
-        forbidden = {
-            "buddy_window.py",
-            "spritesheet.webp",
-            "claude_stop.py",
-            "lens_router.py",
-            "review_telemetry.py",
-            "route-schema.json",
-            "skills/migrate/SKILL.md",
-            "skills/setup-local/SKILL.md",
-            "skills/window/SKILL.md",
-        }
         required = {
             "skills/doctor/SKILL.md",
             "skills/select-lens/SKILL.md",
@@ -51,7 +40,6 @@ class PackageTests(unittest.TestCase):
             "skills/recent-nudges/SKILL.md",
         }
 
-        self.assertFalse(paths & forbidden)
         self.assertTrue(required <= paths)
         self.assertEqual(
             {path for path in paths if path.startswith("personas/")},
@@ -82,26 +70,6 @@ class PackageTests(unittest.TestCase):
                 for handler in group["hooks"]
             )
         )
-
-    def test_packaged_runtime_uses_nudge_not_review_contract_names(self):
-        text = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in PLUGIN.rglob("*.py")
-        )
-
-        for obsolete in (
-            "ReviewRequest",
-            "ReviewOutcome",
-            "ReviewCore",
-            "build_router_prompt",
-            "decision_stage",
-            "parse_route_result",
-            "provider_stage_observer",
-            "review_once",
-            "review_telemetry",
-            "reviewer_config",
-        ):
-            self.assertNotIn(obsolete, text)
 
     def test_clean_copy_starts_both_prompt_hooks(self):
         with tempfile.TemporaryDirectory() as raw:

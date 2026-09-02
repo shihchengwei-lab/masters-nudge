@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from masters_nudge import local_ollama, providers
+from masters_nudge import local_ollama, providers, settings
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,9 +16,11 @@ SCHEMA = ROOT / "nudge-schema.json"
 
 
 class SupportedProviderTests(unittest.TestCase):
-    def test_grok_transport_is_not_part_of_the_runtime(self):
-        self.assertFalse(hasattr(providers, "call_grok_result"))
-        self.assertNotIn('provider == "grok"', Path(providers.__file__).read_text(encoding="utf-8"))
+    def test_only_three_provider_ids_are_supported(self):
+        self.assertEqual(
+            settings.PROVIDER_IDS,
+            ("anthropic", "openai", "ollama"),
+        )
 
     def test_anthropic_receives_the_evidence_packet_unchanged(self):
         completed = subprocess.CompletedProcess(

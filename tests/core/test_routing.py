@@ -37,23 +37,35 @@ class RoutingTests(unittest.TestCase):
             },
         )
 
-    def test_review_tool_batch_uses_two_progress_slots_and_one_failure_reserve(self):
+    def test_review_flow_uses_current_checkpoint_and_two_plus_failure_slots(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "budget", cwd=raw)
             storage.start_turn(root, session, "檢查驗證結果")
             calls = []
 
-            def dispatch(*_args, **_kwargs):
-                calls.append("generator")
+            def dispatch(_provider, _prompt, packet, _model, **_kwargs):
+                calls.append(packet)
                 return {"status": "no_finding", "lens": "none", "finding": ""}
 
             core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
-            check = ToolCompleted(
+            first_check = ToolCompleted(
                 session,
                 "exec_command",
                 tool_input={"cmd": "python -m unittest"},
-                tool_output="Process exited with code 0",
+                tool_output="FIRST_CHECKPOINT passed",
+            )
+            second_check = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="SECOND_CHECKPOINT passed",
+            )
+            third_check = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="THIRD_CHECKPOINT passed",
             )
             change = lambda name: ToolCompleted(
                 session,
@@ -71,12 +83,12 @@ class RoutingTests(unittest.TestCase):
                 failure_known=True,
             )
 
-            first = core.review_tool_batch([check])
-            repeated = core.review_tool_batch([check])
+            first = core.review_tool_batch([first_check])
+            repeated = core.review_tool_batch([first_check])
             core.review_tool_batch([change("edit-1")])
-            second = core.review_tool_batch([check])
+            second = core.review_tool_batch([second_check])
             core.review_tool_batch([change("edit-2")])
-            successful_third = core.review_tool_batch([check])
+            successful_third = core.review_tool_batch([third_check])
             reserve = core.review_tool_batch([failure])
             exhausted = core.review_tool_batch([failure])
             final_state = storage.load_turn_state(root, session)
@@ -87,7 +99,16 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(successful_third)
         self.assertEqual(reserve.status, "no_finding")
         self.assertIsNone(exhausted)
-        self.assertEqual(calls, ["generator", "generator", "generator"])
+        self.assertEqual(len(calls), 3)
+        self.assertIn("FIRST_CHECKPOINT", calls[0])
+        self.assertIn("SECOND_CHECKPOINT", calls[1])
+        self.assertNotIn("FIRST_CHECKPOINT", calls[1])
+        self.assertTrue(
+            any(
+                "FIRST_CHECKPOINT" in record["content"]
+                for record in final_state["evidence_records"]
+            )
+        )
         self.assertEqual(final_state["review_attempts"], 3)
         self.assertEqual(final_state["last_review_change_generation"], 2)
 
@@ -122,54 +143,6 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(first.status, "no_finding")
         self.assertIsNone(second)
         self.assertEqual(calls, ["generator"])
-
-    def test_provider_packet_contains_only_the_triggering_checkpoint(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "current-checkpoint", cwd=raw)
-            storage.start_turn(root, session, "檢查目前修改")
-            packets = []
-
-            def dispatch(_provider, _prompt, packet, _model, **_kwargs):
-                packets.append(packet)
-                return {"status": "no_finding", "lens": "none", "finding": ""}
-
-            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
-            old_check = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "python -m unittest old_suite"},
-                tool_output="OLD_CHECKPOINT passed",
-            )
-            edit = ToolCompleted(
-                session,
-                "apply_patch",
-                tool_input={"patch": "edit-current-owner"},
-                tool_output="Done!",
-                mutating=True,
-            )
-            current_check = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "python -m unittest current_suite"},
-                tool_output="CURRENT_CHECKPOINT passed",
-            )
-
-            core.review_tool_batch([old_check])
-            core.review_tool_batch([edit])
-            core.review_tool_batch([current_check])
-            state = storage.load_turn_state(root, session)
-
-        self.assertEqual(len(packets), 2)
-        self.assertIn("OLD_CHECKPOINT", packets[0])
-        self.assertIn("CURRENT_CHECKPOINT", packets[1])
-        self.assertNotIn("OLD_CHECKPOINT", packets[1])
-        self.assertTrue(
-            any(
-                "OLD_CHECKPOINT" in record["content"]
-                for record in state["evidence_records"]
-            )
-        )
 
     def test_provider_error_consumes_the_attempt(self):
         with tempfile.TemporaryDirectory() as raw:
