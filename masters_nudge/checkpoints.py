@@ -75,6 +75,8 @@ def _command(event: ToolCompleted) -> str:
 
 
 def evidence_category(event: ToolCompleted) -> str:
+    if not event.completed:
+        return ""
     command = _command(event)
     semantic = f"{event.tool_name} {command}"
     output = _compact(event.tool_output)
@@ -96,6 +98,8 @@ def evidence_category(event: ToolCompleted) -> str:
 
 
 def is_navigation(event: ToolCompleted) -> bool:
+    if not event.completed:
+        return False
     command = _command(event)
     semantic = f"{event.tool_name} {command}"
     return bool(NAVIGATION_RE.search(command)) and not (

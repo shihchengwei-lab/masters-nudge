@@ -26,6 +26,7 @@ class ToolCompleted:
     tool_name: str
     tool_input: object = field(default_factory=dict)
     tool_output: object = ""
+    completed: bool = True
     failed: bool = False
     failure_known: bool = False
     mutating: bool = False

@@ -242,27 +242,18 @@ def review_admitted(
     data_dir: Path,
     session: SessionRef,
     *,
-    workspace_revision_signature: str,
-    contract_signature: str,
-    evidence_classes: tuple[str, ...],
+    checkpoint_signature: str,
 ) -> tuple[dict[str, Any], bool]:
-    """Admit the first review of each evidence class in one decision generation."""
+    """Suppress only an identical completed checkpoint delivered again."""
     state = load_turn_state(data_dir, session)
-    if (
-        not workspace_revision_signature
-        or not contract_signature
-        or not evidence_classes
-    ):
+    if not checkpoint_signature:
         return state, True
     admission = state.get("review_admission")
-    same_generation = (
+    repeated = (
         isinstance(admission, dict)
-        and admission.get("workspace_revision_signature")
-        == workspace_revision_signature
-        and admission.get("contract_signature") == contract_signature
+        and admission.get("checkpoint_signature") == checkpoint_signature
     )
-    completed = admission.get("completed_evidence_classes", []) if same_generation else []
-    return state, any(category not in completed for category in evidence_classes)
+    return state, not repeated
 
 
 def record_completed_review(
@@ -270,36 +261,21 @@ def record_completed_review(
     session: SessionRef,
     *,
     workspace_revision_signature: str,
-    contract_signature: str,
-    evidence_classes: tuple[str, ...],
+    checkpoint_signature: str,
 ) -> dict[str, Any]:
-    """Complete one admitted review only while its decision generation is current."""
+    """Remember one checkpoint only while its workspace state is current."""
     state = load_turn_state(data_dir, session)
     if (
         not workspace_revision_signature
-        or not contract_signature
-        or not evidence_classes
+        or not checkpoint_signature
         or state.get("workspace_revision_signature")
         != workspace_revision_signature
     ):
         return state
-    admission = state.get("review_admission")
-    if not (
-        isinstance(admission, dict)
-        and admission.get("workspace_revision_signature")
-        == workspace_revision_signature
-        and admission.get("contract_signature") == contract_signature
-    ):
-        admission = {
-            "workspace_revision_signature": workspace_revision_signature,
-            "contract_signature": contract_signature,
-            "completed_evidence_classes": [],
-        }
-    completed = admission["completed_evidence_classes"]
-    for category in evidence_classes:
-        if category not in completed:
-            completed.append(category)
-    state["review_admission"] = admission
+    state["review_admission"] = {
+        "workspace_revision_signature": workspace_revision_signature,
+        "checkpoint_signature": checkpoint_signature,
+    }
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 

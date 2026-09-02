@@ -74,7 +74,7 @@ class RoutingTests(unittest.TestCase):
         self.assertNotEqual(first, selected)
         self.assertNotEqual(selected, changed_model)
 
-    def test_review_tool_batch_completes_one_decision_per_evidence_class(self):
+    def test_review_tool_batch_suppresses_only_the_identical_checkpoint(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "core-review", cwd=raw)
@@ -123,17 +123,45 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(repeated)
         self.assertEqual(repeated_state["evidence_seq"], 2)
         self.assertEqual(
-            repeated_state["review_admission"]["completed_evidence_classes"],
-            ["verification"],
+            len(repeated_state["review_admission"]["checkpoint_signature"]), 64
         )
         self.assertEqual(changed_evidence.status, "no_finding")
         self.assertEqual(changed_contract.status, "no_finding")
         self.assertEqual(calls, ["generator", "generator", "generator"])
         self.assertEqual(final_state["evidence_seq"], 4)
-        self.assertEqual(
-            final_state["review_admission"]["completed_evidence_classes"],
-            ["failure"],
-        )
+        self.assertIn("checkpoint_signature", final_state["review_admission"])
+
+    def test_no_finding_does_not_block_a_distinct_completed_check(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "richer-review", cwd=raw)
+            storage.start_turn(root, session, "檢查驗證結果")
+            calls = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append("generator")
+                return {"status": "no_finding", "lens": "none", "finding": ""}
+
+            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            focused = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest tests.focused"},
+                tool_output="Process exited with code 0",
+            )
+            complete = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest discover"},
+                tool_output="Process exited with code 0; 83 tests passed",
+            )
+
+            first = core.review_tool_batch([focused])
+            second = core.review_tool_batch([complete])
+
+        self.assertEqual(first.status, "no_finding")
+        self.assertEqual(second.status, "no_finding")
+        self.assertEqual(calls, ["generator", "generator"])
 
     def test_provider_error_leaves_the_decision_open_for_retry(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -191,7 +219,7 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
 
-    def test_one_batch_completes_every_evidence_class_it_reviewed(self):
+    def test_an_identical_multi_class_batch_is_reviewed_once(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "multi-class", cwd=raw)
@@ -217,18 +245,13 @@ class RoutingTests(unittest.TestCase):
             )
 
             first = core.review_tool_batch([verification, measurement])
-            repeated_verification = core.review_tool_batch([verification])
-            repeated_measurement = core.review_tool_batch([measurement])
+            repeated = core.review_tool_batch([verification, measurement])
             state = storage.load_turn_state(root, session)
 
         self.assertEqual(first.status, "no_finding")
-        self.assertIsNone(repeated_verification)
-        self.assertIsNone(repeated_measurement)
+        self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
-        self.assertEqual(
-            state["review_admission"]["completed_evidence_classes"],
-            ["verification", "measurement"],
-        )
+        self.assertIn("checkpoint_signature", state["review_admission"])
 
     def test_each_lens_calls_one_generator_with_its_persona(self):
         persona_markers = {

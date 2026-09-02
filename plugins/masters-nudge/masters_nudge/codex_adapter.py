@@ -25,6 +25,7 @@ GOAL_CONTEXT_RE = re.compile(
     r".*?<objective>\s*(.*?)\s*</objective>",
     re.IGNORECASE | re.DOTALL,
 )
+PENDING_RESULT_TEXT = "Script running with cell ID"
 
 
 def _goal_from_transcript(transcript_path: str) -> str:
@@ -106,6 +107,15 @@ def _failure_signal(value: Any) -> tuple[bool, bool]:
     return False, False
 
 
+def _tool_result_completed(value: Any) -> bool:
+    """Recognize the native deferred-result marker observed in Codex batches."""
+    if isinstance(value, dict):
+        return all(_tool_result_completed(item) for item in value.values())
+    if isinstance(value, list):
+        return all(_tool_result_completed(item) for item in value)
+    return PENDING_RESULT_TEXT not in value if isinstance(value, str) else True
+
+
 def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
     event_name = str(payload.get("hook_event_name") or "")
     if event_name != POST_TOOL_BATCH_EVENT:
@@ -133,6 +143,7 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
                 tool_name,
                 tool_input=item["tool_input"],
                 tool_output=response,
+                completed=_tool_result_completed(response),
                 failed=failed,
                 failure_known=known,
                 mutating=tool_name.lower().split("__")[-1] in MUTATING_TOOLS,

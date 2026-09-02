@@ -90,8 +90,7 @@ class NudgeCore:
                 self.settings.paths.data_dir,
                 events[0].session,
                 workspace_revision_signature=observed.workspace_revision_signature,
-                contract_signature=contract_signature,
-                evidence_classes=observed.evidence_classes,
+                checkpoint_signature=observed.checkpoint_signature,
             )
         return outcome
 

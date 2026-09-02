@@ -68,7 +68,7 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(output)
         self.assertEqual(core.calls, [])
 
-    def test_same_decision_generation_suppresses_a_repeated_verification(self):
+    def test_identical_completed_checkpoint_is_suppressed(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = SilentCore(root)
@@ -104,10 +104,58 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(len(core.calls), 1)
         self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(
-            state["review_admission"]["completed_evidence_classes"],
-            ["verification"],
-        )
+        self.assertIn("checkpoint_signature", state["review_admission"])
+
+    def test_pending_command_does_not_consume_the_completed_checkpoint(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = SilentCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "pending-check",
+                    "cwd": raw,
+                    "prompt": "完成測試後提供第二意見",
+                }
+            )
+            base = {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "pending-check",
+                "cwd": raw,
+            }
+            pending = {
+                **base,
+                "tool_calls": [
+                    {
+                        "tool_name": "exec_command",
+                        "tool_input": {"cmd": "python -m unittest"},
+                        "tool_response": {
+                            "output": "Script running with cell ID 9\nWall time 31.0 seconds"
+                        },
+                    }
+                ],
+            }
+            completed = {
+                **base,
+                "tool_calls": [
+                    {
+                        "tool_name": "exec_command",
+                        "tool_input": {"cmd": "python -m unittest"},
+                        "tool_response": "Process exited with code 0; 83 tests passed",
+                    }
+                ],
+            }
+
+            adapter.process(pending)
+            pending_state = storage.load_turn_state(
+                root, SessionRef("codex_cli", "pending-check", cwd=raw)
+            )
+            adapter.process(completed)
+
+        self.assertEqual(pending_state["evidence_seq"], 0)
+        self.assertEqual(pending_state["review_admission"], {})
+        self.assertEqual(len(core.calls), 1)
 
     def test_navigation_is_saved_without_calling_the_provider(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -327,10 +375,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(checkpoint.call_count, 1)
         self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(
-            state["review_admission"]["completed_evidence_classes"],
-            ["verification"],
-        )
+        self.assertEqual(len(state["review_admission"]["checkpoint_signature"]), 64)
 
     def test_post_tool_batch_returns_nudge_and_audits_after_flush(self):
         with tempfile.TemporaryDirectory() as raw:

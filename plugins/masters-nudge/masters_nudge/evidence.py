@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -14,8 +16,39 @@ from .contracts import ToolCompleted
 class ToolEvidence:
     turn_state: dict[str, Any]
     eligible: bool
-    evidence_classes: tuple[str, ...] = ()
     workspace_revision_signature: str = ""
+    checkpoint_signature: str = ""
+
+
+def _checkpoint_signature(
+    *,
+    workspace_revision_signature: str,
+    contract_signature: str,
+    actor_source_records: Any,
+    records: list[dict[str, str]],
+) -> str:
+    if not workspace_revision_signature or not contract_signature or not records:
+        return ""
+    encoded = json.dumps(
+        {
+            "workspace_revision_signature": workspace_revision_signature,
+            "contract_signature": contract_signature,
+            "actor_source": sorted(
+                {
+                    str(record.get("content") or "")
+                    for record in actor_source_records
+                    if isinstance(record, dict) and record.get("content")
+                }
+            )
+            if isinstance(actor_source_records, list)
+            else [],
+            "records": records,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def observe_tool_batch(
@@ -65,25 +98,29 @@ def observe_tool_batch(
         workspace.snapshot,
         workspace.revision_signature,
     )
-    evidence_classes = tuple(
-        category
-        for category in ("verification", "failure", "measurement")
-        if any(record["category"] == category for record in records)
+    has_review_evidence = any(
+        record["category"] in {"verification", "failure", "measurement"}
+        for record in records
     )
-    if not evidence_classes:
+    if not has_review_evidence:
         return ToolEvidence(state, False)
+    workspace_revision_signature = str(
+        state.get("workspace_revision_signature") or ""
+    )
+    checkpoint_signature = _checkpoint_signature(
+        workspace_revision_signature=workspace_revision_signature,
+        contract_signature=contract_signature,
+        actor_source_records=state.get("actor_source_records") or [],
+        records=records,
+    )
     state, eligible = storage.review_admitted(
         data_dir,
         session,
-        workspace_revision_signature=str(
-            state.get("workspace_revision_signature") or ""
-        ),
-        contract_signature=contract_signature,
-        evidence_classes=evidence_classes,
+        checkpoint_signature=checkpoint_signature,
     )
     return ToolEvidence(
         state,
         eligible,
-        evidence_classes,
-        str(state.get("workspace_revision_signature") or ""),
+        workspace_revision_signature,
+        checkpoint_signature,
     )
