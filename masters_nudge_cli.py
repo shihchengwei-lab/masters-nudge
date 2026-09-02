@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from masters_nudge.local_ollama import DEFAULT_OLLAMA_URL
+from masters_nudge.lenses import LENS_IDS
 from masters_nudge.management import (
     configure_provider,
     doctor,
@@ -44,9 +45,7 @@ def main() -> int:
     lens_commands.add_parser("list")
     lens_commands.add_parser("get")
     lens_set = lens_commands.add_parser("set")
-    lens_set.add_argument(
-        "lens", choices=("automatic", "simplicity", "reliability", "performance")
-    )
+    lens_set.add_argument("lens", choices=LENS_IDS)
 
     provider_parser = commands.add_parser("provider")
     provider_commands = provider_parser.add_subparsers(

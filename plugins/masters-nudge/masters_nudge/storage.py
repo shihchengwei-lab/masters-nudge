@@ -8,7 +8,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import source_context
 
@@ -50,10 +50,6 @@ def state_path(data_dir: Path, session: SessionRef, suffix: str) -> Path:
 
 def audit_path(data_dir: Path, session: SessionRef) -> Path:
     return Path(data_dir) / f"{session_stem(session)}.nudges.jsonl"
-
-
-def provider_trace_path(data_dir: Path, session: SessionRef) -> Path:
-    return Path(data_dir) / f"{session_stem(session)}.provider-stages.jsonl"
 
 
 def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
@@ -296,42 +292,6 @@ def append_host_returned_nudge(
     state["previous_findings"] = list(reversed(retained))
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return entry
-
-
-def provider_stage_observer(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    evidence_seq: int,
-    provider: str,
-    model: str,
-    configured_lens: str,
-) -> Callable[[str, str, str, float], None]:
-    """Bind temporary stage observations to one session and evidence snapshot."""
-
-    def observe(
-        stage: str, status: str, selected_lens: str, duration_ms: float
-    ) -> None:
-        entry = {
-            "time": datetime.now(timezone.utc).isoformat(),
-            "host": session.host,
-            "session_id": session.session_id,
-            "workspace": str(session.repo_root or session.cwd or ""),
-            "evidence_seq": int(evidence_seq),
-            "provider": str(provider or ""),
-            "model": str(model or ""),
-            "configured_lens": str(configured_lens or ""),
-            "stage": str(stage or ""),
-            "status": str(status or "error"),
-            "selected_lens": str(selected_lens or ""),
-            "duration_ms": max(0.0, float(duration_ms)),
-        }
-        path = provider_trace_path(data_dir, session)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-
-    return observe
 
 
 def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:

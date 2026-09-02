@@ -1,29 +1,21 @@
-"""Route one bounded evidence packet through one Nudge Lens."""
+"""Review one bounded evidence packet through one selected Nudge Lens."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-import math
-import time
 from typing import Callable
 
-import lens_router
 import source_context
 
 from . import evidence, providers, storage
 from .contracts import NudgeOutcome, ToolCompleted
-from .prompting import (
-    MAX_NUDGE_CHARS,
-    build_nudge_input,
-    build_router_prompt,
-    build_system_prompt,
-)
+from .lenses import LENSES
+from .prompting import MAX_NUDGE_CHARS, build_nudge_input, build_system_prompt
 from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
 
 ProviderDispatch = Callable[..., dict]
-StageObserver = Callable[[str, str, str, float], None]
 
 
 class NudgeCore:
@@ -41,26 +33,24 @@ class NudgeCore:
         self.prompt_file = runtime / "buddy-prompt.txt"
         self.persona_dir = runtime / "personas"
         self.schema_path = runtime / "nudge-schema.json"
-        self.route_schema_path = runtime / "route-schema.json"
 
     def review_contract_signature(self) -> str:
-        """Identify the Provider contract whose completed silence may be reused."""
+        """Identify the effective Provider contract whose silence may be reused."""
+        spec = LENSES.get(self.settings.lens)
+        if spec is None:
+            self.log_error("review contract requires one selected lens")
+            return ""
         try:
             contract = {
                 "provider": self.settings.provider,
                 "model": self.settings.model,
                 "lens": self.settings.lens,
                 "ollama_url": self.settings.ollama_url,
-                "router_prompt": build_router_prompt(),
                 "buddy_prompt": self.prompt_file.read_text(encoding="utf-8"),
                 "nudge_schema": self.schema_path.read_text(encoding="utf-8"),
-                "route_schema": self.route_schema_path.read_text(encoding="utf-8"),
-                "personas": {
-                    persona: (self.persona_dir / f"{persona}.txt").read_text(
-                        encoding="utf-8"
-                    )
-                    for persona in sorted(set(lens_router.LENS_PERSONAS.values()))
-                },
+                "persona": (self.persona_dir / f"{spec.persona}.txt").read_text(
+                    encoding="utf-8"
+                ),
             }
         except OSError as exc:
             self.log_error(f"review contract unavailable: {exc}")
@@ -93,24 +83,11 @@ class NudgeCore:
             previous_findings=state.get("previous_findings") or [],
             evidence_records=state.get("evidence_records") or [],
         )
-        session = events[0].session
-        observe_stage = storage.provider_stage_observer(
-            self.settings.paths.data_dir,
-            session,
-            evidence_seq=int(state.get("evidence_seq") or 0),
-            provider=self.settings.provider,
-            model=self.settings.model,
-            configured_lens=self.settings.lens,
-        )
-        outcome = self.nudge_once(
-            packet,
-            timeout_sec=PROVIDER_TIMEOUT_SEC,
-            observe_stage=observe_stage,
-        )
-        if outcome.status == "no_finding" and outcome.decision_stage == "generator":
+        outcome = self.nudge_once(packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
+        if outcome.status == "no_finding":
             storage.record_completed_generator_no_finding(
                 self.settings.paths.data_dir,
-                session,
+                events[0].session,
                 evidence_seq=int(state.get("evidence_seq") or 0),
                 workspace_snapshot=str(state.get("workspace_snapshot") or ""),
                 checkpoint_signature=observed.checkpoint_signature,
@@ -120,108 +97,52 @@ class NudgeCore:
 
     def _call(
         self,
-        stage: str,
         system_prompt: str,
         source_packet: str,
-        schema_path,
         timeout_sec: int,
-        observe_stage: StageObserver | None,
     ) -> dict:
-        started_ns = time.monotonic_ns()
-        try:
-            result = self.dispatch(
-                self.settings.provider,
-                system_prompt,
-                source_packet,
-                self.settings.model,
-                schema_path=schema_path,
-                timeout_sec=timeout_sec,
-                ollama_url=self.settings.ollama_url,
-                log_error=self.log_error,
-            )
-            normalized = result if isinstance(result, dict) else {"status": "error"}
-        except Exception:
-            self._observe_stage(observe_stage, stage, "error", "", started_ns)
-            raise
-        self._observe_stage(
-            observe_stage,
-            stage,
-            str(normalized.get("status") or "error"),
-            str(normalized.get("lens") or ""),
-            started_ns,
+        result = self.dispatch(
+            self.settings.provider,
+            system_prompt,
+            source_packet,
+            self.settings.model,
+            schema_path=self.schema_path,
+            timeout_sec=timeout_sec,
+            ollama_url=self.settings.ollama_url,
+            log_error=self.log_error,
         )
-        return normalized
-
-    @staticmethod
-    def _observe_stage(
-        observer: StageObserver | None,
-        stage: str,
-        status: str,
-        lens: str,
-        started_ns: int,
-    ) -> None:
-        if observer is None:
-            return
-        duration_ms = max(0.0, (time.monotonic_ns() - started_ns) / 1_000_000)
-        try:
-            observer(stage, status, lens, round(duration_ms, 3))
-        except Exception:
-            pass
+        return result if isinstance(result, dict) else {"status": "error"}
 
     def nudge_once(
         self,
         source_packet: str,
         timeout_sec: int | None = None,
-        observe_stage: StageObserver | None = None,
     ) -> NudgeOutcome:
         timeout = min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC)
-        deadline = time.perf_counter() + timeout
-        route = lens_router.resolve_nudge_route(self.settings.lens)
-
-        if not route.lens:
-            routed = self._call(
-                "router",
-                build_router_prompt(),
-                source_packet,
-                self.route_schema_path,
-                max(1, math.ceil(deadline - time.perf_counter())),
-                observe_stage,
-            )
-            status = str(routed.get("status") or "error")
-            if status == "no_finding":
-                return NudgeOutcome("no_finding", decision_stage="router")
-            routed_lens = str(routed.get("lens") or "").lower()
-            route = lens_router.resolve_nudge_route(routed_lens)
-            if status != "finding" or not route.lens:
-                return NudgeOutcome("error", decision_stage="router")
-
+        lens = self.settings.lens
         system_prompt = build_system_prompt(
             prompt_file=self.prompt_file,
             persona_dir=self.persona_dir,
-            route=route,
+            lens=lens,
             log_error=self.log_error,
         )
-        remaining = deadline - time.perf_counter()
-        if not system_prompt or remaining <= 0:
-            return NudgeOutcome("error", decision_stage="generator")
+        if not system_prompt:
+            return NudgeOutcome("error")
         result = self._call(
-            "generator",
             system_prompt,
             build_nudge_input(source_packet),
-            self.schema_path,
-            max(1, math.ceil(remaining)),
-            observe_stage,
+            timeout,
         )
         status = str(result.get("status") or "error")
         finding = str(result.get("finding") or "").strip()
         returned_lens = str(result.get("lens") or "").lower()
         if status == "no_finding":
-            return NudgeOutcome("no_finding", decision_stage="generator")
+            return NudgeOutcome("no_finding")
         if (
             status != "finding"
             or not finding
             or len(finding) > MAX_NUDGE_CHARS
-            or returned_lens != route.lens
+            or returned_lens != lens
         ):
-            return NudgeOutcome("error", decision_stage="generator")
-        return NudgeOutcome("finding", finding, route.lens, "generator")
+            return NudgeOutcome("error")
+        return NudgeOutcome("finding", finding, lens)

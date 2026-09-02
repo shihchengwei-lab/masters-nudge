@@ -21,6 +21,28 @@ from masters_nudge.settings import (
 
 
 class SettingsTests(unittest.TestCase):
+    def test_default_lens_is_simplicity_and_automatic_is_rejected(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self.assertEqual(load_user_settings(root).lens, "simplicity")
+            with self.assertRaises(ValueError):
+                save_lens(root, "automatic")
+            (root / "config.json").write_text(
+                json.dumps(
+                    {
+                        "lens": "automatic",
+                        "provider": "",
+                        "model": "",
+                        "ollama_url": DEFAULT_OLLAMA_URL,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                load_user_settings(root).error,
+                "config contains an unsupported lens",
+            )
+
     def test_default_config_lives_outside_expiring_session_data(self):
         with tempfile.TemporaryDirectory() as raw:
             home = Path(raw)
@@ -103,6 +125,12 @@ class JsonCliTests(unittest.TestCase):
                 code, result = self.run_cli("lens", "get")
                 self.assertEqual(code, 0)
                 self.assertEqual(result["lens"], "simplicity")
+
+    def test_lens_cli_rejects_automatic(self):
+        with self.assertRaises(SystemExit) as raised:
+            self.run_cli("lens", "set", "automatic")
+
+        self.assertEqual(raised.exception.code, 2)
 
     def test_provider_cloud_configuration_and_reset(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable
 
 from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
-from .provider_contract import call_result, parse_nudge_result, parse_route_result
+from .provider_contract import call_result, parse_nudge_result
 from .runtime import provider_environment
 
 
@@ -125,16 +125,6 @@ def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str
     return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
 
 
-def parse_schema_result(stdout: str, schema_path: Path) -> dict:
-    """Apply the structural contract selected by the schema path."""
-    parser = (
-        parse_route_result
-        if Path(schema_path).name == "route-schema.json"
-        else parse_nudge_result
-    )
-    return parser(stdout)
-
-
 def call_claude_result(
     system_prompt: str,
     nudge_input: str,
@@ -184,7 +174,7 @@ def call_claude_result(
             detail = str(result.stderr or result.stdout or "")[:500]
             log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
-        parsed = parse_schema_result(result.stdout, schema_path)
+        parsed = parse_nudge_result(result.stdout)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
@@ -197,7 +187,7 @@ def call_claude_result(
             partial_stdout = partial_stdout.decode("utf-8", errors="replace")
         if isinstance(partial_stderr, bytes):
             partial_stderr = partial_stderr.decode("utf-8", errors="replace")
-        parsed = parse_schema_result(str(partial_stdout), schema_path)
+        parsed = parse_nudge_result(str(partial_stdout))
         if parsed.get("status") != "error":
             log_error("claude CLI timed out after complete structured output; recovered")
             return parsed
@@ -300,7 +290,7 @@ def call_codex_result(
         except Exception as exc:
             log_error(f"codex output read failed: {exc}")
             return call_result(error_kind="invalid_output")
-        parsed = parse_schema_result(raw_output, schema_path)
+        parsed = parse_nudge_result(raw_output)
         if parsed.get("status") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
@@ -355,7 +345,7 @@ def dispatch_call_result(
             timeout_sec=timeout_sec,
             base_url=ollama_url,
             log_error=log_error,
-            parse_result=lambda value: parse_schema_result(value, schema_path),
+            parse_result=parse_nudge_result,
         )
     log_error(f"unsupported Nudge Provider: {provider!r}")
     return call_result()

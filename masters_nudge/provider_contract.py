@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import json
 
-import lens_router
-
+from .lenses import LENSES
 from .prompting import MAX_NUDGE_CHARS
 
 
@@ -52,22 +51,9 @@ def parse_nudge_result(stdout: str, max_chars: int = MAX_NUDGE_CHARS) -> dict:
     finding = finding.strip()
     if (
         status != "finding"
-        or lens not in lens_router.LENS_PERSONAS
+        or lens not in LENSES
         or not finding
         or len(finding) > max_chars
     ):
         return call_result(raw_output=raw)
     return call_result("finding", finding, lens, raw_output=raw)
-
-
-def parse_route_result(stdout: str) -> dict:
-    obj, raw = _decode_object(stdout)
-    if obj is None or set(obj) != {"status", "lens"}:
-        return call_result(raw_output=raw)
-    status = obj.get("status")
-    lens = obj.get("lens")
-    if status == "no_finding" and lens == "none":
-        return call_result("no_finding", lens="none", raw_output=raw)
-    if status == "finding" and lens in lens_router.LENS_PERSONAS:
-        return call_result("finding", lens=lens, raw_output=raw)
-    return call_result(raw_output=raw)

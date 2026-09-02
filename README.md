@@ -104,10 +104,6 @@ Masters’ Nudge stores the current task state and a small audit record under
 `~/.masters-nudge/data/`. An audit entry records when a Nudge was returned to
 the Host, which Lens produced it, and what it said.
 
-During the current cost investigation, a separate temporary
-`*.provider-stages.jsonl` trace records router and generator status and timing.
-It contains no evidence packet or finding text and does not change routing.
-
 This proves only that the Hook returned the Nudge to Claude Code or Codex. It
 does not prove that the main model read, accepted, or acted because of it.
 

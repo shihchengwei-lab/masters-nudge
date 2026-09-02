@@ -8,7 +8,7 @@ import tempfile
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
-from .lenses import LENSES, LENS_IDS
+from .lenses import LENSES
 from .local_ollama import DEFAULT_OLLAMA_URL, normalize_loopback_url, validate_model_name
 
 
@@ -24,7 +24,7 @@ PROVIDERS = {
 
 @dataclass(frozen=True)
 class UserSettings:
-    lens: str = "automatic"
+    lens: str = "simplicity"
     provider: str = ""
     model: str = ""
     ollama_url: str = DEFAULT_OLLAMA_URL
@@ -121,7 +121,7 @@ def save_user_settings(data_dir: Path, settings: UserSettings) -> Path:
 
 def resolve_lens(data_dir: Path) -> LensSelection:
     settings = load_user_settings(data_dir)
-    lens = settings.lens if not settings.error else "automatic"
+    lens = settings.lens if not settings.error else "simplicity"
     source = "config" if config_path(data_dir).exists() and not settings.error else "default"
     if settings.error:
         source = "invalid_config"

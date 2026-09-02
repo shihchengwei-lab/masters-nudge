@@ -24,7 +24,7 @@ class FakeCore:
             paths=SimpleNamespace(data_dir=data_dir),
             provider="openai",
             model="test-model",
-            lens="automatic",
+            lens="simplicity",
         )
         self.calls: list[str] = []
         self.log_error = lambda _message: None
@@ -32,12 +32,8 @@ class FakeCore:
     def review_contract_signature(self) -> str:
         return "test-contract"
 
-    def nudge_once(
-        self, source_packet: str, timeout_sec=None, observe_stage=None
-    ) -> NudgeOutcome:
+    def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
         self.calls.append(source_packet)
-        if observe_stage is not None:
-            observe_stage("generator", "finding", "simplicity", 12)
         return NudgeOutcome(
             "finding",
             finding="讓單一欄位直接擁有責任。",
@@ -49,24 +45,9 @@ class FakeCore:
 
 
 class SilentCore(FakeCore):
-    def nudge_once(
-        self, source_packet: str, timeout_sec=None, observe_stage=None
-    ) -> NudgeOutcome:
+    def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
         self.calls.append(source_packet)
-        if observe_stage is not None:
-            observe_stage("router", "finding", "simplicity", 5)
-            observe_stage("generator", "no_finding", "none", 7)
-        return NudgeOutcome("no_finding", decision_stage="generator")
-
-
-class RouterSilentCore(FakeCore):
-    def nudge_once(
-        self, source_packet: str, timeout_sec=None, observe_stage=None
-    ) -> NudgeOutcome:
-        self.calls.append(source_packet)
-        if observe_stage is not None:
-            observe_stage("router", "no_finding", "none", 5)
-        return NudgeOutcome("no_finding", decision_stage="router")
+        return NudgeOutcome("no_finding")
 
 
 class CodexHookFlowTests(unittest.TestCase):
@@ -125,42 +106,6 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertEqual(state["evidence_seq"], 1)
         self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
 
-    def test_router_silence_does_not_gain_generator_reuse_eligibility(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            core = RouterSilentCore(root)
-            adapter = CodexAdapter(core)
-            adapter.process(
-                {
-                    "hook_event_name": "UserPromptSubmit",
-                    "session_id": "router-silence",
-                    "cwd": raw,
-                    "prompt": "檢查驗證結果",
-                }
-            )
-            checkpoint = {
-                "hook_event_name": "PostToolBatch",
-                "session_id": "router-silence",
-                "cwd": raw,
-                "tool_calls": [
-                    {
-                        "tool_name": "exec_command",
-                        "tool_input": {"cmd": "python -m unittest"},
-                        "tool_response": "Process exited with code 0",
-                    }
-                ],
-            }
-
-            adapter.process(checkpoint)
-            adapter.process(checkpoint)
-            state = storage.load_turn_state(
-                root, SessionRef("codex_cli", "router-silence", cwd=raw)
-            )
-
-        self.assertEqual(len(core.calls), 2)
-        self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(state["last_completed_review"], {})
-
     def test_post_tool_batch_returns_one_nudge_for_the_complete_batch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -205,9 +150,6 @@ class CodexHookFlowTests(unittest.TestCase):
             public_text = stream.getvalue()
             public = json.loads(public_text)
             audit = storage.recent_nudges(root)
-            traces = storage.provider_trace_path(root, SessionRef(
-                "codex_cli", "codex-flow", cwd=raw
-            )).read_text(encoding="utf-8").splitlines()
 
         self.assertIn(
             "讓單一欄位直接擁有責任。",
@@ -216,8 +158,6 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertNotIn("_masters_nudge", public_text)
         self.assertEqual(len(audit), 1)
         self.assertEqual(audit[0]["returned_via"], "PostToolBatch")
-        self.assertEqual(len(traces), 1)
-        self.assertEqual(json.loads(traces[0])["stage"], "generator")
 
     def test_post_tool_batch_rejects_a_partially_malformed_batch(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -306,7 +246,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 ),
                 provider="openai",
                 model="test-model",
-                lens="automatic",
+                lens="simplicity",
                 ollama_url="http://localhost:11434",
             )
             hook = {
@@ -332,9 +272,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 mock.patch.object(
                     NudgeCore,
                     "nudge_once",
-                    return_value=NudgeOutcome(
-                        "no_finding", decision_stage="generator"
-                    ),
+                    return_value=NudgeOutcome("no_finding"),
                 ) as checkpoint,
             ):
                 first = claude_checkpoint.prepare_hook(hook)
@@ -361,7 +299,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 ),
                 provider="openai",
                 model="test-model",
-                lens="automatic",
+                lens="simplicity",
                 ollama_url="http://localhost:11434",
             )
             session = SessionRef("claude_code", "claude-flow", cwd=raw)
@@ -383,9 +321,8 @@ class ClaudeHookFlowTests(unittest.TestCase):
                     }
                 ],
             }
-            def checkpoint(_core, packet, timeout_sec=None, observe_stage=None):
+            def checkpoint(_core, packet, timeout_sec=None):
                 self.assertIn("evidence seq=2", packet)
-                self.assertIsNotNone(observe_stage)
                 return NudgeOutcome(
                     "finding",
                     finding="讓單一欄位直接擁有責任。",

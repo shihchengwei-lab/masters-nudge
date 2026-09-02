@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import inspect
-import json
 import os
 import subprocess
 import tempfile
@@ -34,22 +33,18 @@ class NudgeContractTests(unittest.TestCase):
     def test_outcome_contains_only_the_decision_needed_by_the_hook(self):
         self.assertEqual(
             [field.name for field in fields(NudgeOutcome)],
-            ["status", "finding", "lens", "decision_stage"],
+            ["status", "finding", "lens"],
         )
 
     def test_core_accepts_the_packet_directly(self):
         parameters = inspect.signature(NudgeCore.nudge_once).parameters
 
-        self.assertEqual(
-            tuple(parameters),
-            ("self", "source_packet", "timeout_sec", "observe_stage"),
-        )
+        self.assertEqual(tuple(parameters), ("self", "source_packet", "timeout_sec"))
         self.assertIsNone(parameters["timeout_sec"].default)
-        self.assertIsNone(parameters["observe_stage"].default)
 
     def test_silence_needs_no_fake_finding_or_lens(self):
         self.assertEqual(
-            NudgeOutcome("no_finding"), NudgeOutcome("no_finding", "", "", "")
+            NudgeOutcome("no_finding"), NudgeOutcome("no_finding", "", "")
         )
 
     def test_contracts_do_not_keep_unconsumed_event_fields_or_types(self):
@@ -492,35 +487,6 @@ class HostReturnedAuditTests(unittest.TestCase):
         ):
             self.assertNotIn(obsolete, entries[0])
 
-    def test_provider_stage_trace_is_separate_from_host_return_audit(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "trace", cwd=raw)
-            observe_stage = storage.provider_stage_observer(
-                root,
-                session,
-                evidence_seq=4,
-                provider="openai",
-                model="test-model",
-                configured_lens="automatic",
-            )
-            observe_stage("router", "no_finding", "none", 1234)
-            trace = [
-                json.loads(line)
-                for line in storage.provider_trace_path(root, session)
-                .read_text(encoding="utf-8")
-                .splitlines()
-            ]
-
-            self.assertEqual(storage.recent_nudges(root), [])
-
-        self.assertEqual(len(trace), 1)
-        self.assertEqual(trace[0]["evidence_seq"], 4)
-        self.assertEqual(trace[0]["stage"], "router")
-        self.assertEqual(trace[0]["status"], "no_finding")
-        self.assertEqual(trace[0]["duration_ms"], 1234)
-        self.assertNotIn("finding", trace[0])
-
     def test_cleanup_removes_an_expired_session_but_keeps_global_settings(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -534,7 +500,7 @@ class HostReturnedAuditTests(unittest.TestCase):
                 returned_via="PostToolBatch",
             )
             settings = root / "config.json"
-            settings.write_text('{"lens":"automatic"}\n', encoding="utf-8")
+            settings.write_text('{"lens":"simplicity"}\n', encoding="utf-8")
             old = time.time() - 31 * 24 * 60 * 60
             for path in root.iterdir():
                 if path != settings:

@@ -1,4 +1,4 @@
-"""Pure Lens catalog shared by settings, routing, and output validation."""
+"""Pure Lens catalog shared by settings, prompts, and output validation."""
 
 from __future__ import annotations
 
@@ -14,9 +14,6 @@ class LensSpec:
 
 
 LENSES = {
-    "automatic": LensSpec(
-        "automatic", "Automatic", "依目前決策壓力選擇濾鏡", ""
-    ),
     "simplicity": LensSpec(
         "simplicity", "Simplicity", "必要複雜度與單一責任", "linus"
     ),

@@ -74,7 +74,7 @@ class RuntimeSettings:
     model: str
     paths: RuntimePaths
     ollama_url: str = DEFAULT_OLLAMA_URL
-    lens: str = "automatic"
+    lens: str = "simplicity"
     configuration_source: str = "host_default"
     configuration_error: str = ""
 
@@ -110,7 +110,7 @@ class RuntimeSettings:
             model=model,
             paths=paths,
             ollama_url=configured.ollama_url or DEFAULT_OLLAMA_URL,
-            lens=configured.lens if not configured.error else "automatic",
+            lens=configured.lens if not configured.error else "simplicity",
             configuration_source=source,
             configuration_error=configured.error,
         )
