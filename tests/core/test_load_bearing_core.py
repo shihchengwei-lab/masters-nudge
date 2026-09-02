@@ -426,7 +426,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 evidence_records=observed.turn_state["evidence_records"],
             )
 
-        self.assertIn("[current workspace]", packet)
+        self.assertIn("[current workspace — authoritative]", packet)
         self.assertIn("+owner = direct", packet)
         self.assertIn("pytest -q", packet)
 
@@ -465,6 +465,66 @@ class EvidenceBoundaryTests(unittest.TestCase):
             rendered = checkpoints.working_diff(session)
 
         self.assertIn("+owner = direct", rendered)
+
+    def test_workspace_snapshot_gives_each_hunk_part_of_the_fixed_budget(self):
+        noisy_lines = "\n".join(
+            f"+unrelated_change_{index:04d} = True" for index in range(300)
+        )
+        raw_diff = (
+            "diff --git a/noisy.py b/noisy.py\n"
+            "--- a/noisy.py\n"
+            "+++ b/noisy.py\n"
+            "@@ -1,0 +1,300 @@\n"
+            f"{noisy_lines}\n"
+            "diff --git a/agent.js b/agent.js\n"
+            "--- a/agent.js\n"
+            "+++ b/agent.js\n"
+            "@@ -10 +10 @@\n"
+            "+dispatcherDefault = kStringMaxLength\n"
+            "diff --git a/stream.js b/stream.js\n"
+            "--- a/stream.js\n"
+            "+++ b/stream.js\n"
+            "@@ -20 +20 @@\n"
+            "+streamDefault = kStringMaxLength\n"
+        )
+
+        rendered = checkpoints.render_workspace_diff(
+            raw_diff, checkpoints.CHANGE_MAX_CHARS
+        )
+
+        self.assertLessEqual(len(rendered), checkpoints.CHANGE_MAX_CHARS)
+        self.assertIn("unrelated_change_0000", rendered)
+        self.assertIn("dispatcherDefault = kStringMaxLength", rendered)
+        self.assertIn("streamDefault = kStringMaxLength", rendered)
+
+    def test_untracked_files_share_the_workspace_budget(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "tests@example.invalid"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Masters Nudge Tests"],
+                cwd=root,
+                check=True,
+            )
+            (root / "anchor.txt").write_text("anchor\n", encoding="utf-8")
+            subprocess.run(["git", "add", "anchor.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
+            (root / "a.txt").write_text("a" * 4000, encoding="utf-8")
+            (root / "b.txt").write_text("B_VISIBLE", encoding="utf-8")
+            (root / "c.txt").write_text("C_VISIBLE", encoding="utf-8")
+
+            rendered = checkpoints.working_diff(
+                SessionRef("codex_cli", "untracked-budget", cwd=raw)
+            )
+
+        self.assertLessEqual(len(rendered), checkpoints.CHANGE_MAX_CHARS)
+        self.assertIn("B_VISIBLE", rendered)
+        self.assertIn("C_VISIBLE", rendered)
 
     def test_change_evidence_contains_an_untracked_new_file(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -521,6 +581,85 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
         self.assertEqual(first.snapshot, second.snapshot)
         self.assertNotEqual(first.revision_signature, second.revision_signature)
+
+    def test_current_workspace_owns_state_and_historical_patch_body_is_omitted(self):
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="修正錯誤處理",
+            workspace_snapshot=(
+                "diff --git a/stream.js b/stream.js\n"
+                "- error?.code === 'OLD_CODE'\n"
+                "+ error instanceof EventSourceStreamError"
+            ),
+            evidence_records=[
+                {
+                    "seq": 1,
+                    "category": "change",
+                    "content": (
+                        "actual_command:\n*** Begin Patch\n"
+                        "- HISTORICAL_ONLY_BRANCH\n+ replacement"
+                    ),
+                },
+                {
+                    "seq": 2,
+                    "category": "verification",
+                    "content": "actual_command:\npytest -q\n\nresult:\n1 passed",
+                },
+            ],
+        )
+
+        self.assertIn("[current workspace — authoritative]", packet)
+        self.assertIn("'-' means removed/not current", packet)
+        self.assertIn("'+' means present/current", packet)
+        self.assertIn("[tool history — ordered past events]", packet)
+        self.assertIn("[evidence seq=1 category=change]", packet)
+        self.assertIn("details omitted because current workspace", packet)
+        self.assertNotIn("HISTORICAL_ONLY_BRANCH", packet)
+        self.assertIn("pytest -q", packet)
+
+    def test_non_git_packet_retains_change_body_when_current_state_is_unavailable(self):
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="修正錯誤處理",
+            evidence_records=[
+                {
+                    "seq": 1,
+                    "category": "change",
+                    "content": "actual_command:\n- old_branch\n+ replacement",
+                }
+            ],
+        )
+
+        self.assertIn("current workspace unavailable", packet)
+        self.assertIn("- old_branch", packet)
+        self.assertIn("+ replacement", packet)
+
+    def test_packet_budget_preserves_the_authoritative_workspace_section(self):
+        records = []
+        for index, category in enumerate(
+            ("verification", "verification", "failure", "failure", "measurement", "measurement"),
+            start=1,
+        ):
+            records.append(
+                {
+                    "seq": index,
+                    "category": category,
+                    "content": f"{category}-{index}-" + "r" * 2000,
+                }
+            )
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="t" * source_context.TASK_ANCHOR_MAX_CHARS,
+            task_sources={"TASK.md": "s" * source_context.TASK_SOURCE_MAX_CHARS},
+            workspace_snapshot=(
+                "diff --git a/owner.py b/owner.py\n"
+                "+AUTHORITATIVE_WORKSPACE_MUST_SURVIVE\n"
+                "+" + "w" * 1900
+            ),
+            previous_findings=["p" * source_context.PREVIOUS_FINDINGS_MAX_CHARS],
+            evidence_records=records,
+        )
+
+        self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
+        self.assertIn("AUTHORITATIVE_WORKSPACE_MUST_SURVIVE", packet)
+        self.assertIn("[tool history — ordered past events]", packet)
 
 
 class HostReturnedAuditTests(unittest.TestCase):

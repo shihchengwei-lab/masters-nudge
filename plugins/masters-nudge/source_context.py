@@ -15,6 +15,12 @@ PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
 CURRENT_RESULT_SECTION_MAX_CHARS = 5800
 CURRENT_WORKSPACE_MAX_CHARS = 2200
+WORKSPACE_DIFF_LEGEND = (
+    "diff legend: '-' means removed/not current; '+' means present/current"
+)
+WORKSPACE_SNAPSHOT_MAX_CHARS = (
+    CURRENT_WORKSPACE_MAX_CHARS - len(WORKSPACE_DIFF_LEGEND) - 1
+)
 PREVIOUS_FINDINGS_MAX_CHARS = 600
 PACKET_TASK_SOURCE_MAX_CHARS = 3200
 PACKET_RESULT_RECORD_MAX_CHARS = 1600
@@ -147,13 +153,27 @@ def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
     return selected
 
 
-def _render_result_records(records: list[dict[str, Any]]) -> str:
+def _render_result_records(
+    records: list[dict[str, Any]], *, workspace_available: bool
+) -> str:
     rendered: list[str] = []
     for record in records:
+        content = record["content"]
+        if record["category"] == "change":
+            if workspace_available:
+                content = (
+                    "change tool completed; details omitted because current workspace "
+                    "above is authoritative"
+                )
+            else:
+                content = (
+                    "historical change; current workspace unavailable:\n"
+                    f"{content}"
+                )
         rendered.append(
             head_tail(
                 f"[evidence seq={record['seq']} category={record['category']}]\n"
-                f"{record['content']}",
+                f"{content}",
                 PACKET_RESULT_RECORD_MAX_CHARS,
             )
         )
@@ -195,9 +215,13 @@ def _build_packet(
     if rendered_sources:
         contract_lines.extend(("sources:", rendered_sources))
 
-    result_lines = [_render_result_records(_current_results(evidence_records))]
+    current_workspace = str(workspace_snapshot or "").strip()
+    result_content = _render_result_records(
+        _current_results(evidence_records),
+        workspace_available=bool(current_workspace),
+    )
     findings = _render_previous_findings(previous_findings)
-    packet = "\n\n".join(
+    fixed_sections = [
         part
         for part in (
             _section(
@@ -211,19 +235,35 @@ def _build_packet(
                 PREVIOUS_FINDINGS_MAX_CHARS,
             ),
             _section(
-                "current workspace",
-                workspace_snapshot,
+                "current workspace — authoritative",
+                (
+                    f"{WORKSPACE_DIFF_LEGEND}\n{current_workspace}"
+                    if current_workspace
+                    else ""
+                ),
                 CURRENT_WORKSPACE_MAX_CHARS,
-            ),
-            _section(
-                "current result",
-                "\n".join(result_lines),
-                CURRENT_RESULT_SECTION_MAX_CHARS,
             ),
         )
         if part
+    ]
+    fixed_packet = "\n\n".join(fixed_sections)
+    history_label = "tool history — ordered past events"
+    history_overhead = len(f"[{history_label}]\n\n[end {history_label}]")
+    separator_chars = 2 if fixed_packet else 0
+    history_budget = min(
+        CURRENT_RESULT_SECTION_MAX_CHARS,
+        max(
+            0,
+            PACKET_MAX_CHARS
+            - len(fixed_packet)
+            - separator_chars
+            - history_overhead,
+        ),
     )
-    return head_tail(packet, PACKET_MAX_CHARS)
+    history_section = _section(history_label, result_content, history_budget)
+    return "\n\n".join(
+        part for part in (*fixed_sections, history_section) if part
+    )
 
 
 def build_checkpoint_packet(

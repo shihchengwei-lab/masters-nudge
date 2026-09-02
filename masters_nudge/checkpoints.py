@@ -16,7 +16,7 @@ from .contracts import ToolCompleted
 
 
 RESULT_MAX_CHARS = 5000
-CHANGE_MAX_CHARS = 2200
+CHANGE_MAX_CHARS = source_context.WORKSPACE_SNAPSHOT_MAX_CHARS
 VALIDATION_RE = re.compile(
     r"\b(?:pytest|unittest|vitest|jest|eslint|mocha|node\s+--test|"
     r"npx\s+(?:eslint|mocha|jest|vitest)|cargo\s+test|go\s+test|dotnet\s+test|"
@@ -113,9 +113,9 @@ def _untracked_files(cwd: str) -> list[str]:
     return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
 
 
-def _untracked_state(session) -> tuple[str, list[tuple[str, str]]]:
+def _untracked_state(session) -> tuple[list[str], list[tuple[str, str]]]:
     if not session.cwd:
-        return "", []
+        return [], []
     root = Path(session.cwd).resolve()
     paths = _untracked_files(session.cwd)
     paths.sort()
@@ -137,7 +137,71 @@ def _untracked_state(session) -> tuple[str, list[tuple[str, str]]]:
                 continue
             bounded = source_context.head_tail(content, 700)
             rendered.append(f"untracked_file: {display_path}\n{bounded}")
-    return "\n\n".join(rendered), signatures
+    return rendered, signatures
+
+
+def _git_diff_units(raw_diff: str) -> list[str]:
+    blocks = re.split(r"(?m)(?=^diff --git )", str(raw_diff or "").strip())
+    units: list[str] = []
+    for block in (value.strip() for value in blocks if value.strip()):
+        lines = block.splitlines()
+        if not lines or not lines[0].startswith("diff --git "):
+            units.append(block)
+            continue
+        hunk_starts = [
+            index for index, line in enumerate(lines) if line.startswith("@@ ")
+        ]
+        if not hunk_starts:
+            units.append(block)
+            continue
+        prefix = lines[: hunk_starts[0]]
+        for position, start in enumerate(hunk_starts):
+            end = (
+                hunk_starts[position + 1]
+                if position + 1 < len(hunk_starts)
+                else len(lines)
+            )
+            header = prefix if position == 0 else [lines[0]]
+            units.append("\n".join([*header, *lines[start:end]]))
+    return units
+
+
+def _render_bounded_units(units: list[str], max_chars: int) -> str:
+    units = [value.strip() for value in units if value.strip()]
+    if not units or max_chars <= 0:
+        return ""
+    combined = "\n\n".join(units)
+    if len(combined) <= max_chars:
+        return combined
+    separator_chars = 2 * (len(units) - 1)
+    available = max_chars - separator_chars
+    if available <= 0:
+        return source_context.head_tail(combined, max_chars)
+
+    budgets = [0] * len(units)
+    active = set(range(len(units)))
+    remaining = available
+    while active:
+        share = remaining // len(active)
+        fitting = [index for index in active if len(units[index]) <= share]
+        if not fitting:
+            for offset, index in enumerate(sorted(active)):
+                budgets[index] = share + (1 if offset < remaining % len(active) else 0)
+            break
+        for index in fitting:
+            budgets[index] = len(units[index])
+            remaining -= budgets[index]
+            active.remove(index)
+
+    return "\n\n".join(
+        source_context.head_tail(unit, budgets[index])
+        for index, unit in enumerate(units)
+        if budgets[index] > 0
+    )
+
+
+def render_workspace_diff(raw_diff: str, max_chars: int) -> str:
+    return _render_bounded_units(_git_diff_units(raw_diff), max_chars)
 
 
 def workspace_state(session) -> WorkspaceState:
@@ -157,10 +221,9 @@ def workspace_state(session) -> WorkspaceState:
         return WorkspaceState("", "")
     if result.returncode != 0:
         return WorkspaceState("", "")
-    untracked_snapshot, untracked_signatures = _untracked_state(session)
-    combined = "\n\n".join(
-        value for value in (result.stdout.strip(), untracked_snapshot) if value
-    )
+    untracked_units, untracked_signatures = _untracked_state(session)
+    units = _git_diff_units(result.stdout)
+    units.extend(untracked_units)
     revision = json.dumps(
         {
             "tracked_diff": result.stdout,
@@ -171,7 +234,7 @@ def workspace_state(session) -> WorkspaceState:
         separators=(",", ":"),
     ).encode("utf-8")
     return WorkspaceState(
-        source_context.head_tail(combined, CHANGE_MAX_CHARS),
+        _render_bounded_units(units, CHANGE_MAX_CHARS),
         hashlib.sha256(revision).hexdigest(),
     )
 
