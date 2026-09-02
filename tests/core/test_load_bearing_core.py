@@ -317,7 +317,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
             packet = source_context.build_checkpoint_packet(
                 task_anchor=state["task_anchor"],
                 task_sources=state["task_sources"],
-                evidence_records=state["evidence_records"],
+                checkpoint_records=state["evidence_records"],
             )
 
         self.assertIn("pytest tests/test_owner.py -q", packet)
@@ -478,7 +478,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 task_anchor=observed.turn_state["task_anchor"],
                 task_sources=observed.turn_state["task_sources"],
                 workspace_snapshot=observed.turn_state["workspace_snapshot"],
-                evidence_records=observed.turn_state["evidence_records"],
+                checkpoint_records=observed.checkpoint_records,
             )
 
         self.assertIn("[current workspace — authoritative]", packet)
@@ -607,7 +607,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertIn("new_owner.py", rendered)
         self.assertIn("owner = 'direct'", rendered)
 
-    def test_current_workspace_owns_state_and_historical_patch_body_is_omitted(self):
+    def test_current_workspace_replaces_change_details_in_the_checkpoint(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正錯誤處理",
             workspace_snapshot=(
@@ -615,7 +615,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 "- error?.code === 'OLD_CODE'\n"
                 "+ error instanceof EventSourceStreamError"
             ),
-            evidence_records=[
+            checkpoint_records=[
                 {
                     "seq": 1,
                     "category": "change",
@@ -635,16 +635,16 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertIn("[current workspace — authoritative]", packet)
         self.assertIn("'-' means removed/not current", packet)
         self.assertIn("'+' means present/current", packet)
-        self.assertIn("[tool history — ordered past events]", packet)
-        self.assertIn("[evidence seq=1 category=change]", packet)
-        self.assertIn("details omitted because current workspace", packet)
+        self.assertIn("[current checkpoint — triggering batch]", packet)
+        self.assertNotIn("[evidence seq=1 category=change]", packet)
+        self.assertNotIn("details omitted because current workspace", packet)
         self.assertNotIn("HISTORICAL_ONLY_BRANCH", packet)
         self.assertIn("pytest -q", packet)
 
-    def test_non_git_packet_retains_change_body_when_current_state_is_unavailable(self):
+    def test_non_git_packet_retains_current_batch_change_when_workspace_is_unavailable(self):
         packet = source_context.build_checkpoint_packet(
             task_anchor="修正錯誤處理",
-            evidence_records=[
+            checkpoint_records=[
                 {
                     "seq": 1,
                     "category": "change",
@@ -653,7 +653,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
             ],
         )
 
-        self.assertIn("current workspace unavailable", packet)
+        self.assertIn("current batch change; current workspace unavailable", packet)
         self.assertIn("- old_branch", packet)
         self.assertIn("+ replacement", packet)
 
@@ -679,12 +679,12 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 "+" + "w" * 1900
             ),
             previous_findings=["p" * source_context.PREVIOUS_FINDINGS_MAX_CHARS],
-            evidence_records=records,
+            checkpoint_records=records,
         )
 
         self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
         self.assertIn("AUTHORITATIVE_WORKSPACE_MUST_SURVIVE", packet)
-        self.assertIn("[tool history — ordered past events]", packet)
+        self.assertIn("[current checkpoint — triggering batch]", packet)
 
     def test_packet_selects_literal_middle_actor_source_without_growing(self):
         noise = "\n".join(f"unrelated line {index}" for index in range(1800))
@@ -714,7 +714,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 "   this.webSocketOptions = opts.webSocket"
             ),
             actor_source_records=[{"seq": 1, "content": actor_source}],
-            evidence_records=[
+            checkpoint_records=[
                 {
                     "seq": 2,
                     "category": "failure",

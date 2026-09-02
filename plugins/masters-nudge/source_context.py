@@ -13,7 +13,7 @@ TASK_SOURCES_MAX_CHARS = 8000
 TASK_SOURCE_MAX_CHARS = 6000
 PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
-CURRENT_RESULT_SECTION_MAX_CHARS = 5800
+CHECKPOINT_SECTION_MAX_CHARS = 5800
 CURRENT_WORKSPACE_MAX_CHARS = 2200
 WORKSPACE_DIFF_LEGEND = (
     "diff legend: '-' means removed/not current; '+' means present/current"
@@ -23,7 +23,7 @@ WORKSPACE_SNAPSHOT_MAX_CHARS = (
 )
 PREVIOUS_FINDINGS_MAX_CHARS = 600
 PACKET_TASK_SOURCE_MAX_CHARS = 3200
-PACKET_RESULT_RECORD_MAX_CHARS = 1600
+PACKET_CHECKPOINT_RECORD_MAX_CHARS = 1600
 ACTOR_SOURCE_SECTION_MAX_CHARS = 2400
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
 
@@ -132,7 +132,7 @@ def render_task_sources(task_sources: Any) -> str:
 
 
 def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
-    if not isinstance(evidence_records, list):
+    if not isinstance(evidence_records, (list, tuple)):
         return []
     selected: list[dict[str, Any]] = []
     for record in evidence_records:
@@ -157,38 +157,30 @@ def _records(evidence_records: Any, category: str) -> list[dict[str, Any]]:
     return selected
 
 
-def _render_result_records(
-    records: list[dict[str, Any]], *, workspace_available: bool
-) -> str:
+def _render_checkpoint_records(records: list[dict[str, Any]]) -> str:
     rendered: list[str] = []
     for record in records:
         content = record["content"]
         if record["category"] == "change":
-            if workspace_available:
-                content = (
-                    "change tool completed; details omitted because current workspace "
-                    "above is authoritative"
-                )
-            else:
-                content = (
-                    "historical change; current workspace unavailable:\n"
-                    f"{content}"
-                )
+            content = f"current batch change; current workspace unavailable:\n{content}"
         rendered.append(
             head_tail(
                 f"[evidence seq={record['seq']} category={record['category']}]\n"
                 f"{content}",
-                PACKET_RESULT_RECORD_MAX_CHARS,
+                PACKET_CHECKPOINT_RECORD_MAX_CHARS,
             )
         )
     return "\n\n".join(rendered) if rendered else "[]"
 
 
-def _current_results(evidence_records: Any) -> list[dict[str, Any]]:
+def _checkpoint_results(
+    checkpoint_records: Any, *, workspace_available: bool
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
-    limits = {"change": 1, "verification": 2, "failure": 2, "measurement": 2}
-    for category, limit in limits.items():
-        records.extend(_records(evidence_records, category)[-limit:])
+    if not workspace_available:
+        records.extend(_records(checkpoint_records, "change"))
+    for category in ("verification", "failure", "measurement"):
+        records.extend(_records(checkpoint_records, category))
     records.sort(key=lambda record: record["seq"])
     return records
 
@@ -321,7 +313,7 @@ def _build_packet(
     workspace_snapshot: str,
     actor_source_records: Any,
     previous_findings: Any,
-    evidence_records: Any,
+    checkpoint_records: Any,
 ) -> str:
     contract_lines = [
         "task:",
@@ -332,9 +324,11 @@ def _build_packet(
         contract_lines.extend(("sources:", rendered_sources))
 
     current_workspace = str(workspace_snapshot or "").strip()
-    result_content = _render_result_records(
-        _current_results(evidence_records),
-        workspace_available=bool(current_workspace),
+    result_content = _render_checkpoint_records(
+        _checkpoint_results(
+            checkpoint_records,
+            workspace_available=bool(current_workspace),
+        )
     )
     actor_query = "\n".join(
         (
@@ -375,10 +369,14 @@ def _build_packet(
     source_label = (
         "actor-observed source context — prior observations, non-authoritative"
     )
-    history_label = "tool history — ordered past events"
+    checkpoint_label = "current checkpoint — triggering batch"
     source_overhead = len(f"[{source_label}]\n\n[end {source_label}]")
-    history_overhead = len(f"[{history_label}]\n\n[end {history_label}]")
-    protected_history = min(len(result_content), PACKET_RESULT_RECORD_MAX_CHARS)
+    checkpoint_overhead = len(
+        f"[{checkpoint_label}]\n\n[end {checkpoint_label}]"
+    )
+    protected_checkpoint = min(
+        len(result_content), PACKET_CHECKPOINT_RECORD_MAX_CHARS
+    )
     source_budget = min(
         ACTOR_SOURCE_SECTION_MAX_CHARS,
         max(
@@ -386,8 +384,8 @@ def _build_packet(
             PACKET_MAX_CHARS
             - len("\n\n".join(base_sections))
             - source_overhead
-            - history_overhead
-            - protected_history
+            - checkpoint_overhead
+            - protected_checkpoint
             - 4,
         ),
     )
@@ -408,19 +406,23 @@ def _build_packet(
     ]
     fixed_packet = "\n\n".join(fixed_sections)
     separator_chars = 2 if fixed_packet else 0
-    history_budget = min(
-        CURRENT_RESULT_SECTION_MAX_CHARS,
+    checkpoint_budget = min(
+        CHECKPOINT_SECTION_MAX_CHARS,
         max(
             0,
             PACKET_MAX_CHARS
             - len(fixed_packet)
             - separator_chars
-            - history_overhead,
+            - checkpoint_overhead,
         ),
     )
-    history_section = _section(history_label, result_content, history_budget)
+    checkpoint_section = _section(
+        checkpoint_label,
+        result_content,
+        checkpoint_budget,
+    )
     return "\n\n".join(
-        part for part in (*fixed_sections, history_section) if part
+        part for part in (*fixed_sections, checkpoint_section) if part
     )
 
 
@@ -430,7 +432,7 @@ def build_checkpoint_packet(
     workspace_snapshot: str = "",
     actor_source_records: Any = None,
     previous_findings: Any = None,
-    evidence_records: Any = None,
+    checkpoint_records: Any = None,
 ) -> str:
     return _build_packet(
         task_anchor=task_anchor,
@@ -438,5 +440,5 @@ def build_checkpoint_packet(
         workspace_snapshot=workspace_snapshot,
         actor_source_records=actor_source_records,
         previous_findings=previous_findings,
-        evidence_records=evidence_records,
+        checkpoint_records=checkpoint_records,
     )

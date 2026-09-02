@@ -54,7 +54,7 @@ class NudgeCore:
             workspace_snapshot=str(state.get("workspace_snapshot") or ""),
             actor_source_records=state.get("actor_source_records") or [],
             previous_findings=state.get("previous_findings") or [],
-            evidence_records=state.get("evidence_records") or [],
+            checkpoint_records=observed.checkpoint_records,
         )
         return self.nudge_once(packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
 

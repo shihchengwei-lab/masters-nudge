@@ -123,6 +123,54 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(calls, ["generator"])
 
+    def test_provider_packet_contains_only_the_triggering_checkpoint(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "current-checkpoint", cwd=raw)
+            storage.start_turn(root, session, "檢查目前修改")
+            packets = []
+
+            def dispatch(_provider, _prompt, packet, _model, **_kwargs):
+                packets.append(packet)
+                return {"status": "no_finding", "lens": "none", "finding": ""}
+
+            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            old_check = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest old_suite"},
+                tool_output="OLD_CHECKPOINT passed",
+            )
+            edit = ToolCompleted(
+                session,
+                "apply_patch",
+                tool_input={"patch": "edit-current-owner"},
+                tool_output="Done!",
+                mutating=True,
+            )
+            current_check = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest current_suite"},
+                tool_output="CURRENT_CHECKPOINT passed",
+            )
+
+            core.review_tool_batch([old_check])
+            core.review_tool_batch([edit])
+            core.review_tool_batch([current_check])
+            state = storage.load_turn_state(root, session)
+
+        self.assertEqual(len(packets), 2)
+        self.assertIn("OLD_CHECKPOINT", packets[0])
+        self.assertIn("CURRENT_CHECKPOINT", packets[1])
+        self.assertNotIn("OLD_CHECKPOINT", packets[1])
+        self.assertTrue(
+            any(
+                "OLD_CHECKPOINT" in record["content"]
+                for record in state["evidence_records"]
+            )
+        )
+
     def test_provider_error_consumes_the_attempt(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

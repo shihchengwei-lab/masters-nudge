@@ -15,6 +15,7 @@ class ToolEvidence:
     turn_state: dict[str, Any]
     candidate: bool
     has_failure: bool = False
+    checkpoint_records: tuple[dict[str, Any], ...] = ()
 
 
 def observe_tool_batch(
@@ -49,12 +50,19 @@ def observe_tool_batch(
             session,
             content=actor_source,
         )
+    checkpoint_records: list[dict[str, Any]] = []
     for record in records:
         state = storage.record_evidence(
             data_dir,
             session,
             category=record["category"],
             content=record["content"],
+        )
+        checkpoint_records.append(
+            {
+                "seq": int(state.get("evidence_seq") or 0),
+                **record,
+            }
         )
     state = storage.record_workspace_snapshot(
         data_dir,
@@ -63,12 +71,17 @@ def observe_tool_batch(
     )
     has_review_evidence = any(
         record["category"] in {"verification", "failure", "measurement"}
-        for record in records
+        for record in checkpoint_records
     )
     if not has_review_evidence:
-        return ToolEvidence(state, False)
+        return ToolEvidence(
+            state,
+            False,
+            checkpoint_records=tuple(checkpoint_records),
+        )
     return ToolEvidence(
         state,
         True,
         any(record["category"] == "failure" for record in records),
+        tuple(checkpoint_records),
     )
