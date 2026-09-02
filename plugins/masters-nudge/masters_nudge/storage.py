@@ -8,7 +8,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import source_context
 
@@ -50,6 +50,10 @@ def state_path(data_dir: Path, session: SessionRef, suffix: str) -> Path:
 
 def audit_path(data_dir: Path, session: SessionRef) -> Path:
     return Path(data_dir) / f"{session_stem(session)}.nudges.jsonl"
+
+
+def provider_trace_path(data_dir: Path, session: SessionRef) -> Path:
+    return Path(data_dir) / f"{session_stem(session)}.provider-stages.jsonl"
 
 
 def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
@@ -99,6 +103,7 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
+        "last_completed_review": {},
     }
 
 
@@ -192,6 +197,64 @@ def record_workspace_snapshot(
     return state
 
 
+def reuse_completed_generator_no_finding(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    checkpoint_signature: str,
+    contract_signature: str,
+) -> tuple[dict[str, Any], bool]:
+    """Reuse only the immediately preceding completed decision for the same state."""
+    state = load_turn_state(data_dir, session)
+    completed = state.get("last_completed_review")
+    if not isinstance(completed, dict):
+        return state, False
+    matches = (
+        bool(checkpoint_signature)
+        and bool(contract_signature)
+        and completed.get("outcome") == "generator_no_finding"
+        and int(completed.get("evidence_seq") or -1)
+        == int(state.get("evidence_seq") or 0)
+        and completed.get("checkpoint_signature") == checkpoint_signature
+        and completed.get("contract_signature") == contract_signature
+    )
+    if not matches:
+        return state, False
+    completed["reuse_count"] = int(completed.get("reuse_count") or 0) + 1
+    state["last_completed_review"] = completed
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state, True
+
+
+def record_completed_generator_no_finding(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    evidence_seq: int,
+    workspace_snapshot: str,
+    checkpoint_signature: str,
+    contract_signature: str,
+) -> dict[str, Any]:
+    """Remember a completed silence only while its observed state is still current."""
+    state = load_turn_state(data_dir, session)
+    if (
+        not checkpoint_signature
+        or not contract_signature
+        or int(state.get("evidence_seq") or 0) != int(evidence_seq)
+        or state.get("workspace_snapshot") != workspace_snapshot
+    ):
+        return state
+    state["last_completed_review"] = {
+        "evidence_seq": int(evidence_seq),
+        "checkpoint_signature": checkpoint_signature,
+        "contract_signature": contract_signature,
+        "outcome": "generator_no_finding",
+        "reuse_count": 0,
+    }
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state
+
+
 def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
@@ -233,6 +296,42 @@ def append_host_returned_nudge(
     state["previous_findings"] = list(reversed(retained))
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return entry
+
+
+def provider_stage_observer(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    evidence_seq: int,
+    provider: str,
+    model: str,
+    configured_lens: str,
+) -> Callable[[str, str, str, float], None]:
+    """Bind temporary stage observations to one session and evidence snapshot."""
+
+    def observe(
+        stage: str, status: str, selected_lens: str, duration_ms: float
+    ) -> None:
+        entry = {
+            "time": datetime.now(timezone.utc).isoformat(),
+            "host": session.host,
+            "session_id": session.session_id,
+            "workspace": str(session.repo_root or session.cwd or ""),
+            "evidence_seq": int(evidence_seq),
+            "provider": str(provider or ""),
+            "model": str(model or ""),
+            "configured_lens": str(configured_lens or ""),
+            "stage": str(stage or ""),
+            "status": str(status or "error"),
+            "selected_lens": str(selected_lens or ""),
+            "duration_ms": max(0.0, float(duration_ms)),
+        }
+        path = provider_trace_path(data_dir, session)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    return observe
 
 
 def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:

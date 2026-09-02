@@ -33,6 +33,22 @@ class RoutingTests(unittest.TestCase):
             },
         )
 
+    def test_review_contract_signature_changes_with_provider_configuration(self):
+        with tempfile.TemporaryDirectory() as raw:
+            first = NudgeCore(
+                self.settings(Path(raw), "automatic")
+            ).review_contract_signature()
+            changed = RuntimeSettings(
+                "openai",
+                "another-model",
+                RuntimePaths(ROOT, Path(raw), Path(raw), Path(raw) / "error.log"),
+                lens="automatic",
+            )
+            second = NudgeCore(changed).review_contract_signature()
+
+        self.assertEqual(len(first), 64)
+        self.assertNotEqual(first, second)
+
     def test_automatic_route_then_generator_share_one_deadline(self):
         with tempfile.TemporaryDirectory() as raw:
             calls = []
@@ -96,6 +112,77 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(outcome.status, "no_finding")
         self.assertEqual(outcome.decision_stage, "router")
         self.assertEqual(len(calls), 1)
+
+    def test_stage_observer_reports_each_provider_call_without_changing_outcome(self):
+        with tempfile.TemporaryDirectory() as raw:
+            calls = []
+            observed = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append(1)
+                if len(calls) == 1:
+                    return {"status": "finding", "lens": "reliability"}
+                return {
+                    "status": "finding",
+                    "lens": "reliability",
+                    "finding": "讓失敗狀態只有一個權威來源。",
+                }
+
+            outcome = NudgeCore(
+                self.settings(Path(raw), "automatic"), dispatch=dispatch
+            ).nudge_once(
+                "packet",
+                observe_stage=lambda stage, status, lens, duration_ms: observed.append(
+                    (stage, status, lens, duration_ms)
+                ),
+            )
+
+        self.assertEqual(outcome.status, "finding")
+        self.assertEqual(
+            [(stage, status, lens) for stage, status, lens, _duration in observed],
+            [
+                ("router", "finding", "reliability"),
+                ("generator", "finding", "reliability"),
+            ],
+        )
+        self.assertTrue(all(duration >= 0 for *_prefix, duration in observed))
+
+    def test_broken_stage_observer_does_not_change_provider_outcome(self):
+        with tempfile.TemporaryDirectory() as raw:
+            def dispatch(*_args, **_kwargs):
+                return {"status": "no_finding", "lens": "none"}
+
+            def broken_observer(*_args):
+                raise OSError("diagnostic storage unavailable")
+
+            outcome = NudgeCore(
+                self.settings(Path(raw), "automatic"), dispatch=dispatch
+            ).nudge_once("packet", observe_stage=broken_observer)
+
+        self.assertEqual(outcome.status, "no_finding")
+        self.assertEqual(outcome.decision_stage, "router")
+
+    def test_stage_observer_reports_a_provider_timeout_as_an_error(self):
+        with tempfile.TemporaryDirectory() as raw:
+            observed = []
+
+            def dispatch(*_args, **_kwargs):
+                raise TimeoutError("provider timed out")
+
+            with self.assertRaises(TimeoutError):
+                NudgeCore(
+                    self.settings(Path(raw), "automatic"), dispatch=dispatch
+                ).nudge_once(
+                    "packet",
+                    observe_stage=lambda stage, status, lens, duration_ms: observed.append(
+                        (stage, status, lens, duration_ms)
+                    ),
+                )
+
+        self.assertEqual(
+            [(stage, status, lens) for stage, status, lens, _duration in observed],
+            [("router", "error", "")],
+        )
 
 
 if __name__ == "__main__":

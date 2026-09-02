@@ -93,6 +93,9 @@ Masters’ Nudge 會把目前任務狀態與少量稽核紀錄存在
 `~/.masters-nudge/data/`。稽核紀錄包含 Nudge 回傳給 Host 的時間、使用的 Lens 與
 Nudge 內容。
 
+目前成本調查期間，另有暫時性的 `*.provider-stages.jsonl` trace，記錄 router 與
+generator 的狀態及耗時。內容不含 evidence packet 或 finding 文字，也不改變 routing。
+
 這只能證明 Hook 已把 Nudge 回傳給 Claude Code 或 Codex，不能證明主模型真的讀到、
 採納，或因為 Nudge 才採取後續行動。
 

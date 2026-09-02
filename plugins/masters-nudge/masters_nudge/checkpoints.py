@@ -30,7 +30,8 @@ FAILURE_RE = re.compile(
     re.IGNORECASE,
 )
 NAVIGATION_RE = re.compile(
-    r"^(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|read|open|view|search)\b",
+    r"^(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|get-childitem|"
+    r"read|open|view|search)\b",
     re.IGNORECASE,
 )
 

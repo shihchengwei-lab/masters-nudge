@@ -9,8 +9,8 @@ import sys
 from typing import Any
 
 import source_context
-from masters_nudge import claude_adapter, evidence, prompting
-from masters_nudge.contracts import NudgeOutcome, ToolCompleted
+from masters_nudge import claude_adapter, evidence, prompting, storage
+from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, active_guard
 
@@ -68,13 +68,28 @@ def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
     return events
 
 
-def nudge_checkpoint(source_packet: str) -> NudgeOutcome:
+def nudge_checkpoint(
+    source_packet: str, session: SessionRef, evidence_seq: int
+) -> NudgeOutcome:
     settings = claude_adapter.runtime_settings()
     core = NudgeCore(
         settings,
         log_error=lambda message: claude_adapter.log_error("claude-checkpoint", message),
     )
-    return core.nudge_once(source_packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
+
+    observe_stage = storage.provider_stage_observer(
+        settings.paths.data_dir,
+        session,
+        evidence_seq=evidence_seq,
+        provider=settings.provider,
+        model=settings.model,
+        configured_lens=settings.lens,
+    )
+    return core.nudge_once(
+        source_packet,
+        timeout_sec=PROVIDER_TIMEOUT_SEC,
+        observe_stage=observe_stage,
+    )
 
 
 def build_hook_output(finding: str) -> dict[str, Any]:
@@ -91,7 +106,18 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     if not events:
         return None
     settings = claude_adapter.runtime_settings()
-    observed = evidence.observe_tool_batch(settings.paths.data_dir, events)
+    core = NudgeCore(
+        settings,
+        log_error=lambda message: claude_adapter.log_error("claude-checkpoint", message),
+    )
+    contract_signature = core.review_contract_signature()
+    observed = evidence.observe_tool_batch(
+        settings.paths.data_dir,
+        events,
+        contract_signature=contract_signature,
+    )
+    if observed.reused_generator_no_finding:
+        return None
     if not observed.eligible:
         return None
     state = observed.turn_state
@@ -103,10 +129,23 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         evidence_records=state.get("evidence_records") or [],
     )
     try:
-        outcome = nudge_checkpoint(packet)
+        outcome = nudge_checkpoint(
+            packet,
+            events[0].session,
+            int(state.get("evidence_seq") or 0),
+        )
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
+    if outcome.status == "no_finding" and outcome.decision_stage == "generator":
+        storage.record_completed_generator_no_finding(
+            settings.paths.data_dir,
+            events[0].session,
+            evidence_seq=int(state.get("evidence_seq") or 0),
+            workspace_snapshot=str(state.get("workspace_snapshot") or ""),
+            checkpoint_signature=observed.checkpoint_signature,
+            contract_signature=contract_signature,
+        )
     if outcome.status != "finding" or not outcome.finding:
         return None
     return claude_adapter.PreparedDelivery(

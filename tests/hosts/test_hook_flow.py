@@ -21,17 +21,48 @@ class FakeCore:
     def __init__(self, data_dir: Path) -> None:
         self.settings = SimpleNamespace(
             paths=SimpleNamespace(data_dir=data_dir),
+            provider="openai",
+            model="test-model",
+            lens="automatic",
         )
         self.calls: list[str] = []
         self.log_error = lambda _message: None
 
-    def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
+    def review_contract_signature(self) -> str:
+        return "test-contract"
+
+    def nudge_once(
+        self, source_packet: str, timeout_sec=None, observe_stage=None
+    ) -> NudgeOutcome:
         self.calls.append(source_packet)
+        if observe_stage is not None:
+            observe_stage("generator", "finding", "simplicity", 12)
         return NudgeOutcome(
             "finding",
             finding="讓單一欄位直接擁有責任。",
             lens="simplicity",
         )
+
+
+class SilentCore(FakeCore):
+    def nudge_once(
+        self, source_packet: str, timeout_sec=None, observe_stage=None
+    ) -> NudgeOutcome:
+        self.calls.append(source_packet)
+        if observe_stage is not None:
+            observe_stage("router", "finding", "simplicity", 5)
+            observe_stage("generator", "no_finding", "none", 7)
+        return NudgeOutcome("no_finding", decision_stage="generator")
+
+
+class RouterSilentCore(FakeCore):
+    def nudge_once(
+        self, source_packet: str, timeout_sec=None, observe_stage=None
+    ) -> NudgeOutcome:
+        self.calls.append(source_packet)
+        if observe_stage is not None:
+            observe_stage("router", "no_finding", "none", 5)
+        return NudgeOutcome("no_finding", decision_stage="router")
 
 
 class CodexHookFlowTests(unittest.TestCase):
@@ -51,6 +82,80 @@ class CodexHookFlowTests(unittest.TestCase):
 
         self.assertIsNone(output)
         self.assertEqual(core.calls, [])
+
+    def test_identical_checkpoint_reuses_completed_generator_silence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = SilentCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "reused-silence",
+                    "cwd": raw,
+                    "prompt": "檢查驗證結果",
+                }
+            )
+            checkpoint = {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "reused-silence",
+                "cwd": raw,
+                "tool_calls": [
+                    {
+                        "tool_name": "exec_command",
+                        "tool_input": {"cmd": "python -m unittest"},
+                        "tool_response": "Process exited with code 0",
+                    }
+                ],
+            }
+
+            first = adapter.process(checkpoint)
+            second = adapter.process(checkpoint)
+            state = storage.load_turn_state(
+                root, SessionRef("codex_cli", "reused-silence", cwd=raw)
+            )
+
+        self.assertIsNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(len(core.calls), 1)
+        self.assertEqual(state["evidence_seq"], 1)
+        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
+
+    def test_router_silence_does_not_gain_generator_reuse_eligibility(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = RouterSilentCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "router-silence",
+                    "cwd": raw,
+                    "prompt": "檢查驗證結果",
+                }
+            )
+            checkpoint = {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "router-silence",
+                "cwd": raw,
+                "tool_calls": [
+                    {
+                        "tool_name": "exec_command",
+                        "tool_input": {"cmd": "python -m unittest"},
+                        "tool_response": "Process exited with code 0",
+                    }
+                ],
+            }
+
+            adapter.process(checkpoint)
+            adapter.process(checkpoint)
+            state = storage.load_turn_state(
+                root, SessionRef("codex_cli", "router-silence", cwd=raw)
+            )
+
+        self.assertEqual(len(core.calls), 2)
+        self.assertEqual(state["evidence_seq"], 2)
+        self.assertEqual(state["last_completed_review"], {})
 
     def test_post_tool_batch_returns_one_nudge_for_the_complete_batch(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -96,6 +201,9 @@ class CodexHookFlowTests(unittest.TestCase):
             public_text = stream.getvalue()
             public = json.loads(public_text)
             audit = storage.recent_nudges(root)
+            traces = storage.provider_trace_path(root, SessionRef(
+                "codex_cli", "codex-flow", cwd=raw
+            )).read_text(encoding="utf-8").splitlines()
 
         self.assertIn(
             "讓單一欄位直接擁有責任。",
@@ -104,6 +212,8 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertNotIn("_masters_nudge", public_text)
         self.assertEqual(len(audit), 1)
         self.assertEqual(audit[0]["returned_via"], "PostToolBatch")
+        self.assertEqual(len(traces), 1)
+        self.assertEqual(json.loads(traces[0])["stage"], "generator")
 
     def test_post_tool_batch_rejects_a_partially_malformed_batch(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -180,11 +290,75 @@ class CodexHookFlowTests(unittest.TestCase):
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
+    def test_identical_checkpoint_reuses_completed_generator_silence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            runtime = Path(__file__).resolve().parents[2]
+            settings = SimpleNamespace(
+                paths=SimpleNamespace(
+                    data_dir=root,
+                    runtime_dir=runtime,
+                    error_log=root / "error.log",
+                ),
+                provider="openai",
+                model="test-model",
+                lens="automatic",
+                ollama_url="http://localhost:11434",
+            )
+            hook = {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "claude-reused-silence",
+                "cwd": raw,
+                "tool_calls": [
+                    {
+                        "tool_name": "Bash",
+                        "tool_input": {"command": "python -m unittest"},
+                        "tool_response": "Exit code 0\n10 passed",
+                    }
+                ],
+            }
+            storage.start_turn(
+                root,
+                SessionRef("claude_code", "claude-reused-silence", cwd=raw),
+                "檢查驗證結果",
+            )
+
+            with (
+                mock.patch.object(claude_adapter, "RUNTIME", settings),
+                mock.patch.object(
+                    claude_checkpoint,
+                    "nudge_checkpoint",
+                    return_value=NudgeOutcome(
+                        "no_finding", decision_stage="generator"
+                    ),
+                ) as checkpoint,
+            ):
+                first = claude_checkpoint.prepare_hook(hook)
+                second = claude_checkpoint.prepare_hook(hook)
+            state = storage.load_turn_state(
+                root,
+                SessionRef("claude_code", "claude-reused-silence", cwd=raw),
+            )
+
+        self.assertIsNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(checkpoint.call_count, 1)
+        self.assertEqual(state["evidence_seq"], 1)
+        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
+
     def test_post_tool_batch_returns_nudge_and_audits_after_flush(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             settings = SimpleNamespace(
-                paths=SimpleNamespace(data_dir=root, error_log=root / "error.log"),
+                paths=SimpleNamespace(
+                    data_dir=root,
+                    runtime_dir=Path(__file__).resolve().parents[2],
+                    error_log=root / "error.log",
+                ),
+                provider="openai",
+                model="test-model",
+                lens="automatic",
+                ollama_url="http://localhost:11434",
             )
             session = SessionRef("claude_code", "claude-flow", cwd=raw)
             storage.start_turn(root, session, "簡化責任配置")
@@ -205,16 +379,21 @@ class ClaudeHookFlowTests(unittest.TestCase):
                     }
                 ],
             }
+            def checkpoint(_packet, observed_session, evidence_seq):
+                self.assertEqual(observed_session, session)
+                self.assertEqual(evidence_seq, 2)
+                return NudgeOutcome(
+                    "finding",
+                    finding="讓單一欄位直接擁有責任。",
+                    lens="simplicity",
+                )
+
             with (
                 mock.patch.object(claude_adapter, "RUNTIME", settings),
                 mock.patch.object(
                     claude_checkpoint,
                     "nudge_checkpoint",
-                    return_value=NudgeOutcome(
-                        "finding",
-                        finding="讓單一欄位直接擁有責任。",
-                        lens="simplicity",
-                    ),
+                    side_effect=checkpoint,
                 ),
             ):
                 prepared = claude_checkpoint.prepare_hook(hook)

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import time
 from typing import Callable
@@ -20,6 +22,7 @@ from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
 
 ProviderDispatch = Callable[..., dict]
+StageObserver = Callable[[str, str, str, float], None]
 
 
 class NudgeCore:
@@ -39,29 +42,91 @@ class NudgeCore:
         self.schema_path = runtime / "nudge-schema.json"
         self.route_schema_path = runtime / "route-schema.json"
 
+    def review_contract_signature(self) -> str:
+        """Identify the Provider contract whose completed silence may be reused."""
+        try:
+            contract = {
+                "provider": self.settings.provider,
+                "model": self.settings.model,
+                "lens": self.settings.lens,
+                "ollama_url": self.settings.ollama_url,
+                "router_prompt": build_router_prompt(),
+                "buddy_prompt": self.prompt_file.read_text(encoding="utf-8"),
+                "nudge_schema": self.schema_path.read_text(encoding="utf-8"),
+                "route_schema": self.route_schema_path.read_text(encoding="utf-8"),
+                "personas": {
+                    persona: (self.persona_dir / f"{persona}.txt").read_text(
+                        encoding="utf-8"
+                    )
+                    for persona in sorted(set(lens_router.LENS_PERSONAS.values()))
+                },
+            }
+        except OSError as exc:
+            self.log_error(f"review contract unavailable: {exc}")
+            return ""
+        encoded = json.dumps(
+            contract,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
     def _call(
         self,
+        stage: str,
         system_prompt: str,
         source_packet: str,
         schema_path,
         timeout_sec: int,
+        observe_stage: StageObserver | None,
     ) -> dict:
-        result = self.dispatch(
-            self.settings.provider,
-            system_prompt,
-            source_packet,
-            self.settings.model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            ollama_url=self.settings.ollama_url,
-            log_error=self.log_error,
+        started_ns = time.monotonic_ns()
+        try:
+            result = self.dispatch(
+                self.settings.provider,
+                system_prompt,
+                source_packet,
+                self.settings.model,
+                schema_path=schema_path,
+                timeout_sec=timeout_sec,
+                ollama_url=self.settings.ollama_url,
+                log_error=self.log_error,
+            )
+            normalized = result if isinstance(result, dict) else {"status": "error"}
+        except Exception:
+            self._observe_stage(observe_stage, stage, "error", "", started_ns)
+            raise
+        self._observe_stage(
+            observe_stage,
+            stage,
+            str(normalized.get("status") or "error"),
+            str(normalized.get("lens") or ""),
+            started_ns,
         )
-        return result if isinstance(result, dict) else {"status": "error"}
+        return normalized
+
+    @staticmethod
+    def _observe_stage(
+        observer: StageObserver | None,
+        stage: str,
+        status: str,
+        lens: str,
+        started_ns: int,
+    ) -> None:
+        if observer is None:
+            return
+        duration_ms = max(0.0, (time.monotonic_ns() - started_ns) / 1_000_000)
+        try:
+            observer(stage, status, lens, round(duration_ms, 3))
+        except Exception:
+            pass
 
     def nudge_once(
         self,
         source_packet: str,
         timeout_sec: int | None = None,
+        observe_stage: StageObserver | None = None,
     ) -> NudgeOutcome:
         timeout = min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC)
         deadline = time.perf_counter() + timeout
@@ -69,10 +134,12 @@ class NudgeCore:
 
         if not route.lens:
             routed = self._call(
+                "router",
                 build_router_prompt(),
                 source_packet,
                 self.route_schema_path,
                 max(1, math.ceil(deadline - time.perf_counter())),
+                observe_stage,
             )
             status = str(routed.get("status") or "error")
             if status == "no_finding":
@@ -92,10 +159,12 @@ class NudgeCore:
         if not system_prompt or remaining <= 0:
             return NudgeOutcome("error", decision_stage="generator")
         result = self._call(
+            "generator",
             system_prompt,
             build_nudge_input(source_packet),
             self.schema_path,
             max(1, math.ceil(remaining)),
+            observe_stage,
         )
         status = str(result.get("status") or "error")
         finding = str(result.get("finding") or "").strip()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import os
 import subprocess
 import tempfile
@@ -39,8 +40,12 @@ class NudgeContractTests(unittest.TestCase):
     def test_core_accepts_the_packet_directly(self):
         parameters = inspect.signature(NudgeCore.nudge_once).parameters
 
-        self.assertEqual(tuple(parameters), ("self", "source_packet", "timeout_sec"))
+        self.assertEqual(
+            tuple(parameters),
+            ("self", "source_packet", "timeout_sec", "observe_stage"),
+        )
         self.assertIsNone(parameters["timeout_sec"].default)
+        self.assertIsNone(parameters["observe_stage"].default)
 
     def test_silence_needs_no_fake_finding_or_lens(self):
         self.assertEqual(
@@ -161,6 +166,48 @@ class EvidenceBoundaryTests(unittest.TestCase):
             ["actual_command:\npytest -q\n\nresult:\n10 passed"] * 2,
         )
 
+    def test_completed_generator_silence_reuses_only_the_same_next_checkpoint(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "reuse", cwd=raw, repo_root=raw)
+            storage.start_turn(root, session, "重複執行相同驗證")
+            event = ToolCompleted(
+                session,
+                "Bash",
+                tool_input={"command": "pytest -q"},
+                tool_output="10 passed",
+            )
+
+            first = evidence.observe_tool_batch(
+                root, [event], contract_signature="contract-v1"
+            )
+            storage.record_completed_generator_no_finding(
+                root,
+                session,
+                evidence_seq=first.turn_state["evidence_seq"],
+                workspace_snapshot=first.turn_state["workspace_snapshot"],
+                checkpoint_signature=first.checkpoint_signature,
+                contract_signature="contract-v1",
+            )
+            repeated = evidence.observe_tool_batch(
+                root, [event], contract_signature="contract-v1"
+            )
+            changed_contract = evidence.observe_tool_batch(
+                root, [event], contract_signature="contract-v2"
+            )
+
+        self.assertTrue(first.eligible)
+        self.assertFalse(first.reused_generator_no_finding)
+        self.assertFalse(repeated.eligible)
+        self.assertTrue(repeated.reused_generator_no_finding)
+        self.assertEqual(repeated.turn_state["evidence_seq"], 1)
+        self.assertEqual(
+            repeated.turn_state["last_completed_review"]["reuse_count"], 1
+        )
+        self.assertTrue(changed_contract.eligible)
+        self.assertFalse(changed_contract.reused_generator_no_finding)
+        self.assertEqual(changed_contract.turn_state["evidence_seq"], 2)
+
     def test_change_only_is_recorded_without_triggering_a_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -244,6 +291,23 @@ class EvidenceBoundaryTests(unittest.TestCase):
             SessionRef("codex_cli", "navigation"),
             "Bash",
             tool_input={"command": "rg missing-symbol src"},
+            tool_output="",
+            failed=True,
+            failure_known=True,
+        )
+
+        self.assertEqual(checkpoints.evidence_category(event), "")
+
+    def test_failed_powershell_composite_navigation_is_not_failure_evidence(self):
+        event = ToolCompleted(
+            SessionRef("codex_cli", "powershell-navigation"),
+            "Bash",
+            tool_input={
+                "command": (
+                    "Get-ChildItem -Force | Select-Object Name,Mode,Length; "
+                    'rg -n "EventSource|maxEventSize" lib types test 2>$null'
+                )
+            },
             tool_output="",
             failed=True,
             failure_known=True,
@@ -427,6 +491,35 @@ class HostReturnedAuditTests(unittest.TestCase):
             "latency_ms",
         ):
             self.assertNotIn(obsolete, entries[0])
+
+    def test_provider_stage_trace_is_separate_from_host_return_audit(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "trace", cwd=raw)
+            observe_stage = storage.provider_stage_observer(
+                root,
+                session,
+                evidence_seq=4,
+                provider="openai",
+                model="test-model",
+                configured_lens="automatic",
+            )
+            observe_stage("router", "no_finding", "none", 1234)
+            trace = [
+                json.loads(line)
+                for line in storage.provider_trace_path(root, session)
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+
+            self.assertEqual(storage.recent_nudges(root), [])
+
+        self.assertEqual(len(trace), 1)
+        self.assertEqual(trace[0]["evidence_seq"], 4)
+        self.assertEqual(trace[0]["stage"], "router")
+        self.assertEqual(trace[0]["status"], "no_finding")
+        self.assertEqual(trace[0]["duration_ms"], 1234)
+        self.assertNotIn("finding", trace[0])
 
     def test_cleanup_removes_an_expired_session_but_keeps_global_settings(self):
         with tempfile.TemporaryDirectory() as raw:
