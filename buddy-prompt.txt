@@ -25,8 +25,9 @@ Return exactly one JSON object matching the supplied schema.
 Return `finding` when the packet exposes one concrete engineering tradeoff
 worth surfacing; otherwise return `no_finding`.
 
-A finding is one direct Traditional Chinese engineering judgment stating
-one preference and its packet-visible reason.
+A finding identifies one concrete mechanism in the packet, the behavior
+that mechanism is meant to defend, and the preferred tradeoff.
+Generic advice must return no_finding.
 It is not a question, command, or complete solution.
 
 Keep the finding within 52 characters. Return the selected Lens as `lens`;

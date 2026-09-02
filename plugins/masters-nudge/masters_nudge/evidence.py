@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,22 +14,8 @@ from .contracts import ToolCompleted
 class ToolEvidence:
     turn_state: dict[str, Any]
     eligible: bool
-    checkpoint_signature: str = ""
-    reused_generator_no_finding: bool = False
-
-
-def _checkpoint_signature(
-    workspace_snapshot: str, records: list[dict[str, str]]
-) -> str:
-    if not records:
-        return ""
-    encoded = json.dumps(
-        {"workspace_snapshot": workspace_snapshot, "records": records},
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    evidence_classes: tuple[str, ...] = ()
+    workspace_revision_signature: str = ""
 
 
 def observe_tool_batch(
@@ -45,9 +29,7 @@ def observe_tool_batch(
     session = events[0].session
     if any(event.session != session for event in events[1:]):
         raise ValueError("tool batch events must share one session")
-    state = storage.record_workspace_snapshot(
-        data_dir, session, checkpoints.working_diff(session)
-    )
+    workspace = checkpoints.workspace_state(session)
     records: list[dict[str, str]] = []
     for event in events:
         category = checkpoints.evidence_category(event)
@@ -59,24 +41,7 @@ def observe_tool_batch(
                 "content": checkpoints.render_evidence_record(event),
             }
         )
-    eligible = any(record["category"] != "change" for record in records)
-    checkpoint_signature = _checkpoint_signature(
-        str(state.get("workspace_snapshot") or ""), records
-    )
-    if eligible:
-        state, reused = storage.reuse_completed_generator_no_finding(
-            data_dir,
-            session,
-            checkpoint_signature=checkpoint_signature,
-            contract_signature=contract_signature,
-        )
-        if reused:
-            return ToolEvidence(
-                state,
-                False,
-                checkpoint_signature,
-                reused_generator_no_finding=True,
-            )
+    state = storage.load_turn_state(data_dir, session)
     for record in records:
         state = storage.record_evidence(
             data_dir,
@@ -84,4 +49,31 @@ def observe_tool_batch(
             category=record["category"],
             content=record["content"],
         )
-    return ToolEvidence(state, eligible, checkpoint_signature)
+    state = storage.record_workspace_state(
+        data_dir,
+        session,
+        workspace.snapshot,
+        workspace.revision_signature,
+    )
+    evidence_classes = tuple(
+        category
+        for category in ("verification", "failure", "measurement")
+        if any(record["category"] == category for record in records)
+    )
+    if not evidence_classes:
+        return ToolEvidence(state, False)
+    state, eligible = storage.review_admitted(
+        data_dir,
+        session,
+        workspace_revision_signature=str(
+            state.get("workspace_revision_signature") or ""
+        ),
+        contract_signature=contract_signature,
+        evidence_classes=evidence_classes,
+    )
+    return ToolEvidence(
+        state,
+        eligible,
+        evidence_classes,
+        str(state.get("workspace_revision_signature") or ""),
+    )

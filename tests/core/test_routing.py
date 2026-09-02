@@ -74,7 +74,7 @@ class RoutingTests(unittest.TestCase):
         self.assertNotEqual(first, selected)
         self.assertNotEqual(selected, changed_model)
 
-    def test_review_tool_batch_reuses_only_exact_completed_silence(self):
+    def test_review_tool_batch_completes_one_decision_per_evidence_class(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "core-review", cwd=raw)
@@ -121,13 +121,114 @@ class RoutingTests(unittest.TestCase):
 
         self.assertEqual(first.status, "no_finding")
         self.assertIsNone(repeated)
-        self.assertEqual(repeated_state["evidence_seq"], 1)
-        self.assertEqual(repeated_state["last_completed_review"]["reuse_count"], 1)
+        self.assertEqual(repeated_state["evidence_seq"], 2)
+        self.assertEqual(
+            repeated_state["review_admission"]["completed_evidence_classes"],
+            ["verification"],
+        )
         self.assertEqual(changed_evidence.status, "no_finding")
         self.assertEqual(changed_contract.status, "no_finding")
         self.assertEqual(calls, ["generator", "generator", "generator"])
-        self.assertEqual(final_state["evidence_seq"], 3)
-        self.assertEqual(final_state["last_completed_review"]["reuse_count"], 0)
+        self.assertEqual(final_state["evidence_seq"], 4)
+        self.assertEqual(
+            final_state["review_admission"]["completed_evidence_classes"],
+            ["failure"],
+        )
+
+    def test_provider_error_leaves_the_decision_open_for_retry(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "retry", cwd=raw)
+            storage.start_turn(root, session, "檢查驗證結果")
+            calls = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append("generator")
+                return {"status": "error"}
+
+            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="Process exited with code 0",
+            )
+
+            first = core.review_tool_batch([event])
+            second = core.review_tool_batch([event])
+
+        self.assertEqual(first.status, "error")
+        self.assertEqual(second.status, "error")
+        self.assertEqual(calls, ["generator", "generator"])
+
+    def test_finding_also_completes_the_decision(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "finding", cwd=raw)
+            storage.start_turn(root, session, "檢查驗證結果")
+            calls = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append("generator")
+                return {
+                    "status": "finding",
+                    "lens": "simplicity",
+                    "finding": "保留真正承重的邊界。",
+                }
+
+            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="Process exited with code 0",
+            )
+
+            first = core.review_tool_batch([event])
+            repeated = core.review_tool_batch([event])
+
+        self.assertEqual(first.status, "finding")
+        self.assertIsNone(repeated)
+        self.assertEqual(calls, ["generator"])
+
+    def test_one_batch_completes_every_evidence_class_it_reviewed(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "multi-class", cwd=raw)
+            storage.start_turn(root, session, "檢查驗證與量測")
+            calls = []
+
+            def dispatch(*_args, **_kwargs):
+                calls.append("generator")
+                return {"status": "no_finding", "lens": "none", "finding": ""}
+
+            core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            verification = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python -m unittest"},
+                tool_output="Process exited with code 0",
+            )
+            measurement = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "python benchmark.py"},
+                tool_output="median: 10 ms",
+            )
+
+            first = core.review_tool_batch([verification, measurement])
+            repeated_verification = core.review_tool_batch([verification])
+            repeated_measurement = core.review_tool_batch([measurement])
+            state = storage.load_turn_state(root, session)
+
+        self.assertEqual(first.status, "no_finding")
+        self.assertIsNone(repeated_verification)
+        self.assertIsNone(repeated_measurement)
+        self.assertEqual(calls, ["generator"])
+        self.assertEqual(
+            state["review_admission"]["completed_evidence_classes"],
+            ["verification", "measurement"],
+        )
 
     def test_each_lens_calls_one_generator_with_its_persona(self):
         persona_markers = {

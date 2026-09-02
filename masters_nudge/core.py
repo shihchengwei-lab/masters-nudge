@@ -73,7 +73,7 @@ class NudgeCore:
             events,
             contract_signature=contract_signature,
         )
-        if observed.reused_generator_no_finding or not observed.eligible:
+        if not observed.eligible:
             return None
         state = observed.turn_state
         packet = source_context.build_checkpoint_packet(
@@ -84,14 +84,13 @@ class NudgeCore:
             evidence_records=state.get("evidence_records") or [],
         )
         outcome = self.nudge_once(packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
-        if outcome.status == "no_finding":
-            storage.record_completed_generator_no_finding(
+        if outcome.status in {"finding", "no_finding"}:
+            storage.record_completed_review(
                 self.settings.paths.data_dir,
                 events[0].session,
-                evidence_seq=int(state.get("evidence_seq") or 0),
-                workspace_snapshot=str(state.get("workspace_snapshot") or ""),
-                checkpoint_signature=observed.checkpoint_signature,
+                workspace_revision_signature=observed.workspace_revision_signature,
                 contract_signature=contract_signature,
+                evidence_classes=observed.evidence_classes,
             )
         return outcome
 

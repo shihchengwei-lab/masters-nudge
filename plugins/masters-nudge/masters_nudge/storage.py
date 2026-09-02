@@ -96,10 +96,12 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "task_anchor": "",
         "task_sources": {},
         "workspace_snapshot": "",
+        "workspace_revision_signature": "",
+        "change_generation": 0,
         "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
-        "last_completed_review": {},
+        "review_admission": {},
     }
 
 
@@ -176,77 +178,92 @@ def record_evidence(
         )
     retained.sort(key=lambda record: int(record.get("seq") or 0))
     state.update({"evidence_seq": sequence, "evidence_records": retained})
+    if category == "change":
+        state["change_generation"] = int(state.get("change_generation") or 0) + 1
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 
 
-def record_workspace_snapshot(
+def record_workspace_state(
     data_dir: Path,
     session: SessionRef,
     snapshot: str,
+    revision_signature: str,
 ) -> dict[str, Any]:
     state = load_turn_state(data_dir, session)
     state["workspace_snapshot"] = source_context.head_tail(
         snapshot, source_context.CURRENT_WORKSPACE_MAX_CHARS
     )
+    state["workspace_revision_signature"] = (
+        revision_signature
+        or f"observed-change:{int(state.get('change_generation') or 0)}"
+    )
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 
 
-def reuse_completed_generator_no_finding(
+def review_admitted(
     data_dir: Path,
     session: SessionRef,
     *,
-    checkpoint_signature: str,
+    workspace_revision_signature: str,
     contract_signature: str,
+    evidence_classes: tuple[str, ...],
 ) -> tuple[dict[str, Any], bool]:
-    """Reuse only the immediately preceding completed decision for the same state."""
-    state = load_turn_state(data_dir, session)
-    completed = state.get("last_completed_review")
-    if not isinstance(completed, dict):
-        return state, False
-    matches = (
-        bool(checkpoint_signature)
-        and bool(contract_signature)
-        and completed.get("outcome") == "generator_no_finding"
-        and int(completed.get("evidence_seq") or -1)
-        == int(state.get("evidence_seq") or 0)
-        and completed.get("checkpoint_signature") == checkpoint_signature
-        and completed.get("contract_signature") == contract_signature
-    )
-    if not matches:
-        return state, False
-    completed["reuse_count"] = int(completed.get("reuse_count") or 0) + 1
-    state["last_completed_review"] = completed
-    _atomic_write(state_path(data_dir, session, "turn"), state)
-    return state, True
-
-
-def record_completed_generator_no_finding(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    evidence_seq: int,
-    workspace_snapshot: str,
-    checkpoint_signature: str,
-    contract_signature: str,
-) -> dict[str, Any]:
-    """Remember a completed silence only while its observed state is still current."""
+    """Admit the first review of each evidence class in one decision generation."""
     state = load_turn_state(data_dir, session)
     if (
-        not checkpoint_signature
+        not workspace_revision_signature
         or not contract_signature
-        or int(state.get("evidence_seq") or 0) != int(evidence_seq)
-        or state.get("workspace_snapshot") != workspace_snapshot
+        or not evidence_classes
+    ):
+        return state, True
+    admission = state.get("review_admission")
+    same_generation = (
+        isinstance(admission, dict)
+        and admission.get("workspace_revision_signature")
+        == workspace_revision_signature
+        and admission.get("contract_signature") == contract_signature
+    )
+    completed = admission.get("completed_evidence_classes", []) if same_generation else []
+    return state, any(category not in completed for category in evidence_classes)
+
+
+def record_completed_review(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    workspace_revision_signature: str,
+    contract_signature: str,
+    evidence_classes: tuple[str, ...],
+) -> dict[str, Any]:
+    """Complete one admitted review only while its decision generation is current."""
+    state = load_turn_state(data_dir, session)
+    if (
+        not workspace_revision_signature
+        or not contract_signature
+        or not evidence_classes
+        or state.get("workspace_revision_signature")
+        != workspace_revision_signature
     ):
         return state
-    state["last_completed_review"] = {
-        "evidence_seq": int(evidence_seq),
-        "checkpoint_signature": checkpoint_signature,
-        "contract_signature": contract_signature,
-        "outcome": "generator_no_finding",
-        "reuse_count": 0,
-    }
+    admission = state.get("review_admission")
+    if not (
+        isinstance(admission, dict)
+        and admission.get("workspace_revision_signature")
+        == workspace_revision_signature
+        and admission.get("contract_signature") == contract_signature
+    ):
+        admission = {
+            "workspace_revision_signature": workspace_revision_signature,
+            "contract_signature": contract_signature,
+            "completed_evidence_classes": [],
+        }
+    completed = admission["completed_evidence_classes"]
+    for category in evidence_classes:
+        if category not in completed:
+            completed.append(category)
+    state["review_admission"] = admission
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 

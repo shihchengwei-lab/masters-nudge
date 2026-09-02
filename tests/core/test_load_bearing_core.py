@@ -98,28 +98,33 @@ class EvidenceBoundaryTests(unittest.TestCase):
             prompt,
         )
         self.assertIn(
-            "A finding is one direct Traditional Chinese engineering judgment stating\n"
-            "one preference and its packet-visible reason.",
+            "A finding identifies one concrete mechanism in the packet, the behavior\n"
+            "that mechanism is meant to defend, and the preferred tradeoff.",
             prompt,
         )
+        self.assertIn("Generic advice must return no_finding.", prompt)
         self.assertIn("It is not a question, command, or complete solution.", prompt)
         self.assertNotIn("only for one short Traditional Chinese question", prompt)
         self.assertNotIn("Do not suggest a fix.", prompt)
 
-    def test_personas_demonstrate_a_judgment_instead_of_a_question_or_command(self):
-        expected = {
-            "linus.txt": "這層只轉交責任，沒有新增行為，owner 反而更模糊。",
-            "lamport.txt": "完成與取消分開擁有狀態，會留下雙重完成的路徑。",
-            "carmack.txt": "成本在 hot path 重複配置，不在這段計算。",
-        }
-
-        for filename, example in expected.items():
+    def test_personas_do_not_anchor_the_provider_with_stock_examples(self):
+        for filename in ("linus.txt", "lamport.txt", "carmack.txt"):
             with self.subTest(persona=filename):
                 persona = (ROOT / "personas" / filename).read_text(encoding="utf-8")
-                self.assertIn(example, persona)
+                self.assertNotIn("- 範例：", persona)
                 self.assertIn("不要接管實作。", persona)
                 self.assertNotIn("選一個 packet 尚未回答的問題", persona)
                 self.assertNotIn("- 不可以：", persona)
+
+    def test_linus_scene_checks_what_each_mechanism_actually_defends(self):
+        persona = (ROOT / "personas" / "linus.txt").read_text(encoding="utf-8")
+
+        self.assertIn("沿著 packet 顯示的實際 control flow 往前走", persona)
+        self.assertIn("拿掉這段，哪條路會失去保證？", persona)
+        self.assertIn("若兩段守的是不同入口", persona)
+        self.assertIn("又讓多少分支真正消失", persona)
+        self.assertIn("拿掉這一層，哪個可見 caller 會失去行為？", persona)
+        self.assertIn("這個新概念消滅的分支，比它新增的責任多嗎？", persona)
 
     def test_delivery_marks_the_nudge_as_non_authoritative(self):
         self.assertEqual(
@@ -138,7 +143,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
         self.assertIn("Successful application alone is not a check.", prompt)
 
-    def test_identical_native_batches_are_both_recorded(self):
+    def test_same_revision_and_evidence_class_is_admitted_only_once_but_recorded(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "repeat", cwd=raw, repo_root=raw)
@@ -150,18 +155,34 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 tool_output="10 passed",
             )
 
-            first = evidence.observe_tool_batch(root, [event])
-            second = evidence.observe_tool_batch(root, [event])
+            with mock.patch.object(
+                checkpoints,
+                "workspace_state",
+                return_value=checkpoints.WorkspaceState("", "revision-1"),
+            ):
+                first = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v1"
+                )
+                storage.record_completed_review(
+                    root,
+                    session,
+                    workspace_revision_signature=first.workspace_revision_signature,
+                    contract_signature="contract-v1",
+                    evidence_classes=first.evidence_classes,
+                )
+                second = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v1"
+                )
 
         self.assertTrue(first.eligible)
-        self.assertTrue(second.eligible)
+        self.assertFalse(second.eligible)
         self.assertEqual(second.turn_state["evidence_seq"], 2)
         self.assertEqual(
             [record["content"] for record in second.turn_state["evidence_records"]],
             ["actual_command:\npytest -q\n\nresult:\n10 passed"] * 2,
         )
 
-    def test_completed_generator_silence_reuses_only_the_same_next_checkpoint(self):
+    def test_new_evidence_class_contract_or_revision_starts_a_new_decision(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "reuse", cwd=raw, repo_root=raw)
@@ -173,35 +194,55 @@ class EvidenceBoundaryTests(unittest.TestCase):
                 tool_output="10 passed",
             )
 
-            first = evidence.observe_tool_batch(
-                root, [event], contract_signature="contract-v1"
-            )
-            storage.record_completed_generator_no_finding(
-                root,
-                session,
-                evidence_seq=first.turn_state["evidence_seq"],
-                workspace_snapshot=first.turn_state["workspace_snapshot"],
-                checkpoint_signature=first.checkpoint_signature,
-                contract_signature="contract-v1",
-            )
-            repeated = evidence.observe_tool_batch(
-                root, [event], contract_signature="contract-v1"
-            )
-            changed_contract = evidence.observe_tool_batch(
-                root, [event], contract_signature="contract-v2"
-            )
+            with mock.patch.object(
+                checkpoints,
+                "workspace_state",
+                return_value=checkpoints.WorkspaceState("", "revision-1"),
+            ):
+                first = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v1"
+                )
+                storage.record_completed_review(
+                    root,
+                    session,
+                    workspace_revision_signature=first.workspace_revision_signature,
+                    contract_signature="contract-v1",
+                    evidence_classes=first.evidence_classes,
+                )
+                repeated = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v1"
+                )
+                failure = evidence.observe_tool_batch(
+                    root,
+                    [
+                        ToolCompleted(
+                            session,
+                            "Bash",
+                            tool_input={"command": "pytest -q"},
+                            tool_output="1 failed",
+                            failed=True,
+                            failure_known=True,
+                        )
+                    ],
+                    contract_signature="contract-v1",
+                )
+                changed_contract = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v2"
+                )
+            with mock.patch.object(
+                checkpoints,
+                "workspace_state",
+                return_value=checkpoints.WorkspaceState("", "revision-2"),
+            ):
+                changed_revision = evidence.observe_tool_batch(
+                    root, [event], contract_signature="contract-v1"
+                )
 
         self.assertTrue(first.eligible)
-        self.assertFalse(first.reused_generator_no_finding)
         self.assertFalse(repeated.eligible)
-        self.assertTrue(repeated.reused_generator_no_finding)
-        self.assertEqual(repeated.turn_state["evidence_seq"], 1)
-        self.assertEqual(
-            repeated.turn_state["last_completed_review"]["reuse_count"], 1
-        )
+        self.assertTrue(failure.eligible)
         self.assertTrue(changed_contract.eligible)
-        self.assertFalse(changed_contract.reused_generator_no_finding)
-        self.assertEqual(changed_contract.turn_state["evidence_seq"], 2)
+        self.assertTrue(changed_revision.eligible)
 
     def test_change_only_is_recorded_without_triggering_a_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -237,6 +278,54 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertEqual(changed.turn_state["evidence_records"][0]["category"], "change")
         self.assertTrue(checked.eligible)
         self.assertEqual(checked.turn_state["evidence_records"][-1]["category"], "verification")
+
+    def test_non_git_change_starts_a_new_observed_generation(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "fallback", cwd=raw)
+            storage.start_turn(root, session, "修改後重新驗證")
+            check = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "pytest -q"},
+                tool_output="1 passed",
+            )
+            first = evidence.observe_tool_batch(
+                root, [check], contract_signature="contract-v1"
+            )
+            storage.record_completed_review(
+                root,
+                session,
+                workspace_revision_signature=first.workspace_revision_signature,
+                contract_signature="contract-v1",
+                evidence_classes=first.evidence_classes,
+            )
+            repeated = evidence.observe_tool_batch(
+                root, [check], contract_signature="contract-v1"
+            )
+            evidence.observe_tool_batch(
+                root,
+                [
+                    ToolCompleted(
+                        session,
+                        "apply_patch",
+                        tool_input={"patch": "*** Begin Patch"},
+                        tool_output="Done!",
+                        mutating=True,
+                    )
+                ],
+                contract_signature="contract-v1",
+            )
+            after_change = evidence.observe_tool_batch(
+                root, [check], contract_signature="contract-v1"
+            )
+
+        self.assertFalse(repeated.eligible)
+        self.assertTrue(after_change.eligible)
+        self.assertNotEqual(
+            first.workspace_revision_signature,
+            after_change.workspace_revision_signature,
+        )
 
     def test_packet_contains_the_actual_command_and_result(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -323,8 +412,11 @@ class EvidenceBoundaryTests(unittest.TestCase):
             )
             with mock.patch.object(
                 checkpoints,
-                "working_diff",
-                return_value="diff --git a/app.py b/app.py\n+owner = direct",
+                "workspace_state",
+                return_value=checkpoints.WorkspaceState(
+                    "diff --git a/app.py b/app.py\n+owner = direct",
+                    "revision-1",
+                ),
             ):
                 observed = evidence.observe_tool_batch(root, [event])
             packet = source_context.build_checkpoint_packet(
@@ -399,6 +491,36 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
         self.assertIn("new_owner.py", rendered)
         self.assertIn("owner = 'direct'", rendered)
+
+    def test_revision_signature_covers_untracked_files_hidden_from_the_packet(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "tests@example.invalid"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Masters Nudge Tests"],
+                cwd=root,
+                check=True,
+            )
+            (root / "anchor.txt").write_text("anchor\n", encoding="utf-8")
+            subprocess.run(["git", "add", "anchor.txt"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
+            for name in ("a.txt", "b.txt", "c.txt"):
+                (root / name).write_text(name, encoding="utf-8")
+            hidden = root / "z.txt"
+            hidden.write_text("first", encoding="utf-8")
+            session = SessionRef("codex_cli", "full-revision", cwd=raw)
+
+            first = checkpoints.workspace_state(session)
+            hidden.write_text("second", encoding="utf-8")
+            second = checkpoints.workspace_state(session)
+
+        self.assertEqual(first.snapshot, second.snapshot)
+        self.assertNotEqual(first.revision_signature, second.revision_signature)
 
 
 class HostReturnedAuditTests(unittest.TestCase):

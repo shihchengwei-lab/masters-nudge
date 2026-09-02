@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +36,20 @@ NAVIGATION_RE = re.compile(
     r"read|open|view|search)\b",
     re.IGNORECASE,
 )
+
+
+@dataclass(frozen=True)
+class WorkspaceState:
+    snapshot: str
+    revision_signature: str
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _compact(value: Any) -> str:
@@ -97,34 +113,39 @@ def _untracked_files(cwd: str) -> list[str]:
     return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
 
 
-def _untracked_snapshot(session) -> str:
+def _untracked_state(session) -> tuple[str, list[tuple[str, str]]]:
     if not session.cwd:
-        return ""
+        return "", []
     root = Path(session.cwd).resolve()
     paths = _untracked_files(session.cwd)
     paths.sort()
     rendered: list[str] = []
-    for relative in paths[:3]:
+    signatures: list[tuple[str, str]] = []
+    for index, relative in enumerate(paths):
         display_path = relative.replace("\\", "/")
         try:
             candidate = (root / relative).resolve()
             candidate.relative_to(root)
-            content = candidate.read_text(encoding="utf-8", errors="replace")
+            signature = _file_sha256(candidate)
         except (OSError, ValueError):
             continue
-        rendered.append(
-            f"untracked_file: {display_path}\n"
-            f"{source_context.head_tail(content, 700)}"
-        )
-    return "\n\n".join(rendered)
+        signatures.append((display_path, signature))
+        if index < 3:
+            try:
+                content = candidate.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            bounded = source_context.head_tail(content, 700)
+            rendered.append(f"untracked_file: {display_path}\n{bounded}")
+    return "\n\n".join(rendered), signatures
 
 
-def working_diff(session) -> str:
+def workspace_state(session) -> WorkspaceState:
     if not session.cwd:
-        return ""
+        return WorkspaceState("", "")
     try:
         result = subprocess.run(
-            ["git", "diff", "--unified=1", "HEAD", "--"],
+            ["git", "diff", "--binary", "--unified=1", "HEAD", "--"],
             cwd=session.cwd,
             capture_output=True,
             text=True,
@@ -133,13 +154,30 @@ def working_diff(session) -> str:
             timeout=5,
         )
     except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return ""
+        return WorkspaceState("", "")
     if result.returncode != 0:
-        return ""
+        return WorkspaceState("", "")
+    untracked_snapshot, untracked_signatures = _untracked_state(session)
     combined = "\n\n".join(
-        value for value in (result.stdout.strip(), _untracked_snapshot(session)) if value
+        value for value in (result.stdout.strip(), untracked_snapshot) if value
     )
-    return source_context.head_tail(combined, CHANGE_MAX_CHARS)
+    revision = json.dumps(
+        {
+            "tracked_diff": result.stdout,
+            "untracked_files": untracked_signatures,
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return WorkspaceState(
+        source_context.head_tail(combined, CHANGE_MAX_CHARS),
+        hashlib.sha256(revision).hexdigest(),
+    )
+
+
+def working_diff(session) -> str:
+    return workspace_state(session).snapshot
 
 
 def render_evidence_record(event: ToolCompleted) -> str:

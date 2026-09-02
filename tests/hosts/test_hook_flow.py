@@ -68,7 +68,7 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(output)
         self.assertEqual(core.calls, [])
 
-    def test_identical_checkpoint_reuses_completed_generator_silence(self):
+    def test_same_decision_generation_suppresses_a_repeated_verification(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             core = SilentCore(root)
@@ -103,8 +103,11 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(first)
         self.assertIsNone(second)
         self.assertEqual(len(core.calls), 1)
-        self.assertEqual(state["evidence_seq"], 1)
-        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
+        self.assertEqual(state["evidence_seq"], 2)
+        self.assertEqual(
+            state["review_admission"]["completed_evidence_classes"],
+            ["verification"],
+        )
 
     def test_post_tool_batch_returns_one_nudge_for_the_complete_batch(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -234,7 +237,7 @@ class CodexHookFlowTests(unittest.TestCase):
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
-    def test_identical_checkpoint_reuses_completed_generator_silence(self):
+    def test_same_decision_generation_suppresses_a_repeated_verification(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             runtime = Path(__file__).resolve().parents[2]
@@ -285,8 +288,11 @@ class ClaudeHookFlowTests(unittest.TestCase):
         self.assertIsNone(first)
         self.assertIsNone(second)
         self.assertEqual(checkpoint.call_count, 1)
-        self.assertEqual(state["evidence_seq"], 1)
-        self.assertEqual(state["last_completed_review"]["reuse_count"], 1)
+        self.assertEqual(state["evidence_seq"], 2)
+        self.assertEqual(
+            state["review_admission"]["completed_evidence_classes"],
+            ["verification"],
+        )
 
     def test_post_tool_batch_returns_nudge_and_audits_after_flush(self):
         with tempfile.TemporaryDirectory() as raw:
