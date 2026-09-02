@@ -143,6 +143,15 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
         self.assertIn("Successful application alone is not a check.", prompt)
 
+    def test_prompt_defines_actor_source_as_prior_not_current_state(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+
+        self.assertIn(
+            "The current workspace is authoritative; actor-observed source context\n"
+            "shows only what the actor previously saw.",
+            prompt,
+        )
+
     def test_same_revision_and_evidence_class_is_admitted_only_once_but_recorded(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -398,6 +407,49 @@ class EvidenceBoundaryTests(unittest.TestCase):
         )
 
         self.assertEqual(checkpoints.evidence_category(event), "")
+
+    def test_navigation_is_retained_as_actor_source_without_becoming_evidence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "actor-source", cwd=raw)
+            storage.start_turn(root, session, "檢查 Client 選項傳遞")
+            event = ToolCompleted(
+                session,
+                "exec_command",
+                tool_input={"cmd": "Get-Content lib/dispatcher/client.js"},
+                tool_output="class Client {\n  super({ webSocket })\n}",
+            )
+
+            observed = evidence.observe_tool_batch(root, [event])
+
+        self.assertFalse(observed.eligible)
+        self.assertEqual(observed.turn_state["evidence_seq"], 0)
+        self.assertEqual(observed.turn_state["evidence_records"], [])
+        self.assertEqual(len(observed.turn_state["actor_source_records"]), 1)
+        self.assertIn(
+            "super({ webSocket })",
+            observed.turn_state["actor_source_records"][0]["content"],
+        )
+
+    def test_actor_source_storage_is_bounded_without_a_second_dedup_cache(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "bounded-source")
+            storage.start_turn(root, session, "保留 actor 看過的來源")
+            for index in range(4):
+                state = storage.record_actor_source(
+                    root,
+                    session,
+                    content=f"source-{index}\n" + "x" * 79_000,
+                )
+
+        retained = state["actor_source_records"]
+        self.assertLessEqual(
+            sum(len(record["content"]) for record in retained),
+            storage.ACTOR_SOURCE_TOTAL_MAX_CHARS,
+        )
+        self.assertNotIn("source-0", [record["content"][:8] for record in retained])
+        self.assertEqual(retained[-1]["content"][:8], "source-3")
 
     def test_verification_packet_binds_the_latest_workspace_snapshot(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -660,6 +712,63 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
         self.assertIn("AUTHORITATIVE_WORKSPACE_MUST_SURVIVE", packet)
         self.assertIn("[tool history — ordered past events]", packet)
+
+    def test_packet_selects_literal_middle_actor_source_without_growing(self):
+        noise = "\n".join(f"unrelated line {index}" for index in range(1800))
+        actor_source = (
+            "actual_command:\n"
+            "Get-Content package.json; Get-Content lib/dispatcher/client.js; "
+            "Get-Content test/eventsource/eventsource-dispatcher-options.js\n\n"
+            "result:\n"
+            f"{noise}\n"
+            "class Client extends DispatcherBase {\n"
+            "  constructor (url, { webSocket } = {}) {\n"
+            "    super({ webSocket })\n"
+            "  }\n"
+            "}\n"
+            "test('Client eventSourceOptions.maxEventSize is read correctly', () => {})\n"
+            "const stream = new EventSourceStream({ maxEventSize: 5 })\n"
+            f"{noise}"
+        )
+        packet = source_context.build_checkpoint_packet(
+            task_anchor="新增 EventSource 大小限制",
+            workspace_snapshot=(
+                "diff --git a/lib/dispatcher/dispatcher-base.js "
+                "b/lib/dispatcher/dispatcher-base.js\n"
+                " class DispatcherBase {\n"
+                "   super()\n"
+                "+  this.eventSourceOptions = opts.eventSource\n"
+                "   this.webSocketOptions = opts.webSocket"
+            ),
+            actor_source_records=[{"seq": 1, "content": actor_source}],
+            evidence_records=[
+                {
+                    "seq": 2,
+                    "category": "failure",
+                    "content": (
+                        "actual_command:\nnpm run test:eventsource\n\n"
+                        "result:\nClient eventSourceOptions.maxEventSize is read "
+                        "correctly: expected 16777216"
+                    ),
+                }
+            ],
+        )
+
+        self.assertLessEqual(len(packet), source_context.PACKET_MAX_CHARS)
+        self.assertIn(
+            "[actor-observed source context — prior observations, non-authoritative]",
+            packet,
+        )
+        self.assertIn(
+            "Client eventSourceOptions.maxEventSize is read correctly",
+            packet,
+        )
+        self.assertIn("new EventSourceStream({ maxEventSize: 5 })", packet)
+        self.assertLess(
+            packet.index("[actor-observed source context"),
+            packet.index("[current workspace"),
+        )
+        self.assertIn("npm run test:eventsource", packet)
 
 
 class HostReturnedAuditTests(unittest.TestCase):

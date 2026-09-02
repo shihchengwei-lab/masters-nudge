@@ -17,6 +17,8 @@ from .contracts import SessionRef, safe_identifier
 
 EVIDENCE_RECORD_MAX_CHARS = 3000
 EVIDENCE_PER_CATEGORY = 3
+ACTOR_SOURCE_RECORD_MAX_CHARS = 80_000
+ACTOR_SOURCE_TOTAL_MAX_CHARS = 256_000
 MAX_ERROR_LOG_BYTES = 256 * 1024
 SETTINGS_FILE = "config.json"
 
@@ -101,6 +103,8 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
+        "actor_source_seq": 0,
+        "actor_source_records": [],
         "review_admission": {},
     }
 
@@ -180,6 +184,38 @@ def record_evidence(
     state.update({"evidence_seq": sequence, "evidence_records": retained})
     if category == "change":
         state["change_generation"] = int(state.get("change_generation") or 0) + 1
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state
+
+
+def record_actor_source(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    content: str,
+) -> dict[str, Any]:
+    """Retain bounded source text already returned to the actor."""
+    state = load_turn_state(data_dir, session)
+    rendered = source_context.head_tail(content, ACTOR_SOURCE_RECORD_MAX_CHARS)
+    if not rendered:
+        return state
+    sequence = int(state.get("actor_source_seq") or 0) + 1
+    records = [
+        record
+        for record in state.get("actor_source_records", [])
+        if isinstance(record, dict) and str(record.get("content") or "").strip()
+    ]
+    records.append({"seq": sequence, "content": rendered})
+    retained: list[dict[str, Any]] = []
+    used = 0
+    for record in reversed(records):
+        cost = len(str(record.get("content") or ""))
+        if retained and used + cost > ACTOR_SOURCE_TOTAL_MAX_CHARS:
+            break
+        retained.append(record)
+        used += cost
+    state["actor_source_seq"] = sequence
+    state["actor_source_records"] = list(reversed(retained))
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state
 

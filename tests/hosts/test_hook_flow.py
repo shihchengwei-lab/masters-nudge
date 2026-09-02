@@ -109,6 +109,44 @@ class CodexHookFlowTests(unittest.TestCase):
             ["verification"],
         )
 
+    def test_navigation_is_saved_without_calling_the_provider(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = FakeCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "source-only",
+                    "cwd": raw,
+                    "prompt": "檢查 Client 選項傳遞",
+                }
+            )
+            output = adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "source-only",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "exec_command",
+                            "tool_input": {
+                                "cmd": "Get-Content lib/dispatcher/client.js"
+                            },
+                            "tool_response": "class Client extends DispatcherBase {}",
+                        }
+                    ],
+                }
+            )
+            state = storage.load_turn_state(
+                root,
+                SessionRef("codex_cli", "source-only", cwd=raw),
+            )
+
+        self.assertIsNone(output)
+        self.assertEqual(core.calls, [])
+        self.assertEqual(len(state["actor_source_records"]), 1)
+
     def test_post_tool_batch_returns_one_nudge_for_the_complete_batch(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

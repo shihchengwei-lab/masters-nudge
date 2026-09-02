@@ -80,6 +80,7 @@ class NudgeCore:
             task_anchor=str(state.get("task_anchor") or ""),
             task_sources=state.get("task_sources") or {},
             workspace_snapshot=str(state.get("workspace_snapshot") or ""),
+            actor_source_records=state.get("actor_source_records") or [],
             previous_findings=state.get("previous_findings") or [],
             evidence_records=state.get("evidence_records") or [],
         )

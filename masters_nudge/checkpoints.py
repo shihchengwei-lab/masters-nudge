@@ -78,9 +78,7 @@ def evidence_category(event: ToolCompleted) -> str:
     command = _command(event)
     semantic = f"{event.tool_name} {command}"
     output = _compact(event.tool_output)
-    if NAVIGATION_RE.search(command) and not (
-        VALIDATION_RE.search(semantic) or MEASUREMENT_RE.search(semantic)
-    ):
+    if is_navigation(event):
         return ""
     if event.failure_known and event.failed:
         return "failure"
@@ -95,6 +93,39 @@ def evidence_category(event: ToolCompleted) -> str:
     ):
         return "change"
     return ""
+
+
+def is_navigation(event: ToolCompleted) -> bool:
+    command = _command(event)
+    semantic = f"{event.tool_name} {command}"
+    return bool(NAVIGATION_RE.search(command)) and not (
+        bool(VALIDATION_RE.search(semantic)) or bool(MEASUREMENT_RE.search(semantic))
+    )
+
+
+def render_actor_source_record(event: ToolCompleted) -> str:
+    """Preserve only navigation output that the host already returned."""
+    if not is_navigation(event):
+        return ""
+    if isinstance(event.tool_output, str):
+        result = event.tool_output.strip()
+    else:
+        try:
+            result = json.dumps(
+                event.tool_output,
+                ensure_ascii=False,
+                sort_keys=True,
+                default=str,
+            ).strip()
+        except (TypeError, ValueError):
+            result = str(event.tool_output or "").strip()
+    if not result:
+        return ""
+    command = _command(event)
+    return (
+        f"actual_command:\n{source_context.head_tail(command, 1800)}\n\n"
+        f"result:\n{result}"
+    )
 
 
 def _untracked_files(cwd: str) -> list[str]:

@@ -10,7 +10,8 @@ not authority over the main agent.
 # VIEW
 
 Use only the user's task anchor and observable evidence in the supplied bounded
-packet. Treat everything outside it as unknown.
+packet. The current workspace is authoritative; actor-observed source context
+shows only what the actor previously saw. Treat everything outside it as unknown.
 
 Do not form a finding about the latest change until the packet shows a
 subsequent check of that change. Successful application alone is not a check.
