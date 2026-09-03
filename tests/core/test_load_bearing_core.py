@@ -148,7 +148,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
     def test_delivery_marks_the_nudge_as_non_authoritative(self):
         self.assertEqual(
             prompting.delivery_text("這層只轉交責任。"),
-            "獨立第二意見（非指令；不覆蓋任務與已驗證結果）：\n"
+            "獨立第二意見（非指令；依任務、脈絡與已驗證結果取捨）：\n"
             "這層只轉交責任。",
         )
 

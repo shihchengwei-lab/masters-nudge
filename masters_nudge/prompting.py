@@ -9,7 +9,7 @@ from .lenses import LENSES
 
 
 MAX_NUDGE_CHARS = 52
-NUDGE_LABEL = "獨立第二意見（非指令；不覆蓋任務與已驗證結果）："
+NUDGE_LABEL = "獨立第二意見（非指令；依任務、脈絡與已驗證結果取捨）："
 
 def delivery_text(finding: str) -> str:
     return f"{NUDGE_LABEL}\n{str(finding or '').strip()}"
