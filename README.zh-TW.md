@@ -63,11 +63,11 @@ Codex 目前沒有唯讀查詢 Hook capability 的指令，因此 plugin 已安�
 已驗證。Doctor 會把 Codex precision 回報為 `unverified`；是否 exact 必須另以隔離
 smoke 確認。
 
-修改會先記錄，留給下一次檢查判斷。一次 `PostToolBatch` 包含驗證、失敗或量測時，
-可能同步啟動一個 Nudge 流程。每個回合最多有兩次不同修改世代的推進機會，另保留
-一次只供失敗 checkpoint 使用的最後機會。每個通過資格的 checkpoint 只呼叫
-Provider 一次，上限 90 秒。Provider 回應越慢，Agent 等待越久；發生錯誤或逾時時，
-這次 Nudge 直接結束，主要 Agent 照常繼續。
+修改會先記錄，留給下一次檢查判斷。本回合至少觀察到一次修改後，包含驗證、失敗或
+量測的 `PostToolBatch` 才可能同步啟動 Nudge 流程。每個回合最多各有一次非失敗檢查
+的候選機會與一次失敗機會，順序不限。每個通過資格的 checkpoint 都會消耗對應機會
+並呼叫 Provider 一次，上限 90 秒；`no_finding` 也算已使用。Provider 回應越慢，
+Agent 等待越久；發生錯誤或逾時時，這次 Nudge 直接結束，主要 Agent 照常繼續。
 
 Provider packet 以目前 workspace 表示當前狀態，checkpoint 證據則只包含本次觸發
 呼叫的 batch。更早的工具結果仍留在本機稽核狀態，不會重播給 Provider。Agent 先前

@@ -69,13 +69,14 @@ installation alone cannot verify this event. The Doctor therefore reports Codex
 precision as unverified; establish exactness separately with an isolated smoke
 run.
 
-Changes are recorded for the next check. A `PostToolBatch` containing a
-validation, failure, or measurement may synchronously start one Nudge flow.
-Each turn has at most two progress opportunities at distinct change
-generations, plus one final reserve opportunity after a failure. Each admitted
-checkpoint makes one Provider call with a 90-second limit. A slower Provider
-directly adds to the agent's wait; on an error or timeout, the Nudge attempt
-ends and the main agent continues.
+Changes are recorded for the next check. After a change has been observed in
+the turn, a `PostToolBatch` containing a validation, failure, or measurement may
+synchronously start one Nudge flow. Each turn has at most one candidate
+opportunity for a non-failing check and one failure opportunity, in either
+order. Each admitted checkpoint consumes its opportunity and makes one Provider
+call with a 90-second limit, including when the result is `no_finding`. A slower
+Provider directly adds to the agent's wait; on an error or timeout, the Nudge
+attempt ends and the main agent continues.
 
 The Provider packet uses the current workspace as current state and includes
 only the triggering batch as checkpoint evidence. Older tool results remain in

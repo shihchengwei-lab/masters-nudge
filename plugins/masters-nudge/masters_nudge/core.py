@@ -41,7 +41,7 @@ class NudgeCore:
         )
         if not observed.candidate:
             return None
-        state, admitted = storage.claim_review_slot(
+        state, admitted = storage.claim_review_opportunity(
             self.settings.paths.data_dir,
             events[0].session,
             has_failure=observed.has_failure,

@@ -78,6 +78,20 @@ class CodexHookFlowTests(unittest.TestCase):
                     "prompt": "檢查驗證結果",
                 }
             )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "reused-silence",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_response": {"success": True},
+                        }
+                    ],
+                }
+            )
             checkpoint = {
                 "hook_event_name": "PostToolBatch",
                 "session_id": "reused-silence",
@@ -100,8 +114,8 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIsNone(first)
         self.assertIsNone(second)
         self.assertEqual(len(core.calls), 1)
-        self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(state["review_attempts"], 1)
+        self.assertEqual(state["evidence_seq"], 3)
+        self.assertTrue(state["candidate_review_used"])
 
     def test_pending_command_does_not_consume_the_completed_checkpoint(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -114,6 +128,20 @@ class CodexHookFlowTests(unittest.TestCase):
                     "session_id": "pending-check",
                     "cwd": raw,
                     "prompt": "完成測試後提供第二意見",
+                }
+            )
+            adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "pending-check",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_response": {"success": True},
+                        }
+                    ],
                 }
             )
             base = {
@@ -150,8 +178,9 @@ class CodexHookFlowTests(unittest.TestCase):
             )
             adapter.process(completed)
 
-        self.assertEqual(pending_state["evidence_seq"], 0)
-        self.assertEqual(pending_state["review_attempts"], 0)
+        self.assertEqual(pending_state["evidence_seq"], 1)
+        self.assertFalse(pending_state["candidate_review_used"])
+        self.assertFalse(pending_state["failure_review_used"])
         self.assertEqual(len(core.calls), 1)
 
     def test_navigation_is_saved_without_calling_the_provider(self):
@@ -320,7 +349,7 @@ class CodexHookFlowTests(unittest.TestCase):
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
-    def test_same_decision_generation_suppresses_a_repeated_verification(self):
+    def test_used_candidate_opportunity_suppresses_repeated_verification(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             runtime = Path(__file__).resolve().parents[2]
@@ -352,6 +381,12 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 SessionRef("claude_code", "claude-reused-silence", cwd=raw),
                 "檢查驗證結果",
             )
+            storage.record_evidence(
+                root,
+                SessionRef("claude_code", "claude-reused-silence", cwd=raw),
+                category="change",
+                content="edit",
+            )
 
             with (
                 mock.patch.object(claude_adapter, "RUNTIME", settings),
@@ -371,8 +406,8 @@ class ClaudeHookFlowTests(unittest.TestCase):
         self.assertIsNone(first)
         self.assertIsNone(second)
         self.assertEqual(checkpoint.call_count, 1)
-        self.assertEqual(state["evidence_seq"], 2)
-        self.assertEqual(state["review_attempts"], 1)
+        self.assertEqual(state["evidence_seq"], 3)
+        self.assertTrue(state["candidate_review_used"])
 
     def test_post_tool_batch_returns_nudge_and_audits_after_flush(self):
         with tempfile.TemporaryDirectory() as raw:

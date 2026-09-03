@@ -191,31 +191,52 @@ class EvidenceBoundaryTests(unittest.TestCase):
             ["actual_command:\npytest -q\n\nresult:\n10 passed"] * 2,
         )
 
-    def test_review_slots_follow_two_progress_steps_and_one_failure_reserve(self):
+    def test_review_opportunities_allow_one_candidate_and_one_failure(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "budget", cwd=raw)
-            storage.start_turn(root, session, "每輪兩次一般機會，加一次失敗保留機會")
+            storage.start_turn(root, session, "每輪一次候選機會與一次失敗機會")
 
-            _, first = storage.claim_review_slot(root, session, has_failure=False)
-            _, repeated = storage.claim_review_slot(root, session, has_failure=False)
-            storage.record_evidence(root, session, category="change", content="edit 1")
-            _, second = storage.claim_review_slot(root, session, has_failure=False)
-            storage.record_evidence(root, session, category="change", content="edit 2")
-            _, successful_third = storage.claim_review_slot(
+            _, baseline_candidate = storage.claim_review_opportunity(
                 root, session, has_failure=False
             )
-            state, reserve = storage.claim_review_slot(root, session, has_failure=True)
-            _, exhausted = storage.claim_review_slot(root, session, has_failure=True)
+            _, baseline_failure = storage.claim_review_opportunity(
+                root, session, has_failure=True
+            )
+            storage.record_evidence(root, session, category="change", content="edit")
+            _, candidate = storage.claim_review_opportunity(
+                root, session, has_failure=False
+            )
+            _, repeated_candidate = storage.claim_review_opportunity(
+                root, session, has_failure=False
+            )
+            state, failure = storage.claim_review_opportunity(
+                root, session, has_failure=True
+            )
+            _, repeated_failure = storage.claim_review_opportunity(
+                root, session, has_failure=True
+            )
 
-        self.assertTrue(first)
-        self.assertFalse(repeated)
-        self.assertTrue(second)
-        self.assertFalse(successful_third)
-        self.assertTrue(reserve)
-        self.assertFalse(exhausted)
-        self.assertEqual(state["review_attempts"], 3)
-        self.assertEqual(state["last_review_change_generation"], 2)
+            reverse = SessionRef("codex_cli", "reverse-budget", cwd=raw)
+            storage.start_turn(root, reverse, "失敗也可能先於候選完成")
+            storage.record_evidence(root, reverse, category="change", content="edit")
+            _, failure_first = storage.claim_review_opportunity(
+                root, reverse, has_failure=True
+            )
+            _, candidate_second = storage.claim_review_opportunity(
+                root, reverse, has_failure=False
+            )
+
+        self.assertFalse(baseline_candidate)
+        self.assertFalse(baseline_failure)
+        self.assertTrue(candidate)
+        self.assertFalse(repeated_candidate)
+        self.assertTrue(failure)
+        self.assertFalse(repeated_failure)
+        self.assertTrue(failure_first)
+        self.assertTrue(candidate_second)
+        self.assertTrue(state["candidate_review_used"])
+        self.assertTrue(state["failure_review_used"])
 
     def test_change_only_is_recorded_without_triggering_a_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -252,20 +273,23 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertTrue(checked.candidate)
         self.assertEqual(checked.turn_state["evidence_records"][-1]["category"], "verification")
 
-    def test_new_turn_resets_review_budget(self):
+    def test_new_turn_resets_review_opportunities(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "reset", cwd=raw)
             storage.start_turn(root, session, "first")
-            storage.claim_review_slot(root, session, has_failure=False)
+            storage.record_evidence(root, session, category="change", content="edit")
+            storage.claim_review_opportunity(root, session, has_failure=False)
             storage.start_turn(root, session, "second")
-            state, admitted = storage.claim_review_slot(
+            storage.record_evidence(root, session, category="change", content="edit")
+            state, admitted = storage.claim_review_opportunity(
                 root, session, has_failure=False
             )
 
         self.assertTrue(admitted)
-        self.assertEqual(state["review_attempts"], 1)
-        self.assertEqual(state["change_generation"], 0)
+        self.assertTrue(state["candidate_review_used"])
+        self.assertFalse(state["failure_review_used"])
+        self.assertEqual(state["change_generation"], 1)
 
     def test_packet_contains_the_actual_command_and_result(self):
         with tempfile.TemporaryDirectory() as raw:

@@ -99,8 +99,8 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "task_sources": {},
         "workspace_snapshot": "",
         "change_generation": 0,
-        "review_attempts": 0,
-        "last_review_change_generation": -1,
+        "candidate_review_used": False,
+        "failure_review_used": False,
         "previous_findings": [],
         "evidence_seq": 0,
         "evidence_records": [],
@@ -233,25 +233,20 @@ def record_workspace_snapshot(
     return state
 
 
-def claim_review_slot(
+def claim_review_opportunity(
     data_dir: Path,
     session: SessionRef,
     *,
     has_failure: bool,
 ) -> tuple[dict[str, Any], bool]:
-    """Claim one of two progress reviews or the final failure reserve."""
+    """Claim the turn's candidate or failure review opportunity."""
     state = load_turn_state(data_dir, session)
-    attempts = int(state.get("review_attempts") or 0)
-    generation = int(state.get("change_generation") or 0)
-    last_generation = int(state.get("last_review_change_generation", -1))
-    if attempts >= 3:
+    if int(state.get("change_generation") or 0) <= 0:
         return state, False
-    if attempts > 0 and generation <= last_generation:
+    key = "failure_review_used" if has_failure else "candidate_review_used"
+    if bool(state.get(key)):
         return state, False
-    if attempts == 2 and not has_failure:
-        return state, False
-    state["review_attempts"] = attempts + 1
-    state["last_review_change_generation"] = generation
+    state[key] = True
     _atomic_write(state_path(data_dir, session, "turn"), state)
     return state, True
 

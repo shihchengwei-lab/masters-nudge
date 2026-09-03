@@ -37,7 +37,7 @@ class RoutingTests(unittest.TestCase):
             },
         )
 
-    def test_review_flow_uses_current_checkpoint_and_two_plus_failure_slots(self):
+    def test_review_flow_uses_one_candidate_and_one_failure_opportunity(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "budget", cwd=raw)
@@ -83,40 +83,38 @@ class RoutingTests(unittest.TestCase):
                 failure_known=True,
             )
 
-            first = core.review_tool_batch([first_check])
-            repeated = core.review_tool_batch([first_check])
+            baseline = core.review_tool_batch([first_check])
             core.review_tool_batch([change("edit-1")])
-            second = core.review_tool_batch([second_check])
-            core.review_tool_batch([change("edit-2")])
-            successful_third = core.review_tool_batch([third_check])
-            reserve = core.review_tool_batch([failure])
-            exhausted = core.review_tool_batch([failure])
+            candidate = core.review_tool_batch([second_check])
+            repeated_candidate = core.review_tool_batch([third_check])
+            recovery = core.review_tool_batch([failure])
+            repeated_failure = core.review_tool_batch([failure])
             final_state = storage.load_turn_state(root, session)
 
-        self.assertEqual(first.status, "no_finding")
-        self.assertIsNone(repeated)
-        self.assertEqual(second.status, "no_finding")
-        self.assertIsNone(successful_third)
-        self.assertEqual(reserve.status, "no_finding")
-        self.assertIsNone(exhausted)
-        self.assertEqual(len(calls), 3)
-        self.assertIn("FIRST_CHECKPOINT", calls[0])
-        self.assertIn("SECOND_CHECKPOINT", calls[1])
-        self.assertNotIn("FIRST_CHECKPOINT", calls[1])
+        self.assertIsNone(baseline)
+        self.assertEqual(candidate.status, "no_finding")
+        self.assertIsNone(repeated_candidate)
+        self.assertEqual(recovery.status, "no_finding")
+        self.assertIsNone(repeated_failure)
+        self.assertEqual(len(calls), 2)
+        self.assertIn("SECOND_CHECKPOINT", calls[0])
+        self.assertIn("1 failed", calls[1])
+        self.assertNotIn("SECOND_CHECKPOINT", calls[1])
         self.assertTrue(
             any(
                 "FIRST_CHECKPOINT" in record["content"]
                 for record in final_state["evidence_records"]
             )
         )
-        self.assertEqual(final_state["review_attempts"], 3)
-        self.assertEqual(final_state["last_review_change_generation"], 2)
+        self.assertTrue(final_state["candidate_review_used"])
+        self.assertTrue(final_state["failure_review_used"])
 
     def test_a_distinct_completed_check_without_new_change_does_not_call(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "richer-review", cwd=raw)
             storage.start_turn(root, session, "檢查驗證結果")
+            storage.record_evidence(root, session, category="change", content="edit")
             calls = []
 
             def dispatch(*_args, **_kwargs):
@@ -144,11 +142,12 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(calls, ["generator"])
 
-    def test_provider_error_consumes_the_attempt(self):
+    def test_provider_error_consumes_the_candidate_opportunity(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "retry", cwd=raw)
             storage.start_turn(root, session, "檢查驗證結果")
+            storage.record_evidence(root, session, category="change", content="edit")
             calls = []
 
             def dispatch(*_args, **_kwargs):
@@ -170,11 +169,12 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(second)
         self.assertEqual(calls, ["generator"])
 
-    def test_finding_also_completes_the_decision(self):
+    def test_finding_consumes_the_candidate_opportunity(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "finding", cwd=raw)
             storage.start_turn(root, session, "檢查驗證結果")
+            storage.record_evidence(root, session, category="change", content="edit")
             calls = []
 
             def dispatch(*_args, **_kwargs):
@@ -200,7 +200,7 @@ class RoutingTests(unittest.TestCase):
         self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
 
-    def test_an_identical_multi_class_batch_uses_only_one_progress_slot(self):
+    def test_an_identical_multi_class_batch_uses_one_candidate_opportunity(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "multi-class", cwd=raw)
@@ -212,6 +212,17 @@ class RoutingTests(unittest.TestCase):
                 return {"status": "no_finding", "lens": "none", "finding": ""}
 
             core = NudgeCore(self.settings(root, "simplicity"), dispatch=dispatch)
+            core.review_tool_batch(
+                [
+                    ToolCompleted(
+                        session,
+                        "apply_patch",
+                        tool_input={"patch": "edit"},
+                        tool_output="Done!",
+                        mutating=True,
+                    )
+                ]
+            )
             verification = ToolCompleted(
                 session,
                 "exec_command",
@@ -232,7 +243,8 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(first.status, "no_finding")
         self.assertIsNone(repeated)
         self.assertEqual(calls, ["generator"])
-        self.assertEqual(state["review_attempts"], 1)
+        self.assertTrue(state["candidate_review_used"])
+        self.assertFalse(state["failure_review_used"])
 
     def test_each_lens_calls_one_generator_with_its_persona(self):
         persona_markers = {
