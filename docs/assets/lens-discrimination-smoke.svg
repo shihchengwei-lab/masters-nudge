@@ -20,23 +20,23 @@
   <rect x="70" y="310" width="1260" height="130" rx="12" fill="#1c2128" stroke="#6e7681" stroke-width="2"/>
   <rect x="90" y="330" width="182" height="34" rx="6" fill="#30363d"/>
   <text x="105" y="353" fill="#c9d1d9" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">Ablation control</text>
-  <text x="100" y="405" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">重試與去重若分屬不同層，副作用語意會形成兩套真相</text>
+  <text x="100" y="405" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">遠端回應若已有字典契約，可省去占單次呼叫 41% 的序列化成本</text>
 
   <rect x="70" y="466" width="1260" height="130" rx="12" fill="#1c2128" stroke="#d29922" stroke-width="2"/>
   <rect x="90" y="486" width="176" height="34" rx="6" fill="#6e4c0c"/>
   <text x="105" y="509" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">Simplicity · Linus</text>
-  <text x="100" y="561" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">重放身分若只綁回應快取，逾時後副作用仍可能重複</text>
+  <text x="100" y="561" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">重試路徑以遠端明確承擔 replay 去重為前提，否則可能重複提交</text>
 
   <rect x="70" y="622" width="1260" height="150" rx="12" fill="#1c2128" stroke="#a371f7" stroke-width="2"/>
   <rect x="90" y="642" width="205" height="34" rx="6" fill="#4c2889"/>
   <text x="105" y="665" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">Reliability · Lamport</text>
-  <text x="100" y="717" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">逾時不代表未提交；重試若無完成狀態擁有者，</text>
-  <text x="100" y="747" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">會重複遠端副作用</text>
+  <text x="100" y="717" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">以遠端可辨識重放提交為重試前提，</text>
+  <text x="100" y="747" fill="#d2a8ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">才可避免逾時後重複生效</text>
 
   <rect x="70" y="798" width="1260" height="130" rx="12" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
   <rect x="90" y="818" width="220" height="34" rx="6" fill="#0c2d6b"/>
   <text x="105" y="841" fill="#a5d6ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">Performance · Carmack</text>
-  <text x="100" y="893" fill="#a5d6ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">41%只涵蓋單次 handle；批次串行等待可能才是吞吐主成本</text>
+  <text x="100" y="893" fill="#a5d6ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="22">回應可確定為字典時，保留字典語意可避開已量得的41%往返成本</text>
 
   <text x="70" y="955" fill="#8c959f" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="15">Live gpt-5.6-sol smoke · one sample per condition · discriminability check, not an efficacy claim</text>
 </svg>

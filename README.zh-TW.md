@@ -13,14 +13,14 @@ Masters’ Nudge 會在 Claude Code 或 Codex Agent 做下一個決定前，提�
 ![從測試通過，經過預設 Simplicity Nudge，再到 Agent 下一個決策的一次觀察](docs/assets/actual-nudge-decision-path.svg)
 
 這次 controlled live smoke 從正常運作、兩項測試通過的程式開始。預設 Simplicity
-Lens 使用目前發行的 Provider prompt 與注入標籤，指出重複折扣規則應有一個 owner。
-一個全新的主模型收到未經改寫的 Nudge，自行決定改用既有計算，並讓相同兩項測試
-再次通過。
+Lens 使用目前發行的 Provider prompt 與注入標籤，把共用折扣責任表達為避免規則
+分岔的條件。一個全新的主模型收到未經改寫的 Nudge，自行決定改用既有計算，並讓
+相同兩項測試再次通過。
 
 圖中保留完整 Nudge、主模型陳述的決策、實際一行 diff 與重跑結果。這只是一筆觀察，
 不能證明是 Nudge 造成修改，也不保證另一次執行會得到相同結果。
 
-## 看三個 Lens 分開注意力
+## 看同一 packet 如何牽動 Lens 注意力
 
 ![同一份 packet 分別不加 Lens 與通過三個 Lens 的 smoke](docs/assets/lens-discrimination-smoke.svg)
 
@@ -28,8 +28,9 @@ Lens 使用目前發行的 Provider prompt 與注入標籤，指出重複折扣�
 Provider 呼叫。packet 同時呈現不確定重試、必須維持的回傳形狀，以及已量到的序列化
 成本；四組只改變 Lens context，其中 control 不加入 Lens。
 
-Control 注意到責任分層；Simplicity 區分重放身分與回應快取，Reliability 追問完成
-狀態由誰擁有，Performance 則質疑單次量測是否涵蓋批次的主要成本。
+Control 與 Performance 都偏向移除已量到的序列化成本；Simplicity 與 Reliability
+都把遠端重放去重視為安全重試的條件。這次樣本形成兩組注意力，並未得到四個完全
+分離的答案。
 
 圖中是每組一次呼叫的完整 Nudge。這個 smoke 只檢查 prompt 能否分開注意力，不能
 證明準確率、重複穩定性，或 Nudge 對主模型的實際效果。

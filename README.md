@@ -14,15 +14,15 @@ stop the agent. It surfaces a relationship the main model may be underweighting.
 
 This controlled live smoke starts with working code and two passing tests. Using
 the shipping Provider prompt and injection label, the default Simplicity Lens
-surfaced one owner for a duplicated discount rule. A fresh main model received
-the unedited Nudge, chose to reuse the existing calculation, and passed the same
-two tests again.
+framed shared ownership as a condition for preventing a duplicated discount
+rule from drifting. A fresh main model received the unedited Nudge, chose to
+reuse the existing calculation, and passed the same two tests again.
 
 The image records the complete Nudge, the model's stated decision, its actual
 one-line diff, and the repeated check. It is one observed reaction, not causal
 evidence that the Nudge produced the change or a promise that another run will.
 
-## See the Lenses separate
+## See Lens attention on the same packet
 
 ![One same-packet smoke through no Lens context and all three Lenses](docs/assets/lens-discrimination-smoke.svg)
 
@@ -31,9 +31,10 @@ bounded packet and model. The packet exposed an uncertain retry, a required
 return shape, and a measured serialization cost. Only the Lens context changed;
 the ablation control omitted it.
 
-The control noticed split ownership. Simplicity separated replay identity from
-the response cache, Reliability asked who owns completion state, and Performance
-challenged whether the single-call measurement covered the main batch cost.
+The control and Performance both favored removing the measured serialization
+cost. Simplicity and Reliability both made remote replay deduplication a
+condition of safe retry. This sample formed two attention clusters rather than
+four fully separated answers.
 
 The text shown is the complete Nudge from one call per condition. This smoke
 checks whether the prompts can separate attention; it does not establish

@@ -27,15 +27,15 @@
   <rect x="90" y="505" width="250" height="34" rx="6" fill="#6e4c0c"/>
   <text x="105" y="528" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">DEFAULT LENS · SIMPLICITY</text>
   <text x="100" y="575" fill="#8c959f" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="16">Independent second opinion · the agent keeps the decision</text>
-  <text x="100" y="625" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="23">兩個入口承擔同一折扣規則，分流計算會讓規則日後漂移。</text>
+  <text x="100" y="625" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="23">兩入口共享同一折扣責任，是避免規則日後分岔的前提</text>
 
   <path d="M700 687 L700 715 M688 703 L700 715 L712 703" fill="none" stroke="#8c959f" stroke-width="3"/>
 
   <rect x="70" y="730" width="1260" height="260" rx="12" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
   <rect x="90" y="750" width="180" height="34" rx="6" fill="#0c2d6b"/>
   <text x="105" y="773" fill="#a5d6ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">AGENT’S DECISION</text>
-  <text x="100" y="823" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">採納 Nudge：讓 invoice_total 共用既有 discounted_total；</text>
-  <text x="100" y="855" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">公開函式與回傳值不變。</text>
+  <text x="100" y="823" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">接受 Nudge：兩個入口原先已有正確行為，但發票重複實作折扣公式。</text>
+  <text x="100" y="855" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">共享折扣責任可避免規則日後分岔，且修改範圍小、風險低。</text>
   <rect x="100" y="885" width="1200" height="76" rx="8" fill="#0d1117"/>
   <text x="120" y="916" fill="#ff7b72" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="18">- return round(subtotal * 0.9, 2)</text>
   <text x="120" y="946" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="18">+ return discounted_total(subtotal)</text>

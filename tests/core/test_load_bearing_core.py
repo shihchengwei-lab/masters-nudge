@@ -96,10 +96,13 @@ class EvidenceBoundaryTests(unittest.TestCase):
             prompt,
         )
         self.assertIn(
-            "A finding is one concise Traditional Chinese Nudge naming that point and its\n"
-            "consequence. It may favor a direction, but leaves implementation open.",
+            "A finding is one concise Traditional Chinese engineering judgment. Frame a\n"
+            "preferable direction as an enabling condition, and name the packet-visible\n"
+            "consequence that gives it weight. Do not phrase it as an instruction or a\n"
+            "guarantee. Leave implementation open.",
             prompt,
         )
+        self.assertNotIn("State the direction", prompt)
         self.assertIn(
             "Use checks and failures as evidence of consequences, not as findings.",
             prompt,
