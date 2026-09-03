@@ -73,44 +73,45 @@ class EvidenceBoundaryTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "A finding is optional. Use it to make one packet-visible, still-changeable\n"
-            "tradeoff harder to overlook.",
+            "The selected Lens supplies one direction of engineering taste; the main agent\n"
+            "owns the tradeoff.",
             prompt,
         )
         self.assertIn(
-            "The selected persona directs what relationship to inspect,\n"
-            "not the conclusion to reach or authority over the main agent.",
+            "A finding is optional. Surface one packet-visible relationship the main agent\n"
+            "may be underweighting in its next decision.",
             prompt,
         )
         self.assertIn(
-            "Leave missing\n"
-            "context unknown; it does not prevent a finding about a visible tradeoff.",
+            "Ground the decision point in the packet without collapsing distinct states,\n"
+            "responsibilities, or costs.",
+            prompt,
+        )
+        self.assertIn("Missing context limits the claim; do not fill it in.", prompt)
+        self.assertIn(
+            "The same engineering point remains covered when only its wording changes.",
             prompt,
         )
         self.assertIn(
-            "The same engineering tradeoff remains covered when only its wording changes.",
+            "A finding is one concise Traditional Chinese Nudge naming that point and its\n"
+            "consequence. It may favor a direction, but leaves implementation open.",
             prompt,
         )
         self.assertIn(
-            "A finding is one concise Traditional Chinese Nudge that names a preferred\n"
-            "direction and its packet-visible tradeoff without claiming the decision is settled.",
+            "Use checks and failures as evidence of consequences, not as findings.",
             prompt,
         )
-        self.assertNotIn("engineering judgment", prompt)
-        self.assertNotIn("Surface the strongest live tradeoff", prompt)
-        self.assertNotIn("engineering value being defended", prompt)
-        self.assertNotIn("supports both", prompt)
-        self.assertNotIn("may materially alter", prompt)
-        self.assertIn("It is not a question, command, or complete solution.", prompt)
-        self.assertNotIn("only for one short Traditional Chinese question", prompt)
-        self.assertNotIn("Do not suggest a fix.", prompt)
+        self.assertIn("Do not contradict behavior required by a visible check.", prompt)
+        self.assertNotIn("names a preferred direction", prompt)
+        self.assertNotIn("greatest leverage", prompt)
 
     def test_personas_do_not_anchor_the_provider_with_stock_examples(self):
         for filename in ("linus.txt", "lamport.txt", "carmack.txt"):
             with self.subTest(persona=filename):
                 persona = (ROOT / "personas" / filename).read_text(encoding="utf-8")
                 self.assertNotIn("- 範例：", persona)
-                self.assertIn("不要接管實作。", persona)
+                self.assertNotIn("### 形成 Nudge", persona)
+                self.assertNotIn("不要接管實作。", persona)
                 self.assertNotIn("選一個 packet 尚未回答的問題", persona)
                 self.assertNotIn("- 不可以：", persona)
 
@@ -148,22 +149,23 @@ class EvidenceBoundaryTests(unittest.TestCase):
             "這層只轉交責任。",
         )
 
-    def test_prompt_waits_for_a_check_after_the_latest_change(self):
+    def test_prompt_uses_checks_as_evidence_instead_of_owning_admission(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
+        self.assertNotIn("Do not form a finding about the latest change", prompt)
+        self.assertNotIn("Successful application alone is not a check.", prompt)
         self.assertIn(
-            "Do not form a finding about the latest change until the packet shows a\n"
-            "subsequent check of that change.",
+            "Use checks and failures as evidence of consequences, not as findings.",
             prompt,
         )
-        self.assertIn("Successful application alone is not a check.", prompt)
 
     def test_prompt_defines_actor_source_as_prior_not_current_state(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "The current workspace is authoritative; actor-observed source context\n"
-            "shows only what the actor previously saw.",
+            "The current workspace is authoritative. Actor-observed source context\n"
+            "shows only what the actor previously saw; superseded observations are history,\n"
+            "not current state.",
             prompt,
         )
 

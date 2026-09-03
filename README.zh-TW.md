@@ -5,21 +5,22 @@
 > **測試通過，只能確定行為；不能替 Agent 選擇設計。**
 
 Masters’ Nudge 會在 Claude Code 或 Codex Agent 做下一個決定前，提供一則簡短、
-有證據的工程取捨。Masters’ Nudge 不會代替 Agent 解題或阻止 Agent 繼續，而是提醒
-主模型可能忽略的取捨。
+有證據根據的工程視角。Masters’ Nudge 不會代替 Agent 解題或阻止 Agent 繼續，而是
+指出主模型可能低估的工程關係。
 
-## 看一次真實執行
+## 看三個 Lens 分開注意力
 
-![從測試通過到主模型下一個決策的一次實際執行](docs/assets/actual-nudge-run.png)
+![同一份 packet 分別不加 Lens 與通過三個 Lens 的 smoke](docs/assets/lens-discrimination-smoke.svg)
 
-這不是介面示意圖，而是一次真實 CLI 執行的紀錄。程式原本就能運作，兩個測試也都
-通過；但 `web_total` 和 `invoice_total` 各自保存同一份折扣公式。
+這不是介面示意圖，而是同一個模型針對同一份 bounded packet 進行的四次真實
+Provider 呼叫。packet 同時呈現不確定重試、必須維持的回傳形狀，以及已量到的序列化
+成本；四組只改變 Lens context，其中 control 不加入 Lens。
 
-Hook 把程式與測試結果交給 Provider。Provider 回傳一則 Nudge，建議讓折扣公式只有
-一個擁有者。主模型判斷建議合理，實際抽出 `discounted_total`，再跑一次相同測試。
+Control 注意到責任分層；Simplicity 區分重放身分與回應快取，Reliability 追問完成
+狀態由誰擁有，Performance 則質疑單次量測是否涵蓋批次的主要成本。
 
-截圖只省略啟動警告、時間戳與重複輸出；Nudge、主模型判斷、程式差異與測試結果都
-來自同一次執行。這只證明曾觀察到這次反應，不保證主模型每次都會採納 Nudge。
+圖中是每組一次呼叫的完整 Nudge。這個 smoke 只檢查 prompt 能否分開注意力，不能
+證明準確率、重複穩定性，或 Nudge 對主模型的實際效果。
 
 ## 三個 Lens
 
@@ -52,9 +53,9 @@ Agent 已看過的周圍原始碼
       Agent 的下一段脈絡
 ```
 
-每次只會把一則 52 字內的繁體中文 Nudge 放進 Agent 的下一段脈絡。Nudge 會指出偏好
-方向與 packet 中看得見的代價，但不宣稱決策已經定案。內容依目前情況生成，不是隨機
-抽一句罐頭訊息，也不是 review、評分、問題或完整解法；Provider 不會接管任務。
+每次只會把一則 52 字內的繁體中文 Nudge 放進 Agent 的下一段脈絡。Nudge 會在選定的
+品味方向下指出一個工程重點及其後果，取捨與實作仍由 Agent 決定。內容依目前情況
+生成，不是隨機抽一句罐頭訊息，也不是 review、評分、問題或完整解法。
 
 Claude Code 與受支援的 Codex build 都提供理想的 `PostToolBatch` 控制點：同一個
 模型步驟的工具結果都完成後，下一步開始前才判斷。不提供此事件的 Codex build

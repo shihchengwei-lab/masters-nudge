@@ -4,26 +4,26 @@
 
 > **Passing tests settles behavior, not design.**
 
-Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-based
-engineering preference before its next decision. It does not solve the task or
-stop the agent. It points at a tradeoff the main model may otherwise overlook.
+Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-grounded
+engineering perspective before its next decision. It does not solve the task or
+stop the agent. It surfaces a relationship the main model may be underweighting.
 
-## See an actual run
+## See the Lenses separate
 
-![One actual run from passing tests through the main model's next decision](docs/assets/actual-nudge-run.png)
+![One same-packet smoke through no Lens context and all three Lenses](docs/assets/lens-discrimination-smoke.svg)
 
-This is not a UI mockup. It records one real CLI run. The code already worked
-and both tests passed, but `web_total` and `invoice_total` each owned the same
-discount formula.
+This is not a UI mockup. It records four live Provider calls using the same
+bounded packet and model. The packet exposed an uncertain retry, a required
+return shape, and a measured serialization cost. Only the Lens context changed;
+the ablation control omitted it.
 
-The Hook gave the code and test result to the Provider. The Provider returned
-a Nudge favoring one owner for the formula. The main model judged that advice
-reasonable, extracted `discounted_total`, and ran the same tests again.
+The control noticed split ownership. Simplicity separated replay identity from
+the response cache, Reliability asked who owns completion state, and Performance
+challenged whether the single-call measurement covered the main batch cost.
 
-The screenshot omits only startup warnings, timestamps, and repeated output.
-The Nudge, main-model decision, diff, and test results come from the same run.
-It is one observed reaction, not a promise that every main model will follow a
-Nudge.
+The text shown is the complete Nudge from one call per condition. This smoke
+checks whether the prompts can separate attention; it does not establish
+accuracy, repeatability, or an effect on the main model.
 
 ## Three Lenses
 
@@ -55,11 +55,11 @@ Current triggering checkpoint
     The agent's next context
 ```
 
-Each Nudge is one concise Traditional Chinese preference within 52 characters.
-It names a direction and packet-visible tradeoff without claiming the decision
-is settled, then enters the agent's next context. It is generated for the
-current situation, not selected from stock text. It is not a review, score,
-question, or complete solution, and the Provider does not take over the task.
+Each Nudge is one concise Traditional Chinese perspective within 52 characters.
+It names an engineering point and its consequence under the selected direction
+of taste, while leaving the tradeoff and implementation to the agent. It is
+generated for the current situation, not selected from stock text. It is not a
+review, score, question, or complete solution.
 
 Claude Code and the supported Codex build provide the intended `PostToolBatch`
 control point: all tool results from one model step are available before the
