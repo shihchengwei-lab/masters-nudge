@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1190" viewBox="0 0 1400 1190" role="img" aria-labelledby="title desc">
+  <title id="title">Masters’ Nudge observed decision path</title>
+  <desc id="desc">A controlled live smoke from passing tests through a default Simplicity Nudge, the main model's decision and code change, to passing tests again.</desc>
+  <rect width="1400" height="1190" fill="#0d1117"/>
+  <rect x="38" y="38" width="1324" height="1114" rx="16" fill="#161b22" stroke="#30363d" stroke-width="2"/>
+  <rect x="38" y="38" width="1324" height="64" rx="16" fill="#21262d"/>
+  <rect x="38" y="86" width="1324" height="16" fill="#21262d"/>
+  <circle cx="68" cy="70" r="7" fill="#ff7b72"/>
+  <circle cx="92" cy="70" r="7" fill="#d29922"/>
+  <circle cx="116" cy="70" r="7" fill="#3fb950"/>
+  <text x="148" y="78" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="20" font-weight="700">Masters’ Nudge — one observed decision path</text>
+
+  <text x="70" y="145" fill="#8c959f" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="16" font-weight="700">TASK</text>
+  <text x="70" y="180" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">Add a 10% member discount to web checkout and invoice totals.</text>
+  <text x="70" y="210" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">Keep both public functions and their return values.</text>
+
+  <rect x="70" y="250" width="1260" height="180" rx="12" fill="#1c2128" stroke="#3fb950" stroke-width="2"/>
+  <rect x="90" y="270" width="190" height="34" rx="6" fill="#123d25"/>
+  <text x="105" y="293" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">CHECKPOINT · PASS</text>
+  <text x="100" y="340" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">web_total()     → discounted_total(subtotal)</text>
+  <text x="100" y="373" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">invoice_total() → round(subtotal * 0.9, 2)</text>
+  <text x="100" y="410" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="18">2 tests passed — behavior works</text>
+
+  <path d="M700 442 L700 470 M688 458 L700 470 L712 458" fill="none" stroke="#8c959f" stroke-width="3"/>
+
+  <rect x="70" y="485" width="1260" height="190" rx="12" fill="#1c2128" stroke="#d29922" stroke-width="2"/>
+  <rect x="90" y="505" width="250" height="34" rx="6" fill="#6e4c0c"/>
+  <text x="105" y="528" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">DEFAULT LENS · SIMPLICITY</text>
+  <text x="100" y="575" fill="#8c959f" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="16">Independent second opinion · the agent keeps the decision</text>
+  <text x="100" y="625" fill="#ffdf8b" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="23">兩個入口承擔同一折扣規則，分流計算會讓規則日後漂移。</text>
+
+  <path d="M700 687 L700 715 M688 703 L700 715 L712 703" fill="none" stroke="#8c959f" stroke-width="3"/>
+
+  <rect x="70" y="730" width="1260" height="260" rx="12" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
+  <rect x="90" y="750" width="180" height="34" rx="6" fill="#0c2d6b"/>
+  <text x="105" y="773" fill="#a5d6ff" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="17" font-weight="700">AGENT’S DECISION</text>
+  <text x="100" y="823" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">採納 Nudge：讓 invoice_total 共用既有 discounted_total；</text>
+  <text x="100" y="855" fill="#e6edf3" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="19">公開函式與回傳值不變。</text>
+  <rect x="100" y="885" width="1200" height="76" rx="8" fill="#0d1117"/>
+  <text x="120" y="916" fill="#ff7b72" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="18">- return round(subtotal * 0.9, 2)</text>
+  <text x="120" y="946" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="18">+ return discounted_total(subtotal)</text>
+
+  <path d="M700 1002 L700 1030 M688 1018 L700 1030 L712 1018" fill="none" stroke="#8c959f" stroke-width="3"/>
+
+  <rect x="70" y="1045" width="1260" height="60" rx="12" fill="#123d25" stroke="#3fb950" stroke-width="2"/>
+  <text x="100" y="1083" fill="#7ee787" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="20" font-weight="700">2 tests passed again — same behavior, one owner for the rule</text>
+
+  <text x="70" y="1135" fill="#8c959f" font-family="ui-monospace, SFMono-Regular, Consolas, 'Noto Sans Mono CJK TC', monospace" font-size="15">Live gpt-5.6-sol Provider + fresh gpt-5.6-sol agent · one observed reaction · not causal evidence</text>
+</svg>

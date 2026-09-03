@@ -8,6 +8,18 @@ Masters’ Nudge 會在 Claude Code 或 Codex Agent 做下一個決定前，提�
 有證據根據的工程視角。Masters’ Nudge 不會代替 Agent 解題或阻止 Agent 繼續，而是
 指出主模型可能低估的工程關係。
 
+## 看一則 Nudge 進入下一個決策
+
+![從測試通過，經過預設 Simplicity Nudge，再到 Agent 下一個決策的一次觀察](docs/assets/actual-nudge-decision-path.svg)
+
+這次 controlled live smoke 從正常運作、兩項測試通過的程式開始。預設 Simplicity
+Lens 使用目前發行的 Provider prompt 與注入標籤，指出重複折扣規則應有一個 owner。
+一個全新的主模型收到未經改寫的 Nudge，自行決定改用既有計算，並讓相同兩項測試
+再次通過。
+
+圖中保留完整 Nudge、主模型陳述的決策、實際一行 diff 與重跑結果。這只是一筆觀察，
+不能證明是 Nudge 造成修改，也不保證另一次執行會得到相同結果。
+
 ## 看三個 Lens 分開注意力
 
 ![同一份 packet 分別不加 Lens 與通過三個 Lens 的 smoke](docs/assets/lens-discrimination-smoke.svg)

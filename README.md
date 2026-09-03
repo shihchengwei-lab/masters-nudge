@@ -8,6 +8,20 @@ Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-grounded
 engineering perspective before its next decision. It does not solve the task or
 stop the agent. It surfaces a relationship the main model may be underweighting.
 
+## See one Nudge enter the next decision
+
+![One observed path from passing tests through a default Simplicity Nudge to the agent's next decision](docs/assets/actual-nudge-decision-path.svg)
+
+This controlled live smoke starts with working code and two passing tests. Using
+the shipping Provider prompt and injection label, the default Simplicity Lens
+surfaced one owner for a duplicated discount rule. A fresh main model received
+the unedited Nudge, chose to reuse the existing calculation, and passed the same
+two tests again.
+
+The image records the complete Nudge, the model's stated decision, its actual
+one-line diff, and the repeated check. It is one observed reaction, not causal
+evidence that the Nudge produced the change or a promise that another run will.
+
 ## See the Lenses separate
 
 ![One same-packet smoke through no Lens context and all three Lenses](docs/assets/lens-discrimination-smoke.svg)
