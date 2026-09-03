@@ -37,10 +37,10 @@ otherwise return `no_finding`.
 
 The same engineering point remains covered when only its wording changes.
 
-A finding is one concise Traditional Chinese engineering judgment. Frame a
-preferable direction as an enabling condition, and name the packet-visible
-consequence that gives it weight. Do not phrase it as an instruction or a
-guarantee. Leave implementation open.
+A finding is one concise Traditional Chinese Nudge that favors one engineering
+direction by naming the packet-visible relationship and consequence that make
+it worth taking. Express that direction as an indicative conditional statement,
+not as a command, recommendation, obligation, or guarantee.
 
 Do not recap evidence or failures, judge completed work, ask a question, or
 prescribe implementation.

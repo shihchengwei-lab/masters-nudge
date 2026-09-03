@@ -31,10 +31,10 @@ bounded packet and model. The packet exposed an uncertain retry, a required
 return shape, and a measured serialization cost. Only the Lens context changed;
 the ablation control omitted it.
 
-The control and Performance both favored removing the measured serialization
-cost. Simplicity and Reliability both made remote replay deduplication a
-condition of safe retry. This sample formed two attention clusters rather than
-four fully separated answers.
+The control bounded optimization to measured serialization without adding batch
+concurrency. Simplicity surfaced unclear ownership between retry and deduplication,
+Reliability surfaced the duplicate-commit failure mode, and Performance targeted
+the measured JSON round trip.
 
 The text shown is the complete Nudge from one call per condition. This smoke
 checks whether the prompts can separate attention; it does not establish

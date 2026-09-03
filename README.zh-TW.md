@@ -28,9 +28,9 @@ Lens 使用目前發行的 Provider prompt 與注入標籤，把共用折扣責�
 Provider 呼叫。packet 同時呈現不確定重試、必須維持的回傳形狀，以及已量到的序列化
 成本；四組只改變 Lens context，其中 control 不加入 Lens。
 
-Control 與 Performance 都偏向移除已量到的序列化成本；Simplicity 與 Reliability
-都把遠端重放去重視為安全重試的條件。這次樣本形成兩組注意力，並未得到四個完全
-分離的答案。
+Control 把優化限制在已量到的序列化成本，不引入批次併發；Simplicity 指出重試與
+去重的責任不清，Reliability 指出重複提交的失敗模式，Performance 則對準已量到的
+JSON 往返成本。
 
 圖中是每組一次呼叫的完整 Nudge。這個 smoke 只檢查 prompt 能否分開注意力，不能
 證明準確率、重複穩定性，或 Nudge 對主模型的實際效果。
