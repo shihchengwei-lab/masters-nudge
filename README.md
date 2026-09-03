@@ -56,10 +56,11 @@ Current triggering checkpoint
 ```
 
 Each Nudge is one concise Traditional Chinese perspective within 52 characters.
-It names an engineering point and its consequence under the selected direction
-of taste, while leaving the tradeoff and implementation to the agent. It is
-generated for the current situation, not selected from stock text. It is not a
-review, score, question, or complete solution.
+It moves the next decision toward the selected engineering ideal by surfacing
+one point and its consequence, while leaving the tradeoff and implementation to
+the agent. The ideal is a direction, not a finish line. The Nudge is generated
+for the current situation, not selected from stock text. It is not a review,
+score, question, or complete solution.
 
 Claude Code and the supported Codex build provide the intended `PostToolBatch`
 control point: all tool results from one model step are available before the

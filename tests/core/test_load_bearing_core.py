@@ -73,15 +73,18 @@ class EvidenceBoundaryTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
 
         self.assertIn(
-            "The selected Lens supplies one direction of engineering taste; the main agent\n"
-            "owns the tradeoff.",
+            "The selected Lens supplies an engineering ideal, not a finish line; the main\n"
+            "agent owns the tradeoff.",
             prompt,
         )
         self.assertIn(
-            "A finding is optional. Surface one packet-visible relationship the main agent\n"
-            "may be underweighting in its next decision.",
+            "A finding is optional. When warranted, move the next decision toward that ideal\n"
+            "by surfacing one packet-visible relationship the main agent may be\n"
+            "underweighting.",
             prompt,
         )
+        self.assertNotIn("one direction of engineering taste", prompt)
+        self.assertNotIn("worth continually moving toward", prompt)
         self.assertIn(
             "Ground the decision point in the packet without collapsing distinct states,\n"
             "responsibilities, or costs.",
