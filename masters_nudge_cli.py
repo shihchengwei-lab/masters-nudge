@@ -5,20 +5,16 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 from masters_nudge.local_ollama import DEFAULT_OLLAMA_URL
 from masters_nudge.management import (
     configure_provider,
     doctor,
-    get_lens,
     get_provider,
-    list_lenses,
     list_providers,
     recent_nudges,
     reset_provider_config,
-    set_lens,
 )
 
 
@@ -38,15 +34,6 @@ def main() -> int:
         "--host", choices=("auto", "claude", "codex", "all"), default="auto"
     )
     doctor_parser.add_argument("--hook-python-command", default="")
-
-    lens_parser = commands.add_parser("lens")
-    lens_commands = lens_parser.add_subparsers(dest="lens_command", required=True)
-    lens_commands.add_parser("list")
-    lens_commands.add_parser("get")
-    lens_set = lens_commands.add_parser("set")
-    lens_set.add_argument(
-        "lens", choices=("automatic", "simplicity", "reliability", "performance")
-    )
 
     provider_parser = commands.add_parser("provider")
     provider_commands = provider_parser.add_subparsers(
@@ -73,15 +60,6 @@ def main() -> int:
         )
         _write(result)
         return 0 if result["core_ready"] else 1
-    if args.command == "lens":
-        if args.lens_command == "list":
-            result = list_lenses()
-        elif args.lens_command == "get":
-            result = get_lens()
-        else:
-            result = set_lens(args.lens)
-        _write(result)
-        return 0 if not result.get("error") else 1
     if args.command == "provider":
         if args.provider_command == "list":
             result = list_providers()

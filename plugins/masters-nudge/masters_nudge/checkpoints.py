@@ -1,4 +1,4 @@
-"""Recognize observable results worth offering to one Nudge Lens."""
+"""Recognize observable results worth sending to the Nudge Provider."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 import source_context
 
@@ -17,12 +17,16 @@ from .contracts import ToolCompleted
 RESULT_MAX_CHARS = 5000
 CHANGE_MAX_CHARS = 2200
 VALIDATION_RE = re.compile(
-    r"\b(?:pytest|unittest|vitest|jest|cargo\s+test|go\s+test|dotnet\s+test|"
-    r"flutter\s+test|npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
-    r"build|verify)\b",
+    r"(?<![\\/])\b(?:pytest|unittest|vitest|jest|cargo\s+test|go\s+test|dotnet\s+test|"
+    r"flutter\s+test|node\s+--test|(?:npx\s+)?borp|"
+    r"npm\s+(?:run\s+)?test|pnpm\s+(?:run\s+)?test|"
+    r"build|verify)\b(?![\\/])",
     re.IGNORECASE,
 )
-MEASUREMENT_RE = re.compile(r"\b(?:benchmark|bench|profile|trace)\b", re.IGNORECASE)
+MEASUREMENT_RE = re.compile(
+    r"(?<![\\/])\b(?:benchmark|bench|profile|trace)\b(?![\\/])",
+    re.IGNORECASE,
+)
 FAILURE_RE = re.compile(
     r"\b[1-9]\d*\s+(?:failed|failing)\b|\btests? failed\b|"
     r"Traceback \(most recent call last\):|"
@@ -30,11 +34,14 @@ FAILURE_RE = re.compile(
     re.IGNORECASE,
 )
 NAVIGATION_RE = re.compile(
-    r"^(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|read|open|view|search)\b",
+    r"^(?:rg|grep|find|ls|dir|sed|head|tail|type|cat|get-content|read|open|view|search)\b|"
+    r"^git\s+(?:diff|status|show|log)\b",
     re.IGNORECASE,
 )
-
-
+NAVIGATION_TOOL_RE = re.compile(
+    r"(?:^|_)(?:read|view|search|find|list|glob|grep)(?:$|_)",
+    re.IGNORECASE,
+)
 def _compact(value: Any) -> str:
     if isinstance(value, str):
         text = value
@@ -76,22 +83,23 @@ def evidence_category(event: ToolCompleted) -> str:
     command = _command(event)
     semantic = f"{event.tool_name} {command}"
     output = _compact(event.tool_output)
+    mutating = event.mutating or bool(
+        re.search(
+            r"(?:apply_patch|file_change|write_file|edit_file|^edit$|^write$)",
+            event.tool_name,
+            re.IGNORECASE,
+        )
+    )
+    if mutating:
+        return "failure" if event.failure_known and event.failed else "change"
+    if NAVIGATION_RE.search(command) or NAVIGATION_TOOL_RE.search(event.tool_name):
+        return ""
     if event.failure_known and event.failed:
         return "failure"
-    if NAVIGATION_RE.search(command) and not (
-        VALIDATION_RE.search(semantic) or MEASUREMENT_RE.search(semantic)
-    ):
-        return ""
     if MEASUREMENT_RE.search(semantic):
         return "failure" if FAILURE_RE.search(output) else "measurement"
     if VALIDATION_RE.search(semantic):
         return "failure" if FAILURE_RE.search(output) else "verification"
-    if event.mutating or re.search(
-        r"(?:apply_patch|file_change|write_file|edit_file|^edit$|^write$)",
-        event.tool_name,
-        re.IGNORECASE,
-    ):
-        return "change"
     return ""
 
 
@@ -166,15 +174,33 @@ def _working_diff(event: ToolCompleted) -> str:
     return source_context.head_tail(combined, CHANGE_MAX_CHARS)
 
 
-def render_evidence_record(event: ToolCompleted) -> str:
+def render_evidence_record(
+    event: ToolCompleted, *, include_current_diff: bool = True
+) -> str:
     """Preserve the real command and result; do not infer semantic scope."""
     category = evidence_category(event)
     command = _command(event)
+    remaining_input = event.tool_input
+    if command and isinstance(event.tool_input, Mapping):
+        remaining_input = {
+            key: value
+            for key, value in event.tool_input.items()
+            if key not in {"command", "cmd", "patch"}
+        }
+    tool_input = _compact(remaining_input)
     result = _compact(event.tool_output)
-    parts: list[str] = []
+    parts: list[str] = [f"tool: {event.tool_name}"]
     if command:
         parts.append(f"actual_command:\n{source_context.head_tail(command, 1800)}")
-    if category == "change":
+    if tool_input and tool_input != "{}":
+        parts.append(f"actual_input:\n{tool_input}")
+    if category == "change" and include_current_diff:
+        related_source = source_context.related_source_for_change(
+            event.session.repo_root or event.session.cwd,
+            event.tool_input,
+        )
+        if related_source:
+            parts.append(f"related_source:\n{related_source}")
         diff = _working_diff(event)
         if diff:
             parts.append(f"current_diff:\n{diff}")

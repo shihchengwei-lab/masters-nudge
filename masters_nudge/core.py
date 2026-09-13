@@ -1,20 +1,15 @@
-"""Route one bounded evidence packet through one Nudge Lens."""
+"""Ask one Provider for one judgment on a bounded evidence packet."""
 
 from __future__ import annotations
 
-import math
-import time
 from typing import Callable
-
-import lens_router
 
 from . import providers
 from .contracts import NudgeOutcome
 from .prompting import (
-    MAX_NUDGE_CHARS,
-    build_nudge_input,
-    build_router_prompt,
-    build_system_prompt,
+    has_nudge_prefix,
+    is_principle,
+    load_system_prompt,
 )
 from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
@@ -35,78 +30,51 @@ class NudgeCore:
         self.log_error = log_error or (lambda _message: None)
         runtime = settings.paths.runtime_dir
         self.prompt_file = runtime / "buddy-prompt.txt"
-        self.persona_dir = runtime / "personas"
         self.schema_path = runtime / "nudge-schema.json"
-        self.route_schema_path = runtime / "route-schema.json"
-
-    def _call(
-        self,
-        system_prompt: str,
-        source_packet: str,
-        schema_path,
-        timeout_sec: int,
-    ) -> dict:
-        result = self.dispatch(
-            self.settings.provider,
-            system_prompt,
-            source_packet,
-            self.settings.model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            ollama_url=self.settings.ollama_url,
-            log_error=self.log_error,
-        )
-        return result if isinstance(result, dict) else {"status": "error"}
 
     def nudge_once(
         self,
         source_packet: str,
         timeout_sec: int | None = None,
     ) -> NudgeOutcome:
-        timeout = min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC)
-        deadline = time.perf_counter() + timeout
-        route = lens_router.resolve_nudge_route(self.settings.lens)
-
-        if not route.lens:
-            routed = self._call(
-                build_router_prompt(),
-                source_packet,
-                self.route_schema_path,
-                max(1, math.ceil(deadline - time.perf_counter())),
-            )
-            status = str(routed.get("status") or "error")
-            if status == "no_finding":
-                return NudgeOutcome("no_finding")
-            routed_lens = str(routed.get("lens") or "").lower()
-            route = lens_router.resolve_nudge_route(routed_lens)
-            if status != "finding" or not route.lens:
-                return NudgeOutcome("error")
-
-        system_prompt = build_system_prompt(
+        timeout = max(
+            1,
+            min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC),
+        )
+        system_prompt = load_system_prompt(
             prompt_file=self.prompt_file,
-            persona_dir=self.persona_dir,
-            route=route,
             log_error=self.log_error,
         )
-        remaining = deadline - time.perf_counter()
-        if not system_prompt or remaining <= 0:
+        if not system_prompt:
             return NudgeOutcome("error")
-        result = self._call(
+        result = self.dispatch(
+            self.settings.provider,
             system_prompt,
-            build_nudge_input(source_packet),
-            self.schema_path,
-            max(1, math.ceil(remaining)),
+            str(source_packet or ""),
+            self.settings.model,
+            schema_path=self.schema_path,
+            timeout_sec=timeout,
+            ollama_url=self.settings.ollama_url,
+            log_error=self.log_error,
         )
+        if not isinstance(result, dict):
+            return NudgeOutcome("error")
         status = str(result.get("status") or "error")
-        finding = str(result.get("finding") or "").strip()
-        returned_lens = str(result.get("lens") or "").lower()
+        principle = str(result.get("principle") or "none")
+        anchor = str(result.get("anchor") or "").strip()
+        relationship = str(result.get("relationship") or "").strip()
         if status == "no_finding":
-            return NudgeOutcome("no_finding")
+            return (
+                NudgeOutcome("no_finding")
+                if principle == "none" and not anchor and not relationship
+                else NudgeOutcome("error")
+            )
         if (
             status != "finding"
-            or not finding
-            or len(finding) > MAX_NUDGE_CHARS
-            or returned_lens != route.lens
+            or not is_principle(principle)
+            or not anchor
+            or not relationship
+            or has_nudge_prefix(relationship)
         ):
             return NudgeOutcome("error")
-        return NudgeOutcome("finding", finding, route.lens)
+        return NudgeOutcome("finding", principle, anchor, relationship)

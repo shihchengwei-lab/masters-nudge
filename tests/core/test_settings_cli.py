@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -14,8 +15,6 @@ from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSet
 from masters_nudge.settings import (
     DEFAULT_OLLAMA_URL,
     load_user_settings,
-    resolve_lens,
-    save_lens,
     save_provider,
 )
 
@@ -28,32 +27,51 @@ class SettingsTests(unittest.TestCase):
 
             self.assertEqual(paths.data_dir, home / ".masters-nudge" / "data")
             self.assertEqual(paths.settings_dir, home / ".masters-nudge")
-            save_lens(paths.settings_dir, "simplicity")
+            save_provider(paths.settings_dir, "openai", model="gpt-test")
             self.assertTrue((home / ".masters-nudge" / "config.json").is_file())
             self.assertFalse((paths.data_dir / "config.json").exists())
 
-    def test_one_config_preserves_lens_and_provider(self):
+    def test_config_contains_only_provider_settings(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            save_lens(root, "simplicity")
             save_provider(root, "openai", model="gpt-test")
 
             stored = json.loads((root / "config.json").read_text(encoding="utf-8"))
             self.assertEqual(
                 stored,
                 {
-                    "lens": "simplicity",
                     "provider": "openai",
                     "model": "gpt-test",
                     "ollama_url": DEFAULT_OLLAMA_URL,
                 },
             )
-            self.assertEqual(load_user_settings(root).lens, "simplicity")
+
+    def test_legacy_lens_key_is_ignored_and_removed_on_next_save(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "config.json").write_text(
+                json.dumps(
+                    {
+                        "lens": "reliability",
+                        "provider": "openai",
+                        "model": "gpt-old",
+                        "ollama_url": DEFAULT_OLLAMA_URL,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            loaded = load_user_settings(root)
+            self.assertEqual((loaded.provider, loaded.model, loaded.error), ("openai", "gpt-old", ""))
+            save_provider(root, "anthropic", model="sonnet")
+
+            stored = json.loads((root / "config.json").read_text(encoding="utf-8"))
+            self.assertNotIn("lens", stored)
+            self.assertEqual(stored["provider"], "anthropic")
 
     def test_runtime_ignores_manual_environment_overrides(self):
         with tempfile.TemporaryDirectory() as raw:
             data = Path(raw)
-            save_lens(data, "reliability")
             save_provider(data, "anthropic", model="chosen-model")
             settings = RuntimeSettings.from_env(
                 environ={
@@ -70,12 +88,11 @@ class SettingsTests(unittest.TestCase):
             self.assertEqual((settings.provider, settings.model), ("anthropic", "chosen-model"))
             self.assertEqual(PROVIDER_TIMEOUT_SEC, 90)
             self.assertFalse(hasattr(settings, "timeout_sec"))
-            self.assertEqual(resolve_lens(data).lens, "reliability")
+            self.assertFalse(hasattr(settings, "lens"))
 
-    def test_provider_reset_keeps_lens_and_returns_to_host_default(self):
+    def test_provider_reset_returns_to_host_default(self):
         with tempfile.TemporaryDirectory() as raw:
             environment = {"MASTERS_NUDGE_DATA_DIR": raw}
-            save_lens(Path(raw), "performance")
             save_provider(Path(raw), "ollama", model="qwen3", ollama_url=DEFAULT_OLLAMA_URL)
 
             result = management.reset_provider_config(environ=environment)
@@ -83,26 +100,25 @@ class SettingsTests(unittest.TestCase):
 
             self.assertTrue(result["reset"])
             self.assertEqual(settings.provider, "anthropic")
-            self.assertEqual(load_user_settings(Path(raw)).lens, "performance")
 
 
 class JsonCliTests(unittest.TestCase):
     def run_cli(self, *arguments: str) -> tuple[int, dict]:
         output = io.StringIO()
-        with patch.object(masters_nudge_cli.sys, "argv", ["masters-nudge", *arguments]):
+        with patch.object(sys, "argv", ["masters-nudge", *arguments]):
             with redirect_stdout(output):
                 code = masters_nudge_cli.main()
         return code, json.loads(output.getvalue())
 
-    def test_lens_commands_are_json_only(self):
-        with tempfile.TemporaryDirectory() as raw:
-            with patch.dict("os.environ", {"MASTERS_NUDGE_DATA_DIR": raw}, clear=True):
-                code, result = self.run_cli("lens", "set", "simplicity")
-                self.assertEqual(code, 0)
-                self.assertEqual(result["lens"], "simplicity")
-                code, result = self.run_cli("lens", "get")
-                self.assertEqual(code, 0)
-                self.assertEqual(result["lens"], "simplicity")
+    def test_lens_command_is_not_part_of_the_cli(self):
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["masters-nudge", "lens"]):
+            with self.assertRaises(SystemExit), redirect_stdout(io.StringIO()), patch(
+                "sys.stderr", stderr
+            ):
+                masters_nudge_cli.main()
+
+        self.assertIn("invalid choice", stderr.getvalue())
 
     def test_provider_cloud_configuration_and_reset(self):
         with tempfile.TemporaryDirectory() as raw:

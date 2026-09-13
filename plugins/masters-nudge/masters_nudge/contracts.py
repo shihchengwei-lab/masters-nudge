@@ -9,6 +9,9 @@ from typing import Literal, TypeAlias
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
 NudgeStatus: TypeAlias = Literal["finding", "no_finding", "error"]
+NudgePrinciple: TypeAlias = Literal[
+    "validity", "causality", "predictability", "none"
+]
 
 
 @dataclass(frozen=True)
@@ -28,14 +31,15 @@ class ToolCompleted:
     failed: bool = False
     failure_known: bool = False
     mutating: bool = False
-    native_event_name: str = "PostToolUse"
+    native_event_name: str = "PostToolBatch"
 
 
 @dataclass(frozen=True)
 class NudgeOutcome:
     status: NudgeStatus
-    finding: str = ""
-    lens: str = ""
+    principle: NudgePrinciple = "none"
+    anchor: str = ""
+    relationship: str = ""
 
 
 def safe_identifier(value: str, fallback: str = "unknown", limit: int = 160) -> str:

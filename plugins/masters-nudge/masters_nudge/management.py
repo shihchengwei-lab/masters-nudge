@@ -15,13 +15,10 @@ from .plugin_inventory import runtime_files
 from .runtime import RuntimePaths, RuntimeSettings
 from .storage import recent_nudges as read_recent_nudges
 from .settings import (
-    LENSES,
     PROVIDERS,
     config_path,
     load_user_settings,
     reset_provider,
-    resolve_lens,
-    save_lens,
     save_provider,
 )
 
@@ -173,43 +170,6 @@ def _hook_status(
         )
         return {"ready": enabled and version_matches, "version": version, "error": error}
     return {"ready": False, "version": "", "error": "plugin is not installed"}
-
-
-def list_lenses() -> dict:
-    return {
-        "lenses": [
-            {"id": spec.id, "name": spec.name, "focus": spec.focus}
-            for spec in LENSES.values()
-        ]
-    }
-
-
-def get_lens(*, environ: Mapping[str, str] | None = None) -> dict:
-    paths = RuntimePaths.resolve(environ=environ)
-    selected = resolve_lens(paths.settings_dir)
-    settings = load_user_settings(paths.settings_dir)
-    return {
-        "lens": selected.lens,
-        "source": selected.source,
-        "path": str(config_path(paths.settings_dir)),
-        "error": settings.error,
-    }
-
-
-def set_lens(lens: str, *, environ: Mapping[str, str] | None = None) -> dict:
-    paths = RuntimePaths.resolve(environ=environ)
-    result = {
-        "saved": False,
-        "lens": str(lens or "").strip().lower(),
-        "path": str(config_path(paths.settings_dir)),
-        "error": "",
-    }
-    try:
-        save_lens(paths.settings_dir, lens)
-        result["saved"] = True
-    except (OSError, ValueError) as exc:
-        result["error"] = str(exc)
-    return result
 
 
 def list_providers() -> dict:
@@ -382,9 +342,13 @@ def doctor(
                 "hook_error": hook["error"],
                 "trust": "inspect in /hooks" if name == "codex" else "not required",
                 "control_point": {
-                    "event": "PostToolBatch" if name == "claude" else "PostToolUse",
-                    "precision": "exact" if name == "claude" else "approximate",
-                    "limitation": "" if name == "claude" else "parallel tools may be observed separately",
+                    "event": "PostToolBatch",
+                    "precision": "exact",
+                    "limitation": (
+                        ""
+                        if name == "claude"
+                        else "requires a PostToolBatch-capable Codex build"
+                    ),
                 },
             }
         )

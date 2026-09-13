@@ -20,8 +20,9 @@ RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent.parent, host=
 class PreparedDelivery:
     output: dict[str, Any]
     session: SessionRef
-    lens: str
-    finding: str
+    principle: str
+    anchor: str
+    relationship: str
     returned_via: str
 
 
@@ -51,7 +52,8 @@ def emit_json_delivery(prepared: PreparedDelivery, stream: Any = None) -> None:
     storage.append_host_returned_nudge(
         runtime_settings().paths.data_dir,
         prepared.session,
-        lens=prepared.lens,
-        finding=prepared.finding,
+        principle=prepared.principle,
+        anchor=prepared.anchor,
+        relationship=prepared.relationship,
         returned_via=prepared.returned_via,
     )

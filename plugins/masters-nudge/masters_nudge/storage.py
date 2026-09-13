@@ -13,10 +13,9 @@ from typing import Any
 import source_context
 
 from .contracts import SessionRef, safe_identifier
+from .prompting import delivery_text
 
 
-EVIDENCE_RECORD_MAX_CHARS = 3000
-EVIDENCE_PER_CATEGORY = 3
 MAX_ERROR_LOG_BYTES = 256 * 1024
 SETTINGS_FILE = "config.json"
 
@@ -95,13 +94,40 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "session_id": session.session_id,
         "task_anchor": "",
         "task_sources": {},
-        "evidence_seq": 0,
-        "evidence_records": [],
+        "nudge_pending_validation": False,
+        "pending_change": None,
     }
 
 
 def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     return _read_json(state_path(data_dir, session, "turn"), _empty_turn(session))
+
+
+def set_nudge_pending_validation(
+    data_dir: Path,
+    session: SessionRef,
+    pending: bool,
+) -> dict[str, Any]:
+    state = load_turn_state(data_dir, session)
+    state["nudge_pending_validation"] = bool(pending)
+    state["pending_change"] = None
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state
+
+
+def set_pending_change(
+    data_dir: Path,
+    session: SessionRef,
+    change: dict[str, Any],
+) -> dict[str, Any]:
+    state = load_turn_state(data_dir, session)
+    state["pending_change"] = {
+        "seq": 1,
+        "category": "change",
+        "content": str(change.get("content") or ""),
+    }
+    _atomic_write(state_path(data_dir, session, "turn"), state)
+    return state
 
 
 def cleanup_expired_sessions(
@@ -153,47 +179,15 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
     )
 
 
-def record_evidence(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    category: str,
-    content: str,
-) -> dict[str, Any]:
-    state = load_turn_state(data_dir, session)
-    if category not in {"change", "verification", "failure", "measurement"}:
-        return state
-    rendered = source_context.head_tail(content, EVIDENCE_RECORD_MAX_CHARS)
-    if not rendered:
-        return state
-    sequence = int(state.get("evidence_seq") or 0) + 1
-    records = [
-        record
-        for record in state.get("evidence_records", [])
-        if isinstance(record, dict)
-    ]
-    records.append({"seq": sequence, "category": category, "content": rendered})
-    retained: list[dict[str, Any]] = []
-    for name in ("change", "verification", "failure", "measurement"):
-        retained.extend(
-            [record for record in records if record.get("category") == name][
-                -EVIDENCE_PER_CATEGORY:
-            ]
-        )
-    retained.sort(key=lambda record: int(record.get("seq") or 0))
-    state.update({"evidence_seq": sequence, "evidence_records": retained})
-    _atomic_write(state_path(data_dir, session, "turn"), state)
-    return state
-
-
-def record_event(data_dir: Path, session: SessionRef, fingerprint: str) -> bool:
-    """Return true once for an exact consecutive native event replay."""
+def record_event(data_dir: Path, session: SessionRef, fingerprint: str) -> str:
+    """Classify one native batch as first, new, or an exact replay."""
     if not fingerprint:
-        return False
+        return "duplicate"
     path = state_path(data_dir, session, "progress")
     state = _read_json(path, {})
     if state.get("last_event_fingerprint") == fingerprint:
-        return False
+        return "duplicate"
+    status = "new" if state.get("last_event_fingerprint") else "first"
     state.update(
         {
             "schema_version": 1,
@@ -203,15 +197,16 @@ def record_event(data_dir: Path, session: SessionRef, fingerprint: str) -> bool:
         }
     )
     _atomic_write(path, state)
-    return True
+    return status
 
 
 def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
     *,
-    lens: str,
-    finding: str,
+    principle: str,
+    anchor: str,
+    relationship: str,
     returned_via: str,
 ) -> dict[str, Any]:
     entry = {
@@ -219,15 +214,53 @@ def append_host_returned_nudge(
         "host": session.host,
         "session_id": session.session_id,
         "workspace": str(session.repo_root or session.cwd or ""),
-        "lens": str(lens or ""),
-        "finding": str(finding or "").strip(),
+        "principle": str(principle or "").strip(),
+        "anchor": str(anchor or "").strip(),
+        "relationship": str(relationship or "").strip(),
         "returned_via": str(returned_via or ""),
     }
     path = audit_path(data_dir, session)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    set_nudge_pending_validation(data_dir, session, True)
     return entry
+
+
+def read_recent_returned_nudges(
+    data_dir: Path,
+    session: SessionRef,
+    *,
+    limit: int = 3,
+) -> tuple[str, ...]:
+    """Read Nudge texts successfully returned in this session, oldest first."""
+    if limit <= 0:
+        return ()
+    try:
+        lines = audit_path(data_dir, session).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ()
+    selected: list[str] = []
+    for line in reversed(lines):
+        try:
+            entry = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if not isinstance(entry, dict):
+            continue
+        relationship = str(entry.get("relationship") or "").strip()
+        principle = str(entry.get("principle") or "").strip()
+        anchor = str(entry.get("anchor") or "").strip()
+        if relationship and principle and anchor:
+            text = delivery_text(principle, anchor, relationship)
+        else:
+            text = relationship or str(entry.get("finding") or "").strip()
+        if not text:
+            continue
+        selected.append(text)
+        if len(selected) == limit:
+            break
+    return tuple(reversed(selected))
 
 
 def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
@@ -244,7 +277,9 @@ def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
                 entry = json.loads(line)
             except (TypeError, ValueError):
                 continue
-            if isinstance(entry, dict) and entry.get("finding"):
+            if isinstance(entry, dict) and (
+                entry.get("relationship") or entry.get("finding")
+            ):
                 entries.append(entry)
     entries.sort(key=lambda entry: str(entry.get("time") or ""), reverse=True)
     return entries[:limit]

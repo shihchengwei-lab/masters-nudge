@@ -31,5 +31,7 @@ asks for it. Separate these checks:
 Do not call a Nudge Provider merely to diagnose readiness. For local Ollama,
 report the loopback endpoint, server availability, selected installed model,
 and any diagnostic separately. Availability does not prove model quality. For
-Codex, explain that `PostToolUse` is an approximate control point and remind
-the user to inspect and approve the plugin commands in `/hooks` when needed.
+Codex, explain that the plugin requires a `PostToolBatch`-capable Codex build;
+Hook registration alone does not prove that the active Codex build emits the
+event. Remind the user to inspect and approve the plugin commands in `/hooks`
+when needed.

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -24,13 +23,13 @@ class SupportedProviderTests(unittest.TestCase):
         completed = subprocess.CompletedProcess(
             ["claude"],
             0,
-            '{"structured_output":{"status":"no_finding","lens":"none","finding":""}}',
+            '{"structured_output":{"status":"no_finding","principle":"none","anchor":"","relationship":""}}',
             "",
         )
         with mock.patch.object(
             providers, "_run_cli_process", return_value=completed
         ) as run:
-            providers.call_claude_result(
+            result = providers.call_claude_result(
                 "system",
                 "COMMAND-AND-RESULT-Q7K9",
                 "opus",
@@ -40,6 +39,7 @@ class SupportedProviderTests(unittest.TestCase):
 
         argv = run.call_args.args[0]
         self.assertEqual(argv[argv.index("-p") + 1], "COMMAND-AND-RESULT-Q7K9")
+        self.assertEqual(result["status"], "no_finding")
 
     def test_openai_receives_system_prompt_and_evidence_once(self):
         completed = subprocess.CompletedProcess(["codex"], 0, "", "")
@@ -47,13 +47,13 @@ class SupportedProviderTests(unittest.TestCase):
         def run(*args, **_kwargs):
             argv = args[0]
             Path(argv[argv.index("-o") + 1]).write_text(
-                '{"status":"no_finding","lens":"none","finding":""}',
+                '{"status":"no_finding","principle":"none","anchor":"","relationship":""}',
                 encoding="utf-8",
             )
             return completed
 
         with mock.patch.object(providers, "_run_cli_process", side_effect=run) as call:
-            providers.call_codex_result(
+            result = providers.call_codex_result(
                 "SYSTEM-Q7K9",
                 "COMMAND-AND-RESULT-Q7K9",
                 "gpt-test",
@@ -65,12 +65,14 @@ class SupportedProviderTests(unittest.TestCase):
         supplied = call.call_args.kwargs["input_text"]
         self.assertEqual(supplied.count("SYSTEM-Q7K9"), 1)
         self.assertEqual(supplied.count("COMMAND-AND-RESULT-Q7K9"), 1)
+        self.assertEqual(result["status"], "no_finding")
 
     def test_dispatch_supports_ollama_under_its_public_name(self):
         expected = {
             "status": "no_finding",
-            "lens": "none",
-            "finding": "",
+            "principle": "none",
+            "anchor": "",
+            "relationship": "",
         }
         with mock.patch.object(
             providers, "call_local_ollama_result", return_value=expected
@@ -96,7 +98,7 @@ class SupportedProviderTests(unittest.TestCase):
         response = {
             "done": True,
             "message": {
-                "content": '{"status":"no_finding","lens":"none","finding":""}'
+                "content": '{"status":"no_finding","principle":"none","anchor":"","relationship":""}'
             },
         }
         with (
@@ -121,8 +123,9 @@ class SupportedProviderTests(unittest.TestCase):
                 timeout_sec=12,
                 parse_result=lambda _raw: {
                     "status": "no_finding",
-                    "lens": "none",
-                    "finding": "",
+                    "principle": "none",
+                    "anchor": "",
+                    "relationship": "",
                 },
             )
 

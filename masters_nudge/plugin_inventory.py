@@ -6,10 +6,8 @@ GENERATED_FILES = (
     "claude_checkpoint.py",
     "claude_prompt.py",
     "hook_entry.py",
-    "lens_router.py",
     "masters_nudge_cli.py",
     "nudge-schema.json",
-    "route-schema.json",
     "source_context.py",
     "masters_nudge/__init__.py",
     "masters_nudge/checkpoints.py",
@@ -19,7 +17,6 @@ GENERATED_FILES = (
     "masters_nudge/core.py",
     "masters_nudge/evidence.py",
     "masters_nudge/local_ollama.py",
-    "masters_nudge/lenses.py",
     "masters_nudge/management.py",
     "masters_nudge/plugin_inventory.py",
     "masters_nudge/provider_contract.py",
@@ -28,9 +25,6 @@ GENERATED_FILES = (
     "masters_nudge/runtime.py",
     "masters_nudge/settings.py",
     "masters_nudge/storage.py",
-    "personas/carmack.txt",
-    "personas/lamport.txt",
-    "personas/linus.txt",
 )
 
 STATIC_FILES = (
@@ -41,7 +35,6 @@ STATIC_FILES = (
     "hooks/run_python.cmd",
     "hooks/run_python.sh",
     "skills/doctor/SKILL.md",
-    "skills/select-lens/SKILL.md",
     "skills/select-provider/SKILL.md",
     "skills/recent-nudges/SKILL.md",
 )

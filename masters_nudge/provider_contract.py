@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import json
 
-import lens_router
-
-from .prompting import MAX_NUDGE_CHARS
+from .prompting import has_nudge_prefix, is_principle
 
 
 def call_result(
     status: str = "error",
-    finding: str = "",
-    lens: str = "none",
+    principle: str = "none",
+    anchor: str = "",
+    relationship: str = "",
     **extra,
 ) -> dict:
-    result = {"status": status, "lens": lens, "finding": finding, **extra}
+    result = {
+        "status": status,
+        "principle": principle,
+        "anchor": anchor,
+        "relationship": relationship,
+        **extra,
+    }
     if status == "error" and not result.get("error_kind"):
         result["error_kind"] = "invalid_output"
     return result
@@ -34,40 +39,45 @@ def _decode_object(stdout: str) -> tuple[dict | None, str]:
     return (value if isinstance(value, dict) else None), raw
 
 
-def parse_nudge_result(stdout: str, max_chars: int = MAX_NUDGE_CHARS) -> dict:
+def parse_nudge_result(stdout: str) -> dict:
     obj, raw = _decode_object(stdout)
-    if obj is None or set(obj) != {"status", "lens", "finding"}:
+    if obj is None or set(obj) != {
+        "status",
+        "principle",
+        "anchor",
+        "relationship",
+    }:
         return call_result(raw_output=raw)
     status = obj.get("status")
-    lens = obj.get("lens")
-    finding = obj.get("finding")
-    if not isinstance(lens, str) or not isinstance(finding, str):
+    principle = obj.get("principle")
+    anchor = obj.get("anchor")
+    relationship = obj.get("relationship")
+    if (
+        not isinstance(principle, str)
+        or not isinstance(anchor, str)
+        or not isinstance(relationship, str)
+    ):
         return call_result(raw_output=raw)
     if status == "no_finding":
         return (
-            call_result("no_finding", lens="none", raw_output=raw)
-            if lens == "none" and not finding
+            call_result("no_finding", raw_output=raw)
+            if principle == "none" and not anchor and not relationship
             else call_result(raw_output=raw)
         )
-    finding = finding.strip()
+    anchor = anchor.strip()
+    relationship = relationship.strip()
     if (
         status != "finding"
-        or lens not in lens_router.LENS_PERSONAS
-        or not finding
-        or len(finding) > max_chars
+        or not is_principle(principle)
+        or not anchor
+        or not relationship
+        or has_nudge_prefix(relationship)
     ):
         return call_result(raw_output=raw)
-    return call_result("finding", finding, lens, raw_output=raw)
-
-
-def parse_route_result(stdout: str) -> dict:
-    obj, raw = _decode_object(stdout)
-    if obj is None or set(obj) != {"status", "lens"}:
-        return call_result(raw_output=raw)
-    status = obj.get("status")
-    lens = obj.get("lens")
-    if status == "no_finding" and lens == "none":
-        return call_result("no_finding", lens="none", raw_output=raw)
-    if status == "finding" and lens in lens_router.LENS_PERSONAS:
-        return call_result("finding", lens=lens, raw_output=raw)
-    return call_result(raw_output=raw)
+    return call_result(
+        "finding",
+        principle=principle,
+        anchor=anchor,
+        relationship=relationship,
+        raw_output=raw,
+    )

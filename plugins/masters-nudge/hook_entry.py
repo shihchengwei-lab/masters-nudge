@@ -49,9 +49,10 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
         storage.append_host_returned_nudge(
             settings.paths.data_dir,
             audit["session"],
-            lens=str(audit.get("lens") or ""),
-            finding=str(audit.get("finding") or ""),
-            returned_via=str(audit.get("returned_via") or "PostToolUse"),
+            principle=str(audit.get("principle") or ""),
+            anchor=str(audit.get("anchor") or ""),
+            relationship=str(audit.get("relationship") or ""),
+            returned_via=str(audit.get("returned_via") or "PostToolBatch"),
         )
 
 

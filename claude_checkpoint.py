@@ -9,7 +9,7 @@ import sys
 from typing import Any
 
 import source_context
-from masters_nudge import claude_adapter, evidence, prompting
+from masters_nudge import claude_adapter, evidence, prompting, storage
 from masters_nudge.contracts import NudgeOutcome, ToolCompleted
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, active_guard
@@ -77,11 +77,15 @@ def nudge_checkpoint(source_packet: str) -> NudgeOutcome:
     return core.nudge_once(source_packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
 
 
-def build_hook_output(finding: str) -> dict[str, Any]:
+def build_hook_output(
+    principle: str, anchor: str, relationship: str
+) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolBatch",
-            "additionalContext": prompting.delivery_text(finding),
+            "additionalContext": prompting.delivery_text(
+                principle, anchor, relationship
+            ),
         }
     }
 
@@ -98,20 +102,31 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
         task_sources=state.get("task_sources") or {},
-        evidence_records=state.get("evidence_records") or [],
+        evidence_records=list(observed.batch_records),
+    )
+    review_input = prompting.build_review_input(
+        packet,
+        storage.read_recent_returned_nudges(
+            settings.paths.data_dir,
+            events[0].session,
+            limit=3,
+        ),
     )
     try:
-        outcome = nudge_checkpoint(packet)
+        outcome = nudge_checkpoint(review_input)
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
-    if outcome.status != "finding" or not outcome.finding:
+    if outcome.status != "finding" or not outcome.relationship:
         return None
     return claude_adapter.PreparedDelivery(
-        output=build_hook_output(outcome.finding),
+        output=build_hook_output(
+            outcome.principle, outcome.anchor, outcome.relationship
+        ),
         session=events[0].session,
-        lens=outcome.lens,
-        finding=outcome.finding,
+        principle=outcome.principle,
+        anchor=outcome.anchor,
+        relationship=outcome.relationship,
         returned_via="PostToolBatch",
     )
 

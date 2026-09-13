@@ -2,12 +2,19 @@
   "type": "object",
   "properties": {
     "status": {"type": "string", "enum": ["finding", "no_finding"]},
-    "finding": {"type": "string", "maxLength": 52},
-    "lens": {
+    "principle": {
       "type": "string",
-      "enum": ["simplicity", "reliability", "performance", "none"]
+      "enum": ["validity", "causality", "predictability", "none"]
+    },
+    "anchor": {
+      "type": "string",
+      "description": "The smallest exact implementation location that owns or reveals the gap: a code identifier, function, field, or state transition."
+    },
+    "relationship": {
+      "type": "string",
+      "description": "One short Traditional Chinese declarative sentence stating one still-open, packet-grounded engineering edge: the unmet runtime dependency and its task-breaking runtime behavior. The Host renders the principle, warning marker, and anchor separately."
     }
   },
-  "required": ["status", "lens", "finding"],
+  "required": ["status", "principle", "anchor", "relationship"],
   "additionalProperties": false
 }

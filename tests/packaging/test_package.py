@@ -44,28 +44,41 @@ class PackageTests(unittest.TestCase):
         }
         required = {
             "skills/doctor/SKILL.md",
-            "skills/select-lens/SKILL.md",
             "skills/select-provider/SKILL.md",
             "skills/recent-nudges/SKILL.md",
         }
+        removed = {
+            "lens_router.py",
+            "masters_nudge/lenses.py",
+            "route-schema.json",
+            "skills/select-lens/SKILL.md",
+            "personas/linus.txt",
+            "personas/lamport.txt",
+            "personas/carmack.txt",
+        }
 
         self.assertFalse(paths & forbidden)
+        self.assertFalse(paths & removed)
         self.assertTrue(required <= paths)
-        self.assertEqual(
-            {path for path in paths if path.startswith("personas/")},
-            {
-                "personas/linus.txt",
-                "personas/lamport.txt",
-                "personas/carmack.txt",
-            },
-        )
+        self.assertFalse({path for path in paths if path.startswith("personas/")})
 
     def test_hook_manifests_have_no_stop_hook(self):
         claude = json.loads((PLUGIN / "hooks" / "claude.json").read_text(encoding="utf-8"))["hooks"]
         codex = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))["hooks"]
 
         self.assertEqual(set(claude), {"UserPromptSubmit", "PostToolBatch"})
-        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolUse"})
+        self.assertEqual(set(codex), {"UserPromptSubmit", "PostToolBatch"})
+
+    def test_codex_manifest_exposes_no_lens_selection(self):
+        manifest = json.loads(
+            (PLUGIN / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        interface = manifest["interface"]
+        visible_text = " ".join(
+            [interface["longDescription"], *interface["defaultPrompt"]]
+        ).lower()
+
+        self.assertNotIn("lens", visible_text)
 
     def test_packaged_runtime_uses_nudge_not_review_contract_names(self):
         text = "\n".join(
@@ -82,6 +95,71 @@ class PackageTests(unittest.TestCase):
             "reviewer_config",
         ):
             self.assertNotIn(obsolete, text)
+
+    def test_prompt_uses_results_as_scoped_behavioral_evidence(self):
+        for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
+            with self.subTest(prompt_path=prompt_path):
+                prompt = prompt_path.read_text(encoding="utf-8")
+                normalized = " ".join(prompt.split())
+                self.assertIn(
+                    "structural relationships in code, data, responsibility, and control flow",
+                    normalized,
+                )
+                self.assertIn(
+                    "Each build, test, lint, and verification result covers only the "
+                    "behavior it exercised.",
+                    normalized,
+                )
+
+    def test_prompt_runs_an_operational_decision_trace(self):
+        for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
+            with self.subTest(prompt_path=prompt_path):
+                prompt = prompt_path.read_text(encoding="utf-8")
+                normalized = " ".join(prompt.split())
+                self.assertIn(
+                    "Inspect the concrete engineering decision revealed by the bounded decision evidence",
+                    normalized,
+                )
+                self.assertIn("current ordered observable tool-result batch", normalized)
+                self.assertIn("related_source", normalized)
+                self.assertIn(
+                    "source-link records for direct calls and multi-hop owners",
+                    normalized,
+                )
+                self.assertIn(
+                    "unresolved and omitted references remain explicit",
+                    normalized,
+                )
+                self.assertIn(
+                    "Trace changed state transitions and effects in execution order",
+                    normalized,
+                )
+                self.assertIn(
+                    "Track each returned promise or callback into the next action that depends on its completion",
+                    normalized,
+                )
+                self.assertIn(
+                    "An unconsumed completion signal marks an open causality gap",
+                    normalized,
+                )
+                self.assertIn("Every finding names one still-open structural gap", normalized)
+                self.assertIn(
+                    "Observed implementation choice → unmet runtime dependency → task-breaking behavior",
+                    normalized,
+                )
+                self.assertIn(
+                    "Findings describe runtime gaps in code, data, responsibility, or control flow",
+                    normalized,
+                )
+                self.assertIn(
+                    "A successful verification-only batch returns `no_finding`",
+                    normalized,
+                )
+                self.assertIn("completion, ownership, and ordering", normalized)
+                self.assertIn(
+                    "different dependency or downstream consequence remains eligible",
+                    normalized,
+                )
 
     def test_clean_copy_starts_both_prompt_hooks(self):
         with tempfile.TemporaryDirectory() as raw:

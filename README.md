@@ -25,27 +25,62 @@ The Nudge, main-model decision, diff, and test results come from the same run.
 It is one observed reaction, not a promise that every main model will follow a
 Nudge.
 
-## Three Lenses
+## One judgment
 
-| Lens | What it notices |
-|---|---|
-| Simplicity | Unnecessary complexity and the wrong owner for a responsibility |
-| Reliability | What must remain true through reordering, retries, and partial failure |
-| Performance | Measured work on the real execution path that can be removed |
+Normally, only a tool-result batch containing a successful code change is sent
+to the Provider. Read-only exploration, status checks, and standalone
+verification, failure, or measurement results do not call it. After a Nudge is
+returned, later change batches are held and only the latest change is retained
+until the main agent produces a verification, failure, or measurement result.
+That first result is combined with the retained change and sent as one Provider
+judgment, then the hold is cleared. A result without a post-Nudge change does
+not call the Provider or clear the hold. This keeps the implementation decision
+and its observed result together without turning intermediate edits into
+separate problems. The main agent remains responsible for deciding whether and
+how to use each Nudge.
 
-Automatic mode chooses a Lens from the available evidence. You can also ask
-the agent to show the Lens choices and pin one. A pinned Lens still stays quiet
-when the evidence does not support a useful Nudge.
+Each selected batch is sent once. The Provider sees the task beginning and
+bounded decision evidence in a clean context. Each change record can include up
+to 16 source-link records (4,000 characters total) for direct calls and
+multi-hop owners in the concrete mutation. Each link independently resolves to
+a definition or occurrence in the changed text files, or is marked unresolved;
+an omitted count makes the fixed reference limit explicit. This does not depend
+on which source command ran most recently. The Provider forms its own causal
+judgment, then selects the strongest non-obvious observation that could change
+the next engineering decision. Up to three Nudge texts already returned in the
+same session are sent separately as exclusions so the Provider does not repeat
+or continue them; they are not evidence or a record of the main agent's decision
+path.
 
-The expert names inside the Lens prompts are attention cues. They do not give a
-provider another person's ability or make the Nudge more accurate by itself.
+The Provider evaluates three structural principles in one pass without routing
+the problem through a category first:
+
+- make invalid states unrepresentable in the data structure;
+- preserve a unidirectional causal flow from events to state;
+- keep effects and dependencies explicit enough for local reasoning.
+
+The three principles form one judgment contract; they are not three Lenses,
+three model calls, or three separate Nudges.
+
+Each principle has a one-word label: `validity` for invalid states,
+`causality` for unidirectional causal flow, and `predictability` for explicit,
+locally understandable behavior. The Provider returns the principle, the
+smallest atomic `anchor` needed to locate the observation, and one short
+`relationship` that states a single engineering edge. The Host then renders the
+fixed `warning` attention marker, for example `causality warning:`. The marker
+carries no classification or severity meaning.
+
+A Nudge may reveal the abstraction or responsibility the implementation is
+choosing, predict behavior beyond the immediate example, or show a simpler data
+or control-flow shape. Routine verification status and task restatements are
+outside the role.
 
 ## How it works
 
 ```text
 Task and observable tool results
               ↓
-       One qualified Lens
+      One Provider judgment
               ↓
    One short Nudge, or silence
               ↓
@@ -57,9 +92,10 @@ sentence. It is an independent second opinion, not a review, score, question,
 complete solution, or demand to run more tests.
 
 Claude Code provides the intended `PostToolBatch` control point: all tool
-results from one model step are available before the next step. Codex currently
-provides only `PostToolUse`. That is an approximation, so parallel tool results
-may be considered separately. The missing Codex control point is documented in
+results from one model step are available before the next step. The Codex
+integration requires a `PostToolBatch`-capable Codex build; a stock build that
+only exposes `PostToolUse` will not run this hook. The local Codex implementation
+and upstream request are documented in
 [the proposed `PostToolBatch` issue](docs/codex-post-tool-batch-issue-draft.md).
 
 Provider errors and the fixed 90-second timeout fail open: the Nudge attempt
@@ -74,11 +110,19 @@ The selected Provider receives a bounded packet that may include:
 - the current task or recovered long-running Goal;
 - content from local files explicitly named by the task, read once when the
   task begins;
-- recent relevant changes, failures, validations, and measurements;
-- the length-limited command that was run and its result.
+- up to 16 source-link records (4,000 characters total) that resolve direct
+  calls and multi-hop owners to definitions or occurrences in the changed text
+  files, with unresolved references and the omitted count shown explicitly;
+- every ordered tool call and result in the current batch, with each record
+  length-limited;
+- the final bounded working diff when the batch changed files;
+- up to three Nudge texts already returned in the same session, marked only as
+  deduplication exclusions.
 
-The Provider does not receive the complete conversation, hidden model
-reasoning, or unrelated files found by exploring the repository.
+The Provider does not receive the complete conversation or hidden model
+reasoning. It does not receive tool results from earlier batches. Resolved
+related-source links can include parts of a changed file that the main agent did
+not explicitly read in a tool call.
 
 Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
 and is also subject to that Provider's data policy. Choose local Ollama when
@@ -90,14 +134,15 @@ Provider.
 
 Masters’ Nudge stores the current task state and a small audit record under
 `~/.masters-nudge/data/`. An audit entry records when a Nudge was returned to
-the Host, which Lens produced it, and what it said.
+the Host and what it said.
 
 This proves only that the Hook returned the Nudge to Claude Code or Codex. It
 does not prove that the main model read, accepted, or acted because of it.
 
 When a new task starts, session data not updated for more than 30 days is
-deleted. Provider and Lens preferences live separately in
-`~/.masters-nudge/config.json` and are kept until you change them.
+deleted. The Provider preference lives separately in
+`~/.masters-nudge/config.json` and remains until changed. A legacy `lens` field
+is ignored and removed the next time Provider settings are saved.
 
 ## Providers
 
@@ -160,9 +205,6 @@ language:
 
 - **“Check whether Masters’ Nudge is ready.”** Checks Python, Provider access,
   data storage, and Host Hooks without generating a Nudge.
-- **“Switch the Masters’ Nudge Lens.”** Shows Automatic, Simplicity,
-  Reliability, and Performance in plain language, then confirms the saved
-  choice.
 - **“Switch the Masters’ Nudge Provider.”** Shows Anthropic, OpenAI, and local
   Ollama. Ollama setup verifies the selected installed model and loopback
   server.

@@ -8,7 +8,6 @@ import tempfile
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
-from .lenses import LENSES, LENS_IDS
 from .local_ollama import DEFAULT_OLLAMA_URL, normalize_loopback_url, validate_model_name
 
 
@@ -24,18 +23,10 @@ PROVIDERS = {
 
 @dataclass(frozen=True)
 class UserSettings:
-    lens: str = "automatic"
     provider: str = ""
     model: str = ""
     ollama_url: str = DEFAULT_OLLAMA_URL
     error: str = ""
-
-
-@dataclass(frozen=True)
-class LensSelection:
-    lens: str
-    persona: str
-    source: str
 
 
 def config_path(data_dir: Path) -> Path:
@@ -56,21 +47,18 @@ def load_user_settings(data_dir: Path) -> UserSettings:
         return UserSettings()
     except (OSError, UnicodeError, ValueError) as exc:
         return UserSettings(error=f"cannot read config: {exc}")
-    if not isinstance(value, dict) or set(value) != {
-        "lens",
-        "provider",
-        "model",
-        "ollama_url",
+    current_keys = {"provider", "model", "ollama_url"}
+    legacy_keys = {*current_keys, "lens"}
+    if not isinstance(value, dict) or frozenset(value) not in {
+        frozenset(current_keys),
+        frozenset(legacy_keys),
     }:
         return UserSettings(error="config has an invalid shape")
     if not all(isinstance(value.get(key), str) for key in value):
         return UserSettings(error="config values must be strings")
-    lens = value["lens"].strip().lower()
     provider = value["provider"].strip().lower()
     model = value["model"].strip()
     url = value["ollama_url"].strip()
-    if lens not in LENSES:
-        return UserSettings(error="config contains an unsupported lens")
     if provider not in {"", *PROVIDERS}:
         return UserSettings(error="config contains an unsupported provider")
     if provider == "ollama":
@@ -81,7 +69,7 @@ def load_user_settings(data_dir: Path) -> UserSettings:
             return UserSettings(error=f"config contains invalid Ollama settings: {exc}")
     elif not url:
         url = DEFAULT_OLLAMA_URL
-    return UserSettings(lens, provider, model, url)
+    return UserSettings(provider, model, url)
 
 
 def save_user_settings(data_dir: Path, settings: UserSettings) -> Path:
@@ -117,25 +105,6 @@ def save_user_settings(data_dir: Path, settings: UserSettings) -> Path:
         except OSError:
             pass
     return config_path(data_dir)
-
-
-def resolve_lens(data_dir: Path) -> LensSelection:
-    settings = load_user_settings(data_dir)
-    lens = settings.lens if not settings.error else "automatic"
-    source = "config" if config_path(data_dir).exists() and not settings.error else "default"
-    if settings.error:
-        source = "invalid_config"
-    return LensSelection(lens, LENSES[lens].persona, source)
-
-
-def save_lens(data_dir: Path, lens: str) -> Path:
-    selected = str(lens or "").strip().lower()
-    if selected not in LENSES:
-        raise ValueError(f"unsupported lens: {lens!r}")
-    current = load_user_settings(data_dir)
-    if current.error:
-        current = UserSettings()
-    return save_user_settings(data_dir, replace(current, lens=selected))
 
 
 def save_provider(

@@ -21,28 +21,47 @@ Hook 把程式與測試結果交給 Provider。Provider 回傳一則 Nudge，建
 截圖只省略啟動警告、時間戳與重複輸出；Nudge、主模型判斷、程式差異與測試結果都
 來自同一次執行。這只證明曾觀察到這次反應，不保證主模型每次都會採納 Nudge。
 
-## 三個 Lens
+## 一次判斷
 
-Lens 就是觀察問題的角度。
+一般情況下，只有包含成功程式修改的工具結果批次會交給 Provider。純讀取、狀態檢查，
+以及單獨出現的驗證、失敗或量測結果都不會呼叫 Provider。Nudge 回傳後，系統會暫停
+把後續修改交給 Provider，並只保留最新一次修改，直到主 Agent 產生驗證、失敗或量測
+結果。第一個結果會和保留的修改合併成一次 Provider 判斷，完成後解除暫停。Nudge 後
+若沒有修改，單獨出現的結果既不會呼叫 Provider，也不會解除暫停。這讓實作決策與
+可觀察結果一起接受判斷，不把中間修改各自當成獨立問題。是否採納 Nudge、如何修改及
+如何驗證，仍由主 Agent 決定。
 
-| Lens | 關注什麼 |
-|---|---|
-| Simplicity | 不必要的複雜度，以及責任放錯地方 |
-| Reliability | 事件換序、重試或中途失敗時，什麼仍必須成立 |
-| Performance | 真實執行路徑上，哪些已量到的工作可以移除 |
+Provider 在乾淨脈絡中看任務開頭與受長度限制的決策證據。每筆修改證據都可以包含最多
+16 筆、合計 4,000 字元的來源連結紀錄，分別處理具體修改中的直接呼叫與多層擁有者。
+每筆連結會在相同的修改文字檔中解析到定義或出現位置，無法解析時明確標示；超過固定
+上限的數量也會顯示。這個結果不取決於最近執行哪一個原始碼讀取命令。Provider 自行
+形成因果判斷，再挑出最可能改變下一個工程決策、且非顯而易見的觀察。同一個工作階段
+中，最多三則已回傳的 Nudge 會另外作為去重排除資訊送入；這些 Nudge 不是證據，也不
+代表主 Agent 的決策軌跡。
 
-Automatic 模式會依現有證據選擇 Lens。你也可以請 Agent 顯示選項，再固定使用其中
-一個 Lens。手動選擇不會強迫 Provider 硬擠出 Nudge；證據不足時仍會保持沉默。
+Provider 一次檢查三個結構原則，不先把問題路由成某一類：
 
-Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得該人物的能力，也不會
-憑空讓 Nudge 更準確。
+- 讓非法狀態無法由資料結構建構；
+- 讓事件與狀態沿單向因果流動；
+- 讓副作用與依賴保持明確，使行為可以局部推理。
+
+三個原則共同構成一次判斷，不是三個 Lens、三次模型呼叫或三則 Nudge。
+
+三個原則各用一個詞表示：`validity` 是非法狀態、`causality` 是單向因果流、
+`predictability` 是可預測性。Provider 分開回傳原則、精準定位程式概念的 `anchor`，
+以及用一個短句描述單一工程關係的 `relationship`。`anchor` 只保留一個最小定位；
+Host 顯示時才加上固定的 `warning`，例如 `causality warning:`。`warning` 不承擔分類或
+程度語意。
+
+Nudge 可以指出實作真正選擇的抽象或責任、預測眼前案例以外的行為，或提出更自然的
+資料與控制流程形狀。例行驗證狀態與重述任務不屬於 Nudge 的角色。
 
 ## 如何運作
 
 ```text
 任務與可觀察的工具結果
             ↓
-      一個合適的 Lens
+     Provider 一次判斷
             ↓
    一則短 Nudge，或保持沉默
             ↓
@@ -53,8 +72,8 @@ Lens Prompt 裡的專家姓名只是注意力提示，不表示 Provider 取得�
 不是 review、評分、問題、完整解法，也不是一律要求多跑測試。
 
 Claude Code 提供理想的 `PostToolBatch` 控制點：同一個模型步驟的工具結果都完成後，
-下一步開始前才判斷。Codex 目前只有 `PostToolUse`，只是近似控制點；平行工具的結果
-可能被分開判斷。缺少的 Codex 控制點已整理成
+下一步開始前才判斷。Codex 整合需要支援 `PostToolBatch` 的 Codex build；只有
+`PostToolUse` 的原版 Codex 不會執行這個 Hook。本機 Codex 實作與上游需求整理在
 [`PostToolBatch` Issue 草稿](docs/codex-post-tool-batch-issue-draft.md)。
 
 Provider 發生錯誤或超過固定 90 秒時，這次 Nudge 直接結束，主要 Agent 照常繼續。
@@ -67,11 +86,14 @@ Provider 發生錯誤或超過固定 90 秒時，這次 Nudge 直接結束，主
 
 - 目前任務，或從長任務找回的 Goal；
 - 任務明確指定的本機檔案內容，只在任務開始時讀取一次；
-- 最近且相關的修改、失敗、驗證與量測；
-- 實際執行過、經長度限制的命令及結果。
+- 最多 16 筆、合計 4,000 字元的來源連結紀錄，把具體修改中的直接呼叫與多層擁有者
+  連到修改文字檔中的定義或出現位置，並明確顯示無法解析的參照與超額省略數量；
+- 當前批次內依原始順序排列的每個工具呼叫與結果；每筆內容都有長度上限；
+- 批次修改檔案後的最終工作樹差異，內容有長度上限；
+- 同一個工作階段中，最多三則已回傳的 Nudge，只作為去重排除資訊。
 
-Provider 不會收到完整對話、模型未公開的內部思考，也不會收到探索專案時碰到的無關
-檔案。
+Provider 不會收到完整對話、模型未公開的內部思考或先前批次的工具結果。上述已解析
+的關聯來源連結，可能包含主要 Agent 未曾透過工具明確讀取的修改檔案內容。
 
 Anthropic 與 OpenAI 是雲端 Provider，這份資料會離開你的電腦，並受該 Provider
 的資料政策約束。如果資料不能離開電腦，請選本機 Ollama。Ollama 只允許連到本機
@@ -80,14 +102,14 @@ Anthropic 與 OpenAI 是雲端 Provider，這份資料會離開你的電腦，�
 ## 本機紀錄
 
 Masters’ Nudge 會把目前任務狀態與少量稽核紀錄存在
-`~/.masters-nudge/data/`。稽核紀錄包含 Nudge 回傳給 Host 的時間、使用的 Lens 與
-Nudge 內容。
+`~/.masters-nudge/data/`。稽核紀錄包含 Nudge 回傳給 Host 的時間與 Nudge 內容。
 
 這只能證明 Hook 已把 Nudge 回傳給 Claude Code 或 Codex，不能證明主模型真的讀到、
 採納，或因為 Nudge 才採取後續行動。
 
-每次開始新任務時，系統會刪除超過 30 天沒有更新的工作階段資料。Provider 與 Lens
-偏好另外存在 `~/.masters-nudge/config.json`，會保留到你再次修改。
+每次開始新任務時，系統會刪除超過 30 天沒有更新的工作階段資料。Provider 偏好
+另外存在 `~/.masters-nudge/config.json`，會保留到你再次修改。舊設定中的 `lens`
+欄位會被忽略，下一次儲存 Provider 設定時移除。
 
 ## 支援的 Provider
 
@@ -146,8 +168,6 @@ Hooks 會自動執行。需要手動操作時，直接用白話告訴 Agent：
 
 - **「檢查 Masters’ Nudge 是否準備完成。」** 檢查 Python、Provider 存取、資料
   儲存與 Host Hooks，不會產生 Nudge。
-- **「切換 Masters’ Nudge Lens。」** 用白話列出 Automatic、Simplicity、
-  Reliability、Performance，再確認保存後的選擇。
 - **「切換 Masters’ Nudge Provider。」** 列出 Anthropic、OpenAI、本機 Ollama；
   設定 Ollama 時會確認已安裝的模型與本機服務。
 - **「顯示最近的 Masters’ Nudge 紀錄。」** 用白話解釋近期稽核紀錄。
