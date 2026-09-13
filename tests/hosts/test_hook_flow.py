@@ -12,7 +12,7 @@ from unittest import mock
 
 import claude_checkpoint
 import hook_entry
-from masters_nudge import claude_adapter, evidence, storage
+from masters_nudge import claude_adapter, evidence, prompting, storage
 from masters_nudge.codex_adapter import CodexAdapter
 from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 
@@ -42,6 +42,47 @@ class NoFindingCore(FakeCore):
 
 
 class CodexHookFlowTests(unittest.TestCase):
+    def test_no_finding_returns_a_hint_without_creating_nudge_state(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = NoFindingCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "codex-hint",
+                    "cwd": raw,
+                    "prompt": "簡化責任配置",
+                }
+            )
+            output = adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "codex-hint",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {"patch": "change"},
+                            "tool_response": {"success": True},
+                        }
+                    ],
+                }
+            )
+            self.assertIsNotNone(output)
+            stream = io.StringIO()
+            hook_entry._emit_output(output, core.settings, stream=stream)
+            public = json.loads(stream.getvalue())
+            hint = public["hookSpecificOutput"]["additionalContext"]
+            session = SessionRef("codex_cli", "codex-hint", cwd=raw)
+
+            self.assertIn(hint.removeprefix("hint: "), prompting.CODE_TASTE_HINTS)
+            self.assertTrue(hint.startswith("hint: "))
+            self.assertEqual(storage.recent_nudges(root), [])
+            self.assertFalse(
+                storage.load_turn_state(root, session)["nudge_pending_validation"]
+            )
+
     def test_actor_result_replays_the_deferred_change_to_the_provider(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -228,7 +269,10 @@ class CodexHookFlowTests(unittest.TestCase):
                 }
             )
 
-        self.assertIsNone(changed)
+        self.assertIsNotNone(changed)
+        self.assertTrue(
+            changed["hookSpecificOutput"]["additionalContext"].startswith("hint: ")
+        )
         self.assertIsNone(first_test)
         self.assertIsNone(second_test)
         self.assertEqual(len(core.calls), 1)
@@ -501,6 +545,52 @@ def choose(context, options):
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
+    def test_no_finding_returns_a_hint_without_creating_nudge_state(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            settings = SimpleNamespace(
+                paths=SimpleNamespace(data_dir=root, error_log=root / "error.log"),
+            )
+            session = SessionRef("claude_code", "claude-hint", cwd=raw)
+            storage.start_turn(root, session, "簡化責任配置")
+            hook = {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "claude-hint",
+                "cwd": raw,
+                "tool_calls": [
+                    {
+                        "tool_name": "Edit",
+                        "tool_input": {
+                            "file_path": "app.py",
+                            "old_string": "owner = old",
+                            "new_string": "owner = direct",
+                        },
+                        "tool_response": "updated",
+                    }
+                ],
+            }
+            with (
+                mock.patch.object(claude_adapter, "RUNTIME", settings),
+                mock.patch.object(
+                    claude_checkpoint,
+                    "nudge_checkpoint",
+                    return_value=NudgeOutcome("no_finding"),
+                ),
+            ):
+                prepared = claude_checkpoint.prepare_hook(hook)
+                self.assertIsNotNone(prepared)
+                stream = io.StringIO()
+                claude_adapter.emit_json_delivery(prepared, stream=stream)
+                public = json.loads(stream.getvalue())
+                hint = public["hookSpecificOutput"]["additionalContext"]
+
+            self.assertIn(hint.removeprefix("hint: "), prompting.CODE_TASTE_HINTS)
+            self.assertTrue(hint.startswith("hint: "))
+            self.assertEqual(storage.recent_nudges(root), [])
+            self.assertFalse(
+                storage.load_turn_state(root, session)["nudge_pending_validation"]
+            )
+
     def test_provider_receives_latest_returned_nudges_for_deduplication(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -639,7 +729,12 @@ function choose(context, options) {
                     }
                 )
 
-        self.assertIsNone(changed)
+        self.assertIsNotNone(changed)
+        self.assertTrue(
+            changed.output["hookSpecificOutput"]["additionalContext"].startswith(
+                "hint: "
+            )
+        )
         provider.assert_called_once()
         packet = provider.call_args.args[0]
         self.assertNotIn("source from first.py", packet)

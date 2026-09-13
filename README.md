@@ -82,7 +82,7 @@ Task and observable tool results
               ↓
       One Provider judgment
               ↓
-   One short Nudge, or silence
+   One short Nudge, or a local hint
               ↓
     The agent's next context
 ```
@@ -90,6 +90,10 @@ Task and observable tool results
 Each Nudge is generated for the current situation; it is not a random stock
 sentence. It is an independent second opinion, not a review, score, question,
 complete solution, or demand to run more tests.
+When the Provider returns `no_finding`, the Host selects a general code-taste
+sentence from a local example library and labels it `hint:`. A hint does not
+claim a concrete issue in the current code and does not enter Nudge audit,
+deduplication, or pending-validation state.
 
 Claude Code provides the intended `PostToolBatch` control point: all tool
 results from one model step are available before the next step. The Codex

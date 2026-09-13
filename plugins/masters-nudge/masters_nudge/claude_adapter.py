@@ -26,6 +26,11 @@ class PreparedDelivery:
     returned_via: str
 
 
+@dataclass(frozen=True)
+class PreparedHint:
+    output: dict[str, Any]
+
+
 def log_error(component: str, message: str) -> None:
     storage.append_error(runtime_settings().paths.error_log, component, message)
 
@@ -44,11 +49,15 @@ def session_from_hook(hook: dict, *, default_cwd: str = "") -> SessionRef:
     )
 
 
-def emit_json_delivery(prepared: PreparedDelivery, stream: Any = None) -> None:
+def emit_json_delivery(
+    prepared: PreparedDelivery | PreparedHint, stream: Any = None
+) -> None:
     """Audit only after the Nudge has been flushed back to Claude Code."""
     target = stream if stream is not None else sys.stdout
     target.write(json.dumps(prepared.output, ensure_ascii=False) + "\n")
     target.flush()
+    if isinstance(prepared, PreparedHint):
+        return
     storage.append_host_returned_nudge(
         runtime_settings().paths.data_dir,
         prepared.session,

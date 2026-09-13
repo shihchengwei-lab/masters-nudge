@@ -63,13 +63,15 @@ Nudge 可以指出實作真正選擇的抽象或責任、預測眼前案例以�
             ↓
      Provider 一次判斷
             ↓
-   一則短 Nudge，或保持沉默
+   一則短 Nudge，或一則本機 hint
             ↓
       Agent 的下一段脈絡
 ```
 
 每則 Nudge 都依目前情況生成，不是隨機抽一句罐頭訊息。Nudge 是獨立第二意見，
 不是 review、評分、問題、完整解法，也不是一律要求多跑測試。
+Provider 回傳 `no_finding` 時，Host 會從本機例句庫挑一則通用程式碼品味短句，並標成
+`hint:`。hint 不代表目前程式碼有具體問題，也不會寫入 Nudge 稽核、去重或待驗證狀態。
 
 Claude Code 提供理想的 `PostToolBatch` 控制點：同一個模型步驟的工具結果都完成後，
 下一步開始前才判斷。Codex 整合需要支援 `PostToolBatch` 的 Codex build；只有
