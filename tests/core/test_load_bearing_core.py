@@ -11,8 +11,6 @@ import time
 import unittest
 from dataclasses import fields
 from pathlib import Path
-from subprocess import CompletedProcess
-from unittest import mock
 
 import source_context
 from masters_nudge import (
@@ -359,28 +357,97 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertNotIn("evidence_records", state)
         self.assertFalse(hasattr(storage, "record_evidence"))
 
-    def test_change_evidence_contains_the_current_working_diff(self):
-        event = ToolCompleted(
-            SessionRef("codex_cli", "diff", cwd="C:/workspace"),
-            "apply_patch",
-            tool_input={"patch": "*** Update File: app.py"},
-            tool_output={"status": "completed"},
-            mutating=True,
-        )
-        with mock.patch.object(
-            checkpoints.subprocess,
-            "run",
-            return_value=CompletedProcess(
-                ["git", "diff"],
-                0,
-                "diff --git a/app.py b/app.py\n+owner = direct\n",
-                "",
-            ),
-        ):
+    def test_change_evidence_uses_the_native_mutation_without_cumulative_diff(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "tests@example.invalid"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Masters Nudge Tests"],
+                cwd=root,
+                check=True,
+            )
+            path = root / "app.py"
+            path.write_text("BASELINE = True\n", encoding="utf-8")
+            subprocess.run(["git", "add", "app.py"], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
+            path.write_text(
+                "BASELINE = True\nFIRST_MUTATION = True\nSECOND_MUTATION = True\n",
+                encoding="utf-8",
+            )
+            event = ToolCompleted(
+                SessionRef("codex_cli", "diff", cwd=raw, repo_root=raw),
+                "apply_patch",
+                tool_input={
+                    "patch": (
+                        "*** Update File: app.py\n@@\n"
+                        "+SECOND_MUTATION = True\n"
+                    )
+                },
+                tool_output={"status": "completed"},
+                mutating=True,
+            )
+
             rendered = checkpoints.render_evidence_record(event)
 
-        self.assertIn("current_diff:", rendered)
-        self.assertIn("+owner = direct", rendered)
+        self.assertIn("SECOND_MUTATION", rendered)
+        self.assertNotIn("FIRST_MUTATION", rendered)
+        self.assertNotIn("current_diff:", rendered)
+
+    def test_change_evidence_keeps_every_direct_path_and_excludes_ambient_diff(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "tests@example.invalid"],
+                cwd=root,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Masters Nudge Tests"],
+                cwd=root,
+                check=True,
+            )
+            for name in ("first.py", "second.py", "generated.py"):
+                (root / name).write_text("value = 'before'\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
+            (root / "first.py").write_text("value = 'first'\n", encoding="utf-8")
+            (root / "second.py").write_text("value = 'second'\n", encoding="utf-8")
+            (root / "generated.py").write_text(
+                "value = 'ambient'\n", encoding="utf-8"
+            )
+            event = ToolCompleted(
+                SessionRef("codex_cli", "multi-diff", cwd=raw, repo_root=raw),
+                "apply_patch",
+                tool_input={
+                    "patch": (
+                        "*** Begin Patch\n"
+                        "*** Update File: first.py\n"
+                        "@@\n"
+                        "-value = 'before'\n"
+                        "+value = 'first'\n"
+                        "*** Update File: second.py\n"
+                        "@@\n"
+                        "-value = 'before'\n"
+                        "+value = 'second'\n"
+                        "*** End Patch"
+                    )
+                },
+                tool_output={"status": "completed"},
+                mutating=True,
+            )
+
+            rendered = checkpoints.render_evidence_record(event)
+
+        self.assertIn("first.py", rendered)
+        self.assertIn("second.py", rendered)
+        self.assertNotIn("generated.py", rendered)
+        self.assertNotIn("ambient", rendered)
 
     def test_change_evidence_contains_an_untracked_new_file(self):
         with tempfile.TemporaryDirectory() as raw:
@@ -402,10 +469,13 @@ class EvidenceBoundaryTests(unittest.TestCase):
             (root / "new_owner.py").write_text(
                 "owner = 'direct'\n", encoding="utf-8"
             )
+            (root / "generated.py").write_text(
+                "owner = 'ambient'\n", encoding="utf-8"
+            )
             event = ToolCompleted(
                 SessionRef("codex_cli", "untracked", cwd=raw, repo_root=raw),
                 "file_change",
-                tool_input={"path": "new_owner.py"},
+                tool_input={"path": "new_owner.py", "content": "owner = 'direct'"},
                 tool_output={"status": "completed"},
                 mutating=True,
             )
@@ -414,6 +484,46 @@ class EvidenceBoundaryTests(unittest.TestCase):
 
         self.assertIn("new_owner.py", rendered)
         self.assertIn("owner = 'direct'", rendered)
+        self.assertNotIn("generated.py", rendered)
+        self.assertNotIn("owner = 'ambient'", rendered)
+
+    def test_path_only_mutation_is_not_reviewable_decision_evidence(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "path-only", cwd=raw, repo_root=raw)
+            storage.start_turn(root, session, "檢查目前修改")
+
+            observed = evidence.observe_tool_batch(
+                root,
+                [
+                    ToolCompleted(
+                        session,
+                        "file_change",
+                        tool_input={"path": "owner.py"},
+                        tool_output={"status": "completed"},
+                        mutating=True,
+                    )
+                ],
+            )
+
+        self.assertFalse(observed.eligible)
+        self.assertEqual(observed.batch_records[0]["category"], "observation")
+
+    def test_changed_paths_include_both_sides_of_a_move(self):
+        with tempfile.TemporaryDirectory() as raw:
+            paths = source_context.changed_paths_for_change(
+                raw,
+                {
+                    "patch": (
+                        "*** Begin Patch\n"
+                        "*** Update File: old_owner.py\n"
+                        "*** Move to: new_owner.py\n"
+                        "*** End Patch"
+                    )
+                },
+            )
+
+        self.assertEqual(paths, ("old_owner.py", "new_owner.py"))
 
 
 class HostReturnedAuditTests(unittest.TestCase):

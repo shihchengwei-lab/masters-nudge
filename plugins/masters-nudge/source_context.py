@@ -32,7 +32,7 @@ _PATHISH_REFERENCE_RE = re.compile(
     r"(?:[/\\]|\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$)"
 )
 _PATCH_PATH_RE = re.compile(
-    r"^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$",
+    r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to):\s*(.+?)\s*$",
     re.MULTILINE,
 )
 _MEMBER_ACCESS_RE = re.compile(
@@ -178,6 +178,65 @@ def _changed_path_values(tool_input: Any) -> tuple[str, ...]:
     for text in _nested_strings(tool_input):
         values.extend(_PATCH_PATH_RE.findall(text))
     return tuple(dict.fromkeys(values))
+
+
+def changed_paths_for_change(
+    workspace_root: str, tool_input: Any
+) -> tuple[str, ...]:
+    """Return changed paths that resolve inside the current workspace."""
+    if not str(workspace_root or "").strip():
+        return ()
+    try:
+        root = Path(workspace_root).resolve()
+    except (OSError, RuntimeError):
+        return ()
+    paths: list[str] = []
+    for value in _changed_path_values(tool_input):
+        try:
+            raw_path = Path(value)
+            candidate = (
+                raw_path.resolve()
+                if raw_path.is_absolute()
+                else (root / raw_path).resolve()
+            )
+            relative = candidate.relative_to(root).as_posix()
+        except (OSError, RuntimeError, ValueError):
+            continue
+        if relative != "." and relative not in paths:
+            paths.append(relative)
+    return tuple(paths)
+
+
+def has_attributable_change(tool_input: Any) -> bool:
+    """Return whether a mutation input contains content attributable to this call."""
+    if isinstance(tool_input, str):
+        return bool(tool_input.strip())
+    if isinstance(tool_input, Mapping):
+        for key, value in tool_input.items():
+            if key in {"path", "file_path"}:
+                continue
+            if key in {"patch", "command", "cmd"} and isinstance(value, str):
+                text = value.strip()
+                if not text:
+                    continue
+                if key != "patch" or _patch_change_lines(text) or not _PATCH_PATH_RE.search(text):
+                    return True
+            elif key in {
+                "old_string",
+                "new_string",
+                "content",
+                "text",
+                "diff",
+            }:
+                if any(part.strip() for part in _nested_strings(value)):
+                    return True
+            elif isinstance(value, (Mapping, list, tuple)):
+                if has_attributable_change(value):
+                    return True
+        return False
+    if isinstance(tool_input, (list, tuple)):
+        return any(has_attributable_change(value) for value in tool_input)
+    return False
 
 
 def _patch_change_lines(text: str) -> tuple[str, ...]:
@@ -425,7 +484,7 @@ def related_source_for_change(workspace_root: str, tool_input: Any) -> str:
         return ""
     added_lines = _added_change_lines(tool_input)
     files: list[tuple[str, list[str]]] = []
-    for value in _changed_path_values(tool_input):
+    for value in changed_paths_for_change(str(root), tool_input):
         resolved = _workspace_text_file(root, value)
         if resolved is not None:
             files.append(resolved)

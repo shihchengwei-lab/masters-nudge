@@ -5,8 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import subprocess
-from pathlib import Path
 from typing import Any, Mapping
 
 import source_context
@@ -15,7 +13,6 @@ from .contracts import ToolCompleted
 
 
 RESULT_MAX_CHARS = 5000
-CHANGE_MAX_CHARS = 2200
 VALIDATION_RE = re.compile(
     r"(?<![\\/])\b(?:pytest|unittest|vitest|jest|cargo\s+test|go\s+test|dotnet\s+test|"
     r"flutter\s+test|node\s+--test|(?:npx\s+)?borp|"
@@ -91,7 +88,13 @@ def evidence_category(event: ToolCompleted) -> str:
         )
     )
     if mutating:
-        return "failure" if event.failure_known and event.failed else "change"
+        if event.failure_known and event.failed:
+            return "failure"
+        return (
+            "change"
+            if source_context.has_attributable_change(event.tool_input)
+            else ""
+        )
     if NAVIGATION_RE.search(command) or NAVIGATION_TOOL_RE.search(event.tool_name):
         return ""
     if event.failure_known and event.failed:
@@ -103,80 +106,7 @@ def evidence_category(event: ToolCompleted) -> str:
     return ""
 
 
-def _untracked_files(cwd: str) -> list[str]:
-    try:
-        result = subprocess.run(
-            ["git", "ls-files", "--others", "--exclude-standard", "-z"],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=5,
-        )
-    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return []
-    return [value for value in result.stdout.split("\0") if value] if result.returncode == 0 else []
-
-
-def _requested_path(event: ToolCompleted) -> str:
-    if isinstance(event.tool_input, dict):
-        value = event.tool_input.get("path") or event.tool_input.get("file_path")
-        if value:
-            return str(value).replace("\\", "/")
-    match = re.search(r"\*\*\* Add File:\s*([^\r\n]+)", _command(event))
-    return match.group(1).strip().replace("\\", "/") if match else ""
-
-
-def _untracked_snapshot(event: ToolCompleted) -> str:
-    if not event.session.cwd:
-        return ""
-    root = Path(event.session.cwd).resolve()
-    paths = _untracked_files(event.session.cwd)
-    requested = _requested_path(event)
-    paths.sort(key=lambda value: (value.replace("\\", "/") != requested, value))
-    rendered: list[str] = []
-    for relative in paths[:3]:
-        display_path = relative.replace("\\", "/")
-        try:
-            candidate = (root / relative).resolve()
-            candidate.relative_to(root)
-            content = candidate.read_text(encoding="utf-8", errors="replace")
-        except (OSError, ValueError):
-            continue
-        rendered.append(
-            f"untracked_file: {display_path}\n"
-            f"{source_context.head_tail(content, 700)}"
-        )
-    return "\n\n".join(rendered)
-
-
-def _working_diff(event: ToolCompleted) -> str:
-    if not event.session.cwd:
-        return ""
-    try:
-        result = subprocess.run(
-            ["git", "diff", "--unified=1", "HEAD", "--"],
-            cwd=event.session.cwd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=5,
-        )
-    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
-        return ""
-    if result.returncode != 0:
-        return ""
-    combined = "\n\n".join(
-        value for value in (result.stdout.strip(), _untracked_snapshot(event)) if value
-    )
-    return source_context.head_tail(combined, CHANGE_MAX_CHARS)
-
-
-def render_evidence_record(
-    event: ToolCompleted, *, include_current_diff: bool = True
-) -> str:
+def render_evidence_record(event: ToolCompleted) -> str:
     """Preserve the real command and result; do not infer semantic scope."""
     category = evidence_category(event)
     command = _command(event)
@@ -194,16 +124,13 @@ def render_evidence_record(
         parts.append(f"actual_command:\n{source_context.head_tail(command, 1800)}")
     if tool_input and tool_input != "{}":
         parts.append(f"actual_input:\n{tool_input}")
-    if category == "change" and include_current_diff:
+    if category == "change":
         related_source = source_context.related_source_for_change(
             event.session.repo_root or event.session.cwd,
             event.tool_input,
         )
         if related_source:
             parts.append(f"related_source:\n{related_source}")
-        diff = _working_diff(event)
-        if diff:
-            parts.append(f"current_diff:\n{diff}")
     if result:
         parts.append(f"result:\n{result}")
     return "\n\n".join(parts)

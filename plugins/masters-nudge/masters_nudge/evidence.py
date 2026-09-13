@@ -52,10 +52,6 @@ def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvide
     batch_records: list[dict[str, Any]] = []
     has_change = False
     has_actor_result = False
-    last_mutating = max(
-        (index for index, event in enumerate(events) if event.mutating),
-        default=-1,
-    )
     for index, event in enumerate(events):
         engineering_category = checkpoints.evidence_category(event)
         has_change = has_change or engineering_category == "change"
@@ -63,10 +59,7 @@ def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvide
             has_actor_result or engineering_category in ACTOR_RESULT_CATEGORIES
         )
         category = engineering_category or "observation"
-        content = checkpoints.render_evidence_record(
-            event,
-            include_current_diff=index == last_mutating,
-        )
+        content = checkpoints.render_evidence_record(event)
         record = {"seq": index + 1, "category": category, "content": content}
         batch_records.append(record)
     if state.get("nudge_pending_validation"):

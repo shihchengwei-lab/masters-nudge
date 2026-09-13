@@ -477,7 +477,12 @@ def choose(context, options):
                     "tool_calls": [
                         {
                             "tool_name": "apply_patch",
-                            "tool_input": {"patch": "*** Update File: app.py"},
+                            "tool_input": {
+                                "patch": (
+                                    "*** Update File: app.py\n@@\n"
+                                    "-owner = old\n+owner = direct\n"
+                                )
+                            },
                             "tool_response": {"success": True},
                         }
                     ],
@@ -518,7 +523,11 @@ class ClaudeHookFlowTests(unittest.TestCase):
                     ToolCompleted(
                         session,
                         "Edit",
-                        tool_input={"file_path": "accepted.py"},
+                        tool_input={
+                            "file_path": "accepted.py",
+                            "old_string": "owner = old",
+                            "new_string": "owner = accepted",
+                        },
                         tool_output="accepted change",
                         mutating=True,
                     )
@@ -542,7 +551,11 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 "tool_calls": [
                     {
                         "tool_name": "Edit",
-                        "tool_input": {"file_path": "current.py"},
+                        "tool_input": {
+                            "file_path": "current.py",
+                            "old_string": "owner = old",
+                            "new_string": "owner = current",
+                        },
                         "tool_response": "current-result",
                     }
                 ],
@@ -651,7 +664,11 @@ function choose(context, options) {
                 "tool_calls": [
                     {
                         "tool_name": "Edit",
-                        "tool_input": {"file_path": "app.py"},
+                        "tool_input": {
+                            "file_path": "app.py",
+                            "old_string": "owner = old",
+                            "new_string": "owner = direct",
+                        },
                         "tool_response": "updated",
                     }
                 ],

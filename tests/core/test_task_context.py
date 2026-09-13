@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -43,7 +44,10 @@ class TaskContextTests(unittest.TestCase):
                     session,
                     "apply_patch",
                     tool_input={
-                        "patch": "*** Update File: E:/work/vitest/build/verify.py"
+                        "patch": (
+                            "*** Update File: E:/work/vitest/build/verify.py\n"
+                            "@@\n-old_owner = True\n+new_owner = True\n"
+                        )
                     },
                     tool_output="Done!",
                     mutating=True,
@@ -450,6 +454,39 @@ function inspectSecond(options) {
 
         self.assertIn("reference: missingOwner", selected)
         self.assertIn("resolution: unresolved", selected)
+
+    def test_related_source_does_not_scan_unchanged_workspace_files(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "engine.ts").write_text(
+                "export function run() { return decide('value') }\n",
+                encoding="utf-8",
+            )
+            dependency = root / "dependency.ts"
+            dependency.write_text(
+                "export function decide(value) {\n"
+                "  return normalize(value)\n"
+                "}\n",
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+
+            selected = source_context.related_source_for_change(
+                raw,
+                {
+                    "patch": """*** Update File: engine.ts
+@@
+-  return oldDecision(value)
++  return decide(value)
+"""
+                },
+            )
+
+        self.assertIn("reference: decide", selected)
+        self.assertIn("resolution: unresolved", selected)
+        self.assertNotIn("source: dependency.ts:", selected)
+        self.assertNotIn("return normalize(value)", selected)
 
     def test_related_source_reports_the_fixed_reference_limit(self):
         with tempfile.TemporaryDirectory() as raw:
