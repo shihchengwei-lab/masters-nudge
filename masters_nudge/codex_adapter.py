@@ -176,15 +176,6 @@ def build_hook_output(
     }
 
 
-def build_hint_output(event_name: str, seed: str) -> dict[str, Any]:
-    return {
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": prompting.no_finding_hint(seed),
-        }
-    }
-
-
 class CodexAdapter:
     def __init__(self, core: NudgeCore) -> None:
         self.core = core
@@ -235,8 +226,6 @@ class CodexAdapter:
         except Exception as exc:
             self.core.log_error(f"Codex Nudge failed: {exc}")
             return None
-        if outcome.status == "no_finding":
-            return build_hint_output(event_name, review_input)
         if outcome.status != "finding" or not outcome.relationship:
             return None
         output = build_hook_output(

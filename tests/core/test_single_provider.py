@@ -9,7 +9,6 @@ from pathlib import Path
 
 from masters_nudge.core import NudgeCore
 from masters_nudge.provider_contract import parse_nudge_result
-from masters_nudge import prompting
 from masters_nudge.prompting import delivery_text
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
@@ -52,23 +51,6 @@ class SingleProviderTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0][1], "EVIDENCE-PACKET")
         self.assertEqual(calls[0][2], 90)
-
-    def test_no_finding_hint_comes_from_the_local_example_library(self):
-        expected = (
-            "資料結構能排除不可能的狀態，就不必讓每條路徑重複防守。",
-            "旗標組合越多，資料模型容許的矛盾狀態通常也越多。",
-            "事件是已發生的事實；狀態應沿單一方向由事件推導。",
-            "許多時序問題源自缺少唯一的因果順序，而非缺少重試。",
-            "好的抽象讓人能局部推理，不必在腦中執行整個系統。",
-            "依賴與副作用越隱晦，所謂彈性越容易變成不可預測。",
-        )
-        first = prompting.no_finding_hint("same evidence packet")
-        second = prompting.no_finding_hint("same evidence packet")
-
-        self.assertEqual(prompting.CODE_TASTE_HINTS, expected)
-        self.assertEqual(first, second)
-        self.assertIn(first.removeprefix("hint: "), prompting.CODE_TASTE_HINTS)
-        self.assertTrue(first.startswith("hint: "))
 
     def test_provider_prompt_carries_only_the_three_structural_principles(self):
         with tempfile.TemporaryDirectory() as raw:

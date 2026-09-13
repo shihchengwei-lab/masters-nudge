@@ -90,18 +90,7 @@ def build_hook_output(
     }
 
 
-def build_hint_output(seed: str) -> dict[str, Any]:
-    return {
-        "hookSpecificOutput": {
-            "hookEventName": "PostToolBatch",
-            "additionalContext": prompting.no_finding_hint(seed),
-        }
-    }
-
-
-def prepare_hook(
-    hook: dict[str, Any],
-) -> claude_adapter.PreparedDelivery | claude_adapter.PreparedHint | None:
+def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None:
     events = normalize_tool_batch(hook)
     if not events:
         return None
@@ -128,8 +117,6 @@ def prepare_hook(
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
-    if outcome.status == "no_finding":
-        return claude_adapter.PreparedHint(build_hint_output(review_input))
     if outcome.status != "finding" or not outcome.relationship:
         return None
     return claude_adapter.PreparedDelivery(
