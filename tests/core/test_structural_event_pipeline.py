@@ -66,6 +66,73 @@ class ExplicitMutationEvidenceTests(unittest.TestCase):
         self.assertIsNone(events[0].mutation)
         self.assertEqual(events[1].mutation.kind, "content")
 
+    def test_codex_apply_patch_command_is_explicit_mutation(self):
+        events = normalize_tool_batch(
+            {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "codex-apply-patch-command",
+                "cwd": "",
+                "tool_calls": [
+                    {
+                        "tool_name": "apply_patch",
+                        "tool_input": {
+                            "command": (
+                                "*** Begin Patch\n"
+                                "*** Update File: app.py\n"
+                                "@@\n"
+                                "-old\n"
+                                "+new\n"
+                                "*** End Patch"
+                            )
+                        },
+                        "tool_response": "Success. Updated app.py",
+                    }
+                ],
+            }
+        )
+
+        self.assertIsNotNone(events)
+        self.assertEqual(events[0].mutation.kind, "patch")
+
+    def test_codex_command_fallback_rejects_non_patch_and_other_tools(self):
+        events = normalize_tool_batch(
+            {
+                "hook_event_name": "PostToolBatch",
+                "session_id": "codex-command-controls",
+                "cwd": "",
+                "tool_calls": [
+                    {
+                        "tool_name": "apply_patch",
+                        "tool_input": {"command": "Write app.py"},
+                        "tool_response": "done",
+                    },
+                    {
+                        "tool_name": "exec",
+                        "tool_input": (
+                            'const patch = "*** Begin Patch\\n'
+                            '*** Update File: app.py\\n*** End Patch"; '
+                            "await tools.apply_patch(patch);"
+                        ),
+                        "tool_response": "done",
+                    },
+                    {
+                        "tool_name": "exec_command",
+                        "tool_input": {
+                            "command": (
+                                "*** Begin Patch\n"
+                                "*** Delete File: app.py\n"
+                                "*** End Patch"
+                            )
+                        },
+                        "tool_response": "done",
+                    },
+                ],
+            }
+        )
+
+        self.assertIsNotNone(events)
+        self.assertTrue(all(event.mutation is None for event in events))
+
     def test_raw_input_is_not_rewritten_or_dropped(self):
         event = ToolCompleted(
             SessionRef("codex_cli", "raw"),

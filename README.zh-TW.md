@@ -29,6 +29,10 @@ Hook 把程式與測試結果交給 Provider。Provider 回傳一則 Nudge，建
 接受判斷；Masters' Nudge 不從結果文字猜測成功與否，也不把稍後的結果配對到先前的
 修改。是否採納 Nudge、如何修改及如何驗證，仍由主 Agent 決定。
 
+Codex 原生 `apply_patch` 會把修改內容放在最上層 `command`。只有工具名稱完全等於
+`apply_patch`，而且 `command` 含有完整 patch 外框及新增、修改或刪除操作時，
+Masters' Nudge 才接受這個 Codex 專用格式；其他工具或一般命令文字仍不符合資格。
+
 Provider 在乾淨脈絡中看任務開頭與受長度限制的決策證據。每筆修改證據保留 Host
 提供的具體修改輸入與可觀察結果，不會依識別名稱的字串相同來推論來源關係。
 Provider 自行形成因果判斷，再挑出最可能改變下一個工程決策、且非顯而易見的觀察。

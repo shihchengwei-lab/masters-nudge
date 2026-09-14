@@ -119,6 +119,46 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertIn('"patch": "*** Update File: owner.py', core.calls[0])
         self.assertNotIn("category=", core.calls[0])
 
+    def test_codex_native_apply_patch_command_calls_provider_once(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            core = FakeCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "codex-native-patch",
+                    "cwd": raw,
+                    "prompt": "修改 app.py",
+                }
+            )
+            output = adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "codex-native-patch",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {
+                                "command": (
+                                    "*** Begin Patch\n"
+                                    "*** Add File: app.py\n"
+                                    "+print('ready')\n"
+                                    "*** End Patch"
+                                )
+                            },
+                            "tool_response": "Success. Updated app.py",
+                        }
+                    ],
+                }
+            )
+
+        self.assertIsNotNone(output)
+        self.assertEqual(len(core.calls), 1)
+        self.assertEqual(output["_masters_nudge"]["evidence_seq"], 1)
+        self.assertIn('"command": "*** Begin Patch', core.calls[0])
+
     def test_provider_sequence_must_name_a_visible_record(self):
         with tempfile.TemporaryDirectory() as raw:
             core = FakeCore(Path(raw), evidence_seq=3)

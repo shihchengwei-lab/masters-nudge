@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 import re
 from pathlib import Path
@@ -11,6 +12,7 @@ import source_context
 
 from . import prompting, storage
 from .contracts import (
+    MutationEvidence,
     SessionRef,
     ToolCompleted,
     find_git_root,
@@ -28,6 +30,33 @@ GOAL_CONTEXT_RE = re.compile(
     r".*?<objective>\s*(.*?)\s*</objective>",
     re.IGNORECASE | re.DOTALL,
 )
+CODEX_APPLY_PATCH_OPERATIONS = (
+    "*** Add File:",
+    "*** Update File:",
+    "*** Delete File:",
+)
+
+
+def _codex_mutation_evidence(
+    tool_name: str, tool_input: object
+) -> MutationEvidence | None:
+    direct = mutation_evidence_from_input(tool_input)
+    if direct is not None:
+        return direct
+    if tool_name != "apply_patch" or not isinstance(tool_input, Mapping):
+        return None
+    command = tool_input.get("command")
+    if not isinstance(command, str):
+        return None
+    lines = command.strip().splitlines()
+    if (
+        len(lines) < 3
+        or lines[0] != "*** Begin Patch"
+        or lines[-1] != "*** End Patch"
+        or not any(line.startswith(CODEX_APPLY_PATCH_OPERATIONS) for line in lines[1:-1])
+    ):
+        return None
+    return MutationEvidence("patch")
 
 
 def _goal_from_transcript(transcript_path: str) -> str:
@@ -107,7 +136,7 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
                 tool_name,
                 tool_input=tool_input,
                 tool_output=response,
-                mutation=mutation_evidence_from_input(tool_input),
+                mutation=_codex_mutation_evidence(tool_name, tool_input),
                 native_event_name=event_name,
             )
         )

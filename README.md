@@ -36,6 +36,12 @@ not infer success from result text or pair a later result with an earlier
 change. The main agent remains responsible for deciding whether and how to use
 each Nudge.
 
+Codex supplies its native `apply_patch` input as a top-level `command`. Masters'
+Nudge accepts that Host-specific shape only when the tool name is exactly
+`apply_patch` and `command` contains a complete patch envelope with an add,
+update, or delete operation; another tool or arbitrary command text remains
+ineligible.
+
 Each selected batch is sent once. The Provider sees the task beginning and
 bounded decision evidence in a clean context. A change record preserves the
 concrete mutation input and observable result supplied by the Host; it does not
