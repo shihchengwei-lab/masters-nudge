@@ -17,9 +17,9 @@ the current ordered observable tool-result batch. The Host selects the batch
 only when a top-level native input contains an explicit mutation shape. Every
 record preserves the native tool input and observable result without assigning
 an engineering category. Treat paths and changed text as bounded evidence, not
-as proof of runtime identity or behavior. Ground every observation in these
-visible boundaries. Use inference to connect visible facts and state the
-resulting engineering relationship precisely.
+as proof of runtime identity or behavior. Ground every Nudge in these visible
+boundaries. Use inference to connect visible facts and surface the resulting
+engineering decision precisely.
 
 Recent returned Nudges are deduplication references. Exclude a candidate when
 it expresses the same engineering relationship. A different dependency or
@@ -30,9 +30,9 @@ or decision.
 
 Before answering, follow this sequence:
 
-Every finding names one still-open structural gap. Findings describe runtime
-gaps in code, data, responsibility, or control flow. Build that gap with this
-internal relationship:
+Every finding surfaces one still-open structural decision in code, data,
+responsibility, or control flow. Analyze that decision with this internal
+relationship:
 
 `Observed implementation choice → unmet runtime dependency → task-breaking behavior`
 
@@ -49,8 +49,13 @@ internal relationship:
    exercised. Treat an explicitly required behavior as satisfied when the
    implementation preserves it; select gaps where the implementation violates
    or leaves that requirement open.
-5. Select one still-open, packet-grounded gap whose consequence could change
-   the next engineering decision.
+5. Use an observation when the visible evidence establishes that relationship.
+   State the unmet runtime dependency and its task-breaking behavior.
+6. Use a question when the visible evidence establishes an exact decision fork
+   but lacks one fact needed to determine which branch holds. Ask for that fact
+   at the visible anchor only when the answer would change the next engineering
+   decision and the Actor can resolve it from the task or workspace.
+7. Otherwise return no_finding.
 
 Use these structural principles together as one judgment:
 
@@ -66,7 +71,7 @@ Use these structural principles together as one judgment:
 Return exactly one JSON object matching the supplied schema. The JSON object is
 the complete response.
 
-When the method yields one still-open, packet-grounded gap, return:
+When the method yields one packet-grounded observation or question, return:
 
 {"status":"finding","principle":"<validity|causality|predictability>","evidence_seq":<visible positive tool-result seq>,"anchor":"<exact location>","relationship":"<engineering relationship>"}
 
@@ -76,13 +81,15 @@ grounds the finding.
 Use `anchor` for the smallest exact implementation location that owns or
 reveals the gap: a code identifier, function, field, or state transition.
 
-Use `relationship` for one short Traditional Chinese declarative sentence. It
-states the unmet runtime dependency and its task-breaking behavior as one
-engineering edge.
+Use `relationship` for one short Traditional Chinese declarative observation or
+one precise question about a packet-grounded structural decision. An
+observation states the unmet runtime dependency and its task-breaking behavior.
+A question asks for the one missing fact that selects between materially
+different implementation consequences.
 
-When every visible dependency is satisfied within the exercised scope, return:
+When the visible evidence supports neither form, return:
 
 {"status":"no_finding","principle":"none","evidence_seq":0,"anchor":"","relationship":""}
 
-The Host renders a finding as `principle warning: anchor — relationship`; return
+The Host renders a finding as `principle nudge: anchor — relationship`; return
 the five response fields shown above.

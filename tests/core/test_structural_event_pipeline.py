@@ -153,6 +153,131 @@ class ExplicitMutationEvidenceTests(unittest.TestCase):
 
 
 class FactualControlFlowTests(unittest.TestCase):
+    def test_current_mutation_includes_bounded_post_change_source_context(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "src" / "runtime.ts"
+            source.parent.mkdir()
+            source.write_text(
+                "\n".join(
+                    (
+                        "async function linkDependency(dependency) {",
+                        "  const discoveredModules = new Set();",
+                        "  const unlinkedModules = new Set();",
+                        *(f"  step{index}();" for index in range(20)),
+                        "  for (const dependency of unlinkedModules) {",
+                        "  if (dependency.status === 'unlinked') {",
+                        "    await linkDependency(dependency);",
+                        "  }",
+                        "}",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            events = normalize_tool_batch(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "post-change-source",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {
+                                "command": (
+                                    "*** Begin Patch\n"
+                                    "*** Update File: src/runtime.ts\n"
+                                    "@@\n"
+                                    "+  const discoveredModules = new Set();\n"
+                                    "+  const unlinkedModules = new Set();\n"
+                                    "@@\n"
+                                    "-  for (const dependency of modules) {\n"
+                                    "+  for (const dependency of unlinkedModules) {\n"
+                                    "*** End Patch"
+                                )
+                            },
+                            "tool_response": {},
+                        }
+                    ],
+                }
+            )
+            self.assertIn(
+                "for (const dependency of unlinkedModules) {",
+                events[0].mutation.targets[0].anchors,
+            )
+            observed = evidence.observe_tool_batch(root / "data", events)
+            packet = source_context.build_checkpoint_packet(
+                task_anchor="fix dependency linking",
+                evidence_records=observed.batch_records,
+            )
+
+        self.assertIn("[post-change source context]", packet)
+        self.assertIn("source: src/runtime.ts", packet)
+        self.assertIn("const unlinkedModules = new Set", packet)
+        self.assertIn("if (dependency.status === 'unlinked')", packet)
+
+    def test_post_change_source_context_cannot_read_outside_workspace(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            (root / "secret.txt").write_text(
+                "must not enter mutation evidence", encoding="utf-8"
+            )
+            session = SessionRef(
+                "codex_cli",
+                "contained-source",
+                cwd=str(workspace),
+                repo_root=str(workspace),
+            )
+            mutation_input = {
+                "path": "../secret.txt",
+                "old_string": "old",
+                "new_string": "must not enter mutation evidence",
+            }
+            observed = evidence.observe_tool_batch(
+                root / "data",
+                [
+                    ToolCompleted(
+                        session,
+                        "edit",
+                        tool_input=mutation_input,
+                        tool_output={"success": True},
+                        mutation=contracts.mutation_evidence_from_input(mutation_input),
+                    )
+                ],
+            )
+
+        rendered = observed.batch_records[0]["content"]
+        self.assertNotIn("[post-change source context]", rendered)
+        self.assertEqual(rendered.count("must not enter mutation evidence"), 1)
+
+    def test_post_change_source_context_caps_long_source_lines(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            target_line = "changed_" + "x" * 1000
+            (root / "large.txt").write_text(
+                "\n".join(
+                    [*("filler_" + "y" * 1000 for _ in range(20)), target_line]
+                ),
+                encoding="utf-8",
+            )
+            mutation_input = {
+                "path": "large.txt",
+                "old_string": "old",
+                "new_string": target_line,
+            }
+            mutation = contracts.mutation_evidence_from_input(mutation_input)
+            rendered = source_context.render_post_change_sources(
+                SessionRef("codex_cli", "bounded-lines", cwd=raw), mutation
+            )
+
+        self.assertLessEqual(
+            len(rendered), source_context.POST_CHANGE_SOURCE_MAX_CHARS
+        )
+        self.assertIn("changed_", rendered)
+        self.assertNotIn("x" * 300, rendered)
+
     def test_nudge_does_not_create_a_cross_batch_pairing_state(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

@@ -195,9 +195,9 @@ class HostReturnedAuditTests(unittest.TestCase):
         self.assertEqual(
             recent,
             (
-                "causality warning: owner-1 — relationship-1",
-                "causality warning: owner-2 — relationship-2",
-                "causality warning: owner-3 — relationship-3",
+                "causality nudge: owner-1 — relationship-1",
+                "causality nudge: owner-2 — relationship-2",
+                "causality nudge: owner-3 — relationship-3",
             ),
         )
 

@@ -139,13 +139,24 @@ class PackageTests(unittest.TestCase):
                     "An unconsumed completion signal marks an open causality gap",
                     normalized,
                 )
-                self.assertIn("Every finding names one still-open structural gap", normalized)
+                self.assertIn(
+                    "Every finding surfaces one still-open structural decision",
+                    normalized,
+                )
                 self.assertIn(
                     "Observed implementation choice → unmet runtime dependency → task-breaking behavior",
                     normalized,
                 )
                 self.assertIn(
-                    "Findings describe runtime gaps in code, data, responsibility, or control flow",
+                    "structural decision in code, data, responsibility, or control flow",
+                    normalized,
+                )
+                self.assertIn(
+                    "Use an observation when the visible evidence establishes that relationship",
+                    normalized,
+                )
+                self.assertIn(
+                    "Use a question when the visible evidence establishes an exact decision fork",
                     normalized,
                 )
                 self.assertIn("visible tool-result record", normalized)

@@ -56,7 +56,7 @@ def _codex_mutation_evidence(
         or not any(line.startswith(CODEX_APPLY_PATCH_OPERATIONS) for line in lines[1:-1])
     ):
         return None
-    return MutationEvidence("patch")
+    return mutation_evidence_from_input({"patch": command})
 
 
 def _goal_from_transcript(transcript_path: str) -> str:

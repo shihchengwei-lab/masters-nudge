@@ -83,7 +83,7 @@ class SingleProviderTests(unittest.TestCase):
         self.assertNotIn("Knowledge ownership and change locality", normalized)
         self.assertNotIn("SELECTED LENS", normalized)
 
-    def test_prompt_maps_each_principle_to_one_word_and_fixes_warning(self):
+    def test_prompt_maps_each_principle_to_one_word_and_fixes_neutral_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
             prompts = []
 
@@ -102,7 +102,7 @@ class SingleProviderTests(unittest.TestCase):
         self.assertIn("validity", prompts[0])
         self.assertIn("causality", prompts[0])
         self.assertIn("predictability", prompts[0])
-        self.assertIn("`principle warning: anchor — relationship`", prompts[0])
+        self.assertIn("`principle nudge: anchor — relationship`", prompts[0])
         self.assertNotIn("attention cue: `alert`", prompts[0])
         self.assertNotIn("attention cue: `risk`", prompts[0])
         self.assertIn("required invariants", prompts[0])
@@ -113,7 +113,7 @@ class SingleProviderTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
 
-        self.assertIn("Ground every observation in these visible boundaries", normalized)
+        self.assertIn("Ground every Nudge in these visible boundaries", normalized)
         self.assertIn("Use inference to connect visible facts", normalized)
 
     def test_provider_inspects_the_current_decision_from_clean_boundaries(self):
@@ -174,10 +174,10 @@ class SingleProviderTests(unittest.TestCase):
 
         self.assertEqual(outcome.status, "error")
 
-    def test_delivery_uses_principle_plus_fixed_warning(self):
+    def test_delivery_uses_principle_plus_neutral_nudge(self):
         self.assertEqual(
             delivery_text("validity", "flags", "布林旗標可形成矛盾狀態。"),
-            "validity warning: flags — 布林旗標可形成矛盾狀態。",
+            "validity nudge: flags — 布林旗標可形成矛盾狀態。",
         )
         self.assertNotIn(
             "獨立第二意見",
@@ -213,25 +213,30 @@ class SingleProviderTests(unittest.TestCase):
                 outcome.anchor,
                 outcome.relationship,
             ),
-            f"predictability warning: _autoFlushTimer — {relationship}",
+            f"predictability nudge: _autoFlushTimer — {relationship}",
         )
 
-    def test_provider_contract_rejects_a_rendered_prefix_inside_the_relationship(self):
-        result = parse_nudge_result(
-            json.dumps(
-                {
-                    "status": "finding",
-                    "principle": "causality",
-                    "evidence_seq": 1,
-                    "anchor": "batch owner",
-                    "relationship": "causality warning: 重複前綴",
-                }
-            )
-        )
+    def test_provider_contract_rejects_rendered_prefixes_inside_the_relationship(self):
+        for relationship in (
+            "causality nudge: 重複前綴",
+            "causality warning: 舊版重複前綴",
+        ):
+            with self.subTest(relationship=relationship):
+                result = parse_nudge_result(
+                    json.dumps(
+                        {
+                            "status": "finding",
+                            "principle": "causality",
+                            "evidence_seq": 1,
+                            "anchor": "batch owner",
+                            "relationship": relationship,
+                        }
+                    )
+                )
 
-        self.assertEqual(result["status"], "error")
+                self.assertEqual(result["status"], "error")
 
-    def test_prompt_and_schema_require_one_grounded_open_gap(self):
+    def test_prompt_and_schema_let_provider_choose_observation_question_or_silence(self):
         with tempfile.TemporaryDirectory() as raw:
             prompts = []
 
@@ -249,13 +254,26 @@ class SingleProviderTests(unittest.TestCase):
 
         normalized = " ".join(prompts[0].split())
         self.assertIn("Before answering, follow this sequence", normalized)
-        self.assertIn("Every finding names one still-open structural gap", normalized)
+        self.assertIn("Every finding surfaces one still-open structural decision", normalized)
         self.assertIn(
             "Observed implementation choice → unmet runtime dependency → task-breaking behavior",
             normalized,
         )
         self.assertIn(
-            "Findings describe runtime gaps in code, data, responsibility, or control flow",
+            "Use an observation when the visible evidence establishes that relationship",
+            normalized,
+        )
+        self.assertIn(
+            "Use a question when the visible evidence establishes an exact decision fork",
+            normalized,
+        )
+        self.assertIn(
+            "the answer would change the next engineering decision",
+            normalized,
+        )
+        self.assertIn("Otherwise return no_finding", normalized)
+        self.assertIn(
+            "structural decision in code, data, responsibility, or control flow",
             normalized,
         )
         self.assertIn("visible tool-result record", normalized)
@@ -270,20 +288,22 @@ class SingleProviderTests(unittest.TestCase):
         )
         self.assertIn("completion, ownership, and ordering", normalized)
         self.assertIn("covers only the behavior it exercised", normalized)
-        self.assertIn("could change the next engineering decision", normalized)
+        self.assertIn("would change the next engineering decision", normalized)
 
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
         anchor_description = schema["properties"]["anchor"]["description"]
         description = schema["properties"]["relationship"]["description"]
-        self.assertIn("still-open, packet-grounded", description)
-        self.assertIn("task-breaking runtime behavior", description)
-        self.assertIn("engineering edge", description)
+        self.assertIn("declarative observation or one precise question", description)
+        self.assertIn("packet-grounded structural decision", description)
         self.assertIn("smallest exact implementation location", anchor_description.lower())
         self.assertNotIn("maxLength", schema["properties"]["anchor"])
         self.assertNotIn("maxLength", schema["properties"]["relationship"])
         self.assertIn("smallest exact implementation location", prompts[0])
-        self.assertIn("one short Traditional Chinese declarative sentence", prompts[0])
-        self.assertIn("one engineering edge", normalized)
+        self.assertIn(
+            "one short Traditional Chinese declarative observation or one precise question",
+            normalized,
+        )
+        self.assertIn("one packet-grounded observation or question", normalized)
         self.assertNotIn("characters", prompts[0])
         self.assertEqual(
             schema["properties"]["principle"]["enum"],

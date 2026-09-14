@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import re
 from typing import Literal, Mapping, TypeAlias
 
 
@@ -23,10 +24,101 @@ class SessionRef:
 
 
 @dataclass(frozen=True)
+class MutationTarget:
+    """An explicit file target and textual anchors supplied by the mutation."""
+
+    path: str
+    line_hint: int = 0
+    anchors: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class MutationEvidence:
     """A Host-supplied, top-level mutation shape; never an inferred action."""
 
     kind: Literal["patch", "diff", "replacement", "content"]
+    targets: tuple[MutationTarget, ...] = ()
+
+
+_PATCH_OPERATION_RE = re.compile(
+    r"^\*\*\* (?:Add|Update|Delete) File:\s*(.+?)\s*$"
+)
+_UNIFIED_DIFF_PATH_RE = re.compile(r"^\+\+\+\s+(?:b/)?(.+?)\s*$")
+_UNIFIED_DIFF_HUNK_RE = re.compile(r"^@@\s+-\d+(?:,\d+)?\s+\+(\d+)")
+_TARGET_MAX_COUNT = 8
+_ANCHOR_MAX_COUNT = 8
+_ANCHOR_MAX_CHARS = 240
+
+
+def _bounded_anchors(lines: list[str]) -> tuple[str, ...]:
+    anchors: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        value = line.strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        anchors.append(value[:_ANCHOR_MAX_CHARS])
+        if len(anchors) >= _ANCHOR_MAX_COUNT:
+            break
+    return tuple(anchors)
+
+
+def _patch_targets(patch: str) -> tuple[MutationTarget, ...]:
+    """Extract only file paths and hunk anchors explicitly present in a patch."""
+    targets: list[MutationTarget] = []
+    current_path = ""
+    line_hint = 0
+    added_lines: list[str] = []
+    context_lines: list[str] = []
+
+    def append_current() -> None:
+        nonlocal current_path, line_hint, added_lines, context_lines
+        path = current_path.strip().strip('"')
+        if path and path != "/dev/null" and len(targets) < _TARGET_MAX_COUNT:
+            targets.append(
+                MutationTarget(
+                    path,
+                    line_hint,
+                    _bounded_anchors([*added_lines, *context_lines]),
+                )
+            )
+        current_path = ""
+        line_hint = 0
+        added_lines = []
+        context_lines = []
+
+    for line in str(patch or "").splitlines():
+        operation = _PATCH_OPERATION_RE.match(line)
+        if operation:
+            append_current()
+            current_path = operation.group(1)
+            continue
+        unified_path = _UNIFIED_DIFF_PATH_RE.match(line)
+        if unified_path:
+            append_current()
+            current_path = unified_path.group(1)
+            continue
+        if not current_path:
+            continue
+        hunk = _UNIFIED_DIFF_HUNK_RE.match(line)
+        if hunk and not line_hint:
+            line_hint = int(hunk.group(1))
+            continue
+        if line.startswith("+") and not line.startswith("+++"):
+            added_lines.append(line[1:])
+        elif line.startswith(" "):
+            context_lines.append(line[1:])
+    append_current()
+    return tuple(targets)
+
+
+def _path_target(tool_input: Mapping[object, object]) -> str:
+    for key in ("path", "file_path"):
+        value = tool_input.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
 
 
 def mutation_evidence_from_input(tool_input: object) -> MutationEvidence | None:
@@ -35,23 +127,37 @@ def mutation_evidence_from_input(tool_input: object) -> MutationEvidence | None:
         return None
     patch = tool_input.get("patch")
     if isinstance(patch, str) and patch.strip():
-        return MutationEvidence("patch")
+        return MutationEvidence("patch", _patch_targets(patch))
     diff = tool_input.get("diff")
     if isinstance(diff, str) and diff.strip():
-        return MutationEvidence("diff")
-    path = tool_input.get("path")
-    file_path = tool_input.get("file_path")
-    has_path = (isinstance(path, str) and bool(path.strip())) or (
-        isinstance(file_path, str) and bool(file_path.strip())
-    )
+        return MutationEvidence("diff", _patch_targets(diff))
+    target_path = _path_target(tool_input)
+    has_path = bool(target_path)
     if (
         has_path
         and isinstance(tool_input.get("old_string"), str)
         and isinstance(tool_input.get("new_string"), str)
     ):
-        return MutationEvidence("replacement")
+        new_string = str(tool_input.get("new_string") or "")
+        return MutationEvidence(
+            "replacement",
+            (
+                MutationTarget(
+                    target_path,
+                    anchors=_bounded_anchors(new_string.splitlines()),
+                ),
+            ),
+        )
     if has_path and "content" in tool_input:
-        return MutationEvidence("content")
+        content = tool_input.get("content")
+        anchors = (
+            _bounded_anchors(content.splitlines())
+            if isinstance(content, str)
+            else ()
+        )
+        return MutationEvidence(
+            "content", (MutationTarget(target_path, anchors=anchors),)
+        )
     return None
 
 

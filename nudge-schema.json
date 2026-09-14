@@ -17,7 +17,7 @@
     },
     "relationship": {
       "type": "string",
-      "description": "One short Traditional Chinese declarative sentence stating one still-open, packet-grounded engineering edge: the unmet runtime dependency and its task-breaking runtime behavior. The Host renders the principle, warning marker, and anchor separately."
+      "description": "One short Traditional Chinese declarative observation or one precise question about one packet-grounded structural decision. An observation states the unmet runtime dependency and task-breaking runtime behavior. A question asks for the one missing fact whose answer selects between materially different implementation consequences. The Host renders the principle, nudge marker, and anchor separately."
     }
   },
   "required": ["status", "principle", "evidence_seq", "anchor", "relationship"],

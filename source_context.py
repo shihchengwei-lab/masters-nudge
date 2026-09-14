@@ -13,6 +13,11 @@ TASK_SOURCES_MAX_CHARS = 4000
 TASK_SOURCE_MAX_CHARS = 3500
 PACKET_MAX_CHARS = 12000
 CONTRACT_SECTION_MAX_CHARS = 6000
+POST_CHANGE_SOURCE_MAX_CHARS = 4000
+POST_CHANGE_SOURCE_SCAN_CHARS = 1_000_000
+POST_CHANGE_CONTEXT_LINES = 6
+POST_CHANGE_LINE_MAX_CHARS = 240
+POST_CHANGE_TARGET_MAX_COUNT = 4
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
 
 _BACKTICK_REFERENCE_RE = re.compile(r"`([^`\r\n]+)`")
@@ -149,6 +154,111 @@ def render_task_sources(task_sources: Any) -> str:
         if str(name).strip() and str(content).strip()
     ]
     return head_tail("\n\n".join(parts), TASK_SOURCES_MAX_CHARS)
+
+
+def _contained_mutation_path(session: Any, target_path: str) -> Path | None:
+    boundary_value = str(getattr(session, "repo_root", "") or "").strip()
+    cwd_value = str(getattr(session, "cwd", "") or "").strip()
+    if not boundary_value:
+        boundary_value = cwd_value
+    if not boundary_value:
+        return None
+    try:
+        boundary = Path(boundary_value).resolve()
+        cwd = Path(cwd_value).resolve() if cwd_value else boundary
+        cwd.relative_to(boundary)
+        reference = Path(str(target_path or "").strip())
+        candidate = (
+            reference.resolve()
+            if reference.is_absolute()
+            else (cwd / reference).resolve()
+        )
+        candidate.relative_to(boundary)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return candidate if candidate.is_file() else None
+
+
+def _source_focus_lines(lines: list[str], target: Any) -> tuple[int, ...]:
+    found: set[int] = set()
+    anchors = getattr(target, "anchors", ())
+    if isinstance(anchors, tuple):
+        for anchor in (str(value).strip() for value in anchors if str(value).strip()):
+            matches: list[int] = []
+            for index, line in enumerate(lines):
+                value = line.strip()
+                if value == anchor or (
+                    len(anchor) >= 32 and value.startswith(anchor)
+                ):
+                    matches.append(index)
+            if len(matches) == 1:
+                found.add(matches[0])
+    if found:
+        return tuple(sorted(found))
+    try:
+        line_hint = int(getattr(target, "line_hint", 0) or 0)
+    except (TypeError, ValueError):
+        line_hint = 0
+    if line_hint > 0:
+        return (min(line_hint - 1, max(0, len(lines) - 1)),)
+    return (0,)
+
+
+def _render_source_window(path: Path, display_path: str, target: Any) -> str:
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as handle:
+            content = handle.read(POST_CHANGE_SOURCE_SCAN_CHARS + 1)
+    except (OSError, RuntimeError):
+        return ""
+    if not content or "\x00" in content:
+        return ""
+    lines = content[:POST_CHANGE_SOURCE_SCAN_CHARS].splitlines()
+    if not lines:
+        return ""
+    ranges: list[tuple[int, int]] = []
+    for focus in _source_focus_lines(lines, target):
+        start = max(0, focus - POST_CHANGE_CONTEXT_LINES)
+        stop = min(len(lines), focus + POST_CHANGE_CONTEXT_LINES + 1)
+        if ranges and start <= ranges[-1][1]:
+            ranges[-1] = (ranges[-1][0], max(ranges[-1][1], stop))
+        else:
+            ranges.append((start, stop))
+    windows = []
+    for start, stop in ranges:
+        numbered = "\n".join(
+            f"{index + 1}: "
+            + (
+                lines[index]
+                if len(lines[index]) <= POST_CHANGE_LINE_MAX_CHARS
+                else lines[index][:POST_CHANGE_LINE_MAX_CHARS] + "…"
+            )
+            for index in range(start, stop)
+        )
+        windows.append(f"lines {start + 1}-{stop}:\n{numbered}")
+    return f"source: {display_path}\n" + "\n...\n".join(windows)
+
+
+def render_post_change_sources(session: Any, mutation: Any) -> str:
+    """Render bounded current source only for explicit mutation targets."""
+    targets = getattr(mutation, "targets", ())
+    if not isinstance(targets, tuple):
+        return ""
+    selected_targets = targets[:POST_CHANGE_TARGET_MAX_COUNT]
+    rendered: list[str] = []
+    for target in selected_targets:
+        target_path = str(getattr(target, "path", "") or "").strip()
+        if not target_path:
+            continue
+        candidate = _contained_mutation_path(session, target_path)
+        if candidate is None:
+            continue
+        source_window = _render_source_window(candidate, target_path, target)
+        if source_window:
+            rendered.append(source_window)
+    if not rendered:
+        return ""
+    per_source = max(1, POST_CHANGE_SOURCE_MAX_CHARS // len(rendered))
+    return "\n\n".join(head_tail(value, per_source) for value in rendered)
 
 
 def _ordered_results(evidence_records: Any) -> list[dict[str, Any]]:

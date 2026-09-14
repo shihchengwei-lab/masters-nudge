@@ -15,7 +15,7 @@ masters_nudge_cli.py recent-nudges --limit <count>
 
 Use 10 when the user does not provide a count. Do not paste raw JSON. Present
 each returned record in plain language with its time and Nudge text. Render a
-current record as `<principle> warning: <anchor> — <relationship>`. For a legacy
+current record as `<principle> nudge: <anchor> — <relationship>`. For a legacy
 record containing `finding`, present that stored text without inventing missing
 fields. If there are no records, say so directly. Explain diagnostics without
 dumping the JSON.

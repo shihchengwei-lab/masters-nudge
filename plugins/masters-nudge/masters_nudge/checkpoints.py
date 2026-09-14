@@ -48,4 +48,13 @@ def render_evidence_record(event: ToolCompleted) -> str:
         parts.append(f"actual_input:\n{tool_input}")
     if result:
         parts.append(f"result:\n{result}")
+    post_change_sources = source_context.render_post_change_sources(
+        event.session, event.mutation
+    )
+    if post_change_sources:
+        parts.append(
+            "[post-change source context]\n"
+            f"{post_change_sources}\n"
+            "[end post-change source context]"
+        )
     return "\n\n".join(parts)
