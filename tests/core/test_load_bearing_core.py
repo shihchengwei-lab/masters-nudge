@@ -80,6 +80,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
             storage.append_host_returned_nudge(
                 root,
                 session,
+                status="taste_nudge",
                 evidence_seq=1,
                 principle="causality",
                 anchor="owner",
@@ -184,6 +185,9 @@ class HostReturnedAuditTests(unittest.TestCase):
                 storage.append_host_returned_nudge(
                     root,
                     session,
+                    status=(
+                        "contract_warning" if index % 2 else "taste_nudge"
+                    ),
                     evidence_seq=index + 1,
                     principle="causality",
                     anchor=f"owner-{index}",
@@ -195,9 +199,9 @@ class HostReturnedAuditTests(unittest.TestCase):
         self.assertEqual(
             recent,
             (
-                "causality nudge: owner-1 — relationship-1",
+                "causality warning: owner-1 — relationship-1",
                 "causality nudge: owner-2 — relationship-2",
-                "causality nudge: owner-3 — relationship-3",
+                "causality warning: owner-3 — relationship-3",
             ),
         )
 
@@ -208,6 +212,7 @@ class HostReturnedAuditTests(unittest.TestCase):
             storage.append_host_returned_nudge(
                 root,
                 session,
+                status="contract_warning",
                 evidence_seq=2,
                 principle="causality",
                 anchor="batch owner",
@@ -217,6 +222,7 @@ class HostReturnedAuditTests(unittest.TestCase):
             entries = storage.recent_nudges(root, limit=10)
 
         self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["status"], "contract_warning")
         self.assertEqual(entries[0]["evidence_seq"], 2)
         self.assertEqual(entries[0]["relationship"], "讓單一欄位直接擁有責任。")
 
@@ -228,6 +234,7 @@ class HostReturnedAuditTests(unittest.TestCase):
             storage.append_host_returned_nudge(
                 root,
                 session,
+                status="taste_nudge",
                 evidence_seq=1,
                 principle="causality",
                 anchor="retry owner",
@@ -256,6 +263,30 @@ class HostReturnedAuditTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(storage.recent_nudges(root, limit=10)[0]["finding"], "舊格式 Nudge")
+
+    def test_structured_legacy_record_without_status_keeps_current_nudge_rendering(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "legacy-structured", cwd=raw)
+            storage.audit_path(root, session).write_text(
+                json.dumps(
+                    {
+                        "principle": "causality",
+                        "anchor": "owner",
+                        "relationship": "責任仍有單一擁有者。",
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            recent = storage.read_recent_returned_nudges(root, session)
+
+        self.assertEqual(
+            recent,
+            ("causality nudge: owner — 責任仍有單一擁有者。",),
+        )
 
 
 if __name__ == "__main__":

@@ -2,11 +2,12 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-> **Passing tests settles behavior, not design.**
+> **Passing tests provides evidence for exercised behavior; check the task contract before design taste.**
 
 Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-based
-engineering preference before its next decision. It does not solve the task or
-stop the agent. It points at a tradeoff the main model may otherwise overlook.
+contract warning or engineering-taste nudge before its next decision. It does
+not solve the task or stop the agent; the main model still owns the remedy and
+verification.
 
 ## See an actual run
 
@@ -48,22 +49,26 @@ concrete mutation input and observable result supplied by the Host; it does not
 infer source relationships from matching identifier text. When the mutation
 explicitly names a file inside the workspace, the same record also includes
 bounded current source windows around its changed lines; it neither discovers
-related files nor keeps source history. The Provider forms its own causal
-judgment, then selects the strongest non-obvious observation that could change
-the next engineering decision. Up to three Nudge texts
+related files nor keeps source history. The Provider checks the visible task
+contract first. Only when that stage yields no eligible warning does it inspect
+the structural tradeoff most likely to change the next engineering decision.
+Up to three returned texts
 already returned in the same session are sent separately as exclusions so the
 Provider does not repeat or continue them; they are not evidence or a record of
 the main agent's decision path.
 
-The Provider evaluates three structural principles in one pass without routing
-the problem through a category first:
+In one judgment, the Provider checks the task contract first and then evaluates
+engineering taste with three structural principles:
 
 - make invalid states unrepresentable in the data structure;
 - preserve a unidirectional causal flow from events to state;
 - keep effects and dependencies explicit enough for local reasoning.
 
-The three principles form one judgment contract; they are not three Lenses,
-three model calls, or three separate Nudges.
+The two stages and three principles form one judgment contract; they are not an
+extra Provider call, three Lenses, or three separate outputs. When visible
+evidence supports a contract gap or one open decision fork, the Provider returns
+`contract_warning` and stops before taste. Only a pass with no eligible warning
+can produce `taste_nudge`.
 
 Each principle has a one-word label: `validity` for invalid states,
 `causality` for unidirectional causal flow, and `predictability` for explicit,
@@ -73,9 +78,10 @@ locally understandable behavior. The Provider returns the visible
 `relationship` that states or asks about a single engineering edge. When the
 evidence establishes the edge, the Provider uses an observation. When it only
 establishes a concrete fork that would change the implementation, the Provider
-asks for the one missing fact. Otherwise it stays silent. The Host then renders
-the fixed `nudge` attention marker, for example `causality nudge:`. The marker
-carries no classification or severity meaning.
+asks for the one missing fact. Otherwise it stays silent. The Host renders
+`contract_warning` as `causality warning:` and `taste_nudge` as
+`causality nudge:`. A warning means the visible contract remains open; it does
+not make the Hook block the main model.
 
 A Nudge may reveal the abstraction or responsibility the implementation is
 choosing, predict behavior beyond the immediate example, or show a simpler data
@@ -87,17 +93,23 @@ outside the role.
 ```text
 Task and observable tool results
               ↓
-      One Provider judgment
-              ↓
-   One short Nudge, or silence
-              ↓
-    The agent's next context
+ Contract coverage (first stage)
+     ├─ contract_warning
+     └─ no eligible warning
+                 ↓
+ Engineering taste (second stage)
+     ├─ taste_nudge
+     └─ no_finding
+                 ↓
+      The agent's next context
 ```
 
-Each Nudge is generated for the current situation; it is not a random stock
-sentence. It is an observation or one precise question that can change the
-current engineering decision, not a review, score, complete solution, or demand
-to run more tests.
+Each output is generated for the current situation; it is not a random stock
+sentence. A contract warning or taste nudge is an observation or one precise
+question that can change the current engineering decision, not a review, score,
+complete solution, or demand to run more tests. No contract warning means only
+that the current packet yielded no eligible warning; it does not prove the whole
+task contract complete.
 
 Claude Code provides the intended `PostToolBatch` control point: all tool
 results from one model step are available before the next step. The Codex

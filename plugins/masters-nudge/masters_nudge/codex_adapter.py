@@ -144,13 +144,17 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
 
 
 def build_hook_output(
-    event_name: str, principle: str, anchor: str, relationship: str
+    event_name: str,
+    status: str,
+    principle: str,
+    anchor: str,
+    relationship: str,
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
             "additionalContext": prompting.delivery_text(
-                principle, anchor, relationship
+                status, principle, anchor, relationship
             ),
         }
     }
@@ -208,19 +212,21 @@ class CodexAdapter:
             return None
         visible_sequences = {record["seq"] for record in observed.batch_records}
         if (
-            outcome.status != "finding"
+            not prompting.is_delivery_status(outcome.status)
             or not outcome.relationship
             or outcome.evidence_seq not in visible_sequences
         ):
             return None
         output = build_hook_output(
             event_name,
+            outcome.status,
             outcome.principle,
             outcome.anchor,
             outcome.relationship,
         )
         output[AUDIT_MARKER_KEY] = {
             "session": session,
+            "status": outcome.status,
             "principle": outcome.principle,
             "evidence_seq": outcome.evidence_seq,
             "anchor": outcome.anchor,

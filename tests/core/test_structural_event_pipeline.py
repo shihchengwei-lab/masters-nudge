@@ -546,6 +546,7 @@ class FactualControlFlowTests(unittest.TestCase):
             storage.append_host_returned_nudge(
                 root,
                 session,
+                status="taste_nudge",
                 evidence_seq=1,
                 principle="causality",
                 anchor="owner",
@@ -622,13 +623,31 @@ class FactualControlFlowTests(unittest.TestCase):
 
 
 class GroundedProviderContractTests(unittest.TestCase):
-    def test_finding_identifies_the_visible_evidence_record(self):
+    def test_each_positive_status_identifies_the_visible_evidence_record(self):
+        for status in ("contract_warning", "taste_nudge"):
+            with self.subTest(status=status):
+                result = provider_contract.parse_nudge_result(
+                    json.dumps(
+                        {
+                            "status": status,
+                            "principle": "causality",
+                            "evidence_seq": 2,
+                            "anchor": "owner",
+                            "relationship": "依賴沒有明確完成邊界。",
+                        },
+                        ensure_ascii=False,
+                    )
+                )
+
+                self.assertEqual(result["status"], status)
+                self.assertEqual(result["evidence_seq"], 2)
+
+    def test_finding_without_evidence_sequence_is_invalid(self):
         result = provider_contract.parse_nudge_result(
             json.dumps(
                 {
-                    "status": "finding",
+                    "status": "contract_warning",
                     "principle": "causality",
-                    "evidence_seq": 2,
                     "anchor": "owner",
                     "relationship": "依賴沒有明確完成邊界。",
                 },
@@ -636,15 +655,15 @@ class GroundedProviderContractTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(result["status"], "finding")
-        self.assertEqual(result["evidence_seq"], 2)
+        self.assertEqual(result["status"], "error")
 
-    def test_finding_without_evidence_sequence_is_invalid(self):
+    def test_ambiguous_legacy_finding_status_is_invalid(self):
         result = provider_contract.parse_nudge_result(
             json.dumps(
                 {
                     "status": "finding",
                     "principle": "causality",
+                    "evidence_seq": 2,
                     "anchor": "owner",
                     "relationship": "依賴沒有明確完成邊界。",
                 },

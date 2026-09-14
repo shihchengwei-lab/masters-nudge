@@ -20,6 +20,7 @@ RUNTIME = RuntimeSettings.from_env(Path(__file__).resolve().parent.parent, host=
 class PreparedDelivery:
     output: dict[str, Any]
     session: SessionRef
+    status: str
     principle: str
     evidence_seq: int
     anchor: str
@@ -53,6 +54,7 @@ def emit_json_delivery(prepared: PreparedDelivery, stream: Any = None) -> None:
     storage.append_host_returned_nudge(
         runtime_settings().paths.data_dir,
         prepared.session,
+        status=prepared.status,
         evidence_seq=prepared.evidence_seq,
         principle=prepared.principle,
         anchor=prepared.anchor,

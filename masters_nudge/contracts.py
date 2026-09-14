@@ -9,7 +9,9 @@ from typing import Literal, Mapping, TypeAlias
 
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
-NudgeStatus: TypeAlias = Literal["finding", "no_finding", "error"]
+NudgeStatus: TypeAlias = Literal[
+    "contract_warning", "taste_nudge", "no_finding", "error"
+]
 NudgePrinciple: TypeAlias = Literal[
     "validity", "causality", "predictability", "none"
 ]

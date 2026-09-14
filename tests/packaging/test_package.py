@@ -106,12 +106,12 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Each build, test, lint, and verification result covers only the "
-                    "behavior it exercised.",
+                    "Passing build, test, lint, and verification results cover only "
+                    "the behavior they exercised.",
                     normalized,
                 )
 
-    def test_prompt_runs_an_operational_decision_trace(self):
+    def test_prompt_runs_ordered_contract_and_taste_traces(self):
         for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
             with self.subTest(prompt_path=prompt_path):
                 prompt = prompt_path.read_text(encoding="utf-8")
@@ -140,11 +140,23 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Every finding surfaces one still-open structural decision",
+                    "Contract coverage is the first stage",
                     normalized,
                 )
                 self.assertIn(
-                    "Observed implementation choice → unmet runtime dependency → task-breaking behavior",
+                    "Visible task requirement → applicable execution paths → required behavior",
+                    normalized,
+                )
+                self.assertIn(
+                    "Return contract_warning and stop the judgment before considering taste",
+                    normalized,
+                )
+                self.assertIn(
+                    "Taste is the second stage",
+                    normalized,
+                )
+                self.assertIn(
+                    "Observed implementation choice → structural dependency → engineering consequence",
                     normalized,
                 )
                 self.assertIn(
@@ -152,11 +164,11 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Use an observation when the visible evidence establishes every edge in that relationship",
+                    "Use an observation when the packet establishes an unmet requirement and its task-breaking behavior",
                     normalized,
                 )
                 self.assertIn(
-                    "Use a question when the visible evidence establishes an exact decision fork",
+                    "Use a question when the packet establishes an exact contract decision fork",
                     normalized,
                 )
                 self.assertIn("visible tool-result record", normalized)

@@ -13,7 +13,7 @@ from typing import Any
 import source_context
 
 from .contracts import SessionRef, safe_identifier
-from .prompting import delivery_text
+from .prompting import delivery_text, is_delivery_status
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024
@@ -177,6 +177,7 @@ def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
     *,
+    status: str,
     evidence_seq: int,
     principle: str,
     anchor: str,
@@ -188,6 +189,7 @@ def append_host_returned_nudge(
         "host": session.host,
         "session_id": session.session_id,
         "workspace": str(session.repo_root or session.cwd or ""),
+        "status": str(status or "").strip(),
         "evidence_seq": int(evidence_seq),
         "principle": str(principle or "").strip(),
         "anchor": str(anchor or "").strip(),
@@ -225,8 +227,13 @@ def read_recent_returned_nudges(
         relationship = str(entry.get("relationship") or "").strip()
         principle = str(entry.get("principle") or "").strip()
         anchor = str(entry.get("anchor") or "").strip()
+        status = str(entry.get("status") or "taste_nudge").strip()
         if relationship and principle and anchor:
-            text = delivery_text(principle, anchor, relationship)
+            text = (
+                delivery_text(status, principle, anchor, relationship)
+                if is_delivery_status(status)
+                else relationship
+            )
         else:
             text = relationship or str(entry.get("finding") or "").strip()
         if not text:

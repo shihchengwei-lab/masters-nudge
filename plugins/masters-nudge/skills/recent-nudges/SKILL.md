@@ -14,10 +14,12 @@ masters_nudge_cli.py recent-nudges --limit <count>
 ```
 
 Use 10 when the user does not provide a count. Do not paste raw JSON. Present
-each returned record in plain language with its time and Nudge text. Render a
-current record as `<principle> nudge: <anchor> — <relationship>`. For a legacy
-record containing `finding`, present that stored text without inventing missing
-fields. If there are no records, say so directly. Explain diagnostics without
+each returned record in plain language with its time and returned text. Render
+`contract_warning` as `<principle> warning: <anchor> — <relationship>` and
+`taste_nudge` as `<principle> nudge: <anchor> — <relationship>`. Render a
+structured record without `status` with the historical `nudge` marker. For a
+legacy record containing `finding`, present that stored text without inventing
+missing fields. If there are no records, say so directly. Explain diagnostics without
 dumping the JSON.
 
 Call these audit records "returned to the Host," not "read," "adopted," or

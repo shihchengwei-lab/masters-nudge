@@ -59,13 +59,13 @@ def nudge_checkpoint(source_packet: str) -> NudgeOutcome:
 
 
 def build_hook_output(
-    principle: str, anchor: str, relationship: str
+    status: str, principle: str, anchor: str, relationship: str
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolBatch",
             "additionalContext": prompting.delivery_text(
-                principle, anchor, relationship
+                status, principle, anchor, relationship
             ),
         }
     }
@@ -100,16 +100,20 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         return None
     visible_sequences = {record["seq"] for record in observed.batch_records}
     if (
-        outcome.status != "finding"
+        not prompting.is_delivery_status(outcome.status)
         or not outcome.relationship
         or outcome.evidence_seq not in visible_sequences
     ):
         return None
     return claude_adapter.PreparedDelivery(
         output=build_hook_output(
-            outcome.principle, outcome.anchor, outcome.relationship
+            outcome.status,
+            outcome.principle,
+            outcome.anchor,
+            outcome.relationship,
         ),
         session=events[0].session,
+        status=outcome.status,
         principle=outcome.principle,
         evidence_seq=outcome.evidence_seq,
         anchor=outcome.anchor,

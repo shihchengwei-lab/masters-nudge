@@ -6,10 +6,14 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 PRINCIPLE_LABELS = ("validity", "causality", "predictability")
+DELIVERY_MARKERS = {
+    "contract_warning": "warning",
+    "taste_nudge": "nudge",
+}
 NUDGE_PREFIXES = tuple(
     f"{principle} {marker}: "
     for principle in PRINCIPLE_LABELS
-    for marker in ("nudge", "warning")
+    for marker in DELIVERY_MARKERS.values()
 )
 
 
@@ -17,13 +21,20 @@ def is_principle(value: str) -> bool:
     return str(value or "") in PRINCIPLE_LABELS
 
 
+def is_delivery_status(value: str) -> bool:
+    return str(value or "") in DELIVERY_MARKERS
+
+
 def has_nudge_prefix(relationship: str) -> bool:
     return str(relationship or "").startswith(NUDGE_PREFIXES)
 
 
-def delivery_text(principle: str, anchor: str, relationship: str) -> str:
+def delivery_text(
+    status: str, principle: str, anchor: str, relationship: str
+) -> str:
+    marker = DELIVERY_MARKERS[str(status)]
     return (
-        f"{principle} nudge: {str(anchor or '').strip()} — "
+        f"{principle} {marker}: {str(anchor or '').strip()} — "
         f"{str(relationship or '').strip()}"
     )
 

@@ -8,6 +8,7 @@ from . import providers
 from .contracts import NudgeOutcome
 from .prompting import (
     has_nudge_prefix,
+    is_delivery_status,
     is_principle,
     load_system_prompt,
 )
@@ -74,7 +75,7 @@ class NudgeCore:
                 else NudgeOutcome("error")
             )
         if (
-            status != "finding"
+            not is_delivery_status(status)
             or not isinstance(evidence_seq, int)
             or isinstance(evidence_seq, bool)
             or evidence_seq <= 0
@@ -85,7 +86,7 @@ class NudgeCore:
         ):
             return NudgeOutcome("error")
         return NudgeOutcome(
-            "finding",
+            status,
             principle,
             anchor,
             relationship,

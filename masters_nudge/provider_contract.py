@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from .prompting import has_nudge_prefix, is_principle
+from .prompting import has_nudge_prefix, is_delivery_status, is_principle
 
 
 def call_result(
@@ -76,7 +76,7 @@ def parse_nudge_result(stdout: str) -> dict:
     anchor = anchor.strip()
     relationship = relationship.strip()
     if (
-        status != "finding"
+        not is_delivery_status(status)
         or evidence_seq <= 0
         or not is_principle(principle)
         or not anchor
@@ -85,7 +85,7 @@ def parse_nudge_result(stdout: str) -> dict:
     ):
         return call_result(raw_output=raw)
     return call_result(
-        "finding",
+        status,
         principle=principle,
         evidence_seq=evidence_seq,
         anchor=anchor,

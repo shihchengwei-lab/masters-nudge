@@ -18,16 +18,23 @@ from masters_nudge.contracts import NudgeOutcome, SessionRef
 
 
 class FakeCore:
-    def __init__(self, data_dir: Path, *, evidence_seq: int = 1) -> None:
+    def __init__(
+        self,
+        data_dir: Path,
+        *,
+        evidence_seq: int = 1,
+        status: str = "contract_warning",
+    ) -> None:
         self.settings = SimpleNamespace(paths=SimpleNamespace(data_dir=data_dir))
         self.calls: list[str] = []
         self.log_error = lambda _message: None
         self.evidence_seq = evidence_seq
+        self.status = status
 
     def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
         self.calls.append(source_packet)
         return NudgeOutcome(
-            "finding",
+            self.status,
             principle="causality",
             anchor="batch owner",
             relationship="讓單一欄位直接擁有責任。",
@@ -112,7 +119,13 @@ class CodexHookFlowTests(unittest.TestCase):
             )
 
         self.assertIsNotNone(output)
+        self.assertEqual(output["_masters_nudge"]["status"], "contract_warning")
         self.assertEqual(output["_masters_nudge"]["evidence_seq"], 2)
+        self.assertTrue(
+            output["hookSpecificOutput"]["additionalContext"].startswith(
+                "causality warning:"
+            )
+        )
         self.assertIn("[tool result seq=1]", core.calls[0])
         self.assertIn("[tool result seq=2]", core.calls[0])
         self.assertIn('"command": "wrapper --apply"', core.calls[0])
@@ -122,7 +135,7 @@ class CodexHookFlowTests(unittest.TestCase):
     def test_codex_native_apply_patch_command_calls_provider_once(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            core = FakeCore(root)
+            core = FakeCore(root, status="taste_nudge")
             adapter = CodexAdapter(core)
             adapter.process(
                 {
@@ -156,7 +169,13 @@ class CodexHookFlowTests(unittest.TestCase):
 
         self.assertIsNotNone(output)
         self.assertEqual(len(core.calls), 1)
+        self.assertEqual(output["_masters_nudge"]["status"], "taste_nudge")
         self.assertEqual(output["_masters_nudge"]["evidence_seq"], 1)
+        self.assertTrue(
+            output["hookSpecificOutput"]["additionalContext"].startswith(
+                "causality nudge:"
+            )
+        )
         self.assertIn('"command": "*** Begin Patch', core.calls[0])
 
     def test_codex_provider_receives_an_explicit_local_task_source(self):
@@ -274,6 +293,7 @@ class CodexHookFlowTests(unittest.TestCase):
 
         public = json.loads(stream.getvalue())
         self.assertNotIn("_masters_nudge", public)
+        self.assertEqual(entries[0]["status"], "contract_warning")
         self.assertEqual(entries[0]["evidence_seq"], 1)
 
 
@@ -330,7 +350,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                     claude_checkpoint,
                     "nudge_checkpoint",
                     return_value=NudgeOutcome(
-                        "finding",
+                        "contract_warning",
                         "causality",
                         "owner",
                         "責任缺少單一擁有者。",
@@ -341,6 +361,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 prepared = claude_checkpoint.prepare_hook(hook)
 
         self.assertIsNotNone(prepared)
+        self.assertEqual(prepared.status, "contract_warning")
         self.assertEqual(prepared.evidence_seq, 1)
 
     def test_claude_audits_only_after_successful_flush(self):
@@ -350,6 +371,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
             prepared = claude_adapter.PreparedDelivery(
                 output={"hookSpecificOutput": {"additionalContext": "nudge"}},
                 session=SessionRef("claude_code", "wire", cwd=raw),
+                status="taste_nudge",
                 principle="causality",
                 evidence_seq=1,
                 anchor="owner",
@@ -365,6 +387,7 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 claude_adapter.emit_json_delivery(prepared, stream)
                 entries = storage.recent_nudges(root)
 
+        self.assertEqual(entries[0]["status"], "taste_nudge")
         self.assertEqual(entries[0]["evidence_seq"], 1)
 
 

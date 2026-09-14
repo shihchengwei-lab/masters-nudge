@@ -31,7 +31,7 @@ class SingleProviderTests(unittest.TestCase):
             def dispatch(_provider, prompt, packet, _model, **kwargs):
                 calls.append((prompt, packet, kwargs["timeout_sec"]))
                 return {
-                    "status": "finding",
+                    "status": "contract_warning",
                     "principle": "causality",
                     "evidence_seq": 1,
                     "anchor": "batch owner",
@@ -42,7 +42,7 @@ class SingleProviderTests(unittest.TestCase):
                 self.settings(Path(raw)), dispatch=dispatch
             ).nudge_once("EVIDENCE-PACKET")
 
-        self.assertEqual(outcome.status, "finding")
+        self.assertEqual(outcome.status, "contract_warning")
         self.assertEqual(outcome.principle, "causality")
         self.assertEqual(outcome.evidence_seq, 1)
         self.assertEqual(outcome.anchor, "batch owner")
@@ -83,7 +83,7 @@ class SingleProviderTests(unittest.TestCase):
         self.assertNotIn("Knowledge ownership and change locality", normalized)
         self.assertNotIn("SELECTED LENS", normalized)
 
-    def test_prompt_maps_each_principle_to_one_word_and_fixes_neutral_nudge(self):
+    def test_prompt_maps_each_principle_to_one_word_and_fixes_delivery_markers(self):
         with tempfile.TemporaryDirectory() as raw:
             prompts = []
 
@@ -102,6 +102,7 @@ class SingleProviderTests(unittest.TestCase):
         self.assertIn("validity", prompts[0])
         self.assertIn("causality", prompts[0])
         self.assertIn("predictability", prompts[0])
+        self.assertIn("`principle warning: anchor — relationship`", prompts[0])
         self.assertIn("`principle nudge: anchor — relationship`", prompts[0])
         self.assertNotIn("attention cue: `alert`", prompts[0])
         self.assertNotIn("attention cue: `risk`", prompts[0])
@@ -203,7 +204,7 @@ class SingleProviderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             def dispatch(_provider, _prompt, _packet, _model, **_kwargs):
                 return {
-                    "status": "finding",
+                    "status": "contract_warning",
                     "principle": "reliability",
                     "evidence_seq": 1,
                     "anchor": "batch owner",
@@ -216,14 +217,24 @@ class SingleProviderTests(unittest.TestCase):
 
         self.assertEqual(outcome.status, "error")
 
-    def test_delivery_uses_principle_plus_neutral_nudge(self):
+    def test_delivery_uses_status_to_select_the_marker(self):
         self.assertEqual(
-            delivery_text("validity", "flags", "布林旗標可形成矛盾狀態。"),
+            delivery_text(
+                "contract_warning", "validity", "flags", "布林旗標可形成矛盾狀態。"
+            ),
+            "validity warning: flags — 布林旗標可形成矛盾狀態。",
+        )
+        self.assertEqual(
+            delivery_text(
+                "taste_nudge", "validity", "flags", "布林旗標可形成矛盾狀態。"
+            ),
             "validity nudge: flags — 布林旗標可形成矛盾狀態。",
         )
         self.assertNotIn(
             "獨立第二意見",
-            delivery_text("predictability", "side effect", "副作用不明確。"),
+            delivery_text(
+                "taste_nudge", "predictability", "side effect", "副作用不明確。"
+            ),
         )
 
     def test_anchor_and_relationship_have_distinct_ownership(self):
@@ -235,7 +246,7 @@ class SingleProviderTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             def dispatch(_provider, _prompt, _packet, _model, **_kwargs):
                 return {
-                    "status": "finding",
+                    "status": "taste_nudge",
                     "principle": "predictability",
                     "evidence_seq": 1,
                     "anchor": "_autoFlushTimer",
@@ -246,11 +257,12 @@ class SingleProviderTests(unittest.TestCase):
                 self.settings(Path(raw)), dispatch=dispatch
             ).nudge_once("packet")
 
-        self.assertEqual(outcome.status, "finding")
+        self.assertEqual(outcome.status, "taste_nudge")
         self.assertEqual(outcome.anchor, "_autoFlushTimer")
         self.assertEqual(outcome.relationship, relationship)
         self.assertEqual(
             delivery_text(
+                outcome.status,
                 outcome.principle,
                 outcome.anchor,
                 outcome.relationship,
@@ -267,7 +279,7 @@ class SingleProviderTests(unittest.TestCase):
                 result = parse_nudge_result(
                     json.dumps(
                         {
-                            "status": "finding",
+                            "status": "contract_warning",
                             "principle": "causality",
                             "evidence_seq": 1,
                             "anchor": "batch owner",
@@ -278,7 +290,7 @@ class SingleProviderTests(unittest.TestCase):
 
                 self.assertEqual(result["status"], "error")
 
-    def test_prompt_and_schema_let_provider_choose_observation_question_or_silence(self):
+    def test_prompt_and_schema_order_contract_before_taste(self):
         with tempfile.TemporaryDirectory() as raw:
             prompts = []
 
@@ -296,22 +308,33 @@ class SingleProviderTests(unittest.TestCase):
 
         normalized = " ".join(prompts[0].split())
         self.assertIn("Before answering, follow this sequence", normalized)
-        self.assertIn("Every finding surfaces one still-open structural decision", normalized)
+        self.assertIn("Contract coverage is the first stage", normalized)
         self.assertIn(
-            "Observed implementation choice → unmet runtime dependency → task-breaking behavior",
+            "Visible task requirement → applicable execution paths → required behavior",
             normalized,
         )
         self.assertIn(
-            "Use an observation when the visible evidence establishes every edge "
-            "in that relationship",
+            "Return contract_warning and stop the judgment before considering taste",
             normalized,
         )
         self.assertIn(
-            "Use a question when the visible evidence establishes an exact decision fork",
+            "Taste is the second stage",
             normalized,
         )
         self.assertIn(
-            "the answer would change the next engineering decision",
+            "Return taste_nudge only when the contract stage yields no eligible warning",
+            normalized,
+        )
+        self.assertLess(
+            normalized.index("Contract coverage is the first stage"),
+            normalized.index("Taste is the second stage"),
+        )
+        self.assertIn(
+            "A matching keyword does not establish that every applicable path preserves the behavior",
+            normalized,
+        )
+        self.assertIn(
+            "Passing build, test, lint, and verification results cover only the behavior they exercised",
             normalized,
         )
         self.assertIn("Otherwise return no_finding", normalized)
@@ -326,7 +349,7 @@ class SingleProviderTests(unittest.TestCase):
         )
         self.assertIn("Keep every question premise to visible facts", normalized)
         self.assertIn(
-            "Use an observation only when both local behavior and reachability are visible",
+            "Use an observation only when local behavior and reachability are both visible",
             normalized,
         )
         self.assertIn(
@@ -344,7 +367,6 @@ class SingleProviderTests(unittest.TestCase):
             normalized,
         )
         self.assertIn("completion, ownership, and ordering", normalized)
-        self.assertIn("covers only the behavior it exercised", normalized)
         self.assertIn("would change the next engineering decision", normalized)
 
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
@@ -360,8 +382,12 @@ class SingleProviderTests(unittest.TestCase):
             "one short Traditional Chinese declarative observation or one precise question",
             normalized,
         )
-        self.assertIn("one packet-grounded observation or question", normalized)
+        self.assertIn("one packet-grounded contract warning or taste nudge", normalized)
         self.assertNotIn("characters", prompts[0])
+        self.assertEqual(
+            schema["properties"]["status"]["enum"],
+            ["contract_warning", "taste_nudge", "no_finding"],
+        )
         self.assertEqual(
             schema["properties"]["principle"]["enum"],
             ["validity", "causality", "predictability", "none"],
