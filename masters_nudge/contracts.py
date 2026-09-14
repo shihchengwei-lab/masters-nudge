@@ -25,11 +25,12 @@ class SessionRef:
 
 @dataclass(frozen=True)
 class MutationTarget:
-    """An explicit file target and textual anchors supplied by the mutation."""
+    """An explicit file target plus bounded facts supplied by the mutation."""
 
     path: str
     line_hint: int = 0
     anchors: tuple[str, ...] = ()
+    references: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,25 @@ _UNIFIED_DIFF_HUNK_RE = re.compile(r"^@@\s+-\d+(?:,\d+)?\s+\+(\d+)")
 _TARGET_MAX_COUNT = 8
 _ANCHOR_MAX_COUNT = 8
 _ANCHOR_MAX_CHARS = 240
+_REFERENCE_MAX_COUNT = 16
+_CALLABLE_REFERENCE_RE = re.compile(
+    r"(?<![A-Za-z0-9_$])"
+    r"([A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)*)"
+    r"\s*\("
+)
+_NON_REFERENCE_CALLS = frozenset(
+    {
+        "catch",
+        "for",
+        "if",
+        "new",
+        "return",
+        "switch",
+        "throw",
+        "while",
+        "with",
+    }
+)
 
 
 def _bounded_anchors(lines: list[str]) -> tuple[str, ...]:
@@ -62,6 +82,22 @@ def _bounded_anchors(lines: list[str]) -> tuple[str, ...]:
         if len(anchors) >= _ANCHOR_MAX_COUNT:
             break
     return tuple(anchors)
+
+
+def _bounded_callable_references(lines: list[str]) -> tuple[str, ...]:
+    """Keep callable names explicitly present anywhere in the mutation text."""
+    references: list[str] = []
+    seen: set[str] = set()
+    for line in lines:
+        for match in _CALLABLE_REFERENCE_RE.finditer(str(line or "")):
+            value = match.group(1)
+            if value in _NON_REFERENCE_CALLS or value in seen:
+                continue
+            seen.add(value)
+            references.append(value)
+            if len(references) >= _REFERENCE_MAX_COUNT:
+                return tuple(references)
+    return tuple(references)
 
 
 def _patch_targets(patch: str) -> tuple[MutationTarget, ...]:
@@ -81,6 +117,7 @@ def _patch_targets(patch: str) -> tuple[MutationTarget, ...]:
                     path,
                     line_hint,
                     _bounded_anchors([*added_lines, *context_lines]),
+                    _bounded_callable_references([*added_lines, *context_lines]),
                 )
             )
         current_path = ""
@@ -145,6 +182,7 @@ def mutation_evidence_from_input(tool_input: object) -> MutationEvidence | None:
                 MutationTarget(
                     target_path,
                     anchors=_bounded_anchors(new_string.splitlines()),
+                    references=_bounded_callable_references(new_string.splitlines()),
                 ),
             ),
         )
@@ -156,7 +194,18 @@ def mutation_evidence_from_input(tool_input: object) -> MutationEvidence | None:
             else ()
         )
         return MutationEvidence(
-            "content", (MutationTarget(target_path, anchors=anchors),)
+            "content",
+            (
+                MutationTarget(
+                    target_path,
+                    anchors=anchors,
+                    references=(
+                        _bounded_callable_references(content.splitlines())
+                        if isinstance(content, str)
+                        else ()
+                    ),
+                ),
+            ),
         )
     return None
 

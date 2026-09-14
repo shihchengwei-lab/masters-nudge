@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import source_context
@@ -151,6 +152,27 @@ class ExplicitMutationEvidenceTests(unittest.TestCase):
         self.assertIn('"patch": "*** Update File: app.py', rendered)
         self.assertNotIn("actual_command:", rendered)
 
+    def test_mutation_target_keeps_callable_references_from_the_full_change(self):
+        added_lines = [f"+  const marker{index} = {index};" for index in range(10)]
+        patch = "\n".join(
+            (
+                "*** Begin Patch",
+                "*** Update File: src/runtime.ts",
+                "@@",
+                *added_lines,
+                "@@",
+                "+  drainBatch(true, pending);",
+                "*** End Patch",
+            )
+        )
+
+        mutation = contracts.mutation_evidence_from_input({"patch": patch})
+
+        self.assertIsNotNone(mutation)
+        target = mutation.targets[0]
+        self.assertEqual(len(target.anchors), 8)
+        self.assertIn("drainBatch", target.references)
+
 
 class FactualControlFlowTests(unittest.TestCase):
     def test_current_mutation_includes_bounded_post_change_source_context(self):
@@ -212,9 +234,247 @@ class FactualControlFlowTests(unittest.TestCase):
             )
 
         self.assertIn("[post-change source context]", packet)
+        self.assertLess(
+            packet.index("[post-change source context]"),
+            packet.index("actual_input:"),
+        )
         self.assertIn("source: src/runtime.ts", packet)
         self.assertIn("const unlinkedModules = new Set", packet)
         self.assertIn("if (dependency.status === 'unlinked')", packet)
+
+    def test_post_change_source_includes_same_file_caller_and_value_producer(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "src" / "runtime.ts"
+            source.parent.mkdir()
+            source.write_text(
+                "\n".join(
+                    (
+                        "let _transport: Transport;",
+                        "function initDefaults() {",
+                        "  _transport = new Transport();",
+                        "}",
+                        "initDefaults();",
+                        "function submit(item) {",
+                        "  if (item.urgent) {",
+                        "    if (!_transport) {",
+                        "      item.urgent = false;",
+                        "    } else {",
+                        "      return sendImmediately(item);",
+                        "    }",
+                        "  }",
+                        "  enqueue(item);",
+                        "}",
+                        *(f"function unrelatedBefore{index}() {{}}" for index in range(24)),
+                        "function drainBatch(isDeferred, shouldDrain) {",
+                        *(f"  const marker{index} = {index};" for index in range(10)),
+                        "  state.pending = shouldDrain && isDeferred;",
+                        "}",
+                        *(f"function unrelatedMiddle{index}() {{}}" for index in range(24)),
+                        "function enqueue(item) {",
+                        "  if (queueReachedLimit()) {",
+                        "    drainBatch(!item.urgent, true);",
+                        "  }",
+                        "}",
+                        *(f"function unrelatedAfter{index}() {{}}" for index in range(24)),
+                        "function finishManualDrain(pending) {",
+                        "  drainBatch(true, pending);",
+                        "}",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            patch = "\n".join(
+                (
+                    "*** Begin Patch",
+                    "*** Update File: src/runtime.ts",
+                    "@@",
+                    *(f"+  const marker{index} = {index};" for index in range(10)),
+                    "@@",
+                    "+  drainBatch(true, pending);",
+                    "*** End Patch",
+                )
+            )
+            mutation = contracts.mutation_evidence_from_input({"patch": patch})
+
+            rendered = source_context.render_post_change_sources(
+                SessionRef("codex_cli", "relationship-context", cwd=raw), mutation
+            )
+
+        self.assertLessEqual(
+            len(rendered), source_context.POST_CHANGE_SOURCE_MAX_CHARS
+        )
+        self.assertIn("[same-file relationship context]", rendered)
+        self.assertIn("[complete same-file lexical inventories]", rendered)
+        self.assertIn("reference `drainBatch`: all", rendered)
+        self.assertIn("[contiguous upstream-to-bridge source]", rendered)
+        self.assertIn("[contiguous bridge-to-anchor source]", rendered)
+        self.assertIn("drainBatch(!item.urgent, true)", rendered)
+        self.assertIn("nearby callable declaration `enqueue`", rendered)
+        self.assertIn("callable bridge `enqueue`", rendered)
+        self.assertIn("enqueue(item);", rendered)
+        self.assertIn("if (item.urgent)", rendered)
+        self.assertIn("item.urgent = false", rendered)
+        self.assertIn("return sendImmediately(item)", rendered)
+        self.assertIn("_transport = new Transport()", rendered)
+        self.assertIn("initDefaults();", rendered)
+
+    def test_relationship_context_prioritizes_a_data_flow_call_under_budget(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "runtime.ts"
+            source.write_text(
+                "\n".join(
+                    (
+                        "function submit(item) {",
+                        "  if (item.urgent) {",
+                        "    item.urgent = false;",
+                        "  }",
+                        "}",
+                        *(f"const before{index} = {index};" for index in range(20)),
+                        "changedAnchor();",
+                        *(f"const after{index} = {index};" for index in range(7)),
+                        *(f"helper{index}(Mode.Value{index});" for index in range(8)),
+                        *(f"const gap{index} = {index};" for index in range(20)),
+                        "drainBatch(!item.urgent, true);",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            mutation = contracts.MutationEvidence(
+                "patch",
+                (
+                    contracts.MutationTarget(
+                        "runtime.ts",
+                        anchors=("changedAnchor();",),
+                        references=tuple(
+                            [*(f"helper{index}" for index in range(8)), "drainBatch"]
+                        ),
+                    ),
+                ),
+            )
+
+            with mock.patch.object(
+                source_context, "POST_CHANGE_SOURCE_MAX_CHARS", 1200
+            ):
+                rendered = source_context.render_post_change_sources(
+                    SessionRef("codex_cli", "prioritized-relationship", cwd=raw),
+                    mutation,
+                )
+
+        self.assertLessEqual(len(rendered), 1200)
+        self.assertIn("drainBatch(!item.urgent, true)", rendered)
+        self.assertIn("if (item.urgent)", rendered)
+        self.assertIn("item.urgent = false", rendered)
+
+    def test_relationship_context_keeps_same_file_lifecycle_when_no_value_flows(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "runtime.ts"
+            source.write_text(
+                "\n".join(
+                    (
+                        "let _retryTimer: Timer;",
+                        "self.pause = () => {",
+                        "  _clearMainTimer();",
+                        "  paused = true;",
+                        "};",
+                        "function flush() {",
+                        "  if (_retryTimer) {",
+                        "    _retryTimer.cancel();",
+                        "    _retryTimer = null;",
+                        "  }",
+                        "}",
+                        *(f"function unrelated{index}() {{}}" for index in range(24)),
+                        "function _clearMainTimer() {",
+                        "  mainTimer?.cancel();",
+                        "}",
+                        *(f"const gap{index} = {index};" for index in range(24)),
+                        "function scheduleRetry(doWork) {",
+                        "  if (doWork && _retryTimer == null) {",
+                        "    _clearMainTimer();",
+                        "    _retryTimer = _createTimer(runRetry, 0);",
+                        "  }",
+                        "}",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            mutation = contracts.MutationEvidence(
+                "patch",
+                (
+                    contracts.MutationTarget(
+                        "runtime.ts",
+                        anchors=("_retryTimer = _createTimer(runRetry, 0);",),
+                        references=(
+                            "_retryTimer.cancel",
+                            "_createTimer",
+                            "_clearMainTimer",
+                        ),
+                    ),
+                ),
+            )
+
+            rendered = source_context.render_post_change_sources(
+                SessionRef("codex_cli", "lifecycle-context", cwd=raw), mutation
+            )
+
+        self.assertIn("[same-file relationship context]", rendered)
+        self.assertIn("[complete same-file lexical inventories]", rendered)
+        self.assertIn("reference `_retryTimer`: all", rendered)
+        self.assertIn("reference `_clearMainTimer`: all", rendered)
+        self.assertIn("[lifecycle state occurrences]", rendered)
+        self.assertIn("_retryTimer.cancel();", rendered)
+        self.assertIn("callsite owner `self.pause`", rendered)
+        self.assertIn("_clearMainTimer();", rendered)
+
+    def test_relationship_context_keeps_each_selected_value_focus_under_budget(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "runtime.ts"
+            long_filler = "const filler = '" + "x" * 300 + "';"
+            source.write_text(
+                "\n".join(
+                    (
+                        "if (item.urgent) { // first-flow",
+                        *(long_filler for _ in range(8)),
+                        "item.urgent = false; // middle-flow",
+                        *(long_filler for _ in range(8)),
+                        "record(item.urgent); // last-flow",
+                        *(f"const before{index} = {index};" for index in range(20)),
+                        "changedAnchor();",
+                        *(f"const after{index} = {index};" for index in range(20)),
+                        "drainBatch(!item.urgent, true);",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            mutation = contracts.MutationEvidence(
+                "patch",
+                (
+                    contracts.MutationTarget(
+                        "runtime.ts",
+                        anchors=("changedAnchor();",),
+                        references=("drainBatch",),
+                    ),
+                ),
+            )
+
+            with mock.patch.object(
+                source_context, "POST_CHANGE_SOURCE_MAX_CHARS", 1200
+            ):
+                rendered = source_context.render_post_change_sources(
+                    SessionRef("codex_cli", "bounded-value-focuses", cwd=raw),
+                    mutation,
+                )
+
+        self.assertIn("if (item.urgent) { // first-flow", rendered)
+        self.assertIn("item.urgent = false; // middle-flow", rendered)
+        self.assertIn("record(item.urgent); // last-flow", rendered)
 
     def test_post_change_source_context_cannot_read_outside_workspace(self):
         with tempfile.TemporaryDirectory() as raw:

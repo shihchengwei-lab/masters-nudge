@@ -152,7 +152,7 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Use an observation when the visible evidence establishes that relationship",
+                    "Use an observation when the visible evidence establishes every edge in that relationship",
                     normalized,
                 )
                 self.assertIn(
@@ -162,6 +162,39 @@ class PackageTests(unittest.TestCase):
                 self.assertIn("visible tool-result record", normalized)
                 self.assertIn("completion, ownership, and ordering", normalized)
                 self.assertIn(
+                    "Recent returned Nudges are exclusions, not evidence",
+                    normalized,
+                )
+                self.assertIn(
+                    "Ground the choice and every claimed consequence in the current packet",
+                    normalized,
+                )
+                self.assertIn(
+                    "When multiple current-packet consequences depend on one visible state, owner, or control path",
+                    normalized,
+                )
+                self.assertIn(
+                    "A visible name, call, literal, or branch establishes only what happens after entry",
+                    normalized,
+                )
+                self.assertIn(
+                    "Reachability requires a visible producer or caller and path to the anchor",
+                    normalized,
+                )
+                self.assertIn(
+                    "The current packet must establish every edge in this relationship",
+                    normalized,
+                )
+                self.assertIn(
+                    "When the relevant caller or path is absent, ask whether the task-relevant value can reach the anchor",
+                    normalized,
+                )
+                self.assertIn(
+                    "Keep every question premise to visible facts",
+                    normalized,
+                )
+                self.assertIn("the Actor owns the remedy", normalized)
+                self.assertNotIn(
                     "different dependency or downstream consequence remains eligible",
                     normalized,
                 )

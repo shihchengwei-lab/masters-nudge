@@ -44,10 +44,6 @@ def render_evidence_record(event: ToolCompleted) -> str:
     tool_input = _compact(event.tool_input)
     result = _compact(event.tool_output)
     parts: list[str] = [f"tool: {event.tool_name}"]
-    if tool_input and tool_input != "{}":
-        parts.append(f"actual_input:\n{tool_input}")
-    if result:
-        parts.append(f"result:\n{result}")
     post_change_sources = source_context.render_post_change_sources(
         event.session, event.mutation
     )
@@ -57,4 +53,8 @@ def render_evidence_record(event: ToolCompleted) -> str:
             f"{post_change_sources}\n"
             "[end post-change source context]"
         )
+    if tool_input and tool_input != "{}":
+        parts.append(f"actual_input:\n{tool_input}")
+    if result:
+        parts.append(f"result:\n{result}")
     return "\n\n".join(parts)

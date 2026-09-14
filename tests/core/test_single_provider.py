@@ -115,6 +115,20 @@ class SingleProviderTests(unittest.TestCase):
 
         self.assertIn("Ground every Nudge in these visible boundaries", normalized)
         self.assertIn("Use inference to connect visible facts", normalized)
+        self.assertIn(
+            "A visible name, call, literal, or branch establishes only what happens "
+            "after entry",
+            normalized,
+        )
+        self.assertIn(
+            "Reachability requires a visible producer or caller and path to the anchor",
+            normalized,
+        )
+        self.assertIn(
+            "an internal branch that handles a value does not establish that any "
+            "caller supplies it",
+            normalized,
+        )
 
     def test_provider_inspects_the_current_decision_from_clean_boundaries(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -135,13 +149,41 @@ class SingleProviderTests(unittest.TestCase):
             "Treat an explicitly required behavior as satisfied", normalized
         )
 
-    def test_provider_deduplicates_only_the_same_engineering_relationship(self):
+    def test_provider_uses_recent_nudges_only_as_exclusions(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split()).lower()
 
-        self.assertIn("deduplication references", normalized)
-        self.assertIn("same engineering relationship", normalized)
-        self.assertIn("different dependency or downstream consequence remains eligible", normalized)
+        self.assertIn("recent returned nudges are exclusions, not evidence", normalized)
+        self.assertIn(
+            "use them only to recognize a repeated relationship or another obligation "
+            "of the same visible implementation choice",
+            normalized,
+        )
+        self.assertIn(
+            "ground the choice and every claimed consequence in the current packet",
+            normalized,
+        )
+        self.assertIn("different still-changeable engineering decision", normalized)
+        self.assertNotIn("decision-lineage references", normalized)
+        self.assertNotIn(
+            "different dependency or downstream consequence remains eligible", normalized
+        )
+
+    def test_provider_surfaces_one_shared_choice_without_owning_the_remedy(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+
+        self.assertIn("the Actor owns the remedy", normalized)
+        self.assertIn(
+            "When multiple current-packet consequences depend on one visible state, "
+            "owner, or control path",
+            normalized,
+        )
+        self.assertIn(
+            "use the shared implementation choice as the single candidate anchor",
+            normalized,
+        )
+        self.assertIn("consequences as its runtime effects", normalized)
 
     def test_prompt_uses_positive_operational_instructions(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -260,7 +302,8 @@ class SingleProviderTests(unittest.TestCase):
             normalized,
         )
         self.assertIn(
-            "Use an observation when the visible evidence establishes that relationship",
+            "Use an observation when the visible evidence establishes every edge "
+            "in that relationship",
             normalized,
         )
         self.assertIn(
@@ -272,6 +315,20 @@ class SingleProviderTests(unittest.TestCase):
             normalized,
         )
         self.assertIn("Otherwise return no_finding", normalized)
+        self.assertIn(
+            "The current packet must establish every edge in this relationship",
+            normalized,
+        )
+        self.assertIn(
+            "When the relevant caller or path is absent, ask whether the task-relevant "
+            "value can reach the anchor",
+            normalized,
+        )
+        self.assertIn("Keep every question premise to visible facts", normalized)
+        self.assertIn(
+            "Use an observation only when both local behavior and reachability are visible",
+            normalized,
+        )
         self.assertIn(
             "structural decision in code, data, responsibility, or control flow",
             normalized,
