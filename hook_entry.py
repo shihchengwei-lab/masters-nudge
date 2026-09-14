@@ -49,6 +49,7 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
         storage.append_host_returned_nudge(
             settings.paths.data_dir,
             audit["session"],
+            evidence_seq=int(audit.get("evidence_seq") or 0),
             principle=str(audit.get("principle") or ""),
             anchor=str(audit.get("anchor") or ""),
             relationship=str(audit.get("relationship") or ""),

@@ -10,19 +10,17 @@ from typing import Any
 import source_context
 
 from . import prompting, storage
-from .contracts import SessionRef, ToolCompleted, find_git_root
+from .contracts import (
+    SessionRef,
+    ToolCompleted,
+    find_git_root,
+    mutation_evidence_from_input,
+)
 from .core import NudgeCore
 from .evidence import observe_tool_batch
 from .runtime import PROVIDER_TIMEOUT_SEC, active_guard
 
 
-MUTATING_TOOLS = {"apply_patch", "file_change", "edit", "write"}
-FAILURE_TEXT_RE = re.compile(
-    r"^(?:process|command)\s+(?:exited|failed)[^\r\n]*?"
-    r"(?:code|status)\s*[:=]?\s*(-?\d+)\b"
-    r"|^exit\s+code\s*[:=]?\s*(-?\d+)\b",
-    re.IGNORECASE | re.MULTILINE,
-)
 AUDIT_MARKER_KEY = "_masters_nudge"
 POST_TOOL_BATCH_EVENT = "PostToolBatch"
 GOAL_CONTEXT_RE = re.compile(
@@ -82,51 +80,6 @@ def _session(payload: dict[str, Any]) -> SessionRef:
     )
 
 
-def _structured_failure_signal(value: Any) -> tuple[bool, bool]:
-    if isinstance(value, dict):
-        known = failed = False
-        for key, item in value.items():
-            normalized = str(key).lower().replace("_", "")
-            if normalized in {"exitcode", "returncode"}:
-                try:
-                    failed = failed or int(item) != 0
-                    known = True
-                except (TypeError, ValueError):
-                    pass
-            elif normalized in {"iserror", "failed"} and isinstance(item, bool):
-                known, failed = True, failed or item
-            elif normalized == "success" and isinstance(item, bool):
-                known, failed = True, failed or not item
-            if isinstance(item, (dict, list)):
-                child_known, child_failed = _structured_failure_signal(item)
-                known, failed = known or child_known, failed or child_failed
-        return known, failed
-    if isinstance(value, list):
-        values = [_structured_failure_signal(item) for item in value]
-        return any(item[0] for item in values), any(item[1] for item in values)
-    return False, False
-
-
-def _text_failure_signal(value: Any) -> tuple[bool, bool]:
-    if isinstance(value, str):
-        match = FAILURE_TEXT_RE.search(value)
-        if match:
-            code = next((part for part in match.groups() if part is not None), "0")
-            return True, int(code) != 0
-    elif isinstance(value, dict):
-        values = [_text_failure_signal(item) for item in value.values()]
-        return any(item[0] for item in values), any(item[1] for item in values)
-    elif isinstance(value, list):
-        values = [_text_failure_signal(item) for item in value]
-        return any(item[0] for item in values), any(item[1] for item in values)
-    return False, False
-
-
-def _failure_signal(value: Any) -> tuple[bool, bool]:
-    structured = _structured_failure_signal(value)
-    return structured if structured[0] else _text_failure_signal(value)
-
-
 def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
     event_name = str(payload.get("hook_event_name") or "")
     if event_name != POST_TOOL_BATCH_EVENT:
@@ -146,17 +99,15 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
         ):
             return None
         response = item["tool_response"]
-        known, failed = _failure_signal(response)
         tool_name = item["tool_name"]
+        tool_input = item["tool_input"]
         events.append(
             ToolCompleted(
                 session,
                 tool_name,
-                tool_input=item["tool_input"],
+                tool_input=tool_input,
                 tool_output=response,
-                failed=failed,
-                failure_known=known,
-                mutating=tool_name.lower().split("__")[-1] in MUTATING_TOOLS,
+                mutation=mutation_evidence_from_input(tool_input),
                 native_event_name=event_name,
             )
         )
@@ -207,7 +158,6 @@ class CodexAdapter:
             return None
         packet = source_context.build_checkpoint_packet(
             task_anchor=str(observed.turn_state.get("task_anchor") or ""),
-            task_sources=observed.turn_state.get("task_sources") or {},
             evidence_records=list(observed.batch_records),
         )
         review_input = prompting.build_review_input(
@@ -226,7 +176,12 @@ class CodexAdapter:
         except Exception as exc:
             self.core.log_error(f"Codex Nudge failed: {exc}")
             return None
-        if outcome.status != "finding" or not outcome.relationship:
+        visible_sequences = {record["seq"] for record in observed.batch_records}
+        if (
+            outcome.status != "finding"
+            or not outcome.relationship
+            or outcome.evidence_seq not in visible_sequences
+        ):
             return None
         output = build_hook_output(
             event_name,
@@ -237,6 +192,7 @@ class CodexAdapter:
         output[AUDIT_MARKER_KEY] = {
             "session": session,
             "principle": outcome.principle,
+            "evidence_seq": outcome.evidence_seq,
             "anchor": outcome.anchor,
             "relationship": outcome.relationship,
             "returned_via": event_name,

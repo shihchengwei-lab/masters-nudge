@@ -4,37 +4,18 @@
 from __future__ import annotations
 
 import json
-import re
 import sys
 from typing import Any
 
 import source_context
 from masters_nudge import claude_adapter, evidence, prompting, storage
-from masters_nudge.contracts import NudgeOutcome, ToolCompleted
+from masters_nudge.contracts import (
+    NudgeOutcome,
+    ToolCompleted,
+    mutation_evidence_from_input,
+)
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, active_guard
-
-
-MUTATING_TOOLS = {"edit", "write", "apply_patch", "file_change"}
-EXIT_CODE_RE = re.compile(r"^Exit code\s+(-?\d+)\b", re.IGNORECASE)
-
-
-def _response_failure(response: Any) -> tuple[bool, bool]:
-    if isinstance(response, dict):
-        if isinstance(response.get("is_error"), bool):
-            return True, bool(response["is_error"])
-        if isinstance(response.get("exit_code"), int):
-            return True, response["exit_code"] != 0
-    if isinstance(response, list):
-        flags = [
-            block.get("is_error")
-            for block in response
-            if isinstance(block, dict) and isinstance(block.get("is_error"), bool)
-        ]
-        if flags:
-            return True, any(flags)
-    match = EXIT_CODE_RE.match(str(response or "").strip())
-    return (True, int(match.group(1)) != 0) if match else (False, False)
 
 
 def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
@@ -52,16 +33,16 @@ def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
         if not tool_name:
             continue
         response = call.get("tool_response", "")
-        known, failed = _response_failure(response)
+        tool_input = call.get("tool_input")
+        if tool_input is None:
+            tool_input = {}
         events.append(
             ToolCompleted(
                 session,
                 tool_name,
-                tool_input=call.get("tool_input") or {},
+                tool_input=tool_input,
                 tool_output=response,
-                failed=failed,
-                failure_known=known,
-                mutating=tool_name.lower() in MUTATING_TOOLS,
+                mutation=mutation_evidence_from_input(tool_input),
                 native_event_name="PostToolBatch",
             )
         )
@@ -101,7 +82,6 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     state = observed.turn_state
     packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
-        task_sources=state.get("task_sources") or {},
         evidence_records=list(observed.batch_records),
     )
     review_input = prompting.build_review_input(
@@ -117,7 +97,12 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
-    if outcome.status != "finding" or not outcome.relationship:
+    visible_sequences = {record["seq"] for record in observed.batch_records}
+    if (
+        outcome.status != "finding"
+        or not outcome.relationship
+        or outcome.evidence_seq not in visible_sequences
+    ):
         return None
     return claude_adapter.PreparedDelivery(
         output=build_hook_output(
@@ -125,6 +110,7 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
         ),
         session=events[0].session,
         principle=outcome.principle,
+        evidence_seq=outcome.evidence_seq,
         anchor=outcome.anchor,
         relationship=outcome.relationship,
         returned_via="PostToolBatch",

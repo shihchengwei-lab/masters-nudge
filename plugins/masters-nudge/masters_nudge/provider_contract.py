@@ -10,6 +10,7 @@ from .prompting import has_nudge_prefix, is_principle
 def call_result(
     status: str = "error",
     principle: str = "none",
+    evidence_seq: int = 0,
     anchor: str = "",
     relationship: str = "",
     **extra,
@@ -17,6 +18,7 @@ def call_result(
     result = {
         "status": status,
         "principle": principle,
+        "evidence_seq": evidence_seq,
         "anchor": anchor,
         "relationship": relationship,
         **extra,
@@ -44,30 +46,38 @@ def parse_nudge_result(stdout: str) -> dict:
     if obj is None or set(obj) != {
         "status",
         "principle",
+        "evidence_seq",
         "anchor",
         "relationship",
     }:
         return call_result(raw_output=raw)
     status = obj.get("status")
     principle = obj.get("principle")
+    evidence_seq = obj.get("evidence_seq")
     anchor = obj.get("anchor")
     relationship = obj.get("relationship")
     if (
         not isinstance(principle, str)
+        or not isinstance(evidence_seq, int)
+        or isinstance(evidence_seq, bool)
         or not isinstance(anchor, str)
         or not isinstance(relationship, str)
     ):
         return call_result(raw_output=raw)
     if status == "no_finding":
         return (
-            call_result("no_finding", raw_output=raw)
-            if principle == "none" and not anchor and not relationship
+            call_result("no_finding", evidence_seq=0, raw_output=raw)
+            if principle == "none"
+            and evidence_seq == 0
+            and not anchor
+            and not relationship
             else call_result(raw_output=raw)
         )
     anchor = anchor.strip()
     relationship = relationship.strip()
     if (
         status != "finding"
+        or evidence_seq <= 0
         or not is_principle(principle)
         or not anchor
         or not relationship
@@ -77,6 +87,7 @@ def parse_nudge_result(stdout: str) -> dict:
     return call_result(
         "finding",
         principle=principle,
+        evidence_seq=evidence_seq,
         anchor=anchor,
         relationship=relationship,
         raw_output=raw,

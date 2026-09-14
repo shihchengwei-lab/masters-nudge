@@ -61,20 +61,33 @@ class NudgeCore:
             return NudgeOutcome("error")
         status = str(result.get("status") or "error")
         principle = str(result.get("principle") or "none")
+        evidence_seq = result.get("evidence_seq")
         anchor = str(result.get("anchor") or "").strip()
         relationship = str(result.get("relationship") or "").strip()
         if status == "no_finding":
             return (
                 NudgeOutcome("no_finding")
-                if principle == "none" and not anchor and not relationship
+                if principle == "none"
+                and evidence_seq == 0
+                and not anchor
+                and not relationship
                 else NudgeOutcome("error")
             )
         if (
             status != "finding"
+            or not isinstance(evidence_seq, int)
+            or isinstance(evidence_seq, bool)
+            or evidence_seq <= 0
             or not is_principle(principle)
             or not anchor
             or not relationship
             or has_nudge_prefix(relationship)
         ):
             return NudgeOutcome("error")
-        return NudgeOutcome("finding", principle, anchor, relationship)
+        return NudgeOutcome(
+            "finding",
+            principle,
+            anchor,
+            relationship,
+            evidence_seq=evidence_seq,
+        )

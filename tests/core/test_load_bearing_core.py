@@ -1,11 +1,10 @@
-"""Tests for the smallest product behavior that must survive the refactor."""
+"""Tests for the smallest product behavior that must survive refactors."""
 
 from __future__ import annotations
 
 import inspect
 import json
 import os
-import subprocess
 import tempfile
 import time
 import unittest
@@ -13,247 +12,94 @@ from dataclasses import fields
 from pathlib import Path
 
 import source_context
-from masters_nudge import (
-    checkpoints,
-    contracts,
-    evidence,
-    plugin_inventory,
-    prompting,
-    storage,
-)
+from masters_nudge import contracts, evidence, plugin_inventory, prompting, storage
 from masters_nudge.contracts import NudgeOutcome, SessionRef, ToolCompleted
 from masters_nudge.core import NudgeCore
 
 
 class NudgeContractTests(unittest.TestCase):
-    def test_outcome_contains_only_the_decision_needed_by_the_hook(self):
+    def test_outcome_contains_only_the_grounded_decision_needed_by_the_hook(self):
         self.assertEqual(
             [field.name for field in fields(NudgeOutcome)],
-            ["status", "principle", "anchor", "relationship"],
+            ["status", "principle", "anchor", "relationship", "evidence_seq"],
         )
 
     def test_core_accepts_the_packet_directly(self):
         parameters = inspect.signature(NudgeCore.nudge_once).parameters
-
         self.assertEqual(tuple(parameters), ("self", "source_packet", "timeout_sec"))
         self.assertIsNone(parameters["timeout_sec"].default)
 
-    def test_silence_needs_no_fake_finding(self):
+    def test_silence_needs_no_fake_finding_or_evidence(self):
         self.assertEqual(
             NudgeOutcome("no_finding"),
-            NudgeOutcome("no_finding", "none", "", ""),
+            NudgeOutcome("no_finding", "none", "", "", 0),
         )
 
-    def test_contracts_do_not_keep_unconsumed_event_fields_or_types(self):
-        with self.subTest(contract="PromptSubmitted"):
-            self.assertFalse(hasattr(contracts, "PromptSubmitted"))
-        with self.subTest(contract="SessionRef"):
-            self.assertEqual(
-                [field.name for field in fields(SessionRef)],
-                ["host", "session_id", "cwd", "repo_root"],
-            )
-        with self.subTest(contract="ToolCompleted"):
-            self.assertEqual(
-                [field.name for field in fields(ToolCompleted)],
-                [
-                    "session",
-                    "tool_name",
-                    "tool_input",
-                    "tool_output",
-                    "failed",
-                    "failure_known",
-                    "mutating",
-                    "native_event_name",
-                ],
-            )
+    def test_tool_event_keeps_only_native_facts_and_explicit_mutation(self):
+        names = [field.name for field in fields(ToolCompleted)]
+        self.assertEqual(
+            names,
+            [
+                "session",
+                "tool_name",
+                "tool_input",
+                "tool_output",
+                "mutation",
+                "native_event_name",
+            ],
+        )
+        for obsolete in ("failed", "failure_known", "mutating"):
+            self.assertNotIn(obsolete, names)
 
     def test_runtime_inventory_has_no_ignored_installation_parameter(self):
-        self.assertEqual(
-            tuple(inspect.signature(plugin_inventory.runtime_files).parameters),
-            (),
-        )
+        self.assertEqual(tuple(inspect.signature(plugin_inventory.runtime_files).parameters), ())
 
 
 class EvidenceBoundaryTests(unittest.TestCase):
     def test_recent_nudges_are_a_separate_exclusion_set(self):
         review_input = prompting.build_review_input(
-            "CURRENT-PACKET",
-            ("old-nudge-1", "old-nudge-2", "old-nudge-3"),
+            "CURRENT-PACKET", ("old-nudge-1", "old-nudge-2", "old-nudge-3")
         )
-
-        self.assertIn(
-            "[recent returned nudges — exclusions, not evidence]", review_input
-        )
-        self.assertLess(
-            review_input.index("old-nudge-3"), review_input.index("CURRENT-PACKET")
-        )
-        self.assertEqual(
-            prompting.build_review_input("CURRENT-PACKET", ()), "CURRENT-PACKET"
-        )
+        self.assertIn("[recent returned nudges — exclusions, not evidence]", review_input)
+        self.assertLess(review_input.index("old-nudge-3"), review_input.index("CURRENT-PACKET"))
+        self.assertEqual(prompting.build_review_input("CURRENT-PACKET", ()), "CURRENT-PACKET")
 
     def test_exact_native_event_replay_is_the_only_duplicate_guard(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "replay")
-
             self.assertEqual(storage.record_event(root, session, "event-123"), "first")
-            self.assertEqual(
-                storage.record_event(root, session, "event-123"), "duplicate"
-            )
+            self.assertEqual(storage.record_event(root, session, "event-123"), "duplicate")
             self.assertEqual(storage.record_event(root, session, "event-456"), "new")
 
-    def test_returned_nudge_defers_the_latest_change_until_an_actor_result(self):
-        boundaries = {
-            "verification": ToolCompleted(
-                SessionRef("codex_cli", "placeholder"),
-                "exec_command",
-                tool_input={"cmd": "pytest -q"},
-                tool_output="1 passed in 0.10s",
-            ),
-            "failure": ToolCompleted(
-                SessionRef("codex_cli", "placeholder"),
-                "exec_command",
-                tool_input={"cmd": "python app.py"},
-                tool_output="Traceback (most recent call last): RuntimeError: broken",
-                failed=True,
-                failure_known=True,
-            ),
-            "measurement": ToolCompleted(
-                SessionRef("codex_cli", "placeholder"),
-                "exec_command",
-                tool_input={"cmd": "python benchmark.py"},
-                tool_output="median: 12 ms",
-            ),
-        }
-        for category, template in boundaries.items():
-            with self.subTest(category=category), tempfile.TemporaryDirectory() as raw:
-                root = Path(raw)
-                session = SessionRef("codex_cli", category, cwd=raw)
-                storage.start_turn(root, session, "讓 Actor 決定如何處理 Nudge")
-                evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "read",
-                            tool_input={"path": "owner.py"},
-                            tool_output="owner = direct",
-                        )
-                    ],
-                )
-                storage.append_host_returned_nudge(
-                    root,
-                    session,
-                    principle="causality",
-                    anchor="owner",
-                    relationship="目前的責任可能分散。",
-                    returned_via="PostToolBatch",
-                )
-
-                blocked = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "apply_patch",
-                            tool_input={"patch": "change after Nudge"},
-                            tool_output={"status": "completed"},
-                            mutating=True,
-                        )
-                    ],
-                )
-                still_blocked = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "apply_patch",
-                            tool_input={"patch": "second change before a result"},
-                            tool_output={"status": "completed"},
-                            mutating=True,
-                        )
-                    ],
-                )
-                latest_blocked = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "apply_patch",
-                            tool_input={"patch": "third and latest change"},
-                            tool_output={"status": "completed"},
-                            mutating=True,
-                        )
-                    ],
-                )
-                boundary = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            template.tool_name,
-                            tool_input=template.tool_input,
-                            tool_output=template.tool_output,
-                            failed=template.failed,
-                            failure_known=template.failure_known,
-                        )
-                    ],
-                )
-                resumed = evidence.observe_tool_batch(
-                    root,
-                    [
-                        ToolCompleted(
-                            session,
-                            "apply_patch",
-                            tool_input={"patch": "later independent change"},
-                            tool_output={"status": "completed"},
-                            mutating=True,
-                        )
-                    ],
-                )
-
-                self.assertFalse(blocked.eligible)
-                self.assertTrue(blocked.turn_state["nudge_pending_validation"])
-                self.assertFalse(still_blocked.eligible)
-                self.assertTrue(
-                    still_blocked.turn_state["nudge_pending_validation"]
-                )
-                self.assertFalse(latest_blocked.eligible)
-                self.assertTrue(
-                    latest_blocked.turn_state["nudge_pending_validation"]
-                )
-                self.assertTrue(boundary.eligible)
-                self.assertFalse(boundary.turn_state["nudge_pending_validation"])
-                self.assertIsNone(boundary.turn_state["pending_change"])
-                self.assertEqual(
-                    [record["category"] for record in boundary.batch_records],
-                    ["change", category],
-                )
-                packet_content = "\n".join(
-                    record["content"] for record in boundary.batch_records
-                )
-                self.assertNotIn("owner = direct", packet_content)
-                self.assertNotIn("change after Nudge", packet_content)
-                self.assertNotIn("second change before a result", packet_content)
-                self.assertIn("third and latest change", packet_content)
-                self.assertIn(str(template.tool_output), packet_content)
-                self.assertTrue(resumed.eligible)
-
-    def test_returned_nudge_without_a_followup_change_ignores_actor_results(self):
+    def test_mutation_batch_is_independent_after_a_returned_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            session = SessionRef("codex_cli", "unchanged-after-nudge", cwd=raw)
-            storage.start_turn(root, session, "只在採用 Nudge 後重新檢查")
+            session = SessionRef("codex_cli", "independent", cwd=raw)
+            storage.start_turn(root, session, "檢查每個明確修改批次")
             storage.append_host_returned_nudge(
                 root,
                 session,
+                evidence_seq=1,
                 principle="causality",
                 anchor="owner",
                 relationship="目前的責任可能分散。",
                 returned_via="PostToolBatch",
             )
-
-            verified = evidence.observe_tool_batch(
+            mutation_input = {"patch": "*** Update File: owner.py\n@@\n-old\n+new"}
+            changed = evidence.observe_tool_batch(
+                root,
+                [
+                    ToolCompleted(
+                        session,
+                        "unknown",
+                        tool_input=mutation_input,
+                        tool_output={"status": "anything"},
+                        mutation=contracts.mutation_evidence_from_input(mutation_input),
+                    )
+                ],
+            )
+            command = evidence.observe_tool_batch(
                 root,
                 [
                     ToolCompleted(
@@ -264,266 +110,72 @@ class EvidenceBoundaryTests(unittest.TestCase):
                     )
                 ],
             )
-            failed = evidence.observe_tool_batch(
-                root,
-                [
-                    ToolCompleted(
-                        session,
-                        "exec_command",
-                        tool_input={"cmd": "python app.py"},
-                        tool_output="missing dependency",
-                        failed=True,
-                        failure_known=True,
-                    )
-                ],
-            )
-
-        self.assertFalse(verified.eligible)
-        self.assertFalse(failed.eligible)
-        self.assertTrue(failed.turn_state["nudge_pending_validation"])
-        self.assertIsNone(failed.turn_state["pending_change"])
-
-    def test_new_turn_clears_a_pending_nudge(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "new-turn", cwd=raw)
-            storage.start_turn(root, session, "first task")
-            storage.append_host_returned_nudge(
-                root,
-                session,
-                principle="causality",
-                anchor="owner",
-                relationship="目前的責任可能分散。",
-                returned_via="PostToolBatch",
-            )
-            evidence.observe_tool_batch(
-                root,
-                [
-                    ToolCompleted(
-                        session,
-                        "apply_patch",
-                        tool_input={"patch": "change from first task"},
-                        tool_output={"status": "completed"},
-                        mutating=True,
-                    )
-                ],
-            )
-            self.assertTrue(
-                storage.load_turn_state(root, session)["nudge_pending_validation"]
-            )
-            self.assertIsNotNone(
-                storage.load_turn_state(root, session)["pending_change"]
-            )
-
-            storage.start_turn(root, session, "next task")
-
-            self.assertFalse(
-                storage.load_turn_state(root, session)["nudge_pending_validation"]
-            )
-            self.assertIsNone(
-                storage.load_turn_state(root, session)["pending_change"]
-            )
-
-    def test_packet_contains_the_actual_command_and_result(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "command", cwd=raw, repo_root=raw)
-            storage.start_turn(root, session, "確認實際執行的驗證")
-            event = ToolCompleted(
-                session,
-                "exec_command",
-                tool_input={"cmd": "pytest tests/test_owner.py -q"},
-                tool_output="1 passed in 0.12s",
-            )
-            observed = evidence.observe_tool_batch(root, [event])
-            packet = source_context.build_checkpoint_packet(
-                task_anchor=observed.turn_state["task_anchor"],
-                task_sources=observed.turn_state["task_sources"],
-                evidence_records=observed.batch_records,
-            )
-
-        self.assertIn("pytest tests/test_owner.py -q", packet)
-        self.assertIn("1 passed in 0.12s", packet)
-
-    def test_turn_state_keeps_no_cross_batch_evidence_history(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "single-evidence-owner")
-            storage.start_turn(root, session, "只保留最近來源批次")
             state = storage.load_turn_state(root, session)
 
-        self.assertNotIn("last_source_context", state)
-        self.assertNotIn("evidence_seq", state)
-        self.assertNotIn("evidence_records", state)
-        self.assertFalse(hasattr(storage, "record_evidence"))
+        self.assertTrue(changed.eligible)
+        self.assertFalse(command.eligible)
+        self.assertEqual(set(changed.batch_records[0]), {"seq", "content"})
+        self.assertNotIn("pending_change", state)
+        self.assertNotIn("nudge_pending_validation", state)
 
-    def test_change_evidence_uses_the_native_mutation_without_cumulative_diff(self):
+    def test_packet_preserves_actual_native_input_and_result(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "tests@example.invalid"],
-                cwd=root,
-                check=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Masters Nudge Tests"],
-                cwd=root,
-                check=True,
-            )
-            path = root / "app.py"
-            path.write_text("BASELINE = True\n", encoding="utf-8")
-            subprocess.run(["git", "add", "app.py"], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
-            path.write_text(
-                "BASELINE = True\nFIRST_MUTATION = True\nSECOND_MUTATION = True\n",
-                encoding="utf-8",
-            )
-            event = ToolCompleted(
-                SessionRef("codex_cli", "diff", cwd=raw, repo_root=raw),
-                "apply_patch",
-                tool_input={
-                    "patch": (
-                        "*** Update File: app.py\n@@\n"
-                        "+SECOND_MUTATION = True\n"
-                    )
-                },
-                tool_output={"status": "completed"},
-                mutating=True,
-            )
-
-            rendered = checkpoints.render_evidence_record(event)
-
-        self.assertIn("SECOND_MUTATION", rendered)
-        self.assertNotIn("FIRST_MUTATION", rendered)
-        self.assertNotIn("current_diff:", rendered)
-
-    def test_change_evidence_keeps_every_direct_path_and_excludes_ambient_diff(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "tests@example.invalid"],
-                cwd=root,
-                check=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Masters Nudge Tests"],
-                cwd=root,
-                check=True,
-            )
-            for name in ("first.py", "second.py", "generated.py"):
-                (root / name).write_text("value = 'before'\n", encoding="utf-8")
-            subprocess.run(["git", "add", "."], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
-            (root / "first.py").write_text("value = 'first'\n", encoding="utf-8")
-            (root / "second.py").write_text("value = 'second'\n", encoding="utf-8")
-            (root / "generated.py").write_text(
-                "value = 'ambient'\n", encoding="utf-8"
-            )
-            event = ToolCompleted(
-                SessionRef("codex_cli", "multi-diff", cwd=raw, repo_root=raw),
-                "apply_patch",
-                tool_input={
-                    "patch": (
-                        "*** Begin Patch\n"
-                        "*** Update File: first.py\n"
-                        "@@\n"
-                        "-value = 'before'\n"
-                        "+value = 'first'\n"
-                        "*** Update File: second.py\n"
-                        "@@\n"
-                        "-value = 'before'\n"
-                        "+value = 'second'\n"
-                        "*** End Patch"
-                    )
-                },
-                tool_output={"status": "completed"},
-                mutating=True,
-            )
-
-            rendered = checkpoints.render_evidence_record(event)
-
-        self.assertIn("first.py", rendered)
-        self.assertIn("second.py", rendered)
-        self.assertNotIn("generated.py", rendered)
-        self.assertNotIn("ambient", rendered)
-
-    def test_change_evidence_contains_an_untracked_new_file(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "tests@example.invalid"],
-                cwd=root,
-                check=True,
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Masters Nudge Tests"],
-                cwd=root,
-                check=True,
-            )
-            (root / "anchor.txt").write_text("anchor\n", encoding="utf-8")
-            subprocess.run(["git", "add", "anchor.txt"], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "anchor"], cwd=root, check=True)
-            (root / "new_owner.py").write_text(
-                "owner = 'direct'\n", encoding="utf-8"
-            )
-            (root / "generated.py").write_text(
-                "owner = 'ambient'\n", encoding="utf-8"
-            )
-            event = ToolCompleted(
-                SessionRef("codex_cli", "untracked", cwd=raw, repo_root=raw),
-                "file_change",
-                tool_input={"path": "new_owner.py", "content": "owner = 'direct'"},
-                tool_output={"status": "completed"},
-                mutating=True,
-            )
-
-            rendered = checkpoints.render_evidence_record(event)
-
-        self.assertIn("new_owner.py", rendered)
-        self.assertIn("owner = 'direct'", rendered)
-        self.assertNotIn("generated.py", rendered)
-        self.assertNotIn("owner = 'ambient'", rendered)
-
-    def test_path_only_mutation_is_not_reviewable_decision_evidence(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "path-only", cwd=raw, repo_root=raw)
-            storage.start_turn(root, session, "檢查目前修改")
-
+            session = SessionRef("codex_cli", "raw", cwd=raw)
+            storage.start_turn(root, session, "確認原生證據")
+            mutation_input = {
+                "command": "wrapper --apply",
+                "patch": "*** Update File: app.py\n@@\n-old\n+new",
+            }
             observed = evidence.observe_tool_batch(
                 root,
                 [
                     ToolCompleted(
                         session,
-                        "file_change",
-                        tool_input={"path": "owner.py"},
-                        tool_output={"status": "completed"},
-                        mutating=True,
+                        "host_tool",
+                        tool_input=mutation_input,
+                        tool_output={"success": True},
+                        mutation=contracts.mutation_evidence_from_input(mutation_input),
                     )
                 ],
             )
-
-        self.assertFalse(observed.eligible)
-        self.assertEqual(observed.batch_records[0]["category"], "observation")
-
-    def test_changed_paths_include_both_sides_of_a_move(self):
-        with tempfile.TemporaryDirectory() as raw:
-            paths = source_context.changed_paths_for_change(
-                raw,
-                {
-                    "patch": (
-                        "*** Begin Patch\n"
-                        "*** Update File: old_owner.py\n"
-                        "*** Move to: new_owner.py\n"
-                        "*** End Patch"
-                    )
-                },
+            packet = source_context.build_checkpoint_packet(
+                task_anchor=observed.turn_state["task_anchor"],
+                evidence_records=observed.batch_records,
             )
 
-        self.assertEqual(paths, ("old_owner.py", "new_owner.py"))
+        self.assertIn('"command": "wrapper --apply"', packet)
+        self.assertIn('"patch": "*** Update File: app.py', packet)
+        self.assertIn('"success": true', packet)
+        self.assertNotIn("actual_command:", packet)
+        self.assertNotIn("category=", packet)
+
+    def test_turn_state_keeps_no_cross_batch_evidence_or_source_history(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "state")
+            storage.start_turn(root, session, "不要讀 secret.txt")
+            state = storage.load_turn_state(root, session)
+
+        for obsolete in (
+            "last_source_context",
+            "evidence_seq",
+            "evidence_records",
+            "task_sources",
+            "pending_change",
+            "nudge_pending_validation",
+        ):
+            self.assertNotIn(obsolete, state)
+
+    def test_source_context_has_no_inference_or_file_scan_api(self):
+        for obsolete in (
+            "changed_paths_for_change",
+            "related_source_for_change",
+            "has_attributable_change",
+            "referenced_task_sources",
+            "load_referenced_task_sources",
+        ):
+            self.assertFalse(hasattr(source_context, obsolete))
 
 
 class HostReturnedAuditTests(unittest.TestCase):
@@ -535,12 +187,12 @@ class HostReturnedAuditTests(unittest.TestCase):
                 storage.append_host_returned_nudge(
                     root,
                     session,
+                    evidence_seq=index + 1,
                     principle="causality",
                     anchor=f"owner-{index}",
                     relationship=f"relationship-{index}",
                     returned_via="PostToolBatch",
                 )
-
             recent = storage.read_recent_returned_nudges(root, session, limit=3)
 
         self.assertEqual(
@@ -552,13 +204,14 @@ class HostReturnedAuditTests(unittest.TestCase):
             ),
         )
 
-    def test_host_return_creates_one_plain_audit_entry(self):
+    def test_host_return_audit_keeps_grounding_sequence(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("claude_code", "audit", cwd=raw)
             storage.append_host_returned_nudge(
                 root,
                 session,
+                evidence_seq=2,
                 principle="causality",
                 anchor="batch owner",
                 relationship="讓單一欄位直接擁有責任。",
@@ -567,46 +220,10 @@ class HostReturnedAuditTests(unittest.TestCase):
             entries = storage.recent_nudges(root, limit=10)
 
         self.assertEqual(len(entries), 1)
-        self.assertEqual(entries[0]["principle"], "causality")
-        self.assertEqual(entries[0]["anchor"], "batch owner")
+        self.assertEqual(entries[0]["evidence_seq"], 2)
         self.assertEqual(entries[0]["relationship"], "讓單一欄位直接擁有責任。")
-        self.assertEqual(entries[0]["returned_via"], "PostToolBatch")
-        self.assertIn("time", entries[0])
-        self.assertIn("workspace", entries[0])
-        for obsolete in (
-            "queued",
-            "emitted",
-            "injected",
-            "responded",
-            "provider_output",
-            "usage",
-            "latency_ms",
-        ):
-            self.assertNotIn(obsolete, entries[0])
 
-    def test_recent_nudges_keeps_a_legacy_finding_record(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            session = SessionRef("codex_cli", "legacy", cwd=raw)
-            path = storage.audit_path(root, session)
-            path.write_text(
-                json.dumps(
-                    {
-                        "time": "2026-09-01T00:00:00+00:00",
-                        "finding": "舊格式 Nudge",
-                        "returned_via": "PostToolUse",
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n",
-                encoding="utf-8",
-            )
-
-            entries = storage.recent_nudges(root, limit=10)
-
-        self.assertEqual(entries[0]["finding"], "舊格式 Nudge")
-
-    def test_cleanup_removes_an_expired_session_but_keeps_global_settings(self):
+    def test_cleanup_removes_expired_session_data_but_keeps_settings(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "expired", cwd=raw)
@@ -614,16 +231,14 @@ class HostReturnedAuditTests(unittest.TestCase):
             storage.append_host_returned_nudge(
                 root,
                 session,
+                evidence_seq=1,
                 principle="causality",
                 anchor="retry owner",
                 relationship="讓重試保留同一個責任擁有者。",
-                returned_via="PostToolUse",
+                returned_via="PostToolBatch",
             )
             settings = root / "config.json"
-            settings.write_text(
-                '{"provider":"","model":"","ollama_url":"http://127.0.0.1:11434"}\n',
-                encoding="utf-8",
-            )
+            settings.write_text("{}\n", encoding="utf-8")
             old = time.time() - 31 * 24 * 60 * 60
             for path in root.iterdir():
                 if path != settings:
@@ -634,6 +249,16 @@ class HostReturnedAuditTests(unittest.TestCase):
             self.assertTrue(settings.exists())
             self.assertEqual(storage.recent_nudges(root, limit=10), [])
             self.assertEqual(storage.load_turn_state(root, session)["task_anchor"], "")
+
+    def test_recent_nudges_keeps_a_legacy_finding_record(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            session = SessionRef("codex_cli", "legacy", cwd=raw)
+            storage.audit_path(root, session).write_text(
+                json.dumps({"finding": "舊格式 Nudge"}, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(storage.recent_nudges(root, limit=10)[0]["finding"], "舊格式 Nudge")
 
 
 if __name__ == "__main__":

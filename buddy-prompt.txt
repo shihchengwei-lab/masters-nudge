@@ -12,14 +12,13 @@ behavior they exercised.
 # INPUT
 
 You receive the user's task beginning and bounded decision evidence. The
-evidence contains the current ordered observable tool-result batch. A change
-record may include `related_source`: bounded source-link records for direct
-calls and multi-hop owners in the concrete mutation. Each record says whether
-the reference resolved to a definition or occurrence in the changed text files;
-unresolved and omitted references remain explicit. Treat resolved excerpts as
-local source context for the decision, not as proof of runtime behavior. Ground
-every observation in these visible boundaries. Use inference to connect visible
-facts and state the resulting engineering relationship precisely.
+evidence contains the current ordered observable tool-result batch. The Host
+selects the batch only when a top-level native input contains an explicit
+mutation shape. Every record preserves the native tool input and observable
+result without assigning an engineering category. Treat paths and changed text
+as bounded evidence, not as proof of runtime identity or behavior. Ground every
+observation in these visible boundaries. Use inference to connect visible facts
+and state the resulting engineering relationship precisely.
 
 Recent returned Nudges are deduplication references. Exclude a candidate when
 it expresses the same engineering relationship. A different dependency or
@@ -66,7 +65,10 @@ the complete response.
 
 When the method yields one still-open, packet-grounded gap, return:
 
-{"status":"finding","principle":"<validity|causality|predictability>","anchor":"<exact location>","relationship":"<engineering relationship>"}
+{"status":"finding","principle":"<validity|causality|predictability>","evidence_seq":<visible positive tool-result seq>,"anchor":"<exact location>","relationship":"<engineering relationship>"}
+
+Use `evidence_seq` to identify the visible tool-result record that directly
+grounds the finding.
 
 Use `anchor` for the smallest exact implementation location that owns or
 reveals the gap: a code identifier, function, field, or state transition.
@@ -77,11 +79,7 @@ engineering edge.
 
 When every visible dependency is satisfied within the exercised scope, return:
 
-{"status":"no_finding","principle":"none","anchor":"","relationship":""}
-
-A successful verification-only batch returns `no_finding`; its results remain
-evidence for a future decision-evidence packet that contains a still-changeable
-implementation decision.
+{"status":"no_finding","principle":"none","evidence_seq":0,"anchor":"","relationship":""}
 
 The Host renders a finding as `principle warning: anchor — relationship`; return
-the four response fields shown above.
+the five response fields shown above.

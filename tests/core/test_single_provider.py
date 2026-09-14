@@ -33,6 +33,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "finding",
                     "principle": "causality",
+                    "evidence_seq": 1,
                     "anchor": "batch owner",
                     "relationship": "讓批次只有一個擁有者，避免重試重複移除。",
                 }
@@ -43,6 +44,7 @@ class SingleProviderTests(unittest.TestCase):
 
         self.assertEqual(outcome.status, "finding")
         self.assertEqual(outcome.principle, "causality")
+        self.assertEqual(outcome.evidence_seq, 1)
         self.assertEqual(outcome.anchor, "batch owner")
         self.assertEqual(
             outcome.relationship,
@@ -61,6 +63,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "no_finding",
                     "principle": "none",
+                    "evidence_seq": 0,
                     "anchor": "",
                     "relationship": "",
                 }
@@ -89,6 +92,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "no_finding",
                     "principle": "none",
+                    "evidence_seq": 0,
                     "anchor": "",
                     "relationship": "",
                 }
@@ -119,9 +123,10 @@ class SingleProviderTests(unittest.TestCase):
         self.assertIn("task beginning", normalized)
         self.assertIn("ordered observable tool-result batch", normalized)
         self.assertIn("bounded decision evidence", normalized)
-        self.assertIn("related_source", normalized)
-        self.assertIn("source-link records for direct calls and multi-hop owners", normalized)
-        self.assertIn("unresolved and omitted references remain explicit", normalized)
+        self.assertIn("native tool input and observable result", normalized)
+        self.assertIn("without assigning an engineering category", normalized)
+        self.assertNotIn("related_source", normalized)
+        self.assertNotIn("declaration candidates", normalized)
         self.assertIn("Inspect the concrete engineering decision", normalized)
         self.assertIn("task's behavioral requirements", normalized)
         self.assertIn("Identify the implementation choice", normalized)
@@ -154,6 +159,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "finding",
                     "principle": "reliability",
+                    "evidence_seq": 1,
                     "anchor": "batch owner",
                     "relationship": "讓批次只有一個擁有者，避免重試重複移除。",
                 }
@@ -185,6 +191,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "finding",
                     "principle": "predictability",
+                    "evidence_seq": 1,
                     "anchor": "_autoFlushTimer",
                     "relationship": relationship,
                 }
@@ -211,6 +218,7 @@ class SingleProviderTests(unittest.TestCase):
                 {
                     "status": "finding",
                     "principle": "causality",
+                    "evidence_seq": 1,
                     "anchor": "batch owner",
                     "relationship": "causality warning: 重複前綴",
                 }
@@ -228,6 +236,7 @@ class SingleProviderTests(unittest.TestCase):
                 return {
                     "status": "no_finding",
                     "principle": "none",
+                    "evidence_seq": 0,
                     "anchor": "",
                     "relationship": "",
                 }
@@ -245,10 +254,7 @@ class SingleProviderTests(unittest.TestCase):
             "Findings describe runtime gaps in code, data, responsibility, or control flow",
             normalized,
         )
-        self.assertIn(
-            "A successful verification-only batch returns `no_finding`",
-            normalized,
-        )
+        self.assertIn("visible tool-result record", normalized)
         self.assertIn("Trace changed state transitions and effects in execution order", normalized)
         self.assertIn(
             "Track each returned promise or callback into the next action that depends on its completion",
@@ -281,7 +287,7 @@ class SingleProviderTests(unittest.TestCase):
         )
         self.assertEqual(
             schema["required"],
-            ["status", "principle", "anchor", "relationship"],
+            ["status", "principle", "evidence_seq", "anchor", "relationship"],
         )
 
 

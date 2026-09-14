@@ -21,6 +21,7 @@ class PreparedDelivery:
     output: dict[str, Any]
     session: SessionRef
     principle: str
+    evidence_seq: int
     anchor: str
     relationship: str
     returned_via: str
@@ -52,6 +53,7 @@ def emit_json_delivery(prepared: PreparedDelivery, stream: Any = None) -> None:
     storage.append_host_returned_nudge(
         runtime_settings().paths.data_dir,
         prepared.session,
+        evidence_seq=prepared.evidence_seq,
         principle=prepared.principle,
         anchor=prepared.anchor,
         relationship=prepared.relationship,

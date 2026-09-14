@@ -6,6 +6,11 @@
       "type": "string",
       "enum": ["validity", "causality", "predictability", "none"]
     },
+    "evidence_seq": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The visible tool-result sequence that grounds a finding; 0 only for no_finding."
+    },
     "anchor": {
       "type": "string",
       "description": "The smallest exact implementation location that owns or reveals the gap: a code identifier, function, field, or state transition."
@@ -15,6 +20,6 @@
       "description": "One short Traditional Chinese declarative sentence stating one still-open, packet-grounded engineering edge: the unmet runtime dependency and its task-breaking runtime behavior. The Host renders the principle, warning marker, and anchor separately."
     }
   },
-  "required": ["status", "principle", "anchor", "relationship"],
+  "required": ["status", "principle", "evidence_seq", "anchor", "relationship"],
   "additionalProperties": false
 }

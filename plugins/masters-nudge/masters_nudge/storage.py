@@ -93,41 +93,11 @@ def _empty_turn(session: SessionRef) -> dict[str, Any]:
         "host": session.host,
         "session_id": session.session_id,
         "task_anchor": "",
-        "task_sources": {},
-        "nudge_pending_validation": False,
-        "pending_change": None,
     }
 
 
 def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
     return _read_json(state_path(data_dir, session, "turn"), _empty_turn(session))
-
-
-def set_nudge_pending_validation(
-    data_dir: Path,
-    session: SessionRef,
-    pending: bool,
-) -> dict[str, Any]:
-    state = load_turn_state(data_dir, session)
-    state["nudge_pending_validation"] = bool(pending)
-    state["pending_change"] = None
-    _atomic_write(state_path(data_dir, session, "turn"), state)
-    return state
-
-
-def set_pending_change(
-    data_dir: Path,
-    session: SessionRef,
-    change: dict[str, Any],
-) -> dict[str, Any]:
-    state = load_turn_state(data_dir, session)
-    state["pending_change"] = {
-        "seq": 1,
-        "category": "change",
-        "content": str(change.get("content") or ""),
-    }
-    _atomic_write(state_path(data_dir, session, "turn"), state)
-    return state
 
 
 def cleanup_expired_sessions(
@@ -161,9 +131,6 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
         {
             "task_anchor": source_context.head_tail(
                 prompt, source_context.TASK_ANCHOR_MAX_CHARS
-            ),
-            "task_sources": source_context.load_referenced_task_sources(
-                prompt, session.repo_root or session.cwd
             ),
         }
     )
@@ -204,6 +171,7 @@ def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
     *,
+    evidence_seq: int,
     principle: str,
     anchor: str,
     relationship: str,
@@ -214,6 +182,7 @@ def append_host_returned_nudge(
         "host": session.host,
         "session_id": session.session_id,
         "workspace": str(session.repo_root or session.cwd or ""),
+        "evidence_seq": int(evidence_seq),
         "principle": str(principle or "").strip(),
         "anchor": str(anchor or "").strip(),
         "relationship": str(relationship or "").strip(),
@@ -223,7 +192,6 @@ def append_host_returned_nudge(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    set_nudge_pending_validation(data_dir, session, True)
     return entry
 
 

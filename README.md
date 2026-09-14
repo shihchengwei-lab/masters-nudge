@@ -27,30 +27,24 @@ Nudge.
 
 ## One judgment
 
-Normally, only a tool-result batch containing a successful code change is sent
-to the Provider. Read-only exploration, status checks, and standalone
-verification, failure, or measurement results do not call it. After a Nudge is
-returned, later change batches are held and only the latest change is retained
-until the main agent produces a verification, failure, or measurement result.
-That first result is combined with the retained change and sent as one Provider
-judgment, then the hold is cleared. A result without a post-Nudge change does
-not call the Provider or clear the hold. This keeps the implementation decision
-and its observed result together without turning intermediate edits into
-separate problems. The main agent remains responsible for deciding whether and
-how to use each Nudge.
+Only a tool-result batch whose native top-level input contains an explicit
+mutation shape is sent to the Provider: `patch`, `diff`, a path plus
+`old_string` and `new_string`, or a path plus `content`. Read-only exploration,
+status checks, and standalone verification, failure, or measurement results do
+not call it. Each mutation batch is judged independently; Masters' Nudge does
+not infer success from result text or pair a later result with an earlier
+change. The main agent remains responsible for deciding whether and how to use
+each Nudge.
 
 Each selected batch is sent once. The Provider sees the task beginning and
-bounded decision evidence in a clean context. Each change record can include up
-to 16 source-link records (4,000 characters total) for direct calls and
-multi-hop owners in the concrete mutation. Each link independently resolves to
-a definition or occurrence in the changed text files, or is marked unresolved;
-an omitted count makes the fixed reference limit explicit. This does not depend
-on which source command ran most recently. The Provider forms its own causal
-judgment, then selects the strongest non-obvious observation that could change
-the next engineering decision. Up to three Nudge texts already returned in the
-same session are sent separately as exclusions so the Provider does not repeat
-or continue them; they are not evidence or a record of the main agent's decision
-path.
+bounded decision evidence in a clean context. A change record preserves the
+concrete mutation input and observable result supplied by the Host; it does not
+infer source relationships from matching identifier text. The Provider forms
+its own causal judgment, then selects the strongest non-obvious observation
+that could change the next engineering decision. Up to three Nudge texts
+already returned in the same session are sent separately as exclusions so the
+Provider does not repeat or continue them; they are not evidence or a record of
+the main agent's decision path.
 
 The Provider evaluates three structural principles in one pass without routing
 the problem through a category first:
@@ -64,8 +58,9 @@ three model calls, or three separate Nudges.
 
 Each principle has a one-word label: `validity` for invalid states,
 `causality` for unidirectional causal flow, and `predictability` for explicit,
-locally understandable behavior. The Provider returns the principle, the
-smallest atomic `anchor` needed to locate the observation, and one short
+locally understandable behavior. The Provider returns the visible
+`evidence_seq` that grounds the finding, the principle, the smallest atomic
+`anchor` needed to locate the observation, and one short
 `relationship` that states a single engineering edge. The Host then renders the
 fixed `warning` attention marker, for example `causality warning:`. The marker
 carries no classification or severity meaning.
@@ -108,21 +103,14 @@ ends and the main agent continues.
 The selected Provider receives a bounded packet that may include:
 
 - the current task or recovered long-running Goal;
-- content from local files explicitly named by the task, read once when the
-  task begins;
-- up to 16 source-link records (4,000 characters total) that resolve direct
-  calls and multi-hop owners to definitions or occurrences in the changed text
-  files, with unresolved references and the omitted count shown explicitly;
 - every ordered tool call and result in the current batch, with each record
   length-limited;
-- the final bounded working diff when the batch changed files;
 - up to three Nudge texts already returned in the same session, marked only as
   deduplication exclusions.
 
 The Provider does not receive the complete conversation or hidden model
-reasoning. It does not receive tool results from earlier batches. Resolved
-related-source links can include parts of a changed file that the main agent did
-not explicitly read in a tool call.
+reasoning. It does not receive tool results from earlier batches or implicitly
+read local file content.
 
 Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
 and is also subject to that Provider's data policy. Choose local Ollama when

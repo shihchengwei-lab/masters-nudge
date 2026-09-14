@@ -23,7 +23,7 @@ class SupportedProviderTests(unittest.TestCase):
         completed = subprocess.CompletedProcess(
             ["claude"],
             0,
-            '{"structured_output":{"status":"no_finding","principle":"none","anchor":"","relationship":""}}',
+            '{"structured_output":{"status":"no_finding","principle":"none","evidence_seq":0,"anchor":"","relationship":""}}',
             "",
         )
         with mock.patch.object(
@@ -47,7 +47,7 @@ class SupportedProviderTests(unittest.TestCase):
         def run(*args, **_kwargs):
             argv = args[0]
             Path(argv[argv.index("-o") + 1]).write_text(
-                '{"status":"no_finding","principle":"none","anchor":"","relationship":""}',
+                '{"status":"no_finding","principle":"none","evidence_seq":0,"anchor":"","relationship":""}',
                 encoding="utf-8",
             )
             return completed
@@ -71,6 +71,7 @@ class SupportedProviderTests(unittest.TestCase):
         expected = {
             "status": "no_finding",
             "principle": "none",
+            "evidence_seq": 0,
             "anchor": "",
             "relationship": "",
         }
@@ -98,7 +99,7 @@ class SupportedProviderTests(unittest.TestCase):
         response = {
             "done": True,
             "message": {
-                "content": '{"status":"no_finding","principle":"none","anchor":"","relationship":""}'
+                "content": '{"status":"no_finding","principle":"none","evidence_seq":0,"anchor":"","relationship":""}'
             },
         }
         with (
@@ -124,6 +125,7 @@ class SupportedProviderTests(unittest.TestCase):
                 parse_result=lambda _raw: {
                     "status": "no_finding",
                     "principle": "none",
+                    "evidence_seq": 0,
                     "anchor": "",
                     "relationship": "",
                 },

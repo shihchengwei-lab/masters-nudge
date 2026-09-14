@@ -121,15 +121,12 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn("current ordered observable tool-result batch", normalized)
-                self.assertIn("related_source", normalized)
                 self.assertIn(
-                    "source-link records for direct calls and multi-hop owners",
+                    "native tool input and observable result",
                     normalized,
                 )
-                self.assertIn(
-                    "unresolved and omitted references remain explicit",
-                    normalized,
-                )
+                self.assertNotIn("related_source", normalized)
+                self.assertNotIn("declaration candidates", normalized)
                 self.assertIn(
                     "Trace changed state transitions and effects in execution order",
                     normalized,
@@ -151,10 +148,7 @@ class PackageTests(unittest.TestCase):
                     "Findings describe runtime gaps in code, data, responsibility, or control flow",
                     normalized,
                 )
-                self.assertIn(
-                    "A successful verification-only batch returns `no_finding`",
-                    normalized,
-                )
+                self.assertIn("visible tool-result record", normalized)
                 self.assertIn("completion, ownership, and ordering", normalized)
                 self.assertIn(
                     "different dependency or downstream consequence remains eligible",
