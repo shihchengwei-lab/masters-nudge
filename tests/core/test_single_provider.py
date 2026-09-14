@@ -121,6 +121,7 @@ class SingleProviderTests(unittest.TestCase):
         normalized = " ".join(prompt.split())
 
         self.assertIn("task beginning", normalized)
+        self.assertIn("explicitly referenced task sources", normalized)
         self.assertIn("ordered observable tool-result batch", normalized)
         self.assertIn("bounded decision evidence", normalized)
         self.assertIn("native tool input and observable result", normalized)
@@ -130,6 +131,9 @@ class SingleProviderTests(unittest.TestCase):
         self.assertIn("Inspect the concrete engineering decision", normalized)
         self.assertIn("task's behavioral requirements", normalized)
         self.assertIn("Identify the implementation choice", normalized)
+        self.assertIn(
+            "Treat an explicitly required behavior as satisfied", normalized
+        )
 
     def test_provider_deduplicates_only_the_same_engineering_relationship(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")

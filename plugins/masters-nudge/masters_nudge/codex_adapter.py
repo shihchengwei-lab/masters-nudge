@@ -187,6 +187,7 @@ class CodexAdapter:
             return None
         packet = source_context.build_checkpoint_packet(
             task_anchor=str(observed.turn_state.get("task_anchor") or ""),
+            task_sources=observed.turn_state.get("task_sources") or {},
             evidence_records=list(observed.batch_records),
         )
         review_input = prompting.build_review_input(

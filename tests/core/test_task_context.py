@@ -117,7 +117,60 @@ class TaskContextTests(unittest.TestCase):
         self.assertIn("current-batch-result", packet)
         self.assertNotIn("prior-batch-result", packet)
 
-    def test_task_path_mentions_never_read_the_file(self):
+    def test_explicit_task_path_is_loaded_into_the_provider_packet(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "TASK.md").write_text(
+                "The rejection result must not replace the last valid config.",
+                encoding="utf-8",
+            )
+            session = SessionRef("codex_cli", "task-source", cwd=raw, repo_root=raw)
+            storage.start_turn(
+                root / "data",
+                session,
+                "Read TASK.md and complete the task.",
+            )
+            (root / "TASK.md").write_text(
+                "A later workspace edit must not rewrite the task contract.",
+                encoding="utf-8",
+            )
+            state = storage.load_turn_state(root / "data", session)
+            packet = source_context.build_checkpoint_packet(
+                task_anchor=state["task_anchor"],
+                task_sources=state["task_sources"],
+                evidence_records=[{"seq": 1, "content": "patch"}],
+            )
+
+        self.assertEqual(
+            state["task_sources"],
+            {"TASK.md": "The rejection result must not replace the last valid config."},
+        )
+        self.assertIn("source: TASK.md", packet)
+        self.assertIn("must not replace the last valid config", packet)
+
+    def test_task_source_outside_the_workspace_is_not_loaded(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            (root / "outside.md").write_text("must stay outside", encoding="utf-8")
+            session = SessionRef(
+                "codex_cli",
+                "outside-source",
+                cwd=str(workspace),
+                repo_root=str(workspace),
+            )
+            storage.start_turn(
+                root / "data",
+                session,
+                "Read `../outside.md` and complete the task.",
+            )
+            state = storage.load_turn_state(root / "data", session)
+
+        self.assertNotIn("task_sources", state)
+        self.assertNotIn("must stay outside", json.dumps(state, ensure_ascii=False))
+
+    def test_negated_task_path_mention_never_reads_the_file(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             (root / "TASK.md").write_text("must stay private", encoding="utf-8")
@@ -127,6 +180,21 @@ class TaskContextTests(unittest.TestCase):
 
         self.assertNotIn("task_sources", state)
         self.assertNotIn("must stay private", json.dumps(state, ensure_ascii=False))
+
+    def test_task_source_excluded_from_provider_is_not_loaded(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "TASK.md").write_text("must stay local", encoding="utf-8")
+            session = SessionRef("codex_cli", "no-send", cwd=raw, repo_root=raw)
+            storage.start_turn(
+                root / "data",
+                session,
+                "Do not send TASK.md to the Provider.",
+            )
+            state = storage.load_turn_state(root / "data", session)
+
+        self.assertNotIn("task_sources", state)
+        self.assertNotIn("must stay local", json.dumps(state, ensure_ascii=False))
 
     def test_exact_replay_is_not_eligible(self):
         with tempfile.TemporaryDirectory() as raw:

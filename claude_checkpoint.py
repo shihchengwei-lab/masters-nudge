@@ -82,6 +82,7 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     state = observed.turn_state
     packet = source_context.build_checkpoint_packet(
         task_anchor=str(state.get("task_anchor") or ""),
+        task_sources=state.get("task_sources") or {},
         evidence_records=list(observed.batch_records),
     )
     review_input = prompting.build_review_input(

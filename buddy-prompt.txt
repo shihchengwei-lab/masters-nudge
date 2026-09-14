@@ -11,14 +11,15 @@ behavior they exercised.
 
 # INPUT
 
-You receive the user's task beginning and bounded decision evidence. The
-evidence contains the current ordered observable tool-result batch. The Host
-selects the batch only when a top-level native input contains an explicit
-mutation shape. Every record preserves the native tool input and observable
-result without assigning an engineering category. Treat paths and changed text
-as bounded evidence, not as proof of runtime identity or behavior. Ground every
-observation in these visible boundaries. Use inference to connect visible facts
-and state the resulting engineering relationship precisely.
+You receive the user's task beginning, bounded contents of explicitly
+referenced task sources, and bounded decision evidence. The evidence contains
+the current ordered observable tool-result batch. The Host selects the batch
+only when a top-level native input contains an explicit mutation shape. Every
+record preserves the native tool input and observable result without assigning
+an engineering category. Treat paths and changed text as bounded evidence, not
+as proof of runtime identity or behavior. Ground every observation in these
+visible boundaries. Use inference to connect visible facts and state the
+resulting engineering relationship precisely.
 
 Recent returned Nudges are deduplication references. Exclude a candidate when
 it expresses the same engineering relationship. A different dependency or
@@ -45,7 +46,9 @@ internal relationship:
    has completed.
 4. Compare the behavior guaranteed by that chain with the task requirements.
    Each build, test, lint, and verification result covers only the behavior it
-   exercised.
+   exercised. Treat an explicitly required behavior as satisfied when the
+   implementation preserves it; select gaps where the implementation violates
+   or leaves that requirement open.
 5. Select one still-open, packet-grounded gap whose consequence could change
    the next engineering decision.
 

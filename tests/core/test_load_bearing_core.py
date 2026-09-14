@@ -150,7 +150,7 @@ class EvidenceBoundaryTests(unittest.TestCase):
         self.assertNotIn("actual_command:", packet)
         self.assertNotIn("category=", packet)
 
-    def test_turn_state_keeps_no_cross_batch_evidence_or_source_history(self):
+    def test_turn_state_keeps_no_cross_batch_tool_or_source_history(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             session = SessionRef("codex_cli", "state")
@@ -161,19 +161,16 @@ class EvidenceBoundaryTests(unittest.TestCase):
             "last_source_context",
             "evidence_seq",
             "evidence_records",
-            "task_sources",
             "pending_change",
             "nudge_pending_validation",
         ):
             self.assertNotIn(obsolete, state)
 
-    def test_source_context_has_no_inference_or_file_scan_api(self):
+    def test_source_context_has_no_change_inference_or_related_source_scan_api(self):
         for obsolete in (
             "changed_paths_for_change",
             "related_source_for_change",
             "has_attributable_change",
-            "referenced_task_sources",
-            "load_referenced_task_sources",
         ):
             self.assertFalse(hasattr(source_context, obsolete))
 

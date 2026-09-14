@@ -159,6 +159,49 @@ class CodexHookFlowTests(unittest.TestCase):
         self.assertEqual(output["_masters_nudge"]["evidence_seq"], 1)
         self.assertIn('"command": "*** Begin Patch', core.calls[0])
 
+    def test_codex_provider_receives_an_explicit_local_task_source(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "TASK.md").write_text(
+                "A handler result must not replace the current config.",
+                encoding="utf-8",
+            )
+            core = FakeCore(root)
+            adapter = CodexAdapter(core)
+            adapter.process(
+                {
+                    "hook_event_name": "UserPromptSubmit",
+                    "session_id": "codex-task-source",
+                    "cwd": raw,
+                    "prompt": "Read TASK.md and complete the task.",
+                }
+            )
+            output = adapter.process(
+                {
+                    "hook_event_name": "PostToolBatch",
+                    "session_id": "codex-task-source",
+                    "cwd": raw,
+                    "tool_calls": [
+                        {
+                            "tool_name": "apply_patch",
+                            "tool_input": {
+                                "command": (
+                                    "*** Begin Patch\n"
+                                    "*** Update File: app.py\n"
+                                    "@@\n-old\n+new\n"
+                                    "*** End Patch"
+                                )
+                            },
+                            "tool_response": "Success. Updated app.py",
+                        }
+                    ],
+                }
+            )
+
+        self.assertIsNotNone(output)
+        self.assertIn("source: TASK.md", core.calls[0])
+        self.assertIn("must not replace the current config", core.calls[0])
+
     def test_provider_sequence_must_name_a_visible_record(self):
         with tempfile.TemporaryDirectory() as raw:
             core = FakeCore(Path(raw), evidence_seq=3)

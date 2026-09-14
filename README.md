@@ -109,14 +109,16 @@ ends and the main agent continues.
 The selected Provider receives a bounded packet that may include:
 
 - the current task or recovered long-running Goal;
+- bounded contents of local task files explicitly referenced by that task;
 - every ordered tool call and result in the current batch, with each record
   length-limited;
 - up to three Nudge texts already returned in the same session, marked only as
   deduplication exclusions.
 
 The Provider does not receive the complete conversation or hidden model
-reasoning. It does not receive tool results from earlier batches or implicitly
-read local file content.
+reasoning. It does not receive tool results from earlier batches. Masters'
+Nudge does not scan the workspace or read files outside the workspace; a local
+file is included only when its relative path is explicitly named by the task.
 
 Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
 and is also subject to that Provider's data policy. Choose local Ollama when

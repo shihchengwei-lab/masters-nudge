@@ -134,6 +134,12 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
             ),
         }
     )
+    task_sources = source_context.load_referenced_task_sources(
+        prompt,
+        session.repo_root or session.cwd,
+    )
+    if task_sources:
+        state["task_sources"] = task_sources
     _atomic_write(state_path(data_dir, session, "turn"), state)
     _atomic_write(
         state_path(data_dir, session, "progress"),
