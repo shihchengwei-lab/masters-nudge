@@ -145,16 +145,16 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
 
 def build_hook_output(
     event_name: str,
-    status: str,
-    principle: str,
-    anchor: str,
-    relationship: str,
+    current_choice: str,
+    structural_cost: str,
+    direction: str,
+    evidence: tuple[str, ...],
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
             "additionalContext": prompting.delivery_text(
-                status, principle, anchor, relationship
+                current_choice, structural_cost, direction, evidence
             ),
         }
     }
@@ -189,48 +189,45 @@ class CodexAdapter:
         observed = observe_tool_batch(self.data_dir, events)
         if not observed.eligible:
             return None
-        packet = source_context.build_checkpoint_packet(
-            task_anchor=str(observed.turn_state.get("task_anchor") or ""),
-            task_sources=observed.turn_state.get("task_sources") or {},
-            evidence_records=list(observed.batch_records),
+        if storage.intervention_delivered(self.data_dir, session):
+            return None
+        changed_paths = tuple(
+            target.path
+            for event in events
+            if event.mutation is not None
+            for target in event.mutation.targets
+            if target.path
         )
-        review_input = prompting.build_review_input(
-            packet,
-            storage.read_recent_returned_nudges(
-                self.data_dir,
-                session,
-                limit=3,
-            ),
+        snapshot = source_context.build_decision_snapshot(
+            task_contract=str(observed.turn_state.get("task_anchor") or ""),
+            task_start=str(observed.turn_state.get("task_start_workspace") or ""),
+            workspace_root=session.repo_root or session.cwd,
+            changed_paths=changed_paths,
         )
         try:
             outcome = self.core.nudge_once(
-                review_input,
+                snapshot,
                 timeout_sec=PROVIDER_TIMEOUT_SEC,
+                workspace_root=session.repo_root or session.cwd,
             )
         except Exception as exc:
             self.core.log_error(f"Codex Nudge failed: {exc}")
             return None
-        visible_sequences = {record["seq"] for record in observed.batch_records}
-        if (
-            not prompting.is_delivery_status(outcome.status)
-            or not outcome.relationship
-            or outcome.evidence_seq not in visible_sequences
-        ):
+        if outcome.decision != "intervene":
             return None
         output = build_hook_output(
             event_name,
-            outcome.status,
-            outcome.principle,
-            outcome.anchor,
-            outcome.relationship,
+            outcome.current_choice,
+            outcome.structural_cost,
+            outcome.direction,
+            outcome.evidence,
         )
         output[AUDIT_MARKER_KEY] = {
             "session": session,
-            "status": outcome.status,
-            "principle": outcome.principle,
-            "evidence_seq": outcome.evidence_seq,
-            "anchor": outcome.anchor,
-            "relationship": outcome.relationship,
+            "current_choice": outcome.current_choice,
+            "structural_cost": outcome.structural_cost,
+            "direction": outcome.direction,
+            "evidence": outcome.evidence,
             "returned_via": event_name,
         }
         return output

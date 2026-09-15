@@ -2,12 +2,12 @@
 
 [繁體中文](README.zh-TW.md) | English
 
-> **Passing tests provides evidence for exercised behavior; check the task contract before design taste.**
+> **Catch a patch-like structural direction while it is still cheap to change.**
 
-Masters’ Nudge gives a Claude Code or Codex agent one short, evidence-based
-contract warning or engineering-taste nudge before its next decision. It does
-not solve the task or stop the agent; the main model still owns the remedy and
-verification.
+Masters’ Nudge gives a Claude Code or Codex agent one independent, read-only
+structural intervention before its next decision. The Provider may identify a
+better responsibility boundary or existing seam, but the main model still owns
+implementation and verification.
 
 ## See an actual run
 
@@ -26,16 +26,15 @@ The Nudge, main-model decision, diff, and test results come from the same run.
 It is one observed reaction, not a promise that every main model will follow a
 Nudge.
 
-## One judgment
+## One early judgment
 
 Only a tool-result batch whose native top-level input contains an explicit
 mutation shape is sent to the Provider: `patch`, `diff`, a path plus
 `old_string` and `new_string`, or a path plus `content`. Read-only exploration,
 status checks, and standalone verification, failure, or measurement results do
-not call it. Each mutation batch is judged independently; Masters' Nudge does
-not infer success from result text or pair a later result with an earlier
-change. The main agent remains responsible for deciding whether and how to use
-each Nudge.
+not call it. Mutation batches may trigger a fresh workspace judgment until one
+intervention is delivered for the task. The main agent remains responsible for
+deciding whether and how to use that intervention.
 
 Codex supplies its native `apply_patch` input as a top-level `command`. Masters'
 Nudge accepts that Host-specific shape only when the tool name is exactly
@@ -43,75 +42,41 @@ Nudge accepts that Host-specific shape only when the tool name is exactly
 update, or delete operation; another tool or arbitrary command text remains
 ineligible.
 
-Each selected batch is sent once. The Provider sees the task beginning and
-bounded decision evidence in a clean context. A change record preserves the
-concrete mutation input and observable result supplied by the Host; it does not
-infer source relationships from matching identifier text. When the mutation
-explicitly names a file inside the workspace, the same record also includes
-bounded current source windows around its changed lines; it neither discovers
-related files nor keeps source history. The Provider checks the visible task
-contract first. Only when that stage yields no eligible warning does it inspect
-the structural tradeoff most likely to change the next engineering decision.
-Up to three returned texts
-already returned in the same session are sent separately as exclusions so the
-Provider does not repeat or continue them; they are not evidence or a record of
-the main agent's decision path.
+At task start, Masters' Nudge records the bounded Git workspace state. After an
+explicit mutation, it sends the task contract, task-start workspace, current
+cumulative workspace, and bounded contents of explicitly changed files. It
+does not send the Actor's explanation of its approach as evidence.
 
-In one judgment, the Provider checks the task contract first and then evaluates
-engineering taste with three structural principles:
+The OpenAI Provider runs with read-only filesystem access in the Actor's
+workspace, so it can verify an existing abstraction, owner, caller, data path,
+or control-flow path instead of relying on Host-selected source windows. Other
+Providers receive the same bounded snapshot. The Host recognizes only changed
+paths; it does not assign ownership, lifecycle, or data-flow meaning.
 
-- make invalid states unrepresentable in the data structure;
-- preserve a unidirectional causal flow from events to state;
-- keep effects and dependencies explicit enough for local reasoning.
-
-The two stages and three principles form one judgment contract; they are not an
-extra Provider call, three Lenses, or three separate outputs. When visible
-evidence establishes a contract gap, the Provider returns `contract_warning`
-and stops before taste. Only a pass with no eligible warning can produce
-`taste_nudge`. A taste nudge states only a responsibility overlap directly
-visible in the current packet: two concrete implementation elements carry the
-same state, behavior, effect, or control-flow responsibility. The Actor owns
-the remedy.
-
-Each principle has a one-word label: `validity` for invalid states,
-`causality` for unidirectional causal flow, and `predictability` for explicit,
-locally understandable behavior. The Provider returns the visible
-`evidence_seq` that grounds the finding, the principle, the smallest atomic
-`anchor` needed to locate the observation, and one short `relationship` that
-states the contract break or visible responsibility overlap. Missing context
-does not become a contract warning or taste nudge. A relationship with only one
-visible element, or one that depends on a distant caller, cross-file owner, or
-lifecycle, remains silent. The Host renders
-`contract_warning` as `causality warning:` and `taste_nudge` as
-`causality nudge:`. A warning means the visible contract remains open; it does
-not make the Hook block the main model.
-
-A taste nudge neither asks a question nor directs a change, and it does not
-package missing facts as conditions. The Actor still owns the remedy. Routine
-verification status and task restatements are outside the role.
+The Provider returns either `pass` or `intervene`. An intervention names the
+current choice, its structural cost, a direction the Actor can evaluate, and
+concrete repository evidence. The direction may be opinionated, but it cannot
+contain a patch, replacement code, or step-by-step edit. Once one intervention
+has been delivered for a task, later mutation batches remain silent. A new task
+resets that boundary.
 
 ## How it works
 
 ```text
-Task and observable tool results
-              ↓
- Contract coverage (first stage)
-     ├─ contract_warning
-     └─ no eligible warning
+Task contract + task-start workspace
                  ↓
- Engineering taste (second stage)
-     ├─ taste_nudge
-     └─ no_finding
+          Actor mutation
                  ↓
-      The agent's next context
+ Current cumulative workspace + changed files
+                 ↓
+ Read-only Provider ── pass (silent)
+                 └──── intervene (advisory direction)
+                              ↓
+                 Actor owns implementation
 ```
 
-Each output is generated for the current situation; it is not a random stock
-sentence. A contract warning states a visible break. A taste nudge states a
-visible responsibility overlap, not a review, score, complete solution, or
-demand to run more tests. No contract warning means only
-that the current packet yielded no eligible warning; it does not prove the whole
-task contract complete.
+`pass` means only that the current snapshot yielded no important, grounded
+intervention. It does not prove the task complete or the design optimal.
 
 Claude Code provides the intended `PostToolBatch` control point: all tool
 results from one model step are available before the next step. The Codex
@@ -127,19 +92,16 @@ ends and the main agent continues.
 
 ### What leaves your computer
 
-The selected Provider receives a bounded packet that may include:
+The selected Provider receives a bounded snapshot that may include:
 
 - the current task or recovered long-running Goal;
-- bounded contents of local task files explicitly referenced by that task;
-- every ordered tool call and result in the current batch, with each record
-  length-limited;
-- up to three Nudge texts already returned in the same session, marked only as
-  deduplication exclusions.
+- the bounded Git status and diff at task start;
+- the current bounded Git status and cumulative diff;
+- bounded current contents of files explicitly changed by the mutation.
 
-The Provider does not receive the complete conversation or hidden model
-reasoning. It does not receive tool results from earlier batches. Masters'
-Nudge does not scan the workspace or read files outside the workspace; a local
-file is included only when its relative path is explicitly named by the task.
+The Provider does not receive the complete conversation, hidden model
+reasoning, or Actor-authored explanation as evidence. The OpenAI Provider can
+inspect files inside the workspace with read-only tools; it cannot modify them.
 
 Anthropic and OpenAI are cloud Providers, so the packet leaves your computer
 and is also subject to that Provider's data policy. Choose local Ollama when

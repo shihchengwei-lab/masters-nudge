@@ -136,8 +136,10 @@ def call_claude_result(
     *,
     schema_path: Path,
     timeout_sec: int,
+    workspace_root: str = "",
     log_error: Logger = _noop,
 ) -> dict:
+    del workspace_root
     schema_json = load_output_schema_json(schema_path, log_error)
     if not schema_json:
         return call_result()
@@ -179,7 +181,7 @@ def call_claude_result(
             log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
         parsed = parse_schema_result(result.stdout)
-        if parsed.get("status") == "error":
+        if parsed.get("decision") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
     except subprocess.TimeoutExpired as exc:
@@ -192,7 +194,7 @@ def call_claude_result(
         if isinstance(partial_stderr, bytes):
             partial_stderr = partial_stderr.decode("utf-8", errors="replace")
         parsed = parse_schema_result(str(partial_stdout))
-        if parsed.get("status") != "error":
+        if parsed.get("decision") != "error":
             log_error("claude CLI timed out after complete structured output; recovered")
             return parsed
         error_kind = (
@@ -238,6 +240,7 @@ def call_codex_result(
     *,
     schema_path: Path,
     timeout_sec: int,
+    workspace_root: str = "",
     log_error: Logger = _noop,
     codex_bin_resolver: Callable[[], str | None] = resolve_codex_bin,
 ) -> dict:
@@ -281,6 +284,7 @@ def call_codex_result(
         result = _run_cli_process(
             command_value,
             input_text=combined,
+            cwd=workspace_root or None,
             environment=provider_environment(),
             timeout_sec=timeout_sec,
             shell=use_shell,
@@ -295,7 +299,7 @@ def call_codex_result(
             log_error(f"codex output read failed: {exc}")
             return call_result(error_kind="invalid_output")
         parsed = parse_schema_result(raw_output)
-        if parsed.get("status") == "error":
+        if parsed.get("decision") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
     except subprocess.TimeoutExpired:
@@ -320,6 +324,7 @@ def dispatch_call_result(
     schema_path: Path,
     timeout_sec: int,
     ollama_url: str = DEFAULT_OLLAMA_URL,
+    workspace_root: str = "",
     log_error: Logger = _noop,
 ) -> dict:
     if provider in ("openai", "codex"):
@@ -329,6 +334,7 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
+            workspace_root=workspace_root,
             log_error=log_error,
         )
     if provider == "anthropic":
@@ -338,6 +344,7 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
+            workspace_root=workspace_root,
             log_error=log_error,
         )
     if provider == "ollama":

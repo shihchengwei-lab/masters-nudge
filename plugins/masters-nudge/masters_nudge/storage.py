@@ -13,7 +13,6 @@ from typing import Any
 import source_context
 
 from .contracts import SessionRef, safe_identifier
-from .prompting import delivery_text, is_delivery_status
 
 
 MAX_ERROR_LOG_BYTES = 256 * 1024
@@ -132,14 +131,11 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
             "task_anchor": source_context.head_tail(
                 prompt, source_context.TASK_ANCHOR_MAX_CHARS
             ),
+            "task_start_workspace": source_context.capture_workspace_state(
+                session.repo_root or session.cwd
+            ),
         }
     )
-    task_sources = source_context.load_referenced_task_sources(
-        prompt,
-        session.repo_root or session.cwd,
-    )
-    if task_sources:
-        state["task_sources"] = task_sources
     _atomic_write(state_path(data_dir, session, "turn"), state)
     _atomic_write(
         state_path(data_dir, session, "progress"),
@@ -148,6 +144,7 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
             "host": session.host,
             "session_id": session.session_id,
             "last_event_fingerprint": "",
+            "intervention_delivered": False,
         },
     )
 
@@ -177,11 +174,10 @@ def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
     *,
-    status: str,
-    evidence_seq: int,
-    principle: str,
-    anchor: str,
-    relationship: str,
+    current_choice: str,
+    structural_cost: str,
+    direction: str,
+    evidence: tuple[str, ...] | list[str],
     returned_via: str,
 ) -> dict[str, Any]:
     entry = {
@@ -189,59 +185,30 @@ def append_host_returned_nudge(
         "host": session.host,
         "session_id": session.session_id,
         "workspace": str(session.repo_root or session.cwd or ""),
-        "status": str(status or "").strip(),
-        "evidence_seq": int(evidence_seq),
-        "principle": str(principle or "").strip(),
-        "anchor": str(anchor or "").strip(),
-        "relationship": str(relationship or "").strip(),
+        "decision": "intervene",
+        "current_choice": str(current_choice or "").strip(),
+        "structural_cost": str(structural_cost or "").strip(),
+        "direction": str(direction or "").strip(),
+        "evidence": [str(item).strip() for item in evidence if str(item).strip()],
         "returned_via": str(returned_via or ""),
     }
     path = audit_path(data_dir, session)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    progress_path = state_path(data_dir, session, "progress")
+    progress = _read_json(progress_path, {})
+    progress["intervention_delivered"] = True
+    _atomic_write(progress_path, progress)
     return entry
 
 
-def read_recent_returned_nudges(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    limit: int = 3,
-) -> tuple[str, ...]:
-    """Read Nudge texts successfully returned in this session, oldest first."""
-    if limit <= 0:
-        return ()
-    try:
-        lines = audit_path(data_dir, session).read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return ()
-    selected: list[str] = []
-    for line in reversed(lines):
-        try:
-            entry = json.loads(line)
-        except (TypeError, ValueError):
-            continue
-        if not isinstance(entry, dict):
-            continue
-        relationship = str(entry.get("relationship") or "").strip()
-        principle = str(entry.get("principle") or "").strip()
-        anchor = str(entry.get("anchor") or "").strip()
-        status = str(entry.get("status") or "taste_nudge").strip()
-        if relationship and principle and anchor:
-            text = (
-                delivery_text(status, principle, anchor, relationship)
-                if is_delivery_status(status)
-                else relationship
-            )
-        else:
-            text = relationship or str(entry.get("finding") or "").strip()
-        if not text:
-            continue
-        selected.append(text)
-        if len(selected) == limit:
-            break
-    return tuple(reversed(selected))
+def intervention_delivered(data_dir: Path, session: SessionRef) -> bool:
+    return bool(
+        _read_json(state_path(data_dir, session, "progress"), {}).get(
+            "intervention_delivered"
+        )
+    )
 
 
 def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
@@ -259,7 +226,7 @@ def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
             except (TypeError, ValueError):
                 continue
             if isinstance(entry, dict) and (
-                entry.get("relationship") or entry.get("finding")
+                entry.get("direction") or entry.get("relationship") or entry.get("finding")
             ):
                 entries.append(entry)
     entries.sort(key=lambda entry: str(entry.get("time") or ""), reverse=True)

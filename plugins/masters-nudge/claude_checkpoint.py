@@ -49,23 +49,30 @@ def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
     return events
 
 
-def nudge_checkpoint(source_packet: str) -> NudgeOutcome:
+def nudge_checkpoint(source_packet: str, workspace_root: str = "") -> NudgeOutcome:
     settings = claude_adapter.runtime_settings()
     core = NudgeCore(
         settings,
         log_error=lambda message: claude_adapter.log_error("claude-checkpoint", message),
     )
-    return core.nudge_once(source_packet, timeout_sec=PROVIDER_TIMEOUT_SEC)
+    return core.nudge_once(
+        source_packet,
+        timeout_sec=PROVIDER_TIMEOUT_SEC,
+        workspace_root=workspace_root,
+    )
 
 
 def build_hook_output(
-    status: str, principle: str, anchor: str, relationship: str
+    current_choice: str,
+    structural_cost: str,
+    direction: str,
+    evidence_items: tuple[str, ...],
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolBatch",
             "additionalContext": prompting.delivery_text(
-                status, principle, anchor, relationship
+                current_choice, structural_cost, direction, evidence_items
             ),
         }
     }
@@ -79,45 +86,42 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     observed = evidence.observe_tool_batch(settings.paths.data_dir, events)
     if not observed.eligible:
         return None
+    if storage.intervention_delivered(settings.paths.data_dir, events[0].session):
+        return None
     state = observed.turn_state
-    packet = source_context.build_checkpoint_packet(
-        task_anchor=str(state.get("task_anchor") or ""),
-        task_sources=state.get("task_sources") or {},
-        evidence_records=list(observed.batch_records),
+    session = events[0].session
+    changed_paths = tuple(
+        target.path
+        for event in events
+        if event.mutation is not None
+        for target in event.mutation.targets
+        if target.path
     )
-    review_input = prompting.build_review_input(
-        packet,
-        storage.read_recent_returned_nudges(
-            settings.paths.data_dir,
-            events[0].session,
-            limit=3,
-        ),
+    snapshot = source_context.build_decision_snapshot(
+        task_contract=str(state.get("task_anchor") or ""),
+        task_start=str(state.get("task_start_workspace") or ""),
+        workspace_root=session.repo_root or session.cwd,
+        changed_paths=changed_paths,
     )
     try:
-        outcome = nudge_checkpoint(review_input)
+        outcome = nudge_checkpoint(snapshot, session.repo_root or session.cwd)
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
-    visible_sequences = {record["seq"] for record in observed.batch_records}
-    if (
-        not prompting.is_delivery_status(outcome.status)
-        or not outcome.relationship
-        or outcome.evidence_seq not in visible_sequences
-    ):
+    if outcome.decision != "intervene":
         return None
     return claude_adapter.PreparedDelivery(
         output=build_hook_output(
-            outcome.status,
-            outcome.principle,
-            outcome.anchor,
-            outcome.relationship,
+            outcome.current_choice,
+            outcome.structural_cost,
+            outcome.direction,
+            outcome.evidence,
         ),
         session=events[0].session,
-        status=outcome.status,
-        principle=outcome.principle,
-        evidence_seq=outcome.evidence_seq,
-        anchor=outcome.anchor,
-        relationship=outcome.relationship,
+        current_choice=outcome.current_choice,
+        structural_cost=outcome.structural_cost,
+        direction=outcome.direction,
+        evidence=outcome.evidence,
         returned_via="PostToolBatch",
     )
 

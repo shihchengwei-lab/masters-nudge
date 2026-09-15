@@ -1,29 +1,18 @@
 {
   "type": "object",
   "properties": {
-    "status": {
+    "decision": {"type": "string", "enum": ["intervene", "pass"]},
+    "current_choice": {"type": "string"},
+    "structural_cost": {"type": "string"},
+    "direction": {
       "type": "string",
-      "enum": ["contract_warning", "taste_nudge", "no_finding"],
-      "description": "A contract_warning has priority over taste_nudge; no_finding means neither stage has a packet-grounded result."
+      "description": "A responsibility boundary or existing seam, never a patch or step-by-step implementation."
     },
-    "principle": {
-      "type": "string",
-      "enum": ["validity", "causality", "predictability", "none"]
-    },
-    "evidence_seq": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "The visible tool-result sequence that grounds a finding; 0 only for no_finding."
-    },
-    "anchor": {
-      "type": "string",
-      "description": "The smallest exact implementation location that owns or reveals the gap: a code identifier, function, field, or state transition."
-    },
-    "relationship": {
-      "type": "string",
-      "description": "One short Traditional Chinese relationship. A contract warning identifies an unmet task requirement and task-breaking behavior. A taste nudge names two concrete implementation elements that visibly carry the same responsibility and states the conflict exposed by that overlap after the contract stage yields no warning; replacement design remains with the Actor. The Host renders the status marker, principle, and anchor separately."
+    "evidence": {
+      "type": "array",
+      "items": {"type": "string"}
     }
   },
-  "required": ["status", "principle", "evidence_seq", "anchor", "relationship"],
+  "required": ["decision", "current_choice", "structural_cost", "direction", "evidence"],
   "additionalProperties": false
 }

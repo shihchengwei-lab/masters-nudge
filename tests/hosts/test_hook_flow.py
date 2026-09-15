@@ -1,394 +1,164 @@
-"""Both Host hooks preserve explicit event facts and audit only a wire return."""
+"""Host hooks deliver at most one advisory intervention per task."""
 
 from __future__ import annotations
 
 import io
-import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
 from unittest import mock
 
-import claude_checkpoint
-import hook_entry
-from masters_nudge import claude_adapter, storage
+from masters_nudge import storage
 from masters_nudge.codex_adapter import CodexAdapter
-from masters_nudge.contracts import NudgeOutcome, SessionRef
+from masters_nudge.contracts import NudgeOutcome
+from masters_nudge.runtime import RuntimePaths, RuntimeSettings
+import hook_entry
+import claude_checkpoint
+from masters_nudge import claude_adapter
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeCore:
-    def __init__(
-        self,
-        data_dir: Path,
-        *,
-        evidence_seq: int = 1,
-        status: str = "contract_warning",
-    ) -> None:
-        self.settings = SimpleNamespace(paths=SimpleNamespace(data_dir=data_dir))
-        self.calls: list[str] = []
-        self.log_error = lambda _message: None
-        self.evidence_seq = evidence_seq
-        self.status = status
-
-    def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
-        self.calls.append(source_packet)
-        return NudgeOutcome(
-            self.status,
-            principle="causality",
-            anchor="batch owner",
-            relationship="讓單一欄位直接擁有責任。",
-            evidence_seq=self.evidence_seq,
+    def __init__(self, data_dir: Path, outcome: NudgeOutcome):
+        self.settings = RuntimeSettings(
+            "openai", "test", RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log")
         )
+        self.outcome = outcome
+        self.calls = []
+        self.errors = []
+
+    def nudge_once(self, snapshot, **kwargs):
+        self.calls.append((snapshot, kwargs))
+        return self.outcome
+
+    def log_error(self, message):
+        self.errors.append(message)
 
 
-class NoFindingCore(FakeCore):
-    def nudge_once(self, source_packet: str, timeout_sec=None) -> NudgeOutcome:
-        self.calls.append(source_packet)
-        return NudgeOutcome("no_finding")
+def prompt_payload(root: str, session: str = "session") -> dict:
+    return {
+        "hook_event_name": "UserPromptSubmit",
+        "session_id": session,
+        "cwd": root,
+        "prompt": "Keep one owner",
+    }
 
 
-class BrokenStream:
-    def write(self, _value):
-        raise OSError("wire closed")
-
-    def flush(self):
-        pass
+def mutation_payload(root: str, session: str = "session") -> dict:
+    return {
+        "hook_event_name": "PostToolBatch",
+        "session_id": session,
+        "cwd": root,
+        "tool_calls": [
+            {
+                "tool_name": "apply_patch",
+                "tool_input": {
+                    "command": (
+                        "*** Begin Patch\n*** Update File: app.py\n@@\n"
+                        "+parallel_owner = True\n*** End Patch"
+                    )
+                },
+                "tool_response": "done",
+            }
+        ],
+    }
 
 
 class CodexHookFlowTests(unittest.TestCase):
-    def test_command_and_result_text_never_trigger_provider(self):
-        with tempfile.TemporaryDirectory() as raw:
-            core = FakeCore(Path(raw))
-            adapter = CodexAdapter(core)
-            output = adapter.process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "read-only",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "apply_patch_preview",
-                            "tool_input": {"cmd": "echo build"},
-                            "tool_response": {
-                                "success": False,
-                                "output": "Traceback RuntimeError tests failed",
-                            },
-                        }
-                    ],
-                }
-            )
-
-        self.assertIsNone(output)
-        self.assertEqual(core.calls, [])
-
-    def test_explicit_mutation_returns_grounded_nudge_with_raw_batch(self):
+    def test_mutation_uses_workspace_snapshot_and_returns_advice(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            core = FakeCore(root, evidence_seq=2)
+            (root / "app.py").write_text("parallel_owner = True\n", encoding="utf-8")
+            core = FakeCore(
+                root,
+                NudgeOutcome(
+                    "intervene",
+                    "新增第二個 owner",
+                    "責任可能分歧",
+                    "沿用既有 owner",
+                    ("app.py:parallel_owner",),
+                ),
+            )
             adapter = CodexAdapter(core)
-            adapter.process(
-                {
-                    "hook_event_name": "UserPromptSubmit",
-                    "session_id": "codex-batch",
-                    "cwd": raw,
-                    "prompt": "檢查明確修改",
-                }
-            )
-            output = adapter.process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "codex-batch",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "read",
-                            "tool_input": {"path": "owner.py"},
-                            "tool_response": "owner source",
-                        },
-                        {
-                            "tool_name": "unknown_host_tool",
-                            "tool_input": {
-                                "command": "wrapper --apply",
-                                "patch": "*** Update File: owner.py\n@@\n-old\n+new",
-                            },
-                            "tool_response": {"success": True},
-                        },
-                    ],
-                }
-            )
-
-        self.assertIsNotNone(output)
-        self.assertEqual(output["_masters_nudge"]["status"], "contract_warning")
-        self.assertEqual(output["_masters_nudge"]["evidence_seq"], 2)
-        self.assertTrue(
-            output["hookSpecificOutput"]["additionalContext"].startswith(
-                "causality warning:"
-            )
-        )
-        self.assertIn("[tool result seq=1]", core.calls[0])
-        self.assertIn("[tool result seq=2]", core.calls[0])
-        self.assertIn('"command": "wrapper --apply"', core.calls[0])
-        self.assertIn('"patch": "*** Update File: owner.py', core.calls[0])
-        self.assertNotIn("category=", core.calls[0])
-
-    def test_codex_native_apply_patch_command_calls_provider_once(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            core = FakeCore(root, status="taste_nudge")
-            adapter = CodexAdapter(core)
-            adapter.process(
-                {
-                    "hook_event_name": "UserPromptSubmit",
-                    "session_id": "codex-native-patch",
-                    "cwd": raw,
-                    "prompt": "修改 app.py",
-                }
-            )
-            output = adapter.process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "codex-native-patch",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "apply_patch",
-                            "tool_input": {
-                                "command": (
-                                    "*** Begin Patch\n"
-                                    "*** Add File: app.py\n"
-                                    "+print('ready')\n"
-                                    "*** End Patch"
-                                )
-                            },
-                            "tool_response": "Success. Updated app.py",
-                        }
-                    ],
-                }
-            )
+            adapter.process(prompt_payload(raw))
+            output = adapter.process(mutation_payload(raw))
 
         self.assertIsNotNone(output)
         self.assertEqual(len(core.calls), 1)
-        self.assertEqual(output["_masters_nudge"]["status"], "taste_nudge")
-        self.assertEqual(output["_masters_nudge"]["evidence_seq"], 1)
-        self.assertTrue(
-            output["hookSpecificOutput"]["additionalContext"].startswith(
-                "causality nudge:"
-            )
-        )
-        self.assertIn('"command": "*** Begin Patch', core.calls[0])
+        self.assertIn("[task-start workspace]", core.calls[0][0])
+        self.assertIn("parallel_owner = True", core.calls[0][0])
+        self.assertNotIn("actual_input", core.calls[0][0])
+        self.assertEqual(core.calls[0][1]["workspace_root"], raw)
+        self.assertIn("Actor 負責驗證與實作", output["hookSpecificOutput"]["additionalContext"])
 
-    def test_codex_provider_receives_an_explicit_local_task_source(self):
+    def test_pass_is_silent(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            (root / "TASK.md").write_text(
-                "A handler result must not replace the current config.",
-                encoding="utf-8",
-            )
-            core = FakeCore(root)
+            (root / "app.py").write_text("value = 1\n", encoding="utf-8")
+            core = FakeCore(root, NudgeOutcome("pass"))
             adapter = CodexAdapter(core)
-            adapter.process(
-                {
-                    "hook_event_name": "UserPromptSubmit",
-                    "session_id": "codex-task-source",
-                    "cwd": raw,
-                    "prompt": "Read TASK.md and complete the task.",
-                }
-            )
-            output = adapter.process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "codex-task-source",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "apply_patch",
-                            "tool_input": {
-                                "command": (
-                                    "*** Begin Patch\n"
-                                    "*** Update File: app.py\n"
-                                    "@@\n-old\n+new\n"
-                                    "*** End Patch"
-                                )
-                            },
-                            "tool_response": "Success. Updated app.py",
-                        }
-                    ],
-                }
-            )
-
-        self.assertIsNotNone(output)
-        self.assertIn("source: TASK.md", core.calls[0])
-        self.assertIn("must not replace the current config", core.calls[0])
-
-    def test_provider_sequence_must_name_a_visible_record(self):
-        with tempfile.TemporaryDirectory() as raw:
-            core = FakeCore(Path(raw), evidence_seq=3)
-            output = CodexAdapter(core).process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "bad-seq",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "unknown",
-                            "tool_input": {"diff": "one mutation"},
-                            "tool_response": "done",
-                        }
-                    ],
-                }
-            )
-
+            adapter.process(prompt_payload(raw))
+            output = adapter.process(mutation_payload(raw))
         self.assertIsNone(output)
         self.assertEqual(len(core.calls), 1)
 
-    def test_no_finding_is_silent_and_creates_no_audit(self):
+    def test_successful_wire_delivery_prevents_further_interventions_this_turn(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            core = NoFindingCore(root)
-            output = CodexAdapter(core).process(
-                {
-                    "hook_event_name": "PostToolBatch",
-                    "session_id": "silent",
-                    "cwd": raw,
-                    "tool_calls": [
-                        {
-                            "tool_name": "unknown",
-                            "tool_input": {"patch": "change"},
-                            "tool_response": "done",
-                        }
-                    ],
-                }
+            (root / "app.py").write_text("value = 1\n", encoding="utf-8")
+            core = FakeCore(
+                root,
+                NudgeOutcome("intervene", "choice", "cost", "direction", ("app.py:value",)),
             )
-
-        self.assertIsNone(output)
-        self.assertEqual(storage.recent_nudges(root), [])
-
-    def test_wire_flush_commits_audit_and_failed_write_does_not(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            core = FakeCore(root)
-            payload = {
-                "hook_event_name": "PostToolBatch",
-                "session_id": "wire",
-                "cwd": raw,
-                "tool_calls": [
-                    {
-                        "tool_name": "unknown",
-                        "tool_input": {"patch": "change"},
-                        "tool_response": "done",
-                    }
-                ],
-            }
-            output = CodexAdapter(core).process(payload)
-            settings = SimpleNamespace(paths=SimpleNamespace(data_dir=root))
-
-            with self.assertRaises(OSError):
-                hook_entry._emit_output(output, settings, stream=BrokenStream())
-            self.assertEqual(storage.recent_nudges(root), [])
-
+            adapter = CodexAdapter(core)
+            adapter.process(prompt_payload(raw))
+            output = adapter.process(mutation_payload(raw))
             stream = io.StringIO()
-            hook_entry._emit_output(output, settings, stream=stream)
-            entries = storage.recent_nudges(root)
+            hook_entry._emit_output(output, core.settings, stream=stream)
+            second = mutation_payload(raw)
+            second["tool_calls"][0]["tool_response"] = "done again"
+            second_output = adapter.process(second)
 
-        public = json.loads(stream.getvalue())
-        self.assertNotIn("_masters_nudge", public)
-        self.assertEqual(entries[0]["status"], "contract_warning")
-        self.assertEqual(entries[0]["evidence_seq"], 1)
+        self.assertIsNone(second_output)
+        self.assertEqual(len(core.calls), 1)
+        self.assertIn("additionalContext", stream.getvalue())
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
-    def settings(self, data_dir: Path):
-        return SimpleNamespace(
-            paths=SimpleNamespace(data_dir=data_dir, error_log=data_dir / "error.log")
-        )
-
-    def test_claude_normalizer_uses_the_same_explicit_mutation_contract(self):
-        events = claude_checkpoint.normalize_tool_batch(
-            {
-                "hook_event_name": "PostToolBatch",
-                "session_id": "claude-normalize",
-                "tool_calls": [
-                    {
-                        "tool_name": "EditPreview",
-                        "tool_input": {"text": "proposal"},
-                        "tool_response": {"is_error": False},
-                    },
-                    {
-                        "tool_name": "Anything",
-                        "tool_input": {"file_path": "a.py", "content": ""},
-                        "tool_response": {"is_error": True},
-                    },
-                ],
-            }
-        )
-
-        self.assertIsNone(events[0].mutation)
-        self.assertEqual(events[1].mutation.kind, "content")
-        self.assertFalse(hasattr(events[1], "failed"))
-
-    def test_claude_prepares_only_a_visible_grounded_finding(self):
+    def test_claude_uses_the_same_workspace_snapshot_contract(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            settings = self.settings(root)
-            storage.start_turn(root, SessionRef("claude_code", "claude", cwd=raw), "task")
-            hook = {
-                "hook_event_name": "PostToolBatch",
-                "session_id": "claude",
-                "cwd": raw,
-                "tool_calls": [
-                    {
-                        "tool_name": "Anything",
-                        "tool_input": {"diff": "diff --git a/a.py b/a.py"},
-                        "tool_response": "done",
-                    }
-                ],
+            (root / "app.py").write_text("parallel_owner = True\n", encoding="utf-8")
+            settings = RuntimeSettings(
+                "anthropic", "test", RuntimePaths(ROOT, root, root, root / "error.log")
+            )
+            session = claude_adapter.session_from_hook(
+                {"session_id": "claude-session", "cwd": raw}
+            )
+            storage.start_turn(root, session, "Keep one owner")
+            payload = mutation_payload(raw, "claude-session")
+            payload["tool_calls"][0]["tool_input"] = {
+                "patch": "*** Update File: app.py\n@@\n+parallel_owner = True"
             }
             with (
-                mock.patch.object(claude_adapter, "runtime_settings", return_value=settings),
+                mock.patch.object(claude_adapter, "RUNTIME", settings),
                 mock.patch.object(
                     claude_checkpoint,
                     "nudge_checkpoint",
                     return_value=NudgeOutcome(
-                        "contract_warning",
-                        "causality",
-                        "owner",
-                        "責任缺少單一擁有者。",
-                        evidence_seq=1,
+                        "intervene", "choice", "cost", "direction", ("app.py:value",)
                     ),
-                ),
+                ) as provider,
             ):
-                prepared = claude_checkpoint.prepare_hook(hook)
+                prepared = claude_checkpoint.prepare_hook(payload)
 
         self.assertIsNotNone(prepared)
-        self.assertEqual(prepared.status, "contract_warning")
-        self.assertEqual(prepared.evidence_seq, 1)
-
-    def test_claude_audits_only_after_successful_flush(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            settings = self.settings(root)
-            prepared = claude_adapter.PreparedDelivery(
-                output={"hookSpecificOutput": {"additionalContext": "nudge"}},
-                session=SessionRef("claude_code", "wire", cwd=raw),
-                status="taste_nudge",
-                principle="causality",
-                evidence_seq=1,
-                anchor="owner",
-                relationship="責任缺少單一擁有者。",
-                returned_via="PostToolBatch",
-            )
-            with mock.patch.object(claude_adapter, "runtime_settings", return_value=settings):
-                with self.assertRaises(OSError):
-                    claude_adapter.emit_json_delivery(prepared, BrokenStream())
-                self.assertEqual(storage.recent_nudges(root), [])
-
-                stream = io.StringIO()
-                claude_adapter.emit_json_delivery(prepared, stream)
-                entries = storage.recent_nudges(root)
-
-        self.assertEqual(entries[0]["status"], "taste_nudge")
-        self.assertEqual(entries[0]["evidence_seq"], 1)
+        snapshot, workspace = provider.call_args.args
+        self.assertIn("[task-start workspace]", snapshot)
+        self.assertEqual(workspace, raw)
+        self.assertEqual(prepared.direction, "direction")
 
 
 if __name__ == "__main__":

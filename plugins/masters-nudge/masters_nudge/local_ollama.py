@@ -265,7 +265,7 @@ def call_local_ollama_result(
         parsed = parser(raw_output)
         if not isinstance(parsed, dict):
             raise LocalOllamaError("Ollama response parser returned an invalid result")
-        if parsed.get("status") == "error":
+        if parsed.get("decision") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed
     except (LocalOllamaError, ValueError) as exc:

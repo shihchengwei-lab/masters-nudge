@@ -1,52 +1,20 @@
 #!/usr/bin/env python3
-"""Deterministic source selection for Masters' Nudge evidence packets."""
+"""Task and workspace facts supplied to the read-only Provider."""
 
 from __future__ import annotations
 
 from pathlib import Path
-import re
-from typing import Any, Mapping
+import subprocess
 
 
 TASK_ANCHOR_MAX_CHARS = 2000
-TASK_SOURCES_MAX_CHARS = 4000
-TASK_SOURCE_MAX_CHARS = 3500
-PACKET_MAX_CHARS = 12000
-CONTRACT_SECTION_MAX_CHARS = 6000
-POST_CHANGE_SOURCE_MAX_CHARS = 4000
-POST_CHANGE_SOURCE_SCAN_CHARS = 1_000_000
-POST_CHANGE_CONTEXT_LINES = 6
-POST_CHANGE_LINE_MAX_CHARS = 240
-POST_CHANGE_TARGET_MAX_COUNT = 4
+WORKSPACE_STATE_MAX_CHARS = 12000
+CHANGED_SOURCES_MAX_CHARS = 16000
+DECISION_SNAPSHOT_MAX_CHARS = 32000
 TRUNCATION_MARKER = "\n[…中段已截斷…]\n"
-
-_BACKTICK_REFERENCE_RE = re.compile(r"`([^`\r\n]+)`")
-_MARKDOWN_REFERENCE_RE = re.compile(r"\[[^\]]+\]\(([^)\r\n]+)\)")
-_PLAIN_REFERENCE_RE = re.compile(
-    r"(?<![\w./\\-])((?:(?:[A-Za-z]:)?[./\\])?[\w.-]+"
-    r"(?:[/\\][\w.-]+)*\.[A-Za-z0-9]{1,16})(?![\w./\\-])"
-)
-_PATHISH_REFERENCE_RE = re.compile(
-    r"(?:[/\\]|\.[A-Za-z0-9][A-Za-z0-9._-]{0,15}$)"
-)
-_EXCLUDED_TASK_SOURCE_RE = re.compile(
-    r"(?:"
-    r"\b(?:do\s+not|don't|must\s+not|never)\b"
-    r"[^.!?。！？,，;；\r\n]{0,48}\b"
-    r"(?:read|open|load|inspect|use|send|include|share|upload|transmit)\b"
-    r"|\bwithout\s+(?:reading|opening|loading|using|sending|including|sharing)\b"
-    r"|\b(?:ignore|exclude|omit|skip)\b"
-    r"|(?:不要|不得|禁止|請勿|勿|不可|無須|不必|不用|別)"
-    r"[^.!?。！？,，;；\r\n]{0,48}"
-    r"(?:讀取|讀|閱讀|開啟|載入|使用|傳送|傳給|提供|包含|納入|分享|上傳)"
-    r"|(?:忽略|略過|排除|跳過)"
-    r")",
-    re.IGNORECASE,
-)
 
 
 def head_tail(text: str, max_chars: int) -> str:
-    """Keep both ends of long evidence with an explicit middle-cut marker."""
     text = str(text or "").strip()
     if max_chars <= 0:
         return ""
@@ -54,318 +22,99 @@ def head_tail(text: str, max_chars: int) -> str:
         return text
     if max_chars <= len(TRUNCATION_MARKER):
         return text[:max_chars]
-
     available = max_chars - len(TRUNCATION_MARKER)
     head_chars = max(1, (available * 2) // 5)
-    tail_chars = available - head_chars
-    return text[:head_chars] + TRUNCATION_MARKER + text[-tail_chars:]
+    return text[:head_chars] + TRUNCATION_MARKER + text[-(available - head_chars) :]
 
 
-def _section(label: str, content: str, max_chars: int) -> str:
-    content = head_tail(content, max_chars)
-    if not content:
+def _git_text(workspace_root: str, *arguments: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", *arguments],
+            cwd=workspace_root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=8,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
         return ""
-    return f"[{label}]\n{content}\n[end {label}]"
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def _normalized_reference(value: str) -> str:
-    return str(value or "").strip().strip("<>").replace("\\", "/").lower()
-
-
-def _reference_is_excluded(task_request: str, start: int, end: int) -> bool:
-    text = str(task_request or "")
-    clause_start = max(
-        (text.rfind(boundary, 0, start) for boundary in ".!?。！？,，;；\r\n"),
-        default=-1,
-    )
-    clause_ends = [
-        index
-        for boundary in ".!?。！？,，;；\r\n"
-        if (index := text.find(boundary, end)) >= 0
-    ]
-    clause_end = min(clause_ends, default=len(text))
-    clause = text[clause_start + 1 : clause_end]
-    return bool(_EXCLUDED_TASK_SOURCE_RE.search(clause))
-
-
-def referenced_task_sources(task_request: str) -> tuple[str, ...]:
-    """Return non-negated path-like sources explicitly named by the user."""
-    text = str(task_request or "")
-    matches = [
-        *(match for match in _BACKTICK_REFERENCE_RE.finditer(text)),
-        *(match for match in _MARKDOWN_REFERENCE_RE.finditer(text)),
-        *(match for match in _PLAIN_REFERENCE_RE.finditer(text)),
-    ]
-    matches.sort(key=lambda match: (match.start(1), match.end(1)))
-    sources: list[str] = []
-    seen: set[str] = set()
-    for match in matches:
-        source = str(match.group(1) or "").strip().strip("<>")
-        normalized = _normalized_reference(source)
-        if (
-            not normalized
-            or "://" in normalized
-            or not _PATHISH_REFERENCE_RE.search(source)
-            or normalized in seen
-            or _reference_is_excluded(text, match.start(1), match.end(1))
-        ):
-            continue
-        seen.add(normalized)
-        sources.append(source)
-    return tuple(sources)
-
-
-def load_referenced_task_sources(
-    task_request: str,
-    workspace_root: str,
-) -> dict[str, str]:
-    """Read bounded, explicitly referenced files that resolve inside the workspace."""
-    loaded: dict[str, str] = {}
+def capture_workspace_state(workspace_root: str) -> str:
+    """Capture repository facts without interpreting their engineering meaning."""
     if not str(workspace_root or "").strip():
-        return loaded
+        return "workspace unavailable"
+    status = _git_text(workspace_root, "status", "--short", "--untracked-files=all")
+    unstaged = _git_text(
+        workspace_root, "diff", "--no-ext-diff", "--unified=24", "--"
+    )
+    staged = _git_text(
+        workspace_root, "diff", "--cached", "--no-ext-diff", "--unified=24", "--"
+    )
+    sections = [f"status:\n{status or '(clean)'}"]
+    if staged:
+        sections.append(f"staged diff:\n{staged}")
+    if unstaged:
+        sections.append(f"unstaged diff:\n{unstaged}")
+    return head_tail("\n\n".join(sections), WORKSPACE_STATE_MAX_CHARS)
+
+
+def _changed_source_contents(
+    workspace_root: str, changed_paths: tuple[str, ...]
+) -> str:
     try:
         root = Path(workspace_root).resolve()
     except (OSError, RuntimeError):
-        return loaded
-    for source in referenced_task_sources(task_request):
-        reference = Path(source)
-        if reference.is_absolute():
+        return ""
+    rendered: list[str] = []
+    seen: set[str] = set()
+    for value in changed_paths:
+        if value in seen:
             continue
+        seen.add(value)
         try:
-            candidate = (root / reference).resolve()
+            reference = Path(value)
+            candidate = (
+                reference.resolve()
+                if reference.is_absolute()
+                else (root / reference).resolve()
+            )
             candidate.relative_to(root)
             if not candidate.is_file():
                 continue
             content = candidate.read_text(encoding="utf-8", errors="replace")
         except (OSError, RuntimeError, ValueError):
             continue
-        content = head_tail(content, TASK_SOURCE_MAX_CHARS)
-        if content:
-            loaded[source] = content
-    return loaded
+        if "\x00" not in content:
+            rendered.append(f"source: {value}\n{content}")
+    return head_tail("\n\n".join(rendered), CHANGED_SOURCES_MAX_CHARS)
 
 
-def render_task_sources(task_sources: Any) -> str:
-    if not isinstance(task_sources, Mapping):
-        return ""
-    parts = [
-        f"source: {name}\n{head_tail(str(content), TASK_SOURCE_MAX_CHARS)}"
-        for name, content in task_sources.items()
-        if str(name).strip() and str(content).strip()
-    ]
-    return head_tail("\n\n".join(parts), TASK_SOURCES_MAX_CHARS)
-
-
-def _contained_mutation_path(session: Any, target_path: str) -> Path | None:
-    boundary_value = str(getattr(session, "repo_root", "") or "").strip()
-    cwd_value = str(getattr(session, "cwd", "") or "").strip()
-    if not boundary_value:
-        boundary_value = cwd_value
-    if not boundary_value:
-        return None
-    try:
-        boundary = Path(boundary_value).resolve()
-        cwd = Path(cwd_value).resolve() if cwd_value else boundary
-        cwd.relative_to(boundary)
-        reference = Path(str(target_path or "").strip())
-        candidate = (
-            reference.resolve()
-            if reference.is_absolute()
-            else (cwd / reference).resolve()
-        )
-        candidate.relative_to(boundary)
-    except (OSError, RuntimeError, ValueError):
-        return None
-    return candidate if candidate.is_file() else None
-
-
-def _source_focus_lines(lines: list[str], target: Any) -> tuple[int, ...]:
-    found: set[int] = set()
-    anchors = getattr(target, "anchors", ())
-    if isinstance(anchors, tuple):
-        for anchor in (str(value).strip() for value in anchors if str(value).strip()):
-            matches: list[int] = []
-            for index, line in enumerate(lines):
-                value = line.strip()
-                if value == anchor or (
-                    len(anchor) >= 32 and value.startswith(anchor)
-                ):
-                    matches.append(index)
-            if len(matches) == 1:
-                found.add(matches[0])
-    if found:
-        return tuple(sorted(found))
-    try:
-        line_hint = int(getattr(target, "line_hint", 0) or 0)
-    except (TypeError, ValueError):
-        line_hint = 0
-    if line_hint > 0:
-        return (min(line_hint - 1, max(0, len(lines) - 1)),)
-    return (0,)
-
-
-def _bounded_source_line(line: str) -> str:
-    return (
-        line
-        if len(line) <= POST_CHANGE_LINE_MAX_CHARS
-        else line[:POST_CHANGE_LINE_MAX_CHARS] + "…"
-    )
-
-
-def _primary_source_context(lines: list[str], target: Any) -> str:
-    ranges: list[tuple[int, int]] = []
-    for focus in _source_focus_lines(lines, target):
-        start = max(0, focus - POST_CHANGE_CONTEXT_LINES)
-        stop = min(len(lines), focus + POST_CHANGE_CONTEXT_LINES + 1)
-        if ranges and start <= ranges[-1][1]:
-            ranges[-1] = (ranges[-1][0], max(ranges[-1][1], stop))
-        else:
-            ranges.append((start, stop))
-    windows: list[str] = []
-    for start, stop in ranges:
-        numbered = "\n".join(
-            f"{index + 1}: {_bounded_source_line(lines[index])}"
-            for index in range(start, stop)
-        )
-        windows.append(f"lines {start + 1}-{stop}:\n{numbered}")
-    return "\n...\n".join(windows)
-
-
-def _render_source_window(
-    path: Path, display_path: str, target: Any, max_chars: int
-) -> str:
-    try:
-        with path.open("r", encoding="utf-8", errors="replace") as handle:
-            content = handle.read(POST_CHANGE_SOURCE_SCAN_CHARS + 1)
-    except (OSError, RuntimeError):
-        return ""
-    if not content or "\x00" in content:
-        return ""
-    lines = content[:POST_CHANGE_SOURCE_SCAN_CHARS].splitlines()
-    if not lines:
-        return ""
-
-    primary = _primary_source_context(lines, target)
-    return head_tail(f"source: {display_path}\n{primary}", max_chars)
-
-
-def render_post_change_sources(session: Any, mutation: Any) -> str:
-    """Render bounded current source only for explicit mutation targets."""
-    targets = getattr(mutation, "targets", ())
-    if not isinstance(targets, tuple):
-        return ""
-    selected_targets = targets[:POST_CHANGE_TARGET_MAX_COUNT]
-    selected: list[tuple[Path, str, Any]] = []
-    for target in selected_targets:
-        target_path = str(getattr(target, "path", "") or "").strip()
-        if not target_path:
-            continue
-        candidate = _contained_mutation_path(session, target_path)
-        if candidate is None:
-            continue
-        selected.append((candidate, target_path, target))
-    if not selected:
-        return ""
-    separators_size = 2 * (len(selected) - 1)
-    per_source = max(
-        1,
-        (POST_CHANGE_SOURCE_MAX_CHARS - separators_size) // len(selected),
-    )
-    rendered: list[str] = []
-    for candidate, target_path, target in selected:
-        source_window = _render_source_window(
-            candidate, target_path, target, per_source
-        )
-        if source_window:
-            rendered.append(source_window)
-    if not rendered:
-        return ""
-    return head_tail("\n\n".join(rendered), POST_CHANGE_SOURCE_MAX_CHARS)
-
-
-def _ordered_results(evidence_records: Any) -> list[dict[str, Any]]:
-    if not isinstance(evidence_records, (list, tuple)):
-        return []
-    selected: list[dict[str, Any]] = []
-    for record in evidence_records:
-        if not isinstance(record, Mapping):
-            continue
-        content = str(record.get("content") or "").strip()
-        if not content:
-            continue
-        try:
-            seq = int(record.get("seq") or 0)
-        except (TypeError, ValueError):
-            continue
-        selected.append(
-            {
-                "seq": seq,
-                "content": content,
-            }
-        )
-    selected.sort(key=lambda record: record["seq"])
-    return selected
-
-
-def _render_result_records(
-    records: list[dict[str, Any]], max_chars: int
-) -> str:
-    if not records:
-        return "[]"
-    labels = [f"[tool result seq={record['seq']}]" for record in records]
-    separators_size = 2 * (len(records) - 1)
-    labels_size = sum(len(label) + 1 for label in labels)
-    available = max(1, max_chars - labels_size - separators_size)
-    per_record = max(1, available // len(records))
-    rendered: list[str] = []
-    for label, record in zip(labels, records):
-        rendered.append(f"{label}\n{head_tail(record['content'], per_record)}")
-    return "\n\n".join(rendered)
-
-
-def _build_packet(
+def build_decision_snapshot(
     *,
-    task_anchor: str,
-    task_sources: Any,
-    evidence_records: Any,
+    task_contract: str,
+    task_start: str,
+    workspace_root: str,
+    changed_paths: tuple[str, ...] = (),
 ) -> str:
-    contract_lines = [
-        "task:",
-        head_tail(task_anchor, TASK_ANCHOR_MAX_CHARS) or "unknown",
+    """Describe the decision from task and workspace facts, never Actor narration."""
+    current = capture_workspace_state(workspace_root)
+    changed = _changed_source_contents(workspace_root, changed_paths)
+    sections = [
+        f"[task contract]\n{head_tail(task_contract, TASK_ANCHOR_MAX_CHARS) or 'unknown'}\n[end task contract]",
+        f"[task-start workspace]\n{task_start or 'workspace unavailable'}\n[end task-start workspace]",
+        f"[current workspace]\n{current}\n[end current workspace]",
     ]
-    rendered_sources = render_task_sources(task_sources)
-    if rendered_sources:
-        contract_lines.extend(("sources:", rendered_sources))
-    task_section = _section(
-        "task beginning",
-        "\n".join(contract_lines),
-        CONTRACT_SECTION_MAX_CHARS,
+    if changed:
+        sections.append(
+            f"[current changed sources]\n{changed}\n[end current changed sources]"
+        )
+    sections.append(
+        "[provider access]\nThe Provider may inspect this workspace with read-only tools. "
+        "The Actor's prose and intended remedy are not evidence.\n[end provider access]"
     )
-    separator = "\n\n"
-    result_label = "decision evidence"
-    result_wrapper_chars = len(f"[{result_label}]\n\n[end {result_label}]")
-    result_content_max = max(
-        1,
-        PACKET_MAX_CHARS
-        - len(task_section)
-        - len(separator)
-        - result_wrapper_chars,
-    )
-    result_content = _render_result_records(
-        _ordered_results(evidence_records), result_content_max
-    )
-    result_section = _section(result_label, result_content, result_content_max)
-    packet = separator.join((task_section, result_section))
-    return head_tail(packet, PACKET_MAX_CHARS)
-
-
-def build_checkpoint_packet(
-    task_anchor: str,
-    task_sources: Any = None,
-    evidence_records: Any = None,
-) -> str:
-    return _build_packet(
-        task_anchor=task_anchor,
-        task_sources=task_sources,
-        evidence_records=evidence_records,
-    )
+    return head_tail("\n\n".join(sections), DECISION_SNAPSHOT_MAX_CHARS)

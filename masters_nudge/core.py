@@ -6,12 +6,7 @@ from typing import Callable
 
 from . import providers
 from .contracts import NudgeOutcome
-from .prompting import (
-    has_nudge_prefix,
-    is_delivery_status,
-    is_principle,
-    load_system_prompt,
-)
+from .prompting import load_system_prompt
 from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
 
@@ -37,6 +32,8 @@ class NudgeCore:
         self,
         source_packet: str,
         timeout_sec: int | None = None,
+        *,
+        workspace_root: str = "",
     ) -> NudgeOutcome:
         timeout = max(
             1,
@@ -56,39 +53,42 @@ class NudgeCore:
             schema_path=self.schema_path,
             timeout_sec=timeout,
             ollama_url=self.settings.ollama_url,
+            workspace_root=workspace_root,
             log_error=self.log_error,
         )
         if not isinstance(result, dict):
             return NudgeOutcome("error")
-        status = str(result.get("status") or "error")
-        principle = str(result.get("principle") or "none")
-        evidence_seq = result.get("evidence_seq")
-        anchor = str(result.get("anchor") or "").strip()
-        relationship = str(result.get("relationship") or "").strip()
-        if status == "no_finding":
+        decision = str(result.get("decision") or "error")
+        current_choice = str(result.get("current_choice") or "").strip()
+        structural_cost = str(result.get("structural_cost") or "").strip()
+        direction = str(result.get("direction") or "").strip()
+        raw_evidence = result.get("evidence")
+        evidence = (
+            tuple(item.strip() for item in raw_evidence if isinstance(item, str) and item.strip())
+            if isinstance(raw_evidence, list)
+            else ()
+        )
+        if decision == "pass":
             return (
-                NudgeOutcome("no_finding")
-                if principle == "none"
-                and evidence_seq == 0
-                and not anchor
-                and not relationship
+                NudgeOutcome("pass")
+                if not current_choice
+                and not structural_cost
+                and not direction
+                and not evidence
                 else NudgeOutcome("error")
             )
         if (
-            not is_delivery_status(status)
-            or not isinstance(evidence_seq, int)
-            or isinstance(evidence_seq, bool)
-            or evidence_seq <= 0
-            or not is_principle(principle)
-            or not anchor
-            or not relationship
-            or has_nudge_prefix(relationship)
+            decision != "intervene"
+            or not current_choice
+            or not structural_cost
+            or not direction
+            or not evidence
         ):
             return NudgeOutcome("error")
         return NudgeOutcome(
-            status,
-            principle,
-            anchor,
-            relationship,
-            evidence_seq=evidence_seq,
+            "intervene",
+            current_choice,
+            structural_cost,
+            direction,
+            evidence,
         )

@@ -1,4 +1,4 @@
-"""One evidence packet receives one Provider judgment."""
+"""One workspace snapshot receives one bounded Provider judgment."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 
 from masters_nudge.core import NudgeCore
-from masters_nudge.provider_contract import parse_nudge_result
 from masters_nudge.prompting import delivery_text
+from masters_nudge.provider_contract import parse_nudge_result
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
@@ -19,413 +19,76 @@ ROOT = Path(__file__).resolve().parents[2]
 class SingleProviderTests(unittest.TestCase):
     def settings(self, data_dir: Path) -> RuntimeSettings:
         return RuntimeSettings(
-            "openai",
-            "test-model",
-            RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log"),
+            "openai", "test-model", RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log")
         )
 
-    def test_one_packet_causes_one_provider_call(self):
+    def test_one_snapshot_causes_one_provider_call(self):
         with tempfile.TemporaryDirectory() as raw:
             calls = []
 
-            def dispatch(_provider, prompt, packet, _model, **kwargs):
-                calls.append((prompt, packet, kwargs["timeout_sec"]))
+            def dispatch(_provider, prompt, snapshot, _model, **kwargs):
+                calls.append((prompt, snapshot, kwargs))
                 return {
-                    "status": "contract_warning",
-                    "principle": "causality",
-                    "evidence_seq": 1,
-                    "anchor": "batch owner",
-                    "relationship": "讓批次只有一個擁有者，避免重試重複移除。",
+                    "decision": "intervene",
+                    "current_choice": "新增第二個 owner",
+                    "structural_cost": "責任可能分歧",
+                    "direction": "沿用既有 owner",
+                    "evidence": ["src/state.ts:owner"],
                 }
 
             outcome = NudgeCore(
                 self.settings(Path(raw)), dispatch=dispatch
-            ).nudge_once("EVIDENCE-PACKET")
+            ).nudge_once("WORKSPACE-SNAPSHOT", workspace_root=raw)
 
-        self.assertEqual(outcome.status, "contract_warning")
-        self.assertEqual(outcome.principle, "causality")
-        self.assertEqual(outcome.evidence_seq, 1)
-        self.assertEqual(outcome.anchor, "batch owner")
-        self.assertEqual(
-            outcome.relationship,
-            "讓批次只有一個擁有者，避免重試重複移除。",
-        )
+        self.assertEqual(outcome.decision, "intervene")
+        self.assertEqual(outcome.direction, "沿用既有 owner")
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][1], "EVIDENCE-PACKET")
-        self.assertEqual(calls[0][2], 90)
+        self.assertEqual(calls[0][1], "WORKSPACE-SNAPSHOT")
+        self.assertEqual(calls[0][2]["workspace_root"], raw)
 
-    def test_provider_prompt_carries_only_the_three_structural_principles(self):
-        with tempfile.TemporaryDirectory() as raw:
-            prompts = []
-
-            def dispatch(_provider, prompt, _packet, _model, **_kwargs):
-                prompts.append(prompt)
-                return {
-                    "status": "no_finding",
-                    "principle": "none",
-                    "evidence_seq": 0,
-                    "anchor": "",
-                    "relationship": "",
+    def test_pass_is_silent_data(self):
+        parsed = parse_nudge_result(
+            json.dumps(
+                {
+                    "decision": "pass",
+                    "current_choice": "",
+                    "structural_cost": "",
+                    "direction": "",
+                    "evidence": [],
                 }
+            )
+        )
+        self.assertEqual(parsed["decision"], "pass")
 
-            outcome = NudgeCore(
-                self.settings(Path(raw)), dispatch=dispatch
-            ).nudge_once("packet")
+    def test_delivery_keeps_provider_advisory_and_actor_ownership(self):
+        rendered = delivery_text(
+            "新增第二個 owner",
+            "責任可能分歧",
+            "沿用既有 owner",
+            ("src/state.ts:owner",),
+        )
+        self.assertIn("供參考", rendered)
+        self.assertIn("方向：沿用既有 owner", rendered)
+        self.assertIn("Actor 負責驗證與實作", rendered)
 
-        self.assertEqual(outcome.status, "no_finding")
-        self.assertEqual(len(prompts), 1)
-        normalized = " ".join(prompts[0].split())
-        self.assertIn("every constructible value satisfies the required invariants", normalized)
-        self.assertIn("one explicit direction and owner", normalized)
-        self.assertIn("local reasoning", normalized)
-        self.assertNotIn("Epistemic correctness and feedback distance", normalized)
-        self.assertNotIn("Measured execution cost", normalized)
-        self.assertNotIn("Knowledge ownership and change locality", normalized)
-        self.assertNotIn("SELECTED LENS", normalized)
-
-    def test_prompt_maps_each_principle_to_one_word_and_fixes_delivery_markers(self):
-        with tempfile.TemporaryDirectory() as raw:
-            prompts = []
-
-            def dispatch(_provider, prompt, _packet, _model, **_kwargs):
-                prompts.append(prompt)
-                return {
-                    "status": "no_finding",
-                    "principle": "none",
-                    "evidence_seq": 0,
-                    "anchor": "",
-                    "relationship": "",
-                }
-
-            NudgeCore(self.settings(Path(raw)), dispatch=dispatch).nudge_once("packet")
-
-        self.assertIn("validity", prompts[0])
-        self.assertIn("causality", prompts[0])
-        self.assertIn("predictability", prompts[0])
-        self.assertIn("`principle warning: anchor — relationship`", prompts[0])
-        self.assertIn("`principle nudge: anchor — relationship`", prompts[0])
-        self.assertNotIn("attention cue: `alert`", prompts[0])
-        self.assertNotIn("attention cue: `risk`", prompts[0])
-        self.assertIn("required invariants", prompts[0])
-        self.assertIn("required ordering and completion", prompts[0])
-        self.assertIn("predictability", prompts[0])
-
-    def test_provider_grounds_inference_in_the_visible_boundaries(self):
+    def test_prompt_uses_workspace_facts_and_allows_direction(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
+        self.assertIn("workspace state at task start", normalized)
+        self.assertIn("current cumulative workspace state", normalized)
+        self.assertIn("Actor's prose, proposed remedy, and confidence are not evidence", normalized)
+        self.assertIn("propose a better responsibility boundary or existing seam", normalized)
+        self.assertIn("Actor alone owns implementation and verification", normalized)
+        self.assertNotIn("visible responsibility overlap", normalized.lower())
+        self.assertNotIn("contract_warning", normalized)
+        self.assertNotIn("taste_nudge", normalized)
 
-        self.assertIn("Ground every Nudge in these visible boundaries", normalized)
-        self.assertIn("Use inference to connect visible facts", normalized)
-        self.assertIn(
-            "A visible name, call, literal, or branch establishes only what happens "
-            "after entry",
-            normalized,
-        )
-        self.assertIn(
-            "Reachability requires a visible producer or caller and path to the anchor",
-            normalized,
-        )
-        self.assertIn(
-            "an internal branch that handles a value does not establish that any "
-            "caller supplies it",
-            normalized,
-        )
-
-    def test_provider_inspects_the_current_decision_from_clean_boundaries(self):
-        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        normalized = " ".join(prompt.split())
-
-        self.assertIn("task beginning", normalized)
-        self.assertIn("explicitly referenced task sources", normalized)
-        self.assertIn("ordered observable tool-result batch", normalized)
-        self.assertIn("bounded decision evidence", normalized)
-        self.assertIn("native tool input and observable result", normalized)
-        self.assertIn("without assigning an engineering category", normalized)
-        self.assertNotIn("related_source", normalized)
-        self.assertNotIn("declaration candidates", normalized)
-        self.assertIn("Inspect the concrete engineering decision", normalized)
-        self.assertIn("task's behavioral requirements", normalized)
-        self.assertIn("Identify the implementation choice", normalized)
-        self.assertIn(
-            "Treat an explicitly required behavior as satisfied", normalized
-        )
-
-    def test_provider_uses_recent_nudges_only_as_exclusions(self):
-        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        normalized = " ".join(prompt.split()).lower()
-
-        self.assertIn("recent returned nudges are exclusions, not evidence", normalized)
-        self.assertIn(
-            "use them only to recognize a repeated relationship or another obligation "
-            "of the same visible implementation choice",
-            normalized,
-        )
-        self.assertIn(
-            "ground both concrete implementation elements and their shared responsibility "
-            "in the current packet",
-            normalized,
-        )
-        self.assertIn("different still-changeable engineering decision", normalized)
-        self.assertNotIn("decision-lineage references", normalized)
-        self.assertNotIn(
-            "different dependency or downstream consequence remains eligible", normalized
-        )
-
-    def test_provider_reports_only_a_visible_responsibility_overlap(self):
-        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        normalized = " ".join(prompt.split())
-
-        self.assertIn(
-            "A taste nudge names two concrete implementation elements that visibly "
-            "carry the same responsibility",
-            normalized,
-        )
-        self.assertIn(
-            "Identify two concrete implementation elements visible in the current packet",
-            normalized,
-        )
-        self.assertIn(
-            "State the responsibility that both elements visibly carry",
-            normalized,
-        )
-        self.assertIn("The Actor owns the remedy", normalized)
-        self.assertIn("Leave replacement design to the Actor", normalized)
-        self.assertNotIn("required premise", normalized)
-        self.assertNotIn("observable counterexample", normalized)
-
-    def test_prompt_uses_positive_operational_instructions(self):
-        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-
-        for defensive_phrase in (
-            "not a reviewer",
-            "outside your role",
-            "Do not",
-            "Never",
-            "not a submission to grade",
-            "strongest non-obvious",
-        ):
-            with self.subTest(defensive_phrase=defensive_phrase):
-                self.assertNotIn(defensive_phrase, prompt)
-
-    def test_finding_rejects_an_unknown_principle(self):
-        with tempfile.TemporaryDirectory() as raw:
-            def dispatch(_provider, _prompt, _packet, _model, **_kwargs):
-                return {
-                    "status": "contract_warning",
-                    "principle": "reliability",
-                    "evidence_seq": 1,
-                    "anchor": "batch owner",
-                    "relationship": "讓批次只有一個擁有者，避免重試重複移除。",
-                }
-
-            outcome = NudgeCore(
-                self.settings(Path(raw)), dispatch=dispatch
-            ).nudge_once("packet")
-
-        self.assertEqual(outcome.status, "error")
-
-    def test_delivery_uses_status_to_select_the_marker(self):
-        self.assertEqual(
-            delivery_text(
-                "contract_warning", "validity", "flags", "布林旗標可形成矛盾狀態。"
-            ),
-            "validity warning: flags — 布林旗標可形成矛盾狀態。",
-        )
-        self.assertEqual(
-            delivery_text(
-                "taste_nudge", "validity", "flags", "布林旗標可形成矛盾狀態。"
-            ),
-            "validity nudge: flags — 布林旗標可形成矛盾狀態。",
-        )
-        self.assertNotIn(
-            "獨立第二意見",
-            delivery_text(
-                "taste_nudge", "predictability", "side effect", "副作用不明確。"
-            ),
-        )
-
-    def test_anchor_and_relationship_have_distinct_ownership(self):
-        relationship = (
-            "舊回呼清空新計時器狀態，使取消控制失去唯一擁有者；"
-            "後續排程再依錯誤狀態決定是否送出，讓事件結果取決於回呼先後。"
-        )
-        self.assertGreater(len(relationship), 52)
-        with tempfile.TemporaryDirectory() as raw:
-            def dispatch(_provider, _prompt, _packet, _model, **_kwargs):
-                return {
-                    "status": "taste_nudge",
-                    "principle": "predictability",
-                    "evidence_seq": 1,
-                    "anchor": "_autoFlushTimer",
-                    "relationship": relationship,
-                }
-
-            outcome = NudgeCore(
-                self.settings(Path(raw)), dispatch=dispatch
-            ).nudge_once("packet")
-
-        self.assertEqual(outcome.status, "taste_nudge")
-        self.assertEqual(outcome.anchor, "_autoFlushTimer")
-        self.assertEqual(outcome.relationship, relationship)
-        self.assertEqual(
-            delivery_text(
-                outcome.status,
-                outcome.principle,
-                outcome.anchor,
-                outcome.relationship,
-            ),
-            f"predictability nudge: _autoFlushTimer — {relationship}",
-        )
-
-    def test_provider_contract_rejects_rendered_prefixes_inside_the_relationship(self):
-        for relationship in (
-            "causality nudge: 重複前綴",
-            "causality warning: 舊版重複前綴",
-        ):
-            with self.subTest(relationship=relationship):
-                result = parse_nudge_result(
-                    json.dumps(
-                        {
-                            "status": "contract_warning",
-                            "principle": "causality",
-                            "evidence_seq": 1,
-                            "anchor": "batch owner",
-                            "relationship": relationship,
-                        }
-                    )
-                )
-
-                self.assertEqual(result["status"], "error")
-
-    def test_prompt_and_schema_order_contract_before_taste(self):
-        with tempfile.TemporaryDirectory() as raw:
-            prompts = []
-
-            def dispatch(_provider, prompt, _packet, _model, **_kwargs):
-                prompts.append(prompt)
-                return {
-                    "status": "no_finding",
-                    "principle": "none",
-                    "evidence_seq": 0,
-                    "anchor": "",
-                    "relationship": "",
-                }
-
-            NudgeCore(self.settings(Path(raw)), dispatch=dispatch).nudge_once("packet")
-
-        normalized = " ".join(prompts[0].split())
-        self.assertIn("Before answering, follow this sequence", normalized)
-        self.assertIn("Contract coverage is the first stage", normalized)
-        self.assertIn(
-            "Visible task requirement → applicable execution paths → required behavior",
-            normalized,
-        )
-        self.assertIn(
-            "Return contract_warning and stop the judgment before considering taste",
-            normalized,
-        )
-        self.assertIn(
-            "Taste is the second stage",
-            normalized,
-        )
-        self.assertIn(
-            "Return taste_nudge only when the contract stage yields no eligible warning",
-            normalized,
-        )
-        self.assertLess(
-            normalized.index("Contract coverage is the first stage"),
-            normalized.index("Taste is the second stage"),
-        )
-        self.assertIn(
-            "A matching keyword does not establish that every applicable path preserves the behavior",
-            normalized,
-        )
-        self.assertIn(
-            "Passing build, test, lint, and verification results cover only the behavior they exercised",
-            normalized,
-        )
-        self.assertIn("Otherwise return no_finding", normalized)
-        self.assertIn(
-            "The current packet must establish every edge in this relationship",
-            normalized,
-        )
-        self.assertIn(
-            "Visible implementation element → shared responsibility ← visible implementation element",
-            normalized,
-        )
-        self.assertIn(
-            "Identify two concrete implementation elements visible in the current packet",
-            normalized,
-        )
-        self.assertIn(
-            "State the responsibility that both elements visibly carry",
-            normalized,
-        )
-        self.assertIn("The Actor owns the remedy", normalized)
-        self.assertIn("Leave replacement design to the Actor", normalized)
-        self.assertNotIn("required premise", normalized)
-        self.assertNotIn("observable counterexample", normalized)
-        self.assertNotIn("concrete alternative implementation", normalized)
-        self.assertNotIn(
-            "Visible requirement → existing owner → smallest contract-preserving change",
-            normalized,
-        )
-        self.assertNotIn(
-            "Before adding state, a branch, wrapper, timer, retry, or policy",
-            normalized,
-        )
-        self.assertNotIn("removing or merging", normalized)
-        self.assertIn(
-            "Missing context remains absent evidence rather than a contract warning",
-            normalized,
-        )
-        self.assertIn(
-            "structural decision in code, data, responsibility, or control flow",
-            normalized,
-        )
-        self.assertIn("visible tool-result record", normalized)
-        self.assertIn("Trace changed state transitions and effects in execution order", normalized)
-        self.assertNotIn(
-            "Track each returned promise or callback into the next action that depends on its completion",
-            normalized,
-        )
-        self.assertNotIn(
-            "An unconsumed completion signal marks an open causality gap",
-            normalized,
-        )
-        self.assertNotIn("Use a question", normalized)
-        self.assertNotIn("precise question", normalized)
-
+    def test_schema_is_only_pass_or_intervene(self):
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
-        anchor_description = schema["properties"]["anchor"]["description"]
-        description = schema["properties"]["relationship"]["description"]
-        self.assertIn("two concrete implementation elements", description)
-        self.assertIn("same responsibility", description)
-        self.assertNotIn("required premise", description)
-        self.assertNotIn("observable counterexample", description)
-        self.assertNotIn("question", description)
-        self.assertIn("after the contract stage yields no warning", description)
-        self.assertIn("smallest exact implementation location", anchor_description.lower())
-        self.assertNotIn("maxLength", schema["properties"]["anchor"])
-        self.assertNotIn("maxLength", schema["properties"]["relationship"])
-        self.assertIn("smallest exact implementation location", prompts[0])
-        self.assertIn(
-            "one short Traditional Chinese relationship",
-            normalized,
-        )
-        self.assertIn("one packet-grounded contract warning or taste nudge", normalized)
-        self.assertNotIn("characters", prompts[0])
-        self.assertEqual(
-            schema["properties"]["status"]["enum"],
-            ["contract_warning", "taste_nudge", "no_finding"],
-        )
-        self.assertEqual(
-            schema["properties"]["principle"]["enum"],
-            ["validity", "causality", "predictability", "none"],
-        )
+        self.assertEqual(schema["properties"]["decision"]["enum"], ["intervene", "pass"])
         self.assertEqual(
             schema["required"],
-            ["status", "principle", "evidence_seq", "anchor", "relationship"],
+            ["decision", "current_choice", "structural_cost", "direction", "evidence"],
         )
 
 

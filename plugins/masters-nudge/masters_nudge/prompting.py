@@ -3,57 +3,23 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable, Iterable
-
-PRINCIPLE_LABELS = ("validity", "causality", "predictability")
-DELIVERY_MARKERS = {
-    "contract_warning": "warning",
-    "taste_nudge": "nudge",
-}
-NUDGE_PREFIXES = tuple(
-    f"{principle} {marker}: "
-    for principle in PRINCIPLE_LABELS
-    for marker in DELIVERY_MARKERS.values()
-)
-
-
-def is_principle(value: str) -> bool:
-    return str(value or "") in PRINCIPLE_LABELS
-
-
-def is_delivery_status(value: str) -> bool:
-    return str(value or "") in DELIVERY_MARKERS
-
-
-def has_nudge_prefix(relationship: str) -> bool:
-    return str(relationship or "").startswith(NUDGE_PREFIXES)
+from typing import Callable
 
 
 def delivery_text(
-    status: str, principle: str, anchor: str, relationship: str
+    current_choice: str,
+    structural_cost: str,
+    direction: str,
+    evidence: tuple[str, ...] | list[str],
 ) -> str:
-    marker = DELIVERY_MARKERS[str(status)]
+    evidence_text = ", ".join(str(item).strip() for item in evidence if str(item).strip())
     return (
-        f"{principle} {marker}: {str(anchor or '').strip()} — "
-        f"{str(relationship or '').strip()}"
+        "Provider 結構提醒（供參考）："
+        f"目前選擇：{str(current_choice).strip()}；"
+        f"結構成本：{str(structural_cost).strip()}；"
+        f"方向：{str(direction).strip()}；"
+        f"證據：{evidence_text}。Actor 負責驗證與實作。"
     )
-
-
-def build_review_input(source_packet: str, recent_nudges: Iterable[str]) -> str:
-    """Prepend up to three prior Nudge texts as exclusions, never as evidence."""
-    exclusions = [str(value or "").strip() for value in recent_nudges]
-    exclusions = [value for value in exclusions if value][-3:]
-    packet = str(source_packet or "")
-    if not exclusions:
-        return packet
-    section = "\n".join(
-        (
-            "[recent returned nudges — exclusions, not evidence]",
-            *(f"- {value}" for value in exclusions),
-            "[end recent returned nudges — exclusions]",
-        )
-    )
-    return f"{section}\n\n{packet}"
 
 
 def load_system_prompt(

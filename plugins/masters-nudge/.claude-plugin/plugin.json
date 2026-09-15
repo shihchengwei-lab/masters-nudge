@@ -2,7 +2,7 @@
   "name": "masters-nudge",
   "displayName": "Masters’ Nudge",
   "version": "0.5.0",
-  "description": "Evidence-bounded engineering nudges before the next agent decision.",
+  "description": "Read-only, workspace-grounded engineering nudges before the next agent decision.",
   "author": {
     "name": "shihchengwei-lab",
     "url": "https://github.com/shihchengwei-lab"

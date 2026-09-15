@@ -7,7 +7,9 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from . import checkpoints, storage
+import json
+
+from . import storage
 from .contracts import ToolCompleted
 
 
@@ -16,14 +18,19 @@ class ToolEvidence:
     turn_state: dict[str, Any]
     eligible: bool
     fingerprint: str
-    batch_records: tuple[dict[str, Any], ...] = ()
 
 
 def _batch_fingerprint(events: list[ToolCompleted]) -> str:
-    values = [checkpoints.tool_event_fingerprint(event) for event in events]
-    if len(values) == 1:
-        return values[0]
-    return hashlib.sha256("\n".join(values).encode("utf-8")).hexdigest()[:24]
+    raw = json.dumps(
+        [
+            {"tool": event.tool_name, "input": event.tool_input, "output": event.tool_output}
+            for event in events
+        ],
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
 
 
 def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvidence:
@@ -36,15 +43,8 @@ def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvide
     event_status = storage.record_event(data_dir, session, fingerprint)
     if event_status == "duplicate":
         return ToolEvidence(
-            storage.load_turn_state(data_dir, session), False, fingerprint, ()
+            storage.load_turn_state(data_dir, session), False, fingerprint
         )
     state = storage.load_turn_state(data_dir, session)
-    batch_records = tuple(
-        {
-            "seq": index,
-            "content": checkpoints.render_evidence_record(event),
-        }
-        for index, event in enumerate(events, start=1)
-    )
     eligible = any(event.mutation is not None for event in events)
-    return ToolEvidence(state, eligible, fingerprint, batch_records)
+    return ToolEvidence(state, eligible, fingerprint)

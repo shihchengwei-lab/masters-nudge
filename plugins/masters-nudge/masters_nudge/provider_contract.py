@@ -4,26 +4,24 @@ from __future__ import annotations
 
 import json
 
-from .prompting import has_nudge_prefix, is_delivery_status, is_principle
-
 
 def call_result(
-    status: str = "error",
-    principle: str = "none",
-    evidence_seq: int = 0,
-    anchor: str = "",
-    relationship: str = "",
+    decision: str = "error",
+    current_choice: str = "",
+    structural_cost: str = "",
+    direction: str = "",
+    evidence: list[str] | None = None,
     **extra,
 ) -> dict:
     result = {
-        "status": status,
-        "principle": principle,
-        "evidence_seq": evidence_seq,
-        "anchor": anchor,
-        "relationship": relationship,
+        "decision": decision,
+        "current_choice": current_choice,
+        "structural_cost": structural_cost,
+        "direction": direction,
+        "evidence": list(evidence or []),
         **extra,
     }
-    if status == "error" and not result.get("error_kind"):
+    if decision == "error" and not result.get("error_kind"):
         result["error_kind"] = "invalid_output"
     return result
 
@@ -43,52 +41,37 @@ def _decode_object(stdout: str) -> tuple[dict | None, str]:
 
 def parse_nudge_result(stdout: str) -> dict:
     obj, raw = _decode_object(stdout)
-    if obj is None or set(obj) != {
-        "status",
-        "principle",
-        "evidence_seq",
-        "anchor",
-        "relationship",
-    }:
+    required = {"decision", "current_choice", "structural_cost", "direction", "evidence"}
+    if obj is None or set(obj) != required:
         return call_result(raw_output=raw)
-    status = obj.get("status")
-    principle = obj.get("principle")
-    evidence_seq = obj.get("evidence_seq")
-    anchor = obj.get("anchor")
-    relationship = obj.get("relationship")
+    decision = obj.get("decision")
+    current_choice = obj.get("current_choice")
+    structural_cost = obj.get("structural_cost")
+    direction = obj.get("direction")
+    evidence = obj.get("evidence")
     if (
-        not isinstance(principle, str)
-        or not isinstance(evidence_seq, int)
-        or isinstance(evidence_seq, bool)
-        or not isinstance(anchor, str)
-        or not isinstance(relationship, str)
+        not isinstance(current_choice, str)
+        or not isinstance(structural_cost, str)
+        or not isinstance(direction, str)
+        or not isinstance(evidence, list)
+        or any(not isinstance(item, str) for item in evidence)
     ):
         return call_result(raw_output=raw)
-    if status == "no_finding":
+    fields = (current_choice.strip(), structural_cost.strip(), direction.strip())
+    cleaned_evidence = [item.strip() for item in evidence if item.strip()]
+    if decision == "pass":
         return (
-            call_result("no_finding", evidence_seq=0, raw_output=raw)
-            if principle == "none"
-            and evidence_seq == 0
-            and not anchor
-            and not relationship
+            call_result("pass", raw_output=raw)
+            if not any(fields) and not cleaned_evidence
             else call_result(raw_output=raw)
         )
-    anchor = anchor.strip()
-    relationship = relationship.strip()
-    if (
-        not is_delivery_status(status)
-        or evidence_seq <= 0
-        or not is_principle(principle)
-        or not anchor
-        or not relationship
-        or has_nudge_prefix(relationship)
-    ):
+    if decision != "intervene" or not all(fields) or not cleaned_evidence:
         return call_result(raw_output=raw)
     return call_result(
-        status,
-        principle=principle,
-        evidence_seq=evidence_seq,
-        anchor=anchor,
-        relationship=relationship,
+        "intervene",
+        current_choice=fields[0],
+        structural_cost=fields[1],
+        direction=fields[2],
+        evidence=cleaned_evidence,
         raw_output=raw,
     )

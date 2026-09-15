@@ -20,20 +20,18 @@ PLUGIN = ROOT / "plugins" / "masters-nudge"
 
 
 class PackageTests(unittest.TestCase):
-    def test_readmes_describe_visible_overlap_without_counterexample(self):
+    def test_readmes_describe_workspace_grounded_advice(self):
         for readme_path, expected in (
-            (ROOT / "README.md", "responsibility overlap"),
-            (ROOT / "README.zh-TW.md", "責任重疊"),
+            (ROOT / "README.md", "current cumulative workspace"),
+            (ROOT / "README.zh-TW.md", "目前累積工作區"),
         ):
             with self.subTest(readme_path=readme_path):
                 normalized = " ".join(
                     readme_path.read_text(encoding="utf-8").split()
                 ).lower()
                 self.assertIn(expected, normalized)
-                self.assertNotIn("falsifiable premise", normalized)
-                self.assertNotIn("可證偽前提", normalized)
-                self.assertNotIn("observable counterexample", normalized)
-                self.assertNotIn("可觀察反例", normalized)
+                self.assertNotIn("taste_nudge", normalized)
+                self.assertNotIn("contract_warning", normalized)
 
     def test_inventory_matches_the_checked_in_plugin(self):
         declared = set(package_files())
@@ -111,134 +109,18 @@ class PackageTests(unittest.TestCase):
         ):
             self.assertNotIn(obsolete, text)
 
-    def test_prompt_uses_results_as_scoped_behavioral_evidence(self):
+    def test_prompt_uses_workspace_facts_and_read_only_direction(self):
         for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
             with self.subTest(prompt_path=prompt_path):
                 prompt = prompt_path.read_text(encoding="utf-8")
                 normalized = " ".join(prompt.split())
-                self.assertIn(
-                    "structural relationships in code, data, responsibility, and control flow",
-                    normalized,
-                )
-                self.assertIn(
-                    "Passing build, test, lint, and verification results cover only "
-                    "the behavior they exercised.",
-                    normalized,
-                )
-
-    def test_prompt_runs_ordered_contract_and_taste_traces(self):
-        for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
-            with self.subTest(prompt_path=prompt_path):
-                prompt = prompt_path.read_text(encoding="utf-8")
-                normalized = " ".join(prompt.split())
-                self.assertIn(
-                    "Inspect the concrete engineering decision revealed by the bounded decision evidence",
-                    normalized,
-                )
-                self.assertIn("current ordered observable tool-result batch", normalized)
-                self.assertIn(
-                    "native tool input and observable result",
-                    normalized,
-                )
-                self.assertNotIn("related_source", normalized)
-                self.assertNotIn("declaration candidates", normalized)
-                self.assertIn(
-                    "Trace changed state transitions and effects in execution order",
-                    normalized,
-                )
-                self.assertNotIn(
-                    "Track each returned promise or callback into the next action that depends on its completion",
-                    normalized,
-                )
-                self.assertNotIn(
-                    "An unconsumed completion signal marks an open causality gap",
-                    normalized,
-                )
-                self.assertIn(
-                    "Contract coverage is the first stage",
-                    normalized,
-                )
-                self.assertIn(
-                    "Visible task requirement → applicable execution paths → required behavior",
-                    normalized,
-                )
-                self.assertIn(
-                    "Return contract_warning and stop the judgment before considering taste",
-                    normalized,
-                )
-                self.assertIn(
-                    "Taste is the second stage",
-                    normalized,
-                )
-                self.assertIn(
-                    "Visible implementation element → shared responsibility ← visible implementation element",
-                    normalized,
-                )
-                self.assertIn(
-                    "structural decision in code, data, responsibility, or control flow",
-                    normalized,
-                )
-                self.assertIn(
-                    "Use a declarative observation only when the packet establishes an unmet requirement and its task-breaking behavior",
-                    normalized,
-                )
-                self.assertIn(
-                    "Identify two concrete implementation elements visible in the current packet",
-                    normalized,
-                )
-                self.assertIn(
-                    "State the responsibility that both elements visibly carry",
-                    normalized,
-                )
-                self.assertIn("The Actor owns the remedy", normalized)
-                self.assertIn("Leave replacement design to the Actor", normalized)
-                self.assertNotIn("required premise", normalized)
-                self.assertNotIn("observable counterexample", normalized)
-                self.assertNotIn("concrete alternative implementation", normalized)
-                self.assertNotIn(
-                    "Visible requirement → existing owner → smallest contract-preserving change",
-                    normalized,
-                )
-                self.assertNotIn(
-                    "Before adding state, a branch, wrapper, timer, retry, or policy",
-                    normalized,
-                )
-                self.assertNotIn("removing or merging", normalized)
-                self.assertIn("visible tool-result record", normalized)
-                self.assertIn(
-                    "Recent returned Nudges are exclusions, not evidence",
-                    normalized,
-                )
-                self.assertIn(
-                    "Ground both concrete implementation elements and their shared responsibility in the current packet",
-                    normalized,
-                )
-                self.assertNotIn(
-                    "When multiple current-packet consequences depend on one visible state, owner, or control path",
-                    normalized,
-                )
-                self.assertIn(
-                    "A visible name, call, literal, or branch establishes only what happens after entry",
-                    normalized,
-                )
-                self.assertIn(
-                    "Reachability requires a visible producer or caller and path to the anchor",
-                    normalized,
-                )
-                self.assertIn(
-                    "The current packet must establish every edge in this relationship",
-                    normalized,
-                )
-                self.assertIn(
-                    "Missing context remains absent evidence rather than a contract warning",
-                    normalized,
-                )
-                self.assertNotIn("Use a question", normalized)
-                self.assertNotIn("precise question", normalized)
-                self.assertNotIn(
-                    "different dependency or downstream consequence remains eligible",
-                    normalized,
-                )
+                self.assertIn("workspace state at task start", normalized)
+                self.assertIn("current cumulative workspace state", normalized)
+                self.assertIn("read-only tools", normalized)
+                self.assertIn("propose a better responsibility boundary or existing seam", normalized)
+                self.assertIn("Actor alone owns implementation and verification", normalized)
+                self.assertNotIn("current ordered observable tool-result batch", normalized)
+                self.assertNotIn("visible responsibility overlap", normalized.lower())
 
     def test_clean_copy_starts_both_prompt_hooks(self):
         with tempfile.TemporaryDirectory() as raw:
