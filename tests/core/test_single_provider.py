@@ -161,7 +161,8 @@ class SingleProviderTests(unittest.TestCase):
             normalized,
         )
         self.assertIn(
-            "ground the choice and every claimed consequence in the current packet",
+            "ground both concrete implementation elements and their shared responsibility "
+            "in the current packet",
             normalized,
         )
         self.assertIn("different still-changeable engineering decision", normalized)
@@ -170,21 +171,27 @@ class SingleProviderTests(unittest.TestCase):
             "different dependency or downstream consequence remains eligible", normalized
         )
 
-    def test_provider_surfaces_one_shared_choice_without_owning_the_remedy(self):
+    def test_provider_reports_only_a_visible_responsibility_overlap(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
 
-        self.assertIn("the Actor owns the remedy", normalized)
         self.assertIn(
-            "When multiple current-packet consequences depend on one visible state, "
-            "owner, or control path",
+            "A taste nudge names two concrete implementation elements that visibly "
+            "carry the same responsibility",
             normalized,
         )
         self.assertIn(
-            "use the shared implementation choice as the single candidate anchor",
+            "Identify two concrete implementation elements visible in the current packet",
             normalized,
         )
-        self.assertIn("consequences as its runtime effects", normalized)
+        self.assertIn(
+            "State the responsibility that both elements visibly carry",
+            normalized,
+        )
+        self.assertIn("The Actor owns the remedy", normalized)
+        self.assertIn("Leave replacement design to the Actor", normalized)
+        self.assertNotIn("required premise", normalized)
+        self.assertNotIn("observable counterexample", normalized)
 
     def test_prompt_uses_positive_operational_instructions(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -343,13 +350,33 @@ class SingleProviderTests(unittest.TestCase):
             normalized,
         )
         self.assertIn(
-            "When the relevant caller or path is absent, ask whether the task-relevant "
-            "value can reach the anchor",
+            "Visible implementation element → shared responsibility ← visible implementation element",
             normalized,
         )
-        self.assertIn("Keep every question premise to visible facts", normalized)
         self.assertIn(
-            "Use an observation only when local behavior and reachability are both visible",
+            "Identify two concrete implementation elements visible in the current packet",
+            normalized,
+        )
+        self.assertIn(
+            "State the responsibility that both elements visibly carry",
+            normalized,
+        )
+        self.assertIn("The Actor owns the remedy", normalized)
+        self.assertIn("Leave replacement design to the Actor", normalized)
+        self.assertNotIn("required premise", normalized)
+        self.assertNotIn("observable counterexample", normalized)
+        self.assertNotIn("concrete alternative implementation", normalized)
+        self.assertNotIn(
+            "Visible requirement → existing owner → smallest contract-preserving change",
+            normalized,
+        )
+        self.assertNotIn(
+            "Before adding state, a branch, wrapper, timer, retry, or policy",
+            normalized,
+        )
+        self.assertNotIn("removing or merging", normalized)
+        self.assertIn(
+            "Missing context remains absent evidence rather than a contract warning",
             normalized,
         )
         self.assertIn(
@@ -358,28 +385,32 @@ class SingleProviderTests(unittest.TestCase):
         )
         self.assertIn("visible tool-result record", normalized)
         self.assertIn("Trace changed state transitions and effects in execution order", normalized)
-        self.assertIn(
+        self.assertNotIn(
             "Track each returned promise or callback into the next action that depends on its completion",
             normalized,
         )
-        self.assertIn(
+        self.assertNotIn(
             "An unconsumed completion signal marks an open causality gap",
             normalized,
         )
-        self.assertIn("completion, ownership, and ordering", normalized)
-        self.assertIn("would change the next engineering decision", normalized)
+        self.assertNotIn("Use a question", normalized)
+        self.assertNotIn("precise question", normalized)
 
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
         anchor_description = schema["properties"]["anchor"]["description"]
         description = schema["properties"]["relationship"]["description"]
-        self.assertIn("declarative observation or one precise question", description)
-        self.assertIn("packet-grounded structural decision", description)
+        self.assertIn("two concrete implementation elements", description)
+        self.assertIn("same responsibility", description)
+        self.assertNotIn("required premise", description)
+        self.assertNotIn("observable counterexample", description)
+        self.assertNotIn("question", description)
+        self.assertIn("after the contract stage yields no warning", description)
         self.assertIn("smallest exact implementation location", anchor_description.lower())
         self.assertNotIn("maxLength", schema["properties"]["anchor"])
         self.assertNotIn("maxLength", schema["properties"]["relationship"])
         self.assertIn("smallest exact implementation location", prompts[0])
         self.assertIn(
-            "one short Traditional Chinese declarative observation or one precise question",
+            "one short Traditional Chinese relationship",
             normalized,
         )
         self.assertIn("one packet-grounded contract warning or taste nudge", normalized)

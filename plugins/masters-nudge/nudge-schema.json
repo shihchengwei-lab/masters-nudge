@@ -21,7 +21,7 @@
     },
     "relationship": {
       "type": "string",
-      "description": "One short Traditional Chinese declarative observation or one precise question about one packet-grounded structural decision. A contract warning identifies an unmet task requirement or the one missing fact that keeps contract coverage open. A taste nudge identifies a concrete structural dependency and engineering consequence after the contract stage yields no warning. The Host renders the status marker, principle, and anchor separately."
+      "description": "One short Traditional Chinese relationship. A contract warning identifies an unmet task requirement and task-breaking behavior. A taste nudge names two concrete implementation elements that visibly carry the same responsibility and states the conflict exposed by that overlap after the contract stage yields no warning; replacement design remains with the Actor. The Host renders the status marker, principle, and anchor separately."
     }
   },
   "required": ["status", "principle", "evidence_seq", "anchor", "relationship"],

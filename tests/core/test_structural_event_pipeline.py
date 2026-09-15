@@ -242,7 +242,7 @@ class FactualControlFlowTests(unittest.TestCase):
         self.assertIn("const unlinkedModules = new Set", packet)
         self.assertIn("if (dependency.status === 'unlinked')", packet)
 
-    def test_post_change_source_includes_same_file_caller_and_value_producer(self):
+    def test_post_change_source_stays_at_changed_anchors(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             source = root / "src" / "runtime.ts"
@@ -305,22 +305,14 @@ class FactualControlFlowTests(unittest.TestCase):
         self.assertLessEqual(
             len(rendered), source_context.POST_CHANGE_SOURCE_MAX_CHARS
         )
-        self.assertIn("[same-file relationship context]", rendered)
-        self.assertIn("[complete same-file lexical inventories]", rendered)
-        self.assertIn("reference `drainBatch`: all", rendered)
-        self.assertIn("[contiguous upstream-to-bridge source]", rendered)
-        self.assertIn("[contiguous bridge-to-anchor source]", rendered)
-        self.assertIn("drainBatch(!item.urgent, true)", rendered)
-        self.assertIn("nearby callable declaration `enqueue`", rendered)
-        self.assertIn("callable bridge `enqueue`", rendered)
-        self.assertIn("enqueue(item);", rendered)
-        self.assertIn("if (item.urgent)", rendered)
-        self.assertIn("item.urgent = false", rendered)
-        self.assertIn("return sendImmediately(item)", rendered)
-        self.assertIn("_transport = new Transport()", rendered)
-        self.assertIn("initDefaults();", rendered)
+        self.assertIn("const marker9 = 9", rendered)
+        self.assertNotIn("[same-file relationship context]", rendered)
+        self.assertNotIn("[complete same-file lexical inventories]", rendered)
+        self.assertNotIn("drainBatch(!item.urgent, true)", rendered)
+        self.assertNotIn("if (item.urgent)", rendered)
+        self.assertNotIn("_transport = new Transport()", rendered)
 
-    def test_relationship_context_prioritizes_a_data_flow_call_under_budget(self):
+    def test_post_change_source_does_not_infer_a_distant_data_flow(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             source = root / "runtime.ts"
@@ -365,11 +357,12 @@ class FactualControlFlowTests(unittest.TestCase):
                 )
 
         self.assertLessEqual(len(rendered), 1200)
-        self.assertIn("drainBatch(!item.urgent, true)", rendered)
-        self.assertIn("if (item.urgent)", rendered)
-        self.assertIn("item.urgent = false", rendered)
+        self.assertIn("changedAnchor();", rendered)
+        self.assertNotIn("drainBatch(!item.urgent, true)", rendered)
+        self.assertNotIn("if (item.urgent)", rendered)
+        self.assertNotIn("item.urgent = false", rendered)
 
-    def test_relationship_context_keeps_same_file_lifecycle_when_no_value_flows(self):
+    def test_post_change_source_does_not_infer_a_distant_lifecycle(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             source = root / "runtime.ts"
@@ -422,16 +415,13 @@ class FactualControlFlowTests(unittest.TestCase):
                 SessionRef("codex_cli", "lifecycle-context", cwd=raw), mutation
             )
 
-        self.assertIn("[same-file relationship context]", rendered)
-        self.assertIn("[complete same-file lexical inventories]", rendered)
-        self.assertIn("reference `_retryTimer`: all", rendered)
-        self.assertIn("reference `_clearMainTimer`: all", rendered)
-        self.assertIn("[lifecycle state occurrences]", rendered)
-        self.assertIn("_retryTimer.cancel();", rendered)
-        self.assertIn("callsite owner `self.pause`", rendered)
-        self.assertIn("_clearMainTimer();", rendered)
+        self.assertIn("_retryTimer = _createTimer(runRetry, 0);", rendered)
+        self.assertIn("function scheduleRetry(doWork)", rendered)
+        self.assertNotIn("[same-file relationship context]", rendered)
+        self.assertNotIn("_retryTimer.cancel();", rendered)
+        self.assertNotIn("self.pause", rendered)
 
-    def test_relationship_context_keeps_each_selected_value_focus_under_budget(self):
+    def test_post_change_source_excludes_unrelated_value_focuses_under_budget(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             source = root / "runtime.ts"
@@ -472,9 +462,10 @@ class FactualControlFlowTests(unittest.TestCase):
                     mutation,
                 )
 
-        self.assertIn("if (item.urgent) { // first-flow", rendered)
-        self.assertIn("item.urgent = false; // middle-flow", rendered)
-        self.assertIn("record(item.urgent); // last-flow", rendered)
+        self.assertIn("changedAnchor();", rendered)
+        self.assertNotIn("if (item.urgent) { // first-flow", rendered)
+        self.assertNotIn("item.urgent = false; // middle-flow", rendered)
+        self.assertNotIn("record(item.urgent); // last-flow", rendered)
 
     def test_post_change_source_context_cannot_read_outside_workspace(self):
         with tempfile.TemporaryDirectory() as raw:

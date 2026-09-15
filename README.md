@@ -66,27 +66,29 @@ engineering taste with three structural principles:
 
 The two stages and three principles form one judgment contract; they are not an
 extra Provider call, three Lenses, or three separate outputs. When visible
-evidence supports a contract gap or one open decision fork, the Provider returns
-`contract_warning` and stops before taste. Only a pass with no eligible warning
-can produce `taste_nudge`.
+evidence establishes a contract gap, the Provider returns `contract_warning`
+and stops before taste. Only a pass with no eligible warning can produce
+`taste_nudge`. A taste nudge states only a responsibility overlap directly
+visible in the current packet: two concrete implementation elements carry the
+same state, behavior, effect, or control-flow responsibility. The Actor owns
+the remedy.
 
 Each principle has a one-word label: `validity` for invalid states,
 `causality` for unidirectional causal flow, and `predictability` for explicit,
 locally understandable behavior. The Provider returns the visible
 `evidence_seq` that grounds the finding, the principle, the smallest atomic
-`anchor` needed to locate the observation, and one short
-`relationship` that states or asks about a single engineering edge. When the
-evidence establishes the edge, the Provider uses an observation. When it only
-establishes a concrete fork that would change the implementation, the Provider
-asks for the one missing fact. Otherwise it stays silent. The Host renders
+`anchor` needed to locate the observation, and one short `relationship` that
+states the contract break or visible responsibility overlap. Missing context
+does not become a contract warning or taste nudge. A relationship with only one
+visible element, or one that depends on a distant caller, cross-file owner, or
+lifecycle, remains silent. The Host renders
 `contract_warning` as `causality warning:` and `taste_nudge` as
 `causality nudge:`. A warning means the visible contract remains open; it does
 not make the Hook block the main model.
 
-A Nudge may reveal the abstraction or responsibility the implementation is
-choosing, predict behavior beyond the immediate example, or show a simpler data
-or control-flow shape. Routine verification status and task restatements are
-outside the role.
+A taste nudge neither asks a question nor directs a change, and it does not
+package missing facts as conditions. The Actor still owns the remedy. Routine
+verification status and task restatements are outside the role.
 
 ## How it works
 
@@ -105,9 +107,9 @@ Task and observable tool results
 ```
 
 Each output is generated for the current situation; it is not a random stock
-sentence. A contract warning or taste nudge is an observation or one precise
-question that can change the current engineering decision, not a review, score,
-complete solution, or demand to run more tests. No contract warning means only
+sentence. A contract warning states a visible break. A taste nudge states a
+visible responsibility overlap, not a review, score, complete solution, or
+demand to run more tests. No contract warning means only
 that the current packet yielded no eligible warning; it does not prove the whole
 task contract complete.
 

@@ -20,6 +20,21 @@ PLUGIN = ROOT / "plugins" / "masters-nudge"
 
 
 class PackageTests(unittest.TestCase):
+    def test_readmes_describe_visible_overlap_without_counterexample(self):
+        for readme_path, expected in (
+            (ROOT / "README.md", "responsibility overlap"),
+            (ROOT / "README.zh-TW.md", "責任重疊"),
+        ):
+            with self.subTest(readme_path=readme_path):
+                normalized = " ".join(
+                    readme_path.read_text(encoding="utf-8").split()
+                ).lower()
+                self.assertIn(expected, normalized)
+                self.assertNotIn("falsifiable premise", normalized)
+                self.assertNotIn("可證偽前提", normalized)
+                self.assertNotIn("observable counterexample", normalized)
+                self.assertNotIn("可觀察反例", normalized)
+
     def test_inventory_matches_the_checked_in_plugin(self):
         declared = set(package_files())
         actual = {
@@ -131,11 +146,11 @@ class PackageTests(unittest.TestCase):
                     "Trace changed state transitions and effects in execution order",
                     normalized,
                 )
-                self.assertIn(
+                self.assertNotIn(
                     "Track each returned promise or callback into the next action that depends on its completion",
                     normalized,
                 )
-                self.assertIn(
+                self.assertNotIn(
                     "An unconsumed completion signal marks an open causality gap",
                     normalized,
                 )
@@ -156,7 +171,7 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Observed implementation choice → structural dependency → engineering consequence",
+                    "Visible implementation element → shared responsibility ← visible implementation element",
                     normalized,
                 )
                 self.assertIn(
@@ -164,24 +179,41 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "Use an observation when the packet establishes an unmet requirement and its task-breaking behavior",
+                    "Use a declarative observation only when the packet establishes an unmet requirement and its task-breaking behavior",
                     normalized,
                 )
                 self.assertIn(
-                    "Use a question when the packet establishes an exact contract decision fork",
+                    "Identify two concrete implementation elements visible in the current packet",
                     normalized,
                 )
+                self.assertIn(
+                    "State the responsibility that both elements visibly carry",
+                    normalized,
+                )
+                self.assertIn("The Actor owns the remedy", normalized)
+                self.assertIn("Leave replacement design to the Actor", normalized)
+                self.assertNotIn("required premise", normalized)
+                self.assertNotIn("observable counterexample", normalized)
+                self.assertNotIn("concrete alternative implementation", normalized)
+                self.assertNotIn(
+                    "Visible requirement → existing owner → smallest contract-preserving change",
+                    normalized,
+                )
+                self.assertNotIn(
+                    "Before adding state, a branch, wrapper, timer, retry, or policy",
+                    normalized,
+                )
+                self.assertNotIn("removing or merging", normalized)
                 self.assertIn("visible tool-result record", normalized)
-                self.assertIn("completion, ownership, and ordering", normalized)
                 self.assertIn(
                     "Recent returned Nudges are exclusions, not evidence",
                     normalized,
                 )
                 self.assertIn(
-                    "Ground the choice and every claimed consequence in the current packet",
+                    "Ground both concrete implementation elements and their shared responsibility in the current packet",
                     normalized,
                 )
-                self.assertIn(
+                self.assertNotIn(
                     "When multiple current-packet consequences depend on one visible state, owner, or control path",
                     normalized,
                 )
@@ -198,14 +230,11 @@ class PackageTests(unittest.TestCase):
                     normalized,
                 )
                 self.assertIn(
-                    "When the relevant caller or path is absent, ask whether the task-relevant value can reach the anchor",
+                    "Missing context remains absent evidence rather than a contract warning",
                     normalized,
                 )
-                self.assertIn(
-                    "Keep every question premise to visible facts",
-                    normalized,
-                )
-                self.assertIn("the Actor owns the remedy", normalized)
+                self.assertNotIn("Use a question", normalized)
+                self.assertNotIn("precise question", normalized)
                 self.assertNotIn(
                     "different dependency or downstream consequence remains eligible",
                     normalized,
