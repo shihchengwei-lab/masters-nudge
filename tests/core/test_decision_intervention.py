@@ -102,6 +102,68 @@ class WorkspaceAccessTests(unittest.TestCase):
 
         self.assertEqual(result["decision"], "pass")
         self.assertEqual(run.call_args.kwargs["cwd"], str(root))
+        command = run.call_args.args[0]
+        self.assertIn('mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]', command)
+        self.assertIn(
+            'mcp_servers.readrepo.default_tools_approval_mode="approve"',
+            command,
+        )
+        self.assertTrue(any("read_only_repo_mcp.py" in part for part in command))
+
+    def test_codex_provider_recovers_clean_result_from_json_events(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            schema = root / "schema.json"
+            schema.write_text('{"type":"object"}', encoding="utf-8")
+            clean = json.dumps(
+                {
+                    "decision": "intervene",
+                    "current_choice": "局部掃描",
+                    "structural_cost": "重做既有語意",
+                    "direction": "回到既有 owner",
+                    "evidence": ["src/owner.ts:fact"],
+                },
+                ensure_ascii=False,
+            )
+            event = json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {"type": "agent_message", "text": clean},
+                },
+                ensure_ascii=False,
+            )
+
+            def fake_run(command, **kwargs):
+                Path(command[command.index("-o") + 1]).write_text(
+                    json.dumps(
+                        {
+                            "decision": "intervene",
+                            "current_choice": "�",
+                            "structural_cost": "�",
+                            "direction": "�",
+                            "evidence": ["�"],
+                        },
+                        ensure_ascii=False,
+                    ),
+                    encoding="utf-8",
+                )
+                return subprocess.CompletedProcess([], 0, event + "\n", "")
+
+            with mock.patch(
+                "masters_nudge.providers._run_cli_process", side_effect=fake_run
+            ):
+                result = call_codex_result(
+                    "prompt",
+                    "snapshot",
+                    "model",
+                    schema_path=schema,
+                    timeout_sec=10,
+                    workspace_root=str(root),
+                    codex_bin_resolver=lambda: "codex.exe",
+                )
+
+        self.assertEqual(result["decision"], "intervene")
+        self.assertEqual(result["direction"], "回到既有 owner")
 
 
 class DecisionSnapshotTests(unittest.TestCase):

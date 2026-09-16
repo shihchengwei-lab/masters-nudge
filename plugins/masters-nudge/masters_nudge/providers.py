@@ -7,6 +7,7 @@ import os
 import signal
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Callable
@@ -127,6 +128,43 @@ def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str
 
 def parse_schema_result(stdout: str) -> dict:
     return parse_nudge_result(stdout)
+
+
+def _parse_codex_jsonl_result(stdout: str) -> dict:
+    recovered = call_result()
+    for line in str(stdout or "").splitlines():
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            continue
+        if event.get("type") != "item.completed":
+            continue
+        item = event.get("item")
+        if not isinstance(item, dict) or item.get("type") != "agent_message":
+            continue
+        parsed = parse_schema_result(str(item.get("text") or ""))
+        if parsed.get("decision") != "error":
+            recovered = parsed
+    return recovered
+
+
+def _codex_readrepo_config(workspace_root: str) -> list[str]:
+    if not str(workspace_root or "").strip():
+        return []
+    server = Path(__file__).with_name("read_only_repo_mcp.py")
+    values = [server.as_posix(), "--root", Path(workspace_root).resolve().as_posix()]
+    command = Path(sys.executable).as_posix()
+    return [
+        "-c",
+        f"mcp_servers.readrepo.command={json.dumps(command)}",
+        "-c",
+        "mcp_servers.readrepo.args="
+        + json.dumps(values, ensure_ascii=False, separators=(",", ":")),
+        "-c",
+        'mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]',
+        "-c",
+        'mcp_servers.readrepo.default_tools_approval_mode="approve"',
+    ]
 
 
 def call_claude_result(
@@ -260,6 +298,7 @@ def call_codex_result(
     try:
         command = [
             codex_bin,
+            *_codex_readrepo_config(workspace_root),
             "exec",
             "--skip-git-repo-check",
             "--ephemeral",
@@ -276,9 +315,7 @@ def call_codex_result(
             "-",
         ]
         if use_shell:
-            command_value: list[str] | str = " ".join(
-                f'"{part}"' if " " in part else part for part in command
-            )
+            command_value: list[str] | str = subprocess.list2cmdline(command)
         else:
             command_value = command
         result = _run_cli_process(
@@ -299,6 +336,9 @@ def call_codex_result(
             log_error(f"codex output read failed: {exc}")
             return call_result(error_kind="invalid_output")
         parsed = parse_schema_result(raw_output)
+        event_result = _parse_codex_jsonl_result(result.stdout)
+        if event_result.get("decision") != "error":
+            parsed = event_result
         if parsed.get("decision") == "error":
             parsed["error_kind"] = "invalid_output"
         return parsed

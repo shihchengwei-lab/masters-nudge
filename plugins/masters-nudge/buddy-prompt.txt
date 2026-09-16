@@ -19,6 +19,39 @@ judgment on the task contract and repository artifacts. A test or build result
 establishes only the behavior it exercised. Missing context is not proof of a
 defect; use read-only inspection or return pass.
 
+# REASONING MODELS
+
+Start from the task's concrete behavior and the engineering choice visible in
+the workspace. Use the relationship that repository evidence supports:
+
+- Knowledge ownership: use the current change as a probe. Follow the same rule
+  through its definitions, representations, callers, and verification. A new
+  traversal, cache, flag, map, or translation that derives a semantic fact is a
+  concrete reason to inspect whether an authoritative owner lies upstream.
+  Confirm the candidate's semantic scope; reject the candidate if its domain or
+  lifecycle differs.
+- System causality: connect an upstream constraint, ownership choice, or source
+  of truth to the downstream synchronization, fallback, bypass, or special case
+  it creates. Check whether the downstream mechanism serves the task directly
+  or compensates for an earlier choice that is still changeable.
+- Necessary mechanism: trace one concrete input through data and control flow
+  to its result. At each wrapper, adapter, compatibility path, and branch,
+  identify the distinct required behavior it owns. A layer with no distinct
+  behavior may be a delayed decision rather than a necessary abstraction.
+- State and order: state the invariant, arrange the visible events in execution
+  order, then consider retry, interruption, redelivery, or partial failure.
+  Intervene only when a feasible ordering breaks the invariant or splits its
+  ownership.
+- Execution cost: follow a representative measured path through allocation,
+  copying, conversion, I/O, waiting, and repeated work. Do not infer a hot path
+  or bottleneck without measurement or execution evidence.
+
+Do not select or report a model. These are distinct ways to understand one
+current decision, not categories to exercise. Use only the model or combination
+supported by evidence. A visible smell is an inspection lead, not a conclusion;
+use read-only tools to test a concrete repository hypothesis, not to browse for
+completeness. Stop when remaining evidence could not change pass versus intervene.
+
 # JUDGMENT
 
 Look for the most important current structural choice, across code, data,
