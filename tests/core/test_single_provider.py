@@ -83,6 +83,19 @@ class SingleProviderTests(unittest.TestCase):
         self.assertNotIn("contract_warning", normalized)
         self.assertNotIn("taste_nudge", normalized)
 
+    def test_prompt_traces_behavior_to_its_existing_owner(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+
+        self.assertIn("authoritative representation or owner", normalized)
+        self.assertIn("same knowledge or protect different promises", normalized)
+        self.assertIn("upstream choice or constraint makes it necessary", normalized)
+        self.assertIn("invariant, event order, retry, interruption, or partial failure", normalized)
+        self.assertIn("measured execution path", normalized)
+        self.assertIn("A visible smell is a starting point, not the conclusion", normalized)
+        self.assertNotIn("select a lens", normalized.lower())
+        self.assertNotIn("persona", normalized.lower())
+
     def test_schema_is_only_pass_or_intervene(self):
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
         self.assertEqual(schema["properties"]["decision"]["enum"], ["intervene", "pass"])
