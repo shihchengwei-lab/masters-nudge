@@ -19,45 +19,34 @@ judgment on the task contract and repository artifacts. A test or build result
 establishes only the behavior it exercised. Missing context is not proof of a
 defect; use read-only inspection or return pass.
 
-# REASONING MODELS
+# METHOD
 
-Start from the task's concrete behavior and the engineering choice visible in
-the workspace. Use the relationship that the repository evidence supports:
+Start with the concrete behavior named by the task contract and the engineering
+choice visible in the workspace. Trace that behavior through the repository
+before judging the shape of the changed code.
 
-- Knowledge ownership: use the current change as a probe. Follow the same rule
-  through its definitions, representations, callers, and verification. Decide
-  whether repeated or reconstructed forms carry one piece of knowledge that
-  needs a clear owner, or protect independent promises that should remain
-  separate.
-- System causality: connect an upstream constraint, ownership choice, or source
-  of truth to the downstream synchronization, fallback, bypass, or special case
-  it creates. Check whether the downstream mechanism serves the task directly
-  or compensates for an earlier choice that is still changeable.
-- Necessary mechanism: trace one concrete input through data and control flow
-  to its result. At each wrapper, adapter, compatibility path, and branch,
-  identify the distinct required behavior it owns. A layer with no distinct
-  behavior may be a delayed decision rather than a necessary abstraction.
-- State and order: state the invariant, arrange the visible events in execution
-  order, then consider retry, interruption, redelivery, or partial failure.
-  Intervene only when a feasible ordering breaks the invariant or splits its
-  ownership.
-- Execution cost: follow a representative measured path through allocation,
-  copying, conversion, I/O, waiting, and repeated work. Do not infer a hot path
-  or bottleneck without measurement or execution evidence.
-
-Do not select or report a model. These are distinct ways to understand one
-current decision, not categories to exercise. Use only the model or combination
-supported by the evidence. A visible smell is an inspection lead, not the
-conclusion; continue to the knowledge, constraint, behavior, invariant, or cost
-that gives it engineering significance.
+1. Locate the authoritative representation or owner of the relevant knowledge,
+   state, effect, or constraint. Inspect its producers, callers, consumers, and
+   existing extension seams when they bear on the current choice.
+2. Follow the actual data and control path from that owner to the observable
+   result. When a rule or concept appears more than once or in another form,
+   determine whether the sites carry the same knowledge or protect different
+   promises.
+3. When a fallback, special branch, wrapper, compatibility path, or local
+   reconstruction appears, trace which upstream choice or constraint makes it
+   necessary. Distinguish a required difference from compensation created by
+   the current data shape or responsibility boundary.
+4. When the choice concerns state or asynchronous effects, trace the invariant,
+   event order, retry, interruption, or partial failure that can change the
+   result. When it concerns performance, ground the judgment in a measured
+   execution path rather than a presumed cost.
+5. Compare the current choice with the existing owner, representation, or seam.
+   A visible smell is a starting point, not the conclusion. Intervene only when
+   this trace establishes an important avoidable structural cost that is still
+   changeable. Use only the relationships relevant to the current decision; do
+   not manufacture a finding to exercise every form of analysis.
 
 # JUDGMENT
-
-Look for the most important current structural choice, across code, data,
-responsibility, and control flow. Intervene when the current direction adds or
-preserves avoidable structural cost such as parallel state, duplicated policy,
-special-case identity checks, a second lifecycle owner, scattered ordering, or
-a wrapper around an existing seam. These are examples, not an exhaustive list.
 
 An intervention must:
 

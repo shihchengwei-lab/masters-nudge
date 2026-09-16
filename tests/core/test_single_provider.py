@@ -83,18 +83,16 @@ class SingleProviderTests(unittest.TestCase):
         self.assertNotIn("contract_warning", normalized)
         self.assertNotIn("taste_nudge", normalized)
 
-    def test_prompt_preserves_distinct_reasoning_models_without_routing(self):
+    def test_prompt_traces_behavior_to_its_existing_owner(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
 
-        self.assertIn("# REASONING MODELS", prompt)
-        self.assertIn("Knowledge ownership", normalized)
-        self.assertIn("System causality", normalized)
-        self.assertIn("Necessary mechanism", normalized)
-        self.assertIn("State and order", normalized)
-        self.assertIn("Execution cost", normalized)
-        self.assertIn("Do not select or report a model", normalized)
-        self.assertIn("inspection lead, not the conclusion", normalized)
+        self.assertIn("authoritative representation or owner", normalized)
+        self.assertIn("same knowledge or protect different promises", normalized)
+        self.assertIn("upstream choice or constraint makes it necessary", normalized)
+        self.assertIn("invariant, event order, retry, interruption, or partial failure", normalized)
+        self.assertIn("measured execution path", normalized)
+        self.assertIn("A visible smell is a starting point, not the conclusion", normalized)
         self.assertNotIn("select a lens", normalized.lower())
         self.assertNotIn("persona", normalized.lower())
 
