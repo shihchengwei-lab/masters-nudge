@@ -103,6 +103,7 @@ class WorkspaceAccessTests(unittest.TestCase):
         self.assertEqual(result["decision"], "pass")
         self.assertEqual(run.call_args.kwargs["cwd"], str(root))
         command = run.call_args.args[0]
+        self.assertIn("features.shell_tool=false", command)
         self.assertIn('mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]', command)
         self.assertIn(
             'mcp_servers.readrepo.default_tools_approval_mode="approve"',

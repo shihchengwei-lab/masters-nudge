@@ -156,6 +156,8 @@ def _codex_readrepo_config(workspace_root: str) -> list[str]:
     command = Path(sys.executable).as_posix()
     return [
         "-c",
+        "features.shell_tool=false",
+        "-c",
         f"mcp_servers.readrepo.command={json.dumps(command)}",
         "-c",
         "mcp_servers.readrepo.args="
