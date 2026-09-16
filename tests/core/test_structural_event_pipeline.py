@@ -9,32 +9,39 @@ from masters_nudge.codex_adapter import normalize_tool_batch
 
 
 class ExplicitMutationEvidenceTests(unittest.TestCase):
-    def test_only_structured_mutation_payloads_create_mutation_evidence(self):
+    def test_only_structured_mutation_payloads_create_completed_mutation(self):
         cases = (
-            ({"patch": "*** Update File: app.py"}, "patch"),
-            ({"diff": "+++ b/app.py"}, "diff"),
-            ({"path": "app.py", "old_string": "a", "new_string": "b"}, "replacement"),
-            ({"file_path": "empty.txt", "content": ""}, "content"),
+            ({"patch": "*** Update File: app.py"}, "*** Update File: app.py"),
+            ({"diff": "+++ b/app.py"}, "+++ b/app.py"),
+            (
+                {"path": "app.py", "old_string": "a", "new_string": "b"},
+                "path: app.py\n[before]\na\n[end before]\n[after]\nb\n[end after]",
+            ),
+            (
+                {"file_path": "empty.txt", "content": ""},
+                "path: empty.txt\n[content]\n\n[end content]",
+            ),
             ({"command": "echo build"}, None),
             ({"text": "preview only"}, None),
             ({"payload": {"path": "app.py", "content": "hidden"}}, None),
         )
         for payload, expected in cases:
             with self.subTest(payload=payload):
-                mutation = contracts.mutation_evidence_from_input(payload)
-                self.assertEqual(None if mutation is None else mutation.kind, expected)
+                mutation = contracts.completed_mutation_from_input(payload)
+                self.assertEqual(None if mutation is None else mutation.change, expected)
 
-    def test_patch_extracts_paths_without_source_anchors_or_relationships(self):
-        mutation = contracts.mutation_evidence_from_input(
+    def test_patch_is_preserved_without_derived_metadata(self):
+        patch = (
+            "*** Begin Patch\n*** Update File: src/runtime.ts\n@@\n"
+            "+const parallelOwner = true;\n*** End Patch"
+        )
+        mutation = contracts.completed_mutation_from_input(
             {
-                "patch": (
-                    "*** Begin Patch\n*** Update File: src/runtime.ts\n@@\n"
-                    "+const parallelOwner = true;\n*** End Patch"
-                )
+                "patch": patch
             }
         )
-        self.assertEqual(mutation.targets[0].path, "src/runtime.ts")
-        self.assertEqual(list(contracts.MutationTarget.__dataclass_fields__), ["path"])
+        self.assertEqual(mutation.change, patch)
+        self.assertEqual(list(contracts.CompletedMutation.__dataclass_fields__), ["change"])
 
     def test_codex_apply_patch_command_is_explicit_mutation(self):
         events = normalize_tool_batch(
@@ -55,7 +62,7 @@ class ExplicitMutationEvidenceTests(unittest.TestCase):
                 ],
             }
         )
-        self.assertEqual(events[0].mutation.targets[0].path, "app.py")
+        self.assertIn("*** Update File: app.py", events[0].mutation.change)
 
     def test_command_text_does_not_infer_a_mutation_for_other_tools(self):
         events = normalize_tool_batch(

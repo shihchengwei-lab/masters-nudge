@@ -10,9 +10,9 @@ from typing import Any
 import source_context
 from masters_nudge import claude_adapter, evidence, prompting, storage
 from masters_nudge.contracts import (
-    NudgeOutcome,
+    Nudge,
     ToolCompleted,
-    mutation_evidence_from_input,
+    completed_mutation_from_input,
 )
 from masters_nudge.core import NudgeCore
 from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, active_guard
@@ -42,38 +42,30 @@ def normalize_tool_batch(hook: dict[str, Any]) -> list[ToolCompleted]:
                 tool_name,
                 tool_input=tool_input,
                 tool_output=response,
-                mutation=mutation_evidence_from_input(tool_input),
+                mutation=completed_mutation_from_input(tool_input),
                 native_event_name="PostToolBatch",
             )
         )
     return events
 
 
-def nudge_checkpoint(source_packet: str, workspace_root: str = "") -> NudgeOutcome:
+def nudge_checkpoint(observation: str) -> Nudge | None:
     settings = claude_adapter.runtime_settings()
     core = NudgeCore(
         settings,
         log_error=lambda message: claude_adapter.log_error("claude-checkpoint", message),
     )
-    return core.nudge_once(
-        source_packet,
-        timeout_sec=PROVIDER_TIMEOUT_SEC,
-        workspace_root=workspace_root,
-    )
+    return core.nudge_once(observation, timeout_sec=PROVIDER_TIMEOUT_SEC)
 
 
 def build_hook_output(
-    current_choice: str,
-    structural_cost: str,
-    direction: str,
+    message: str,
     evidence_items: tuple[str, ...],
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": "PostToolBatch",
-            "additionalContext": prompting.delivery_text(
-                current_choice, structural_cost, direction, evidence_items
-            ),
+            "additionalContext": prompting.delivery_text(message, evidence_items),
         }
     }
 
@@ -86,42 +78,30 @@ def prepare_hook(hook: dict[str, Any]) -> claude_adapter.PreparedDelivery | None
     observed = evidence.observe_tool_batch(settings.paths.data_dir, events)
     if not observed.eligible:
         return None
-    if storage.intervention_delivered(settings.paths.data_dir, events[0].session):
+    if storage.nudge_delivered(settings.paths.data_dir, events[0].session):
         return None
     state = observed.turn_state
     session = events[0].session
-    changed_paths = tuple(
-        target.path
-        for event in events
-        if event.mutation is not None
-        for target in event.mutation.targets
-        if target.path
-    )
-    snapshot = source_context.build_decision_snapshot(
-        task_contract=str(state.get("task_anchor") or ""),
-        task_start=str(state.get("task_start_workspace") or ""),
-        workspace_root=session.repo_root or session.cwd,
-        changed_paths=changed_paths,
-    )
     try:
-        outcome = nudge_checkpoint(snapshot, session.repo_root or session.cwd)
+        observation = source_context.build_observation(
+            str(state.get("task_anchor") or ""),
+            events,
+        )
+    except (source_context.ObservationTooLargeError, ValueError) as exc:
+        claude_adapter.log_error("claude-checkpoint", f"Nudge skipped: {exc}")
+        return None
+    try:
+        nudge = nudge_checkpoint(observation)
     except Exception as exc:
         claude_adapter.log_error("claude-checkpoint", f"Nudge failed: {exc}")
         return None
-    if outcome.decision != "intervene":
+    if nudge is None:
         return None
     return claude_adapter.PreparedDelivery(
-        output=build_hook_output(
-            outcome.current_choice,
-            outcome.structural_cost,
-            outcome.direction,
-            outcome.evidence,
-        ),
+        output=build_hook_output(nudge.message, nudge.evidence),
         session=events[0].session,
-        current_choice=outcome.current_choice,
-        structural_cost=outcome.structural_cost,
-        direction=outcome.direction,
-        evidence=outcome.evidence,
+        message=nudge.message,
+        evidence=nudge.evidence,
         returned_via="PostToolBatch",
     )
 

@@ -20,10 +20,10 @@ PLUGIN = ROOT / "plugins" / "masters-nudge"
 
 
 class PackageTests(unittest.TestCase):
-    def test_readmes_describe_workspace_grounded_advice(self):
+    def test_readmes_describe_task_and_completed_change(self):
         for readme_path, expected in (
-            (ROOT / "README.md", "current cumulative workspace"),
-            (ROOT / "README.zh-TW.md", "目前累積工作區"),
+            (ROOT / "README.md", "task and the completed change"),
+            (ROOT / "README.zh-TW.md", "任務與剛完成的修改"),
         ):
             with self.subTest(readme_path=readme_path):
                 normalized = " ".join(
@@ -68,6 +68,7 @@ class PackageTests(unittest.TestCase):
             "personas/linus.txt",
             "personas/lamport.txt",
             "personas/carmack.txt",
+            "masters_nudge/read_only_repo_mcp.py",
         }
 
         self.assertFalse(paths & forbidden)
@@ -109,18 +110,18 @@ class PackageTests(unittest.TestCase):
         ):
             self.assertNotIn(obsolete, text)
 
-    def test_prompt_uses_workspace_facts_and_read_only_direction(self):
+    def test_prompt_uses_only_task_and_completed_change(self):
         for prompt_path in (ROOT / "buddy-prompt.txt", PLUGIN / "buddy-prompt.txt"):
             with self.subTest(prompt_path=prompt_path):
                 prompt = prompt_path.read_text(encoding="utf-8")
                 normalized = " ".join(prompt.split())
-                self.assertIn("workspace state at task start", normalized)
-                self.assertIn("current cumulative workspace state", normalized)
-                self.assertIn("read-only tools", normalized)
-                self.assertIn("propose a better responsibility boundary or existing seam", normalized)
-                self.assertIn("Actor alone owns implementation and verification", normalized)
-                self.assertNotIn("current ordered observable tool-result batch", normalized)
-                self.assertNotIn("visible responsibility overlap", normalized.lower())
+                self.assertIn("the user's task", normalized)
+                self.assertIn("the completed change that just happened", normalized)
+                self.assertIn("Actor has just changed the program", normalized)
+                self.assertIn("still owns every implementation decision", normalized)
+                self.assertNotIn("workspace state", normalized.lower())
+                self.assertNotIn("read-only tools", normalized.lower())
+                self.assertNotIn("# REASONING MODELS", prompt)
 
     def test_clean_copy_starts_both_prompt_hooks(self):
         with tempfile.TemporaryDirectory() as raw:

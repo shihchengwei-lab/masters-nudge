@@ -13,19 +13,11 @@ from masters_nudge import local_ollama, providers
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA = ROOT / "nudge-schema.json"
-PASS_JSON = json.dumps(
-    {
-        "decision": "pass",
-        "current_choice": "",
-        "structural_cost": "",
-        "direction": "",
-        "evidence": [],
-    }
-)
+PASS_JSON = json.dumps({"nudge": None})
 
 
 class SupportedProviderTests(unittest.TestCase):
-    def test_anthropic_receives_snapshot_unchanged(self):
+    def test_anthropic_receives_observation_unchanged(self):
         completed = subprocess.CompletedProcess(
             ["claude"], 0, json.dumps({"structured_output": json.loads(PASS_JSON)}), ""
         )
@@ -35,9 +27,9 @@ class SupportedProviderTests(unittest.TestCase):
             )
         argv = run.call_args.args[0]
         self.assertEqual(argv[argv.index("-p") + 1], "WORKSPACE-SNAPSHOT")
-        self.assertEqual(result["decision"], "pass")
+        self.assertIsNone(result["nudge"])
 
-    def test_openai_receives_prompt_once_and_uses_workspace_cwd(self):
+    def test_openai_receives_prompt_once_without_actor_workspace(self):
         def run(_command, **kwargs):
             Path(_command[_command.index("-o") + 1]).write_text(PASS_JSON, encoding="utf-8")
             return subprocess.CompletedProcess(["codex"], 0, "", "")
@@ -49,14 +41,17 @@ class SupportedProviderTests(unittest.TestCase):
                 "gpt-test",
                 schema_path=SCHEMA,
                 timeout_sec=12,
-                workspace_root=str(ROOT),
                 codex_bin_resolver=lambda: "codex",
             )
         supplied = call.call_args.kwargs["input_text"]
         self.assertEqual(supplied.count("SYSTEM-Q7K9"), 1)
         self.assertEqual(supplied.count("WORKSPACE-Q7K9"), 1)
-        self.assertEqual(call.call_args.kwargs["cwd"], str(ROOT))
-        self.assertEqual(result["decision"], "pass")
+        self.assertNotEqual(call.call_args.kwargs["cwd"], str(ROOT))
+        command = call.call_args.args[0]
+        self.assertIn("features.shell_tool=false", command)
+        self.assertIn("project_doc_max_bytes=0", command)
+        self.assertFalse(any("readrepo" in part for part in command))
+        self.assertIsNone(result["nudge"])
 
     def test_dispatch_supports_ollama(self):
         expected = json.loads(PASS_JSON)
@@ -91,7 +86,7 @@ class SupportedProviderTests(unittest.TestCase):
                 schema_path=SCHEMA,
                 timeout_sec=12,
             )
-        self.assertEqual(result["decision"], "pass")
+        self.assertIsNone(result["nudge"])
         self.assertEqual(request.call_args.args[0], "http://127.0.0.1:11434")
         self.assertEqual(request.call_args.kwargs["payload"]["messages"][1]["content"], "WORKSPACE-SNAPSHOT")
 

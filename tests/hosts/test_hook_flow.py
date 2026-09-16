@@ -1,4 +1,4 @@
-"""Host hooks deliver at most one advisory intervention per task."""
+"""Host hooks deliver at most one Nudge per task before the next inference."""
 
 from __future__ import annotations
 
@@ -8,30 +8,32 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from masters_nudge import storage
-from masters_nudge.codex_adapter import CodexAdapter
-from masters_nudge.contracts import NudgeOutcome
-from masters_nudge.runtime import RuntimePaths, RuntimeSettings
-import hook_entry
 import claude_checkpoint
-from masters_nudge import claude_adapter
+import hook_entry
+import source_context
+from masters_nudge import claude_adapter, storage
+from masters_nudge.codex_adapter import CodexAdapter
+from masters_nudge.contracts import Nudge
+from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeCore:
-    def __init__(self, data_dir: Path, outcome: NudgeOutcome):
+    def __init__(self, data_dir: Path, nudge: Nudge | None):
         self.settings = RuntimeSettings(
-            "openai", "test", RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log")
+            "openai",
+            "test",
+            RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log"),
         )
-        self.outcome = outcome
+        self.nudge = nudge
         self.calls = []
         self.errors = []
 
-    def nudge_once(self, snapshot, **kwargs):
-        self.calls.append((snapshot, kwargs))
-        return self.outcome
+    def nudge_once(self, observation, **kwargs):
+        self.calls.append((observation, kwargs))
+        return self.nudge
 
     def log_error(self, message):
         self.errors.append(message)
@@ -67,18 +69,13 @@ def mutation_payload(root: str, session: str = "session") -> dict:
 
 
 class CodexHookFlowTests(unittest.TestCase):
-    def test_mutation_uses_workspace_snapshot_and_returns_advice(self):
+    def test_mutation_sends_task_and_change_then_returns_nudge(self):
         with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            (root / "app.py").write_text("parallel_owner = True\n", encoding="utf-8")
             core = FakeCore(
-                root,
-                NudgeOutcome(
-                    "intervene",
-                    "新增第二個 owner",
-                    "責任可能分歧",
-                    "沿用既有 owner",
-                    ("app.py:parallel_owner",),
+                Path(raw),
+                Nudge(
+                    "同一狀態新增了第二個 owner。",
+                    ("+parallel_owner = True",),
                 ),
             )
             adapter = CodexAdapter(core)
@@ -87,31 +84,44 @@ class CodexHookFlowTests(unittest.TestCase):
 
         self.assertIsNotNone(output)
         self.assertEqual(len(core.calls), 1)
-        self.assertIn("[task-start workspace]", core.calls[0][0])
-        self.assertIn("parallel_owner = True", core.calls[0][0])
-        self.assertNotIn("actual_input", core.calls[0][0])
-        self.assertEqual(core.calls[0][1]["workspace_root"], raw)
-        self.assertIn("Actor 負責驗證與實作", output["hookSpecificOutput"]["additionalContext"])
+        observation, kwargs = core.calls[0]
+        self.assertIn("[task]\nKeep one owner\n[end task]", observation)
+        self.assertIn("[change]\n*** Begin Patch", observation)
+        self.assertIn("+parallel_owner = True", observation)
+        self.assertNotIn("workspace", observation.lower())
+        self.assertEqual(kwargs, {"timeout_sec": 90})
+        delivered = output["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("Nudge：同一狀態新增了第二個 owner。", delivered)
+        self.assertIn("證據：+parallel_owner = True", delivered)
 
-    def test_pass_is_silent(self):
+    def test_null_is_silent(self):
         with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            (root / "app.py").write_text("value = 1\n", encoding="utf-8")
-            core = FakeCore(root, NudgeOutcome("pass"))
+            core = FakeCore(Path(raw), None)
             adapter = CodexAdapter(core)
             adapter.process(prompt_payload(raw))
             output = adapter.process(mutation_payload(raw))
         self.assertIsNone(output)
         self.assertEqual(len(core.calls), 1)
 
-    def test_successful_wire_delivery_prevents_further_interventions_this_turn(self):
+    def test_oversized_observation_fails_open_without_provider(self):
         with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            (root / "app.py").write_text("value = 1\n", encoding="utf-8")
-            core = FakeCore(
-                root,
-                NudgeOutcome("intervene", "choice", "cost", "direction", ("app.py:value",)),
-            )
+            core = FakeCore(Path(raw), Nudge("message", ("evidence",)))
+            adapter = CodexAdapter(core)
+            adapter.process(prompt_payload(raw))
+            with mock.patch.object(
+                source_context,
+                "build_observation",
+                side_effect=source_context.ObservationTooLargeError("too large"),
+            ):
+                output = adapter.process(mutation_payload(raw))
+
+        self.assertIsNone(output)
+        self.assertEqual(core.calls, [])
+        self.assertTrue(any("too large" in message for message in core.errors))
+
+    def test_successful_wire_delivery_prevents_more_nudges_this_turn(self):
+        with tempfile.TemporaryDirectory() as raw:
+            core = FakeCore(Path(raw), Nudge("message", ("evidence",)))
             adapter = CodexAdapter(core)
             adapter.process(prompt_payload(raw))
             output = adapter.process(mutation_payload(raw))
@@ -127,12 +137,13 @@ class CodexHookFlowTests(unittest.TestCase):
 
 
 class ClaudeHookFlowTests(unittest.TestCase):
-    def test_claude_uses_the_same_workspace_snapshot_contract(self):
+    def test_claude_uses_the_same_task_and_change_contract(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
-            (root / "app.py").write_text("parallel_owner = True\n", encoding="utf-8")
             settings = RuntimeSettings(
-                "anthropic", "test", RuntimePaths(ROOT, root, root, root / "error.log")
+                "anthropic",
+                "test",
+                RuntimePaths(ROOT, root, root, root / "error.log"),
             )
             session = claude_adapter.session_from_hook(
                 {"session_id": "claude-session", "cwd": raw}
@@ -147,18 +158,44 @@ class ClaudeHookFlowTests(unittest.TestCase):
                 mock.patch.object(
                     claude_checkpoint,
                     "nudge_checkpoint",
-                    return_value=NudgeOutcome(
-                        "intervene", "choice", "cost", "direction", ("app.py:value",)
-                    ),
+                    return_value=Nudge("message", ("+parallel_owner = True",)),
                 ) as provider,
             ):
                 prepared = claude_checkpoint.prepare_hook(payload)
 
         self.assertIsNotNone(prepared)
-        snapshot, workspace = provider.call_args.args
-        self.assertIn("[task-start workspace]", snapshot)
-        self.assertEqual(workspace, raw)
-        self.assertEqual(prepared.direction, "direction")
+        observation = provider.call_args.args[0]
+        self.assertIn("[task]\nKeep one owner\n[end task]", observation)
+        self.assertIn("+parallel_owner = True", observation)
+        self.assertNotIn("workspace", observation.lower())
+        self.assertEqual(prepared.message, "message")
+
+    def test_claude_oversized_observation_fails_open_before_provider(self):
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            settings = RuntimeSettings(
+                "anthropic",
+                "test",
+                RuntimePaths(ROOT, root, root, root / "error.log"),
+            )
+            session = claude_adapter.session_from_hook(
+                {"session_id": "claude-session", "cwd": raw}
+            )
+            storage.start_turn(root, session, "Keep one owner")
+            payload = mutation_payload(raw, "claude-session")
+            with (
+                mock.patch.object(claude_adapter, "RUNTIME", settings),
+                mock.patch.object(
+                    source_context,
+                    "build_observation",
+                    side_effect=source_context.ObservationTooLargeError("too large"),
+                ),
+                mock.patch.object(claude_checkpoint, "nudge_checkpoint") as provider,
+            ):
+                prepared = claude_checkpoint.prepare_hook(payload)
+
+        self.assertIsNone(prepared)
+        provider.assert_not_called()
 
 
 if __name__ == "__main__":

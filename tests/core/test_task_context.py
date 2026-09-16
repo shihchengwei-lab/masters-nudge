@@ -1,13 +1,12 @@
-"""Decision snapshots preserve task and workspace boundaries."""
+"""Task and completed mutation are preserved without workspace reconstruction."""
 
 from __future__ import annotations
 
-import tempfile
 import unittest
-from pathlib import Path
 
 import source_context
 from masters_nudge.codex_adapter import _task_anchor
+from masters_nudge.contracts import CompletedMutation, SessionRef, ToolCompleted
 
 
 class TaskContextTests(unittest.TestCase):
@@ -15,30 +14,35 @@ class TaskContextTests(unittest.TestCase):
         anchor = _task_anchor(
             {"goal": {"objective": "Keep one owner"}, "prompt": "Handle empty input"}
         )
-        self.assertEqual(anchor, "Goal:\nKeep one owner\n\nCurrent request:\nHandle empty input")
-
-    def test_changed_source_must_stay_inside_workspace(self):
-        with tempfile.TemporaryDirectory() as raw, tempfile.TemporaryDirectory() as outside:
-            root = Path(raw)
-            (root / "inside.py").write_text("inside = True\n", encoding="utf-8")
-            outside_path = Path(outside) / "secret.py"
-            outside_path.write_text("secret = True\n", encoding="utf-8")
-            packet = source_context.build_decision_snapshot(
-                task_contract="Task",
-                task_start="status:\n(clean)",
-                workspace_root=raw,
-                changed_paths=("inside.py", str(outside_path)),
-            )
-        self.assertIn("inside = True", packet)
-        self.assertNotIn("secret = True", packet)
-
-    def test_snapshot_is_bounded(self):
-        packet = source_context.build_decision_snapshot(
-            task_contract="T" * 100_000,
-            task_start="S" * 100_000,
-            workspace_root="",
+        self.assertEqual(
+            anchor,
+            "Goal:\nKeep one owner\n\nCurrent request:\nHandle empty input",
         )
-        self.assertLessEqual(len(packet), source_context.DECISION_SNAPSHOT_MAX_CHARS)
+
+    def test_replacement_keeps_before_and_after_text(self):
+        mutation = CompletedMutation(
+            "path: state.ts\n"
+            "[before]\nconst sent = false;\n[end before]\n"
+            "[after]\nconst sent = request.sent;\n[end after]"
+        )
+        event = ToolCompleted(
+            SessionRef("codex_cli", "session"),
+            "Edit",
+            mutation=mutation,
+        )
+
+        observation = source_context.build_observation("Keep one owner", [event])
+
+        self.assertIn("path: state.ts", observation)
+        self.assertIn("[before]\nconst sent = false;", observation)
+        self.assertIn("[after]\nconst sent = request.sent;", observation)
+
+    def test_missing_task_or_change_is_not_reconstructed(self):
+        session = SessionRef("codex_cli", "session")
+        with self.assertRaises(ValueError):
+            source_context.build_observation("", [])
+        with self.assertRaises(ValueError):
+            source_context.build_observation("Task", [ToolCompleted(session, "Read")])
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ from typing import Literal, Mapping, TypeAlias
 
 
 HostName: TypeAlias = Literal["claude_code", "codex_cli"]
-Decision: TypeAlias = Literal["intervene", "pass", "error"]
 
 
 @dataclass(frozen=True)
@@ -21,39 +20,10 @@ class SessionRef:
 
 
 @dataclass(frozen=True)
-class MutationTarget:
-    path: str
+class CompletedMutation:
+    """The exact mutation reported by a completed write tool."""
 
-
-@dataclass(frozen=True)
-class MutationEvidence:
-    """Explicit changed paths used only to wake the Provider and show current files."""
-
-    kind: Literal["patch", "diff", "replacement", "content"]
-    targets: tuple[MutationTarget, ...] = ()
-
-
-_PATCH_PATH_RE = re.compile(
-    r"^(?:\*\*\* (?:Add|Update|Delete) File:|\+\+\+\s+(?:b/)?)\s*(.+?)\s*$"
-)
-_TARGET_MAX_COUNT = 16
-
-
-def _patch_targets(patch: str) -> tuple[MutationTarget, ...]:
-    paths: list[MutationTarget] = []
-    seen: set[str] = set()
-    for line in str(patch or "").splitlines():
-        match = _PATCH_PATH_RE.match(line)
-        if not match:
-            continue
-        path = match.group(1).strip().strip('"')
-        if not path or path == "/dev/null" or path in seen:
-            continue
-        seen.add(path)
-        paths.append(MutationTarget(path))
-        if len(paths) >= _TARGET_MAX_COUNT:
-            break
-    return tuple(paths)
+    change: str = ""
 
 
 def _path_target(tool_input: Mapping[object, object]) -> str:
@@ -64,25 +34,36 @@ def _path_target(tool_input: Mapping[object, object]) -> str:
     return ""
 
 
-def mutation_evidence_from_input(tool_input: object) -> MutationEvidence | None:
+def completed_mutation_from_input(tool_input: object) -> CompletedMutation | None:
     """Recognize only explicit top-level mutation fields; infer no semantics."""
     if not isinstance(tool_input, Mapping):
         return None
     patch = tool_input.get("patch")
     if isinstance(patch, str) and patch.strip():
-        return MutationEvidence("patch", _patch_targets(patch))
+        change = patch.strip()
+        return CompletedMutation(change)
     diff = tool_input.get("diff")
     if isinstance(diff, str) and diff.strip():
-        return MutationEvidence("diff", _patch_targets(diff))
+        change = diff.strip()
+        return CompletedMutation(change)
     target = _path_target(tool_input)
     if (
         target
         and isinstance(tool_input.get("old_string"), str)
         and isinstance(tool_input.get("new_string"), str)
     ):
-        return MutationEvidence("replacement", (MutationTarget(target),))
+        change = (
+            f"path: {target}\n"
+            f"[before]\n{tool_input['old_string']}\n[end before]\n"
+            f"[after]\n{tool_input['new_string']}\n[end after]"
+        )
+        return CompletedMutation(change)
     if target and "content" in tool_input:
-        return MutationEvidence("content", (MutationTarget(target),))
+        content = tool_input.get("content")
+        if not isinstance(content, str):
+            return None
+        change = f"path: {target}\n[content]\n{content}\n[end content]"
+        return CompletedMutation(change)
     return None
 
 
@@ -92,16 +73,13 @@ class ToolCompleted:
     tool_name: str
     tool_input: object = field(default_factory=dict)
     tool_output: object = ""
-    mutation: MutationEvidence | None = None
+    mutation: CompletedMutation | None = None
     native_event_name: str = "PostToolBatch"
 
 
 @dataclass(frozen=True)
-class NudgeOutcome:
-    decision: Decision
-    current_choice: str = ""
-    structural_cost: str = ""
-    direction: str = ""
+class Nudge:
+    message: str
     evidence: tuple[str, ...] = ()
 
 

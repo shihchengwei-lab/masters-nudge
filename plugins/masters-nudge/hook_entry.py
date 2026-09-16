@@ -49,9 +49,7 @@ def _emit_output(output: dict, settings: RuntimeSettings, stream=None) -> None:
         storage.append_host_returned_nudge(
             settings.paths.data_dir,
             audit["session"],
-            current_choice=str(audit.get("current_choice") or ""),
-            structural_cost=str(audit.get("structural_cost") or ""),
-            direction=str(audit.get("direction") or ""),
+            message=str(audit.get("message") or ""),
             evidence=tuple(audit.get("evidence") or ()),
             returned_via=str(audit.get("returned_via") or "PostToolBatch"),
         )

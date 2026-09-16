@@ -12,11 +12,11 @@ import source_context
 
 from . import prompting, storage
 from .contracts import (
-    MutationEvidence,
+    CompletedMutation,
     SessionRef,
     ToolCompleted,
+    completed_mutation_from_input,
     find_git_root,
-    mutation_evidence_from_input,
 )
 from .core import NudgeCore
 from .evidence import observe_tool_batch
@@ -39,8 +39,8 @@ CODEX_APPLY_PATCH_OPERATIONS = (
 
 def _codex_mutation_evidence(
     tool_name: str, tool_input: object
-) -> MutationEvidence | None:
-    direct = mutation_evidence_from_input(tool_input)
+) -> CompletedMutation | None:
+    direct = completed_mutation_from_input(tool_input)
     if direct is not None:
         return direct
     if tool_name != "apply_patch" or not isinstance(tool_input, Mapping):
@@ -56,7 +56,7 @@ def _codex_mutation_evidence(
         or not any(line.startswith(CODEX_APPLY_PATCH_OPERATIONS) for line in lines[1:-1])
     ):
         return None
-    return mutation_evidence_from_input({"patch": command})
+    return completed_mutation_from_input({"patch": command})
 
 
 def _goal_from_transcript(transcript_path: str) -> str:
@@ -145,17 +145,13 @@ def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
 
 def build_hook_output(
     event_name: str,
-    current_choice: str,
-    structural_cost: str,
-    direction: str,
+    message: str,
     evidence: tuple[str, ...],
 ) -> dict[str, Any]:
     return {
         "hookSpecificOutput": {
             "hookEventName": event_name,
-            "additionalContext": prompting.delivery_text(
-                current_choice, structural_cost, direction, evidence
-            ),
+            "additionalContext": prompting.delivery_text(message, evidence),
         }
     }
 
@@ -189,45 +185,34 @@ class CodexAdapter:
         observed = observe_tool_batch(self.data_dir, events)
         if not observed.eligible:
             return None
-        if storage.intervention_delivered(self.data_dir, session):
+        if storage.nudge_delivered(self.data_dir, session):
             return None
-        changed_paths = tuple(
-            target.path
-            for event in events
-            if event.mutation is not None
-            for target in event.mutation.targets
-            if target.path
-        )
-        snapshot = source_context.build_decision_snapshot(
-            task_contract=str(observed.turn_state.get("task_anchor") or ""),
-            task_start=str(observed.turn_state.get("task_start_workspace") or ""),
-            workspace_root=session.repo_root or session.cwd,
-            changed_paths=changed_paths,
-        )
         try:
-            outcome = self.core.nudge_once(
-                snapshot,
-                timeout_sec=PROVIDER_TIMEOUT_SEC,
-                workspace_root=session.repo_root or session.cwd,
+            observation = source_context.build_observation(
+                str(observed.turn_state.get("task_anchor") or ""),
+                events,
+            )
+        except (source_context.ObservationTooLargeError, ValueError) as exc:
+            self.core.log_error(f"Codex Nudge skipped: {exc}")
+            return None
+        try:
+            nudge = self.core.nudge_once(
+                observation, timeout_sec=PROVIDER_TIMEOUT_SEC
             )
         except Exception as exc:
             self.core.log_error(f"Codex Nudge failed: {exc}")
             return None
-        if outcome.decision != "intervene":
+        if nudge is None:
             return None
         output = build_hook_output(
             event_name,
-            outcome.current_choice,
-            outcome.structural_cost,
-            outcome.direction,
-            outcome.evidence,
+            nudge.message,
+            nudge.evidence,
         )
         output[AUDIT_MARKER_KEY] = {
             "session": session,
-            "current_choice": outcome.current_choice,
-            "structural_cost": outcome.structural_cost,
-            "direction": outcome.direction,
-            "evidence": outcome.evidence,
+            "message": nudge.message,
+            "evidence": nudge.evidence,
             "returned_via": event_name,
         }
         return output

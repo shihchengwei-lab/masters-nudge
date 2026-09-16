@@ -7,18 +7,14 @@ from typing import Callable
 
 
 def delivery_text(
-    current_choice: str,
-    structural_cost: str,
-    direction: str,
+    message: str,
     evidence: tuple[str, ...] | list[str],
 ) -> str:
     evidence_text = ", ".join(str(item).strip() for item in evidence if str(item).strip())
     return (
-        "Provider 結構提醒（供參考）："
-        f"目前選擇：{str(current_choice).strip()}；"
-        f"結構成本：{str(structural_cost).strip()}；"
-        f"方向：{str(direction).strip()}；"
-        f"證據：{evidence_text}。Actor 負責驗證與實作。"
+        f"Nudge：{str(message).strip()}\n"
+        f"證據：{evidence_text}\n"
+        "請重新比較可行解法；Actor 自行決定、實作與驗證。"
     )
 
 

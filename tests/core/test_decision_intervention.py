@@ -1,4 +1,4 @@
-"""The Provider judges workspace facts early without taking implementation ownership."""
+"""A Provider can return one observation without gaining workspace access."""
 
 from __future__ import annotations
 
@@ -10,81 +10,58 @@ from pathlib import Path
 from unittest import mock
 
 from masters_nudge.core import NudgeCore
-from masters_nudge.provider_contract import parse_nudge_result
 from masters_nudge.providers import call_codex_result
 from masters_nudge.runtime import RuntimePaths, RuntimeSettings
-import source_context
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class DecisionContractTests(unittest.TestCase):
-    def test_pass_has_no_advice_payload(self):
-        result = parse_nudge_result(
-            json.dumps(
-                {
-                    "decision": "pass",
-                    "current_choice": "",
-                    "structural_cost": "",
-                    "direction": "",
-                    "evidence": [],
-                }
+class ProviderBoundaryTests(unittest.TestCase):
+    def test_core_sends_only_prompt_and_observation(self):
+        with tempfile.TemporaryDirectory() as raw:
+            captured = {}
+            settings = RuntimeSettings(
+                "openai",
+                "test-model",
+                RuntimePaths(ROOT, Path(raw), Path(raw), Path(raw) / "error.log"),
             )
-        )
 
-        self.assertEqual(result["decision"], "pass")
-
-    def test_intervention_can_propose_direction_from_concrete_evidence(self):
-        result = parse_nudge_result(
-            json.dumps(
-                {
-                    "decision": "intervene",
-                    "current_choice": "新增第二組旗標追蹤相同狀態",
-                    "structural_cost": "兩組旗標可以互相矛盾",
-                    "direction": "讓 NodeFlags.ContainsThis 成為唯一狀態來源",
-                    "evidence": ["src/checker.ts:NodeFlags.ContainsThis"],
+            def dispatch(*args, **kwargs):
+                captured["args"] = args
+                captured["kwargs"] = kwargs
+                return {
+                    "nudge": {
+                        "message": "同一事實有兩個 owner。",
+                        "evidence": ["+parallel_owner = True"],
+                    }
                 }
+
+            nudge = NudgeCore(settings, dispatch=dispatch).nudge_once(
+                "[task]\nKeep one owner\n[end task]\n\n"
+                "[change]\n+parallel_owner = True\n[end change]"
             )
-        )
 
-        self.assertEqual(result["decision"], "intervene")
-        self.assertIn("NodeFlags.ContainsThis", result["direction"])
-        self.assertEqual(result["evidence"], ["src/checker.ts:NodeFlags.ContainsThis"])
+        self.assertEqual(nudge.message, "同一事實有兩個 owner。")
+        self.assertEqual(nudge.evidence, ("+parallel_owner = True",))
+        self.assertEqual(len(captured["args"]), 4)
+        self.assertNotIn("workspace_root", captured["kwargs"])
 
-    def test_intervention_rejects_empty_direction_or_evidence(self):
-        payload = {
-            "decision": "intervene",
-            "current_choice": "新增平行狀態",
-            "structural_cost": "狀態可能矛盾",
-            "direction": "",
-            "evidence": [],
-        }
-
-        self.assertEqual(
-            parse_nudge_result(json.dumps(payload))["decision"],
-            "error",
-        )
-
-
-class WorkspaceAccessTests(unittest.TestCase):
-    def test_codex_provider_runs_read_only_in_the_actor_workspace(self):
+    def test_codex_provider_runs_without_actor_workspace_or_repo_tools(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             schema = root / "schema.json"
             schema.write_text('{"type":"object"}', encoding="utf-8")
-            output = json.dumps(
-                {
-                    "decision": "pass",
-                    "current_choice": "",
-                    "structural_cost": "",
-                    "direction": "",
-                    "evidence": [],
-                }
-            )
 
-            def fake_run(_command, **kwargs):
-                Path(_command[_command.index("-o") + 1]).write_text(output, encoding="utf-8")
+            def fake_run(command, **kwargs):
+                Path(command[command.index("-o") + 1]).write_text(
+                    '{"nudge":null}', encoding="utf-8"
+                )
+                self.assertNotEqual(kwargs["cwd"], str(root))
+                self.assertEqual(
+                    [path.name for path in Path(kwargs["cwd"]).iterdir()],
+                    ["output.json"],
+                )
                 return subprocess.CompletedProcess([], 0, "", "")
 
             with mock.patch(
@@ -92,61 +69,44 @@ class WorkspaceAccessTests(unittest.TestCase):
             ) as run:
                 result = call_codex_result(
                     "prompt",
-                    "snapshot",
+                    "observation",
                     "model",
                     schema_path=schema,
                     timeout_sec=10,
-                    workspace_root=str(root),
                     codex_bin_resolver=lambda: "codex.exe",
                 )
 
-        self.assertEqual(result["decision"], "pass")
-        self.assertEqual(run.call_args.kwargs["cwd"], str(root))
+        self.assertIsNone(result["nudge"])
         command = run.call_args.args[0]
         self.assertIn("features.shell_tool=false", command)
-        self.assertIn('mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]', command)
-        self.assertIn(
-            'mcp_servers.readrepo.default_tools_approval_mode="approve"',
-            command,
-        )
-        self.assertTrue(any("read_only_repo_mcp.py" in part for part in command))
+        self.assertIn("project_doc_max_bytes=0", command)
+        self.assertFalse(any("readrepo" in part for part in command))
 
-    def test_codex_provider_recovers_clean_result_from_json_events(self):
+    def test_codex_provider_recovers_complete_json_event(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             schema = root / "schema.json"
             schema.write_text('{"type":"object"}', encoding="utf-8")
-            clean = json.dumps(
-                {
-                    "decision": "intervene",
-                    "current_choice": "局部掃描",
-                    "structural_cost": "重做既有語意",
-                    "direction": "回到既有 owner",
-                    "evidence": ["src/owner.ts:fact"],
-                },
-                ensure_ascii=False,
-            )
+            clean = {
+                "nudge": {
+                    "message": "同一事實有兩個 owner。",
+                    "evidence": ["+parallel_owner = True"],
+                }
+            }
             event = json.dumps(
                 {
                     "type": "item.completed",
-                    "item": {"type": "agent_message", "text": clean},
+                    "item": {
+                        "type": "agent_message",
+                        "text": json.dumps(clean, ensure_ascii=False),
+                    },
                 },
                 ensure_ascii=False,
             )
 
             def fake_run(command, **kwargs):
                 Path(command[command.index("-o") + 1]).write_text(
-                    json.dumps(
-                        {
-                            "decision": "intervene",
-                            "current_choice": "�",
-                            "structural_cost": "�",
-                            "direction": "�",
-                            "evidence": ["�"],
-                        },
-                        ensure_ascii=False,
-                    ),
-                    encoding="utf-8",
+                    '{"nudge":null}', encoding="utf-8"
                 )
                 return subprocess.CompletedProcess([], 0, event + "\n", "")
 
@@ -155,81 +115,14 @@ class WorkspaceAccessTests(unittest.TestCase):
             ):
                 result = call_codex_result(
                     "prompt",
-                    "snapshot",
+                    "observation",
                     "model",
                     schema_path=schema,
                     timeout_sec=10,
-                    workspace_root=str(root),
                     codex_bin_resolver=lambda: "codex.exe",
                 )
 
-        self.assertEqual(result["decision"], "intervene")
-        self.assertEqual(result["direction"], "回到既有 owner")
-
-
-class DecisionSnapshotTests(unittest.TestCase):
-    def test_snapshot_compares_task_start_and_current_workspace(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-            subprocess.run(
-                ["git", "config", "user.email", "test@example.com"], cwd=root, check=True
-            )
-            subprocess.run(
-                ["git", "config", "user.name", "Test"], cwd=root, check=True
-            )
-            source = root / "state.ts"
-            source.write_text("export const owner = 'existing';\n", encoding="utf-8")
-            subprocess.run(["git", "add", "state.ts"], cwd=root, check=True)
-            subprocess.run(["git", "commit", "-qm", "baseline"], cwd=root, check=True)
-
-            baseline = source_context.capture_workspace_state(str(root))
-            source.write_text(
-                "export const owner = 'existing';\nexport const parallelOwner = true;\n",
-                encoding="utf-8",
-            )
-            packet = source_context.build_decision_snapshot(
-                task_contract="Keep one owner",
-                task_start=baseline,
-                workspace_root=str(root),
-                changed_paths=("state.ts",),
-            )
-
-        self.assertIn("[task contract]", packet)
-        self.assertIn("[task-start workspace]", packet)
-        self.assertIn("[current workspace]", packet)
-        self.assertIn("parallelOwner", packet)
-        self.assertNotIn("actual_input", packet)
-        self.assertNotIn("tool result", packet.lower())
-
-
-class CoreWorkspaceTests(unittest.TestCase):
-    def test_core_passes_workspace_to_provider(self):
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            captured = {}
-            settings = RuntimeSettings(
-                "openai",
-                "test-model",
-                RuntimePaths(ROOT, root, root, root / "error.log"),
-            )
-
-            def dispatch(*_args, **kwargs):
-                captured.update(kwargs)
-                return {
-                    "decision": "pass",
-                    "current_choice": "",
-                    "structural_cost": "",
-                    "direction": "",
-                    "evidence": [],
-                }
-
-            outcome = NudgeCore(settings, dispatch=dispatch).nudge_once(
-                "snapshot", workspace_root=str(root)
-            )
-
-        self.assertEqual(outcome.decision, "pass")
-        self.assertEqual(captured["workspace_root"], str(root))
+        self.assertEqual(result["nudge"], clean["nudge"])
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ import os
 import signal
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 from typing import Callable
@@ -143,30 +142,9 @@ def _parse_codex_jsonl_result(stdout: str) -> dict:
         if not isinstance(item, dict) or item.get("type") != "agent_message":
             continue
         parsed = parse_schema_result(str(item.get("text") or ""))
-        if parsed.get("decision") != "error":
+        if not parsed.get("error_kind"):
             recovered = parsed
     return recovered
-
-
-def _codex_readrepo_config(workspace_root: str) -> list[str]:
-    if not str(workspace_root or "").strip():
-        return []
-    server = Path(__file__).with_name("read_only_repo_mcp.py")
-    values = [server.as_posix(), "--root", Path(workspace_root).resolve().as_posix()]
-    command = Path(sys.executable).as_posix()
-    return [
-        "-c",
-        "features.shell_tool=false",
-        "-c",
-        f"mcp_servers.readrepo.command={json.dumps(command)}",
-        "-c",
-        "mcp_servers.readrepo.args="
-        + json.dumps(values, ensure_ascii=False, separators=(",", ":")),
-        "-c",
-        'mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]',
-        "-c",
-        'mcp_servers.readrepo.default_tools_approval_mode="approve"',
-    ]
 
 
 def call_claude_result(
@@ -176,10 +154,8 @@ def call_claude_result(
     *,
     schema_path: Path,
     timeout_sec: int,
-    workspace_root: str = "",
     log_error: Logger = _noop,
 ) -> dict:
-    del workspace_root
     schema_json = load_output_schema_json(schema_path, log_error)
     if not schema_json:
         return call_result()
@@ -221,8 +197,6 @@ def call_claude_result(
             log_error(f"claude CLI exit {result.returncode}: {detail}")
             return call_result(error_kind="nonzero_exit")
         parsed = parse_schema_result(result.stdout)
-        if parsed.get("decision") == "error":
-            parsed["error_kind"] = "invalid_output"
         return parsed
     except subprocess.TimeoutExpired as exc:
         partial_stdout = (
@@ -234,7 +208,7 @@ def call_claude_result(
         if isinstance(partial_stderr, bytes):
             partial_stderr = partial_stderr.decode("utf-8", errors="replace")
         parsed = parse_schema_result(str(partial_stdout))
-        if parsed.get("decision") != "error":
+        if not parsed.get("error_kind"):
             log_error("claude CLI timed out after complete structured output; recovered")
             return parsed
         error_kind = (
@@ -280,7 +254,6 @@ def call_codex_result(
     *,
     schema_path: Path,
     timeout_sec: int,
-    workspace_root: str = "",
     log_error: Logger = _noop,
     codex_bin_resolver: Callable[[], str | None] = resolve_codex_bin,
 ) -> dict:
@@ -292,69 +265,63 @@ def call_codex_result(
         return call_result()
 
     combined = f"{system_prompt}\n\n---\n\n{nudge_input}"
-    output = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    output.close()
     use_shell = codex_bin.lower().endswith((".cmd", ".bat"))
-    try:
-        command = [
-            codex_bin,
-            *_codex_readrepo_config(workspace_root),
-            "exec",
-            "--skip-git-repo-check",
-            "--ephemeral",
-            "--ignore-user-config",
-            "--json",
-            "-s",
-            "read-only",
-            "-m",
-            model,
-            "--output-schema",
-            str(schema_path),
-            "-o",
-            output.name,
-            "-",
-        ]
-        if use_shell:
-            command_value: list[str] | str = subprocess.list2cmdline(command)
-        else:
-            command_value = command
-        result = _run_cli_process(
-            command_value,
-            input_text=combined,
-            cwd=workspace_root or None,
-            environment=provider_environment(),
-            timeout_sec=timeout_sec,
-            shell=use_shell,
-            log_error=log_error,
-        )
-        if result.returncode != 0:
-            log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")
-            return call_result(error_kind="nonzero_exit")
+    with tempfile.TemporaryDirectory(prefix="masters-nudge-provider-") as temp_dir:
+        output_path = Path(temp_dir) / "output.json"
         try:
-            raw_output = Path(output.name).read_text(encoding="utf-8")
-        except Exception as exc:
-            log_error(f"codex output read failed: {exc}")
-            return call_result(error_kind="invalid_output")
-        parsed = parse_schema_result(raw_output)
-        event_result = _parse_codex_jsonl_result(result.stdout)
-        if event_result.get("decision") != "error":
-            parsed = event_result
-        if parsed.get("decision") == "error":
-            parsed["error_kind"] = "invalid_output"
-        return parsed
-    except subprocess.TimeoutExpired:
-        log_error("codex timeout")
-        return call_result(error_kind="timeout")
-    except FileNotFoundError:
-        log_error(f"codex CLI not executable: {codex_bin}")
-        return call_result(error_kind="not_found")
-    finally:
-        try:
-            os.unlink(output.name)
-        except OSError:
-            pass
+            command = [
+                codex_bin,
+                "-c",
+                "features.shell_tool=false",
+                "-c",
+                "project_doc_max_bytes=0",
+                "exec",
+                "--skip-git-repo-check",
+                "--ephemeral",
+                "--ignore-user-config",
+                "--json",
+                "-s",
+                "read-only",
+                "-m",
+                model,
+                "--output-schema",
+                str(schema_path),
+                "-o",
+                str(output_path),
+                "-",
+            ]
+            if use_shell:
+                command_value: list[str] | str = subprocess.list2cmdline(command)
+            else:
+                command_value = command
+            result = _run_cli_process(
+                command_value,
+                input_text=combined,
+                cwd=temp_dir,
+                environment=provider_environment(),
+                timeout_sec=timeout_sec,
+                shell=use_shell,
+                log_error=log_error,
+            )
+            if result.returncode != 0:
+                log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")
+                return call_result(error_kind="nonzero_exit")
+            try:
+                raw_output = output_path.read_text(encoding="utf-8")
+            except Exception as exc:
+                log_error(f"codex output read failed: {exc}")
+                return call_result(error_kind="invalid_output")
+            parsed = parse_schema_result(raw_output)
+            event_result = _parse_codex_jsonl_result(result.stdout)
+            if not event_result.get("error_kind"):
+                parsed = event_result
+            return parsed
+        except subprocess.TimeoutExpired:
+            log_error("codex timeout")
+            return call_result(error_kind="timeout")
+        except FileNotFoundError:
+            log_error(f"codex CLI not executable: {codex_bin}")
+            return call_result(error_kind="not_found")
 
 
 def dispatch_call_result(
@@ -366,7 +333,6 @@ def dispatch_call_result(
     schema_path: Path,
     timeout_sec: int,
     ollama_url: str = DEFAULT_OLLAMA_URL,
-    workspace_root: str = "",
     log_error: Logger = _noop,
 ) -> dict:
     if provider in ("openai", "codex"):
@@ -376,7 +342,6 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
-            workspace_root=workspace_root,
             log_error=log_error,
         )
     if provider == "anthropic":
@@ -386,7 +351,6 @@ def dispatch_call_result(
             model,
             schema_path=schema_path,
             timeout_sec=timeout_sec,
-            workspace_root=workspace_root,
             log_error=log_error,
         )
     if provider == "ollama":

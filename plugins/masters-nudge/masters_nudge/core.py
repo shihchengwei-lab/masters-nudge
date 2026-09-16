@@ -1,11 +1,11 @@
-"""Ask one Provider for one judgment on a bounded evidence packet."""
+"""Ask one Provider whether the completed change needs one Nudge."""
 
 from __future__ import annotations
 
 from typing import Callable
 
 from . import providers
-from .contracts import NudgeOutcome
+from .contracts import Nudge
 from .prompting import load_system_prompt
 from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
 
@@ -30,11 +30,9 @@ class NudgeCore:
 
     def nudge_once(
         self,
-        source_packet: str,
+        observation: str,
         timeout_sec: int | None = None,
-        *,
-        workspace_root: str = "",
-    ) -> NudgeOutcome:
+    ) -> Nudge | None:
         timeout = max(
             1,
             min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC),
@@ -44,51 +42,33 @@ class NudgeCore:
             log_error=self.log_error,
         )
         if not system_prompt:
-            return NudgeOutcome("error")
+            return None
         result = self.dispatch(
             self.settings.provider,
             system_prompt,
-            str(source_packet or ""),
+            str(observation or ""),
             self.settings.model,
             schema_path=self.schema_path,
             timeout_sec=timeout,
             ollama_url=self.settings.ollama_url,
-            workspace_root=workspace_root,
             log_error=self.log_error,
         )
-        if not isinstance(result, dict):
-            return NudgeOutcome("error")
-        decision = str(result.get("decision") or "error")
-        current_choice = str(result.get("current_choice") or "").strip()
-        structural_cost = str(result.get("structural_cost") or "").strip()
-        direction = str(result.get("direction") or "").strip()
-        raw_evidence = result.get("evidence")
-        evidence = (
-            tuple(item.strip() for item in raw_evidence if isinstance(item, str) and item.strip())
-            if isinstance(raw_evidence, list)
-            else ()
+        if not isinstance(result, dict) or result.get("error_kind"):
+            return None
+        raw_nudge = result.get("nudge")
+        if raw_nudge is None:
+            return None
+        if not isinstance(raw_nudge, dict):
+            return None
+        message = str(raw_nudge.get("message") or "").strip()
+        raw_evidence = raw_nudge.get("evidence")
+        if not message or not isinstance(raw_evidence, list):
+            return None
+        evidence = tuple(
+            item.strip()
+            for item in raw_evidence
+            if isinstance(item, str) and item.strip()
         )
-        if decision == "pass":
-            return (
-                NudgeOutcome("pass")
-                if not current_choice
-                and not structural_cost
-                and not direction
-                and not evidence
-                else NudgeOutcome("error")
-            )
-        if (
-            decision != "intervene"
-            or not current_choice
-            or not structural_cost
-            or not direction
-            or not evidence
-        ):
-            return NudgeOutcome("error")
-        return NudgeOutcome(
-            "intervene",
-            current_choice,
-            structural_cost,
-            direction,
-            evidence,
-        )
+        if not evidence or len(evidence) != len(raw_evidence):
+            return None
+        return Nudge(message, evidence)

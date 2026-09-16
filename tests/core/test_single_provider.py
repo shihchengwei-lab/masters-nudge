@@ -1,4 +1,4 @@
-"""One workspace snapshot receives one bounded Provider judgment."""
+"""One completed change receives at most one Provider Nudge."""
 
 from __future__ import annotations
 
@@ -19,83 +19,70 @@ ROOT = Path(__file__).resolve().parents[2]
 class SingleProviderTests(unittest.TestCase):
     def settings(self, data_dir: Path) -> RuntimeSettings:
         return RuntimeSettings(
-            "openai", "test-model", RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log")
+            "openai",
+            "test-model",
+            RuntimePaths(ROOT, data_dir, data_dir, data_dir / "error.log"),
         )
 
-    def test_one_snapshot_causes_one_provider_call(self):
+    def test_one_observation_causes_one_provider_call(self):
         with tempfile.TemporaryDirectory() as raw:
             calls = []
 
-            def dispatch(_provider, prompt, snapshot, _model, **kwargs):
-                calls.append((prompt, snapshot, kwargs))
+            def dispatch(_provider, prompt, observation, _model, **kwargs):
+                calls.append((prompt, observation, kwargs))
                 return {
-                    "decision": "intervene",
-                    "current_choice": "新增第二個 owner",
-                    "structural_cost": "責任可能分歧",
-                    "direction": "沿用既有 owner",
-                    "evidence": ["src/state.ts:owner"],
+                    "nudge": {
+                        "message": "兩個欄位表示同一個傳送狀態。",
+                        "evidence": ["isSent", "isMarkedAsSent"],
+                    }
                 }
 
-            outcome = NudgeCore(
+            nudge = NudgeCore(
                 self.settings(Path(raw)), dispatch=dispatch
-            ).nudge_once("WORKSPACE-SNAPSHOT", workspace_root=raw)
+            ).nudge_once("TASK-AND-CHANGE")
 
-        self.assertEqual(outcome.decision, "intervene")
-        self.assertEqual(outcome.direction, "沿用既有 owner")
+        self.assertEqual(nudge.message, "兩個欄位表示同一個傳送狀態。")
+        self.assertEqual(nudge.evidence, ("isSent", "isMarkedAsSent"))
         self.assertEqual(len(calls), 1)
-        self.assertEqual(calls[0][1], "WORKSPACE-SNAPSHOT")
-        self.assertEqual(calls[0][2]["workspace_root"], raw)
+        self.assertEqual(calls[0][1], "TASK-AND-CHANGE")
+        self.assertNotIn("workspace_root", calls[0][2])
 
-    def test_pass_is_silent_data(self):
-        parsed = parse_nudge_result(
-            json.dumps(
-                {
-                    "decision": "pass",
-                    "current_choice": "",
-                    "structural_cost": "",
-                    "direction": "",
-                    "evidence": [],
-                }
+    def test_null_is_no_runtime_nudge(self):
+        with tempfile.TemporaryDirectory() as raw:
+            core = NudgeCore(
+                self.settings(Path(raw)),
+                dispatch=lambda *_args, **_kwargs: {"nudge": None},
             )
-        )
-        self.assertEqual(parsed["decision"], "pass")
+            self.assertIsNone(core.nudge_once("TASK-AND-CHANGE"))
 
-    def test_delivery_keeps_provider_advisory_and_actor_ownership(self):
+        parsed = parse_nudge_result(json.dumps({"nudge": None}))
+        self.assertIsNone(parsed["nudge"])
+
+    def test_delivery_is_one_observation_not_an_instruction(self):
         rendered = delivery_text(
-            "新增第二個 owner",
-            "責任可能分歧",
-            "沿用既有 owner",
-            ("src/state.ts:owner",),
+            "兩個欄位表示同一個傳送狀態。",
+            ("isSent", "isMarkedAsSent"),
         )
-        self.assertIn("供參考", rendered)
-        self.assertIn("方向：沿用既有 owner", rendered)
-        self.assertIn("Actor 負責驗證與實作", rendered)
+        self.assertIn("Nudge：", rendered)
+        self.assertIn("證據：", rendered)
+        self.assertIn("Actor 自行決定、實作與驗證", rendered)
+        self.assertNotIn("reframe", rendered.lower())
+        self.assertNotIn("invariant", rendered.lower())
 
-    def test_prompt_uses_workspace_facts_and_allows_direction(self):
+    def test_prompt_and_schema_expose_only_optional_nudge(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
-        self.assertIn("workspace state at task start", normalized)
-        self.assertIn("current cumulative workspace state", normalized)
-        self.assertIn("Actor's prose, proposed remedy, and confidence are not evidence", normalized)
-        self.assertIn("propose a better responsibility boundary or existing seam", normalized)
-        self.assertIn("Actor alone owns implementation and verification", normalized)
-        self.assertIn("# REASONING MODELS", prompt)
-        self.assertIn("authoritative owner lies upstream", normalized)
-        self.assertIn("reject the candidate if its domain or lifecycle differs", normalized)
-        self.assertIn("remaining evidence could not change pass versus intervene", normalized)
-        self.assertIn("State and order", normalized)
-        self.assertIn("Necessary mechanism", normalized)
-        self.assertNotIn("visible responsibility overlap", normalized.lower())
-        self.assertNotIn("contract_warning", normalized)
-        self.assertNotIn("taste_nudge", normalized)
+        self.assertIn("the user's task", normalized)
+        self.assertIn("the completed change that just happened", normalized)
+        self.assertIn("Actor has just changed the program", normalized)
+        self.assertIn("still owns every implementation decision", normalized)
+        self.assertNotIn("workspace state", normalized.lower())
+        self.assertNotIn("read-only tools", normalized.lower())
+        self.assertNotIn("# REASONING MODELS", prompt)
 
-    def test_schema_is_only_pass_or_intervene(self):
         schema = json.loads((ROOT / "nudge-schema.json").read_text(encoding="utf-8"))
-        self.assertEqual(schema["properties"]["decision"]["enum"], ["intervene", "pass"])
-        self.assertEqual(
-            schema["required"],
-            ["decision", "current_choice", "structural_cost", "direction", "evidence"],
-        )
+        self.assertEqual(schema["required"], ["nudge"])
+        self.assertEqual(set(schema["properties"]), {"nudge"})
 
 
 if __name__ == "__main__":

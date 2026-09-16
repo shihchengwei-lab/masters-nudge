@@ -10,8 +10,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import source_context
-
 from .contracts import SessionRef, safe_identifier
 
 
@@ -126,16 +124,7 @@ def cleanup_expired_sessions(
 def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
     cleanup_expired_sessions(data_dir)
     state = _empty_turn(session)
-    state.update(
-        {
-            "task_anchor": source_context.head_tail(
-                prompt, source_context.TASK_ANCHOR_MAX_CHARS
-            ),
-            "task_start_workspace": source_context.capture_workspace_state(
-                session.repo_root or session.cwd
-            ),
-        }
-    )
+    state["task_anchor"] = str(prompt or "").strip()
     _atomic_write(state_path(data_dir, session, "turn"), state)
     _atomic_write(
         state_path(data_dir, session, "progress"),
@@ -144,7 +133,7 @@ def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
             "host": session.host,
             "session_id": session.session_id,
             "last_event_fingerprint": "",
-            "intervention_delivered": False,
+            "nudge_delivered": False,
         },
     )
 
@@ -174,9 +163,7 @@ def append_host_returned_nudge(
     data_dir: Path,
     session: SessionRef,
     *,
-    current_choice: str,
-    structural_cost: str,
-    direction: str,
+    message: str,
     evidence: tuple[str, ...] | list[str],
     returned_via: str,
 ) -> dict[str, Any]:
@@ -185,10 +172,7 @@ def append_host_returned_nudge(
         "host": session.host,
         "session_id": session.session_id,
         "workspace": str(session.repo_root or session.cwd or ""),
-        "decision": "intervene",
-        "current_choice": str(current_choice or "").strip(),
-        "structural_cost": str(structural_cost or "").strip(),
-        "direction": str(direction or "").strip(),
+        "message": str(message or "").strip(),
         "evidence": [str(item).strip() for item in evidence if str(item).strip()],
         "returned_via": str(returned_via or ""),
     }
@@ -198,15 +182,15 @@ def append_host_returned_nudge(
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
     progress_path = state_path(data_dir, session, "progress")
     progress = _read_json(progress_path, {})
-    progress["intervention_delivered"] = True
+    progress["nudge_delivered"] = True
     _atomic_write(progress_path, progress)
     return entry
 
 
-def intervention_delivered(data_dir: Path, session: SessionRef) -> bool:
+def nudge_delivered(data_dir: Path, session: SessionRef) -> bool:
     return bool(
         _read_json(state_path(data_dir, session, "progress"), {}).get(
-            "intervention_delivered"
+            "nudge_delivered"
         )
     )
 
@@ -225,9 +209,7 @@ def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
                 entry = json.loads(line)
             except (TypeError, ValueError):
                 continue
-            if isinstance(entry, dict) and (
-                entry.get("direction") or entry.get("relationship") or entry.get("finding")
-            ):
+            if isinstance(entry, dict) and entry.get("message"):
                 entries.append(entry)
     entries.sort(key=lambda entry: str(entry.get("time") or ""), reverse=True)
     return entries[:limit]
