@@ -5,7 +5,7 @@
 在執行者修改程式之後，提供一則小幅反饋，讓執行者重新判斷資料關係。
 工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；目前重構驗收進度見 [驗收紀錄](docs/spec-refactor-progress.zh-TW.md)。
 
-使用者要求先交給執行者。工具在原生 PostToolBatch 收到明確修改後，將任務、修改及工具結果交給
+使用者要求先交給執行者。工具在原生 PostToolBatch 第一次收到明確修改時先保存材料，等下一批工具操作後，再將任務、修改及兩批工具結果交給
 OpenAI Provider。Provider 以 Linus Torvalds 的六條思考準則查看材料，需要更多脈絡時自行搜尋或讀檔。
 執行者決定是否採納建議，負責實作及驗證。
 

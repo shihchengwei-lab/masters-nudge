@@ -21,9 +21,13 @@ class NudgeCore:
         self.journal.start_round(session, request, goal)
 
     def process_batch(self, session: SessionRef, events: tuple[ToolCompleted, ...]):
-        self.journal.record_batch(session, [asdict(event) for event in events])
-        if not any(event.modification is not None for event in events):
+        payload = [asdict(event) for event in events]
+        self.journal.record_batch(session, payload)
+        judgment_payload = self.journal.events_for_judgment(
+            session, payload, has_modification=any(event.modification is not None for event in events))
+        if judgment_payload is None:
             return None
+        events = tuple(ToolCompleted(**event) for event in judgment_payload)
         reserved = self.journal.begin(session)
         if reserved is None:
             return None

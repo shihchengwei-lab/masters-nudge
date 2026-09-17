@@ -5,8 +5,8 @@ English | [繁體中文](README.zh-TW.md)
 Small engineering feedback after the Actor changes code. [SPEC.zh-TW.md](SPEC.zh-TW.md) is the authority;
 [refactor acceptance](docs/spec-refactor-progress.zh-TW.md) records current verification.
 
-UserPromptSubmit records the task without calling a Provider. A native PostToolBatch carrying explicit change data
-starts one OpenAI/Codex judgment. The Provider uses one Linus Torvalds anchor and six checks, optionally searching or
+UserPromptSubmit records the task without calling a Provider. The first native PostToolBatch carrying explicit change
+data is held until the following tool batch, then starts one OpenAI/Codex judgment with both batches. The Provider uses one Linus Torvalds anchor and six checks, optionally searching or
 reading related repository files through read-only MCP tools. The Actor owns implementation and verification.
 
 Each user-message round stops at three feedbacks or two silences. New requests reset the allowance; latest conflicting
