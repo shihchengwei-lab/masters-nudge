@@ -6,6 +6,19 @@ from .contracts import (
 )
 
 
+def value_lines(source: str, path: str, value: object):
+    """Keep returned text verbatim instead of hiding it behind JSON escapes."""
+    if isinstance(value, str):
+        return material_lines(source, path, value)
+    if isinstance(value, dict) and value:
+        lines = []
+        for key, item in value.items():
+            child = f"{path}/{key}"
+            lines.extend(material_lines(source, child, item if isinstance(item, str) else json_text(item)))
+        return tuple(lines)
+    return material_lines(source, path, json_text(value))
+
+
 def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, ...]) -> MaterialPacket:
     lines = []
     lines.extend(material_lines("task_contract", "task/original", task["goal"]))
@@ -14,11 +27,9 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
         if event.modification is not None:
             lines.extend(material_lines("batch_change", f"tool/{event.tool_use_id}/input", event.modification))
         lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/name", event.tool_name))
-        raw_input = event.tool_input if isinstance(event.tool_input, str) else json_text(event.tool_input)
         if event.modification is None:
-            lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/input", raw_input))
-        output = event.tool_response if isinstance(event.tool_response, str) else json_text(event.tool_response)
-        lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/output", output))
+            lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/input", event.tool_input))
+        lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/output", event.tool_response))
     packet = MaterialPacket(tuple(lines), find_git_root(session.cwd), session.transcript_path)
     try:
         return fit_packet(packet)
@@ -31,9 +42,10 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
                             for event in events if isinstance(event.tool_response, dict)
                             and type(event.tool_response.get("exit_code")) is int
                             and event.tool_response["exit_code"] == 0}
-        kept = [line for line in lines if line.path not in compressed_paths]
+        kept = [line for line in lines if not any(
+            line.path == path or line.path.startswith(path + "/") for path in compressed_paths)]
         for path in compressed_paths:
-            kept.extend(material_lines("tool_result", path, '{"exit_code":0,"output_omitted":true}'))
+            kept.extend(material_lines("tool_result", f"{path}/summary", '{"exit_code":0,"output_omitted":true}'))
         return fit_packet(replace(packet, lines=tuple(kept)))
 
 

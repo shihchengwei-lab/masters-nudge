@@ -80,6 +80,18 @@ class ContractTests(unittest.TestCase):
             self.assertIn("修改 x", packet.render())
             self.assertIn("output_omitted", packet.render())
 
+    def test_tool_result_string_fields_are_verbatim_lines_not_escaped_json(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            event = ToolCompleted("run-1", "exec", {"cmd": "test"},
+                                  {"exit_code": 0, "output": 'profile["enabled"] = True\r\nnext()'})
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": "g", "request": "r"}, (event,))
+            output = [line for line in packet.lines if line.path == "tool/run-1/output/output"]
+            self.assertEqual([line.text for line in output], ['profile["enabled"] = True', "next()"])
+            self.assertEqual([line.line for line in output], [1, 2])
+
 
 class RepositoryTests(unittest.TestCase):
     def setUp(self):
