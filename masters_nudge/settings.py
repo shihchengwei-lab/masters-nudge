@@ -1,151 +1,60 @@
-"""The single persistent user-settings contract for Masters' Nudge."""
-
-from __future__ import annotations
-
+"""Persist only the supported Provider selection; unsupported old choices are errors."""
+from dataclasses import dataclass, asdict
 import json
 import os
-import tempfile
-from dataclasses import asdict, dataclass, replace
 from pathlib import Path
-
-from .local_ollama import DEFAULT_OLLAMA_URL, normalize_loopback_url, validate_model_name
-
+import tempfile
 
 CONFIG_FILE = "config.json"
-PROVIDER_IDS = ("anthropic", "openai", "ollama")
-
-PROVIDERS = {
-    "anthropic": {"id": "anthropic", "name": "Anthropic", "local": False},
-    "openai": {"id": "openai", "name": "OpenAI", "local": False},
-    "ollama": {"id": "ollama", "name": "Ollama", "local": True},
-}
+PROVIDERS = {"openai": {"id": "openai", "name": "OpenAI / Codex", "local": False}}
 
 
 @dataclass(frozen=True)
 class UserSettings:
     provider: str = ""
     model: str = ""
-    ollama_url: str = DEFAULT_OLLAMA_URL
     error: str = ""
 
 
 def config_path(data_dir: Path) -> Path:
-    return Path(data_dir) / CONFIG_FILE
-
-
-def _payload(settings: UserSettings) -> dict[str, str]:
-    value = asdict(settings)
-    value.pop("error", None)
-    return value
+    return data_dir / CONFIG_FILE
 
 
 def load_user_settings(data_dir: Path) -> UserSettings:
-    path = config_path(data_dir)
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(config_path(data_dir).read_text(encoding="utf-8"))
     except FileNotFoundError:
         return UserSettings()
-    except (OSError, UnicodeError, ValueError) as exc:
-        return UserSettings(error=f"cannot read config: {exc}")
-    current_keys = {"provider", "model", "ollama_url"}
-    legacy_keys = {*current_keys, "lens"}
-    if not isinstance(value, dict) or frozenset(value) not in {
-        frozenset(current_keys),
-        frozenset(legacy_keys),
-    }:
-        return UserSettings(error="config has an invalid shape")
-    if not all(isinstance(value.get(key), str) for key in value):
-        return UserSettings(error="config values must be strings")
-    provider = value["provider"].strip().lower()
-    model = value["model"].strip()
-    url = value["ollama_url"].strip()
-    if provider not in {"", *PROVIDERS}:
-        return UserSettings(error="config contains an unsupported provider")
-    if provider == "ollama":
-        try:
-            model = validate_model_name(model)
-            url = normalize_loopback_url(url)
-        except ValueError as exc:
-            return UserSettings(error=f"config contains invalid Ollama settings: {exc}")
-    elif not url:
-        url = DEFAULT_OLLAMA_URL
-    return UserSettings(provider, model, url)
+    except (OSError, ValueError) as exc:
+        return UserSettings(error=str(exc))
+    if not isinstance(value, dict) or not {"provider", "model"} <= value.keys():
+        return UserSettings(error="設定格式錯誤")
+    # Read the previous file format only to preserve an existing supported choice.
+    if value.keys() - {"provider", "model", "ollama_url", "lens"}:
+        return UserSettings(error="設定含未知欄位")
+    if not isinstance(value["provider"], str) or not isinstance(value["model"], str):
+        return UserSettings(error="Provider 與模型必須是文字")
+    if value["provider"] not in ("", "openai", "codex"):
+        return UserSettings(error="第一版僅支援 OpenAI／Codex，請重新設定")
+    return UserSettings(value["provider"], value["model"])
 
 
-def save_user_settings(data_dir: Path, settings: UserSettings) -> Path:
-    if settings.error:
-        settings = replace(settings, error="")
-    data_dir = Path(data_dir)
+def save_provider(data_dir: Path, provider: str, *, model: str = "") -> Path:
+    if provider not in ("openai", "codex"):
+        raise ValueError("第一版僅支援 OpenAI／Codex")
     data_dir.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".tmp",
-        prefix="settings-",
-        dir=data_dir,
-        delete=False,
-    )
-    temp_path = Path(handle.name)
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=data_dir, delete=False) as stream:
+        path = Path(stream.name)
+        json.dump({"provider": "openai", "model": model}, stream, ensure_ascii=False)
+        stream.write("\n")
     try:
-        json.dump(_payload(settings), handle, ensure_ascii=False)
-        handle.write("\n")
-        handle.close()
-        try:
-            os.chmod(temp_path, 0o600)
-        except OSError:
-            pass
-        os.replace(temp_path, config_path(data_dir))
+        os.replace(path, config_path(data_dir))
     finally:
-        try:
-            handle.close()
-        except Exception:
-            pass
-        try:
-            temp_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        path.unlink(missing_ok=True)
     return config_path(data_dir)
 
 
-def save_provider(
-    data_dir: Path,
-    provider: str,
-    *,
-    model: str = "",
-    ollama_url: str = DEFAULT_OLLAMA_URL,
-) -> Path:
-    selected = str(provider or "").strip().lower()
-    if selected not in PROVIDERS:
-        raise ValueError(f"unsupported provider: {provider!r}")
-    selected_model = str(model or "").strip()
-    endpoint = str(ollama_url or DEFAULT_OLLAMA_URL).strip()
-    if selected == "ollama":
-        selected_model = validate_model_name(selected_model)
-        endpoint = normalize_loopback_url(endpoint)
-    current = load_user_settings(data_dir)
-    if current.error:
-        current = UserSettings()
-    return save_user_settings(
-        data_dir,
-        replace(
-            current,
-            provider=selected,
-            model=selected_model,
-            ollama_url=endpoint,
-        ),
-    )
-
-
 def reset_provider(data_dir: Path) -> Path:
-    current = load_user_settings(data_dir)
-    if current.error:
-        current = UserSettings()
-    return save_user_settings(
-        data_dir,
-        replace(
-            current,
-            provider="",
-            model="",
-            ollama_url=DEFAULT_OLLAMA_URL,
-        ),
-    )
+    path = config_path(data_dir)
+    path.unlink(missing_ok=True)
+    return path

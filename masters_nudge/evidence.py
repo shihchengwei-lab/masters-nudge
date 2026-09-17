@@ -1,50 +1,56 @@
-"""Collect bounded observable evidence from one native tool batch."""
-
-from __future__ import annotations
-
-from dataclasses import dataclass
-import hashlib
-from pathlib import Path
-from typing import Any
-
-import json
-
-from . import storage
-from .contracts import ToolCompleted
+"""Pack known facts; the Provider chooses relevant repository structure."""
+from dataclasses import replace
+from .contracts import (
+    MATERIAL_MAX_CHARS, MaterialPacket, SessionRef, ToolCompleted, ToolFault,
+    find_git_root, json_text, material_lines,
+)
 
 
-@dataclass(frozen=True)
-class ToolEvidence:
-    turn_state: dict[str, Any]
-    eligible: bool
-    fingerprint: str
+def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, ...]) -> MaterialPacket:
+    lines = []
+    lines.extend(material_lines("task_contract", "task/original", task["goal"]))
+    lines.extend(material_lines("task_contract", "task/latest", task["request"]))
+    for event in events:
+        if event.modification is not None:
+            lines.extend(material_lines("batch_change", f"tool/{event.tool_use_id}/input", event.modification))
+        lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/name", event.tool_name))
+        raw_input = event.tool_input if isinstance(event.tool_input, str) else json_text(event.tool_input)
+        if event.modification is None:
+            lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/input", raw_input))
+        output = event.tool_response if isinstance(event.tool_response, str) else json_text(event.tool_response)
+        lines.extend(material_lines("tool_result", f"tool/{event.tool_use_id}/output", output))
+    packet = MaterialPacket(tuple(lines), find_git_root(session.cwd), session.transcript_path)
+    try:
+        return fit_packet(packet)
+    except ToolFault as exc:
+        if exc.kind != "input_size":
+            raise
+        # Only an explicit successful exit permits dropping verbose output.
+        # Arbitrary text is not classified as success by keyword matching.
+        compressed_paths = {f"tool/{event.tool_use_id}/output": event.tool_response
+                            for event in events if isinstance(event.tool_response, dict)
+                            and type(event.tool_response.get("exit_code")) is int
+                            and event.tool_response["exit_code"] == 0}
+        kept = [line for line in lines if line.path not in compressed_paths]
+        for path in compressed_paths:
+            kept.extend(material_lines("tool_result", path, '{"exit_code":0,"output_omitted":true}'))
+        return fit_packet(replace(packet, lines=tuple(kept)))
 
 
-def _batch_fingerprint(events: list[ToolCompleted]) -> str:
-    raw = json.dumps(
-        [
-            {"tool": event.tool_name, "input": event.tool_input, "output": event.tool_output}
-            for event in events
-        ],
-        ensure_ascii=False,
-        sort_keys=True,
-        default=str,
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+def fit_packet(packet: MaterialPacket) -> MaterialPacket:
+    if packet.material_chars <= MATERIAL_MAX_CHARS:
+        return packet
+    packet = replace(packet, lines=tuple(line for line in packet.lines if line.source != "before_structure"))
+    if packet.material_chars <= MATERIAL_MAX_CHARS:
+        return packet
+    # Generic result text does not identify dispensable success output.
+    # Oversized mandatory data is a fault, never silent truncation.
+    raise ToolFault("input_size", "材料超過上限，無法保留必要原文")
 
 
-def observe_tool_batch(data_dir: Path, events: list[ToolCompleted]) -> ToolEvidence:
-    if not events:
-        raise ValueError("tool batch must contain at least one event")
-    session = events[0].session
-    if any(event.session != session for event in events[1:]):
-        raise ValueError("tool batch events must share one session")
-    fingerprint = _batch_fingerprint(events)
-    event_status = storage.record_event(data_dir, session, fingerprint)
-    if event_status == "duplicate":
-        return ToolEvidence(
-            storage.load_turn_state(data_dir, session), False, fingerprint
-        )
-    state = storage.load_turn_state(data_dir, session)
-    eligible = any(event.mutation is not None for event in events)
-    return ToolEvidence(state, eligible, fingerprint)
+def verify_evidence(feedback, materials):
+    for reference in feedback.evidence:
+        candidates = (line for line in materials
+                      if line.source == reference.source and line.location == reference.location)
+        if not any(reference.excerpt in line.text for line in candidates):
+            raise ToolFault("evidence", f"引文不在本次材料的指定位置：{reference.location}")

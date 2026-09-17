@@ -1,215 +1,115 @@
-"""Minimal cross-hook task state and host-returned Nudge audit."""
-
+"""One durable journal owns round identity, attempts, quotas and evidence."""
 from __future__ import annotations
-
 import json
-import os
-import tempfile
+import sqlite3
 import time
-from datetime import datetime, timezone
+import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
-
-from .contracts import SessionRef, safe_identifier
+from .contracts import FEEDBACK_LIMIT, SILENCE_LIMIT, SessionRef, ToolFault, json_text
 
 
-MAX_ERROR_LOG_BYTES = 256 * 1024
-SETTINGS_FILE = "config.json"
+class Journal:
+    def __init__(self, directory: Path):
+        directory.mkdir(parents=True, exist_ok=True)
+        self.path = directory / "feedback.sqlite3"
+        with self.connect() as db:
+            db.executescript("""
+                CREATE TABLE IF NOT EXISTS rounds(
+                    session TEXT PRIMARY KEY, turn TEXT NOT NULL, goal TEXT NOT NULL, request TEXT NOT NULL,
+                    round_id TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS attempts(
+                    id TEXT PRIMARY KEY, session TEXT NOT NULL, turn TEXT NOT NULL,
+                    started REAL NOT NULL, finished REAL, outcome TEXT, delivered INTEGER NOT NULL DEFAULT 0,
+                    detail TEXT NOT NULL DEFAULT '{}', round_id TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS batches(
+                    session TEXT NOT NULL, turn TEXT NOT NULL, received REAL NOT NULL, payload TEXT NOT NULL);
+            """)
+            # Preserve journals created before user messages owned round identity.
+            db.execute("BEGIN IMMEDIATE")
+            for table in ("rounds", "attempts"):
+                columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
+                if "round_id" not in columns:
+                    db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
+            for row in db.execute("SELECT session,turn FROM rounds WHERE round_id=''").fetchall():
+                round_id = uuid.uuid4().hex
+                db.execute("UPDATE rounds SET round_id=? WHERE session=?", (round_id, row["session"]))
+                db.execute("UPDATE attempts SET round_id=? WHERE session=? AND turn=? AND round_id=''",
+                           (round_id, row["session"], row["turn"]))
 
-
-def append_error(error_log: Path, component: str, message: str) -> None:
-    """Append one bounded diagnostic line without breaking a host hook."""
-    try:
-        path = Path(error_log)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.exists() and path.stat().st_size > MAX_ERROR_LOG_BYTES:
-            with path.open("rb") as handle:
-                handle.seek(-(MAX_ERROR_LOG_BYTES // 2), os.SEEK_END)
-                handle.readline()
-                tail = handle.read()
-            path.write_bytes(tail)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(
-                f"[{datetime.now(timezone.utc).isoformat()}] {component}: {message}\n"
-            )
-    except Exception:
-        pass
-
-
-def session_stem(session: SessionRef) -> str:
-    return f"{safe_identifier(session.host)}--{safe_identifier(session.session_id)}"
-
-
-def state_path(data_dir: Path, session: SessionRef, suffix: str) -> Path:
-    return Path(data_dir) / f"{session_stem(session)}.{suffix}.json"
-
-
-def audit_path(data_dir: Path, session: SessionRef) -> Path:
-    return Path(data_dir) / f"{session_stem(session)}.nudges.jsonl"
-
-
-def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, TypeError, ValueError):
-        return dict(default)
-    return payload if isinstance(payload, dict) else dict(default)
-
-
-def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    handle = tempfile.NamedTemporaryFile(
-        mode="w",
-        suffix=".tmp",
-        prefix=f"{path.stem}-",
-        dir=path.parent,
-        delete=False,
-        encoding="utf-8",
-    )
-    temp_path = Path(handle.name)
-    try:
-        json.dump(payload, handle, ensure_ascii=False)
-        handle.write("\n")
-        handle.close()
-        for attempt in range(5):
-            try:
-                os.replace(temp_path, path)
-                break
-            except PermissionError:
-                if attempt == 4:
-                    raise
-                time.sleep(0.02 * (attempt + 1))
-    finally:
-        handle.close()
-        temp_path.unlink(missing_ok=True)
-
-
-def _empty_turn(session: SessionRef) -> dict[str, Any]:
-    return {
-        "schema_version": 1,
-        "host": session.host,
-        "session_id": session.session_id,
-        "task_anchor": "",
-    }
-
-
-def load_turn_state(data_dir: Path, session: SessionRef) -> dict[str, Any]:
-    return _read_json(state_path(data_dir, session, "turn"), _empty_turn(session))
-
-
-def cleanup_expired_sessions(
-    data_dir: Path,
-    *,
-    max_age_days: int = 30,
-    now: float | None = None,
-) -> int:
-    """Remove stale session data opportunistically; preserve global settings."""
-    root = Path(data_dir)
-    if not root.exists():
-        return 0
-    cutoff = (time.time() if now is None else now) - max_age_days * 24 * 60 * 60
-    removed = 0
-    for path in root.iterdir():
-        if not path.is_file() or path.name == SETTINGS_FILE:
-            continue
+    @contextmanager
+    def connect(self):
+        db = sqlite3.connect(self.path, timeout=5)
+        db.row_factory = sqlite3.Row
         try:
-            if path.stat().st_mtime < cutoff:
-                path.unlink()
-                removed += 1
-        except OSError:
-            continue
-    return removed
+            yield db
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
+    def start_round(self, session: SessionRef, request: str, goal: str = ""):
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            old = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
+            original = goal or (old["goal"] if old else request)
+            db.execute("INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id) VALUES(?,?,?,?,?)",
+                       (session.session_id, session.turn_id, original, request, uuid.uuid4().hex))
+
+    def record_batch(self, session: SessionRef, payload: object):
+        with self.connect() as db:
+            db.execute("INSERT INTO batches VALUES(?,?,?,?)",
+                       (session.session_id, session.turn_id, time.time(), json_text(payload)))
+
+    def begin(self, session: SessionRef) -> tuple[str, dict] | None:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
+            if row is None:
+                raise ToolFault("input", "缺少本輪使用者要求事件")
+            if row["turn"] != session.turn_id:
+                return None
+            counts = {r["outcome"]: r["n"] for r in db.execute(
+                "SELECT outcome, COUNT(*) n FROM attempts WHERE round_id=? GROUP BY outcome",
+                (row["round_id"],))}
+            if counts.get("feedback", 0) >= FEEDBACK_LIMIT or counts.get("silence", 0) >= SILENCE_LIMIT:
+                return None
+            if counts.get(None, 0):
+                raise ToolFault("interrupted", "本輪有尚未完成或中斷的判斷，不能重複呼叫")
+            attempt = uuid.uuid4().hex
+            db.execute("INSERT INTO attempts(id,session,turn,started,round_id) VALUES(?,?,?,?,?)",
+                       (attempt, session.session_id, session.turn_id, time.time(), row["round_id"]))
+            return attempt, dict(row)
+
+    def finish(self, session: SessionRef, attempt: str, outcome: str, detail: dict) -> bool:
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute("SELECT 1 FROM rounds r JOIN attempts a ON r.round_id=a.round_id "
+                             "WHERE r.session=? AND a.id=?", (session.session_id, attempt)).fetchone()
+            current = row is not None
+            updated = db.execute("UPDATE attempts SET finished=?,outcome=?,detail=? WHERE id=? AND outcome IS NULL",
+                       (time.time(), outcome, json_text(detail), attempt))
+            return current and updated.rowcount == 1
+
+    def delivered(self, attempt: str):
+        with self.connect() as db:
+            db.execute("UPDATE attempts SET delivered=1 WHERE id=? AND outcome='feedback'", (attempt,))
+
+    def recent(self, limit: int = 20) -> list[dict]:
+        with self.connect() as db:
+            return [dict(row) | {"detail": json.loads(row["detail"])} for row in db.execute(
+                "SELECT * FROM attempts ORDER BY started DESC LIMIT ?", (max(0, min(limit, 200)),))]
 
 
-def start_turn(data_dir: Path, session: SessionRef, prompt: str) -> None:
-    cleanup_expired_sessions(data_dir)
-    state = _empty_turn(session)
-    state["task_anchor"] = str(prompt or "").strip()
-    _atomic_write(state_path(data_dir, session, "turn"), state)
-    _atomic_write(
-        state_path(data_dir, session, "progress"),
-        {
-            "schema_version": 1,
-            "host": session.host,
-            "session_id": session.session_id,
-            "last_event_fingerprint": "",
-            "nudge_delivered": False,
-        },
-    )
-
-
-def record_event(data_dir: Path, session: SessionRef, fingerprint: str) -> str:
-    """Classify one native batch as first, new, or an exact replay."""
-    if not fingerprint:
-        return "duplicate"
-    path = state_path(data_dir, session, "progress")
-    state = _read_json(path, {})
-    if state.get("last_event_fingerprint") == fingerprint:
-        return "duplicate"
-    status = "new" if state.get("last_event_fingerprint") else "first"
-    state.update(
-        {
-            "schema_version": 1,
-            "host": session.host,
-            "session_id": session.session_id,
-            "last_event_fingerprint": fingerprint,
-        }
-    )
-    _atomic_write(path, state)
-    return status
-
-
-def append_host_returned_nudge(
-    data_dir: Path,
-    session: SessionRef,
-    *,
-    message: str,
-    evidence: tuple[str, ...] | list[str],
-    returned_via: str,
-) -> dict[str, Any]:
-    entry = {
-        "time": datetime.now(timezone.utc).isoformat(),
-        "host": session.host,
-        "session_id": session.session_id,
-        "workspace": str(session.repo_root or session.cwd or ""),
-        "message": str(message or "").strip(),
-        "evidence": [str(item).strip() for item in evidence if str(item).strip()],
-        "returned_via": str(returned_via or ""),
-    }
-    path = audit_path(data_dir, session)
+def append_error(path: Path, component: str, message: str):
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    progress_path = state_path(data_dir, session, "progress")
-    progress = _read_json(progress_path, {})
-    progress["nudge_delivered"] = True
-    _atomic_write(progress_path, progress)
-    return entry
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json_text({"time": time.time(), "component": component, "message": message}) + "\n")
 
 
-def nudge_delivered(data_dir: Path, session: SessionRef) -> bool:
-    return bool(
-        _read_json(state_path(data_dir, session, "progress"), {}).get(
-            "nudge_delivered"
-        )
-    )
-
-
-def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-    if limit <= 0:
-        return entries
-    for path in Path(data_dir).glob("*.nudges.jsonl"):
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            continue
-        for line in lines:
-            try:
-                entry = json.loads(line)
-            except (TypeError, ValueError):
-                continue
-            if isinstance(entry, dict) and entry.get("message"):
-                entries.append(entry)
-    entries.sort(key=lambda entry: str(entry.get("time") or ""), reverse=True)
-    return entries[:limit]
+def recent_nudges(data_dir: Path, *, limit: int = 20) -> list[dict]:
+    if not (data_dir / "feedback.sqlite3").exists():
+        return []
+    return Journal(data_dir).recent(limit)

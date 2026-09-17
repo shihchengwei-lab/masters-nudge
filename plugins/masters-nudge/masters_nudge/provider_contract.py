@@ -1,56 +1,41 @@
-"""Structural JSON contract shared by Nudge transports."""
-
-from __future__ import annotations
-
+"""Invalid output raises a fault; it cannot become silence."""
 import json
+from .contracts import Evidence, Feedback, FEEDBACK_MAX_CHARS, SOURCES, ToolFault
 
 
-_MISSING = object()
-
-
-def call_result(nudge: object = _MISSING, **extra: object) -> dict:
-    """Represent valid silence, one Nudge, or an internal transport error."""
-    if nudge is _MISSING:
-        return {"nudge": None, "error_kind": "invalid_output", **extra}
-    return {"nudge": nudge, **extra}
-
-
-def _decode_object(stdout: str) -> tuple[dict | None, str]:
-    raw = str(stdout or "").strip()
-    if not raw:
-        return None, raw
+def parse_feedback(raw: str) -> Feedback | None:
     try:
         value = json.loads(raw)
-    except (TypeError, ValueError):
-        return None, raw
-    if isinstance(value, dict) and "structured_output" in value:
-        value = value.get("structured_output")
-    return (value if isinstance(value, dict) else None), raw
-
-
-def parse_nudge_result(stdout: str) -> dict:
-    obj, raw = _decode_object(stdout)
-    if obj is None or set(obj) != {"nudge"}:
-        return call_result(raw_output=raw)
-    nudge = obj.get("nudge")
-    if nudge is None:
-        return call_result(None, raw_output=raw)
-    if not isinstance(nudge, dict) or set(nudge) != {"message", "evidence"}:
-        return call_result(raw_output=raw)
-    message = nudge.get("message")
-    evidence = nudge.get("evidence")
-    if (
-        not isinstance(message, str)
-        or not message.strip()
-        or not isinstance(evidence, list)
-        or not evidence
-        or any(not isinstance(item, str) or not item.strip() for item in evidence)
-    ):
-        return call_result(raw_output=raw)
-    return call_result(
-        {
-            "message": message.strip(),
-            "evidence": [item.strip() for item in evidence],
-        },
-        raw_output=raw,
-    )
+    except (TypeError, ValueError) as exc:
+        raise ToolFault("output", "Provider 未回傳 JSON") from exc
+    if not isinstance(value, dict) or set(value) != {"feedback"}:
+        raise ToolFault("output", "必須只回傳 feedback 欄位")
+    item = value["feedback"]
+    if item is None:
+        return None
+    if not isinstance(item, dict) or set(item) != {"criterion", "evidence", "fact", "relationship", "question"}:
+        raise ToolFault("output", "反饋欄位不符合契約")
+    if type(item["criterion"]) is not int or not 1 <= item["criterion"] <= 6:
+        raise ToolFault("output", "criterion 必須是 1 到 6")
+    for key in ("fact", "relationship", "question"):
+        if not isinstance(item[key], str) or not item[key].strip():
+            raise ToolFault("output", f"{key} 必須是非空文字")
+    refs = item["evidence"]
+    if not isinstance(refs, list) or not 1 <= len(refs) <= 2:
+        raise ToolFault("output", "必須提供一至兩筆引文")
+    evidence = []
+    for ref in refs:
+        if not isinstance(ref, dict) or set(ref) != {"source", "location", "excerpt"}:
+            raise ToolFault("output", "引文欄位不符合契約")
+        if not all(isinstance(v, str) and v.strip() for v in ref.values()):
+            raise ToolFault("output", "引文欄位不能為空")
+        if ref["source"] not in SOURCES or len(ref["excerpt"]) > FEEDBACK_MAX_CHARS:
+            raise ToolFault("output", "引文來源或長度不符合契約")
+        evidence.append(Evidence(**ref))
+    feedback = Feedback(item["criterion"], tuple(evidence), item["fact"], item["relationship"], item["question"])
+    if len(feedback.message) > FEEDBACK_MAX_CHARS:
+        raise ToolFault("output", "反饋超過 120 字")
+    question = feedback.question.rstrip()
+    if not question.endswith(("?", "？")) or question.count("?") + question.count("？") != 1:
+        raise ToolFault("output", "question 必須只有一個問句")
+    return feedback

@@ -5,33 +5,12 @@ description: Diagnose a Masters' Nudge installation only when the user explicitl
 
 # Masters' Nudge Doctor
 
-Starting from this `SKILL.md`, walk upward to the plugin root containing
-`masters_nudge_cli.py`. Run the internal CLI from that root. On Claude Code, use the configured Python
-executable and run:
+Find the plugin root above this file containing masters_nudge_cli.py. With the current Python 3.10+ interpreter run:
 
 ```text
-masters_nudge_cli.py doctor --host claude --hook-python-command <configured-python>
+python masters_nudge_cli.py doctor --host codex
 ```
 
-On Codex, use the current Python 3.10+ interpreter and run:
-
-```text
-masters_nudge_cli.py doctor --host codex
-```
-
-The command returns JSON for the Agent, not user-facing prose. Explain the
-result in plain language and do not paste raw JSON unless the user explicitly
-asks for it. Separate these checks:
-
-- Python and packaged runtime files;
-- ability to write local data;
-- selected Provider and its availability;
-- Host Hook registration and control-point precision.
-
-Do not call a Nudge Provider merely to diagnose readiness. For local Ollama,
-report the loopback endpoint, server availability, selected installed model,
-and any diagnostic separately. Availability does not prove model quality. For
-Codex, explain that the plugin requires a `PostToolBatch`-capable Codex build;
-Hook registration alone does not prove that the active Codex build emits the
-event. Remind the user to inspect and approve the plugin commands in `/hooks`
-when needed.
+Explain the JSON in plain language. Report missing runtime files, Codex Provider login, and enabled plugin separately.
+Do not call a Provider just to diagnose setup. This diagnostic does not prove PostToolBatch is supported or feedback was
+delivered; those need a complete runtime test. The first version supports only Codex with OpenAI.

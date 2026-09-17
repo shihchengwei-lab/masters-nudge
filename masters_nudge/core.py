@@ -1,74 +1,61 @@
-"""Ask one Provider whether the completed change needs one Nudge."""
-
-from __future__ import annotations
-
-from typing import Callable
-
+"""One synchronous judgment after an explicit mutation; no Actor consultation."""
+from dataclasses import asdict
+import time
 from . import providers
-from .contracts import Nudge
+from .contracts import MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault
+from .evidence import build_packet, verify_evidence
 from .prompting import load_system_prompt
-from .runtime import PROVIDER_TIMEOUT_SEC, RuntimeSettings
-
-
-ProviderDispatch = Callable[..., dict]
+from .provider_contract import parse_feedback
+from .runtime import RuntimeSettings, PROVIDER_TIMEOUT_SEC
+from .storage import Journal
 
 
 class NudgeCore:
-    def __init__(
-        self,
-        settings: RuntimeSettings,
-        *,
-        dispatch: ProviderDispatch | None = None,
-        log_error: Callable[[str], None] | None = None,
-    ) -> None:
+    def __init__(self, settings: RuntimeSettings, *, dispatch=None, log_error=None):
         self.settings = settings
-        self.dispatch = dispatch or providers.dispatch_call_result
-        self.log_error = log_error or (lambda _message: None)
-        runtime = settings.paths.runtime_dir
-        self.prompt_file = runtime / "buddy-prompt.txt"
-        self.schema_path = runtime / "nudge-schema.json"
+        self.dispatch = dispatch or providers.call_codex_result
+        self.log_error = log_error or (lambda message: None)
+        self.journal = Journal(settings.paths.data_dir)
 
-    def nudge_once(
-        self,
-        observation: str,
-        timeout_sec: int | None = None,
-    ) -> Nudge | None:
-        timeout = max(
-            1,
-            min(timeout_sec or PROVIDER_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC),
-        )
-        system_prompt = load_system_prompt(
-            prompt_file=self.prompt_file,
-            log_error=self.log_error,
-        )
-        if not system_prompt:
+    def start_round(self, session: SessionRef, request: str, goal: str = ""):
+        self.journal.start_round(session, request, goal)
+
+    def process_batch(self, session: SessionRef, events: tuple[ToolCompleted, ...]):
+        self.journal.record_batch(session, [asdict(event) for event in events])
+        if not any(event.modification is not None for event in events):
             return None
-        result = self.dispatch(
-            self.settings.provider,
-            system_prompt,
-            str(observation or ""),
-            self.settings.model,
-            schema_path=self.schema_path,
-            timeout_sec=timeout,
-            ollama_url=self.settings.ollama_url,
-            log_error=self.log_error,
-        )
-        if not isinstance(result, dict) or result.get("error_kind"):
+        reserved = self.journal.begin(session)
+        if reserved is None:
             return None
-        raw_nudge = result.get("nudge")
-        if raw_nudge is None:
+        attempt, task = reserved
+        detail = {}
+        try:
+            if self.settings.configuration_error or self.settings.provider not in ("openai", "codex"):
+                raise ToolFault("configuration", self.settings.configuration_error or "僅支援 OpenAI／Codex")
+            packet = build_packet(session, task, events)
+            detail["packet"] = packet.render()
+            started = time.monotonic()
+            run = self.dispatch(
+                system_prompt=load_system_prompt(prompt_file=self.settings.paths.runtime_dir / "buddy-prompt.txt"),
+                nudge_input=detail["packet"], model=self.settings.model,
+                schema_path=self.settings.paths.runtime_dir / "nudge-schema.json",
+                timeout_sec=PROVIDER_TIMEOUT_SEC, workspace_root=packet.workspace,
+                remaining_chars=MATERIAL_MAX_CHARS - packet.material_chars,
+                log_error=self.log_error,
+            )
+            detail.update(raw_output=run.raw_output, usage=run.usage, trace=run.trace,
+                          materials=[asdict(line) for line in run.materials],
+                          elapsed_seconds=time.monotonic() - started)
+            feedback = parse_feedback(run.raw_output)
+            if feedback is not None:
+                verify_evidence(feedback, (*packet.lines, *run.materials))
+            current = self.journal.finish(session, attempt, "feedback" if feedback else "silence", detail)
+            if current and feedback:
+                return attempt, feedback
             return None
-        if not isinstance(raw_nudge, dict):
-            return None
-        message = str(raw_nudge.get("message") or "").strip()
-        raw_evidence = raw_nudge.get("evidence")
-        if not message or not isinstance(raw_evidence, list):
-            return None
-        evidence = tuple(
-            item.strip()
-            for item in raw_evidence
-            if isinstance(item, str) and item.strip()
-        )
-        if not evidence or len(evidence) != len(raw_evidence):
-            return None
-        return Nudge(message, evidence)
+        except Exception as exc:
+            fault = exc if isinstance(exc, ToolFault) else ToolFault("internal", str(exc))
+            detail["fault"] = {"kind": fault.kind, "detail": fault.detail}
+            detail.update(fault.evidence)
+            self.journal.finish(session, attempt, "fault", detail)
+            raise fault

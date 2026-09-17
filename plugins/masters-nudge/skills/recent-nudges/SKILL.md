@@ -1,27 +1,21 @@
 ---
 name: recent-nudges
-description: Read recent Masters' Nudge audit records only when the user explicitly asks what Nudges were returned or wants recent Nudge history for auditing.
+description: Read recent Masters' Nudge attempts only when the user asks for returned feedback, silence, failures, or audit history.
 ---
 
-# Show recent Masters' Nudge records
+# Recent Masters' Nudge Attempts
 
-Starting from this `SKILL.md`, walk upward to the plugin root containing
-`masters_nudge_cli.py`. Use the configured Python executable on Claude Code or the current Python 3.10+
-interpreter on Codex. Run the internal JSON command from the plugin root:
+Find the plugin root above this file containing masters_nudge_cli.py. Use Python 3.10+:
 
 ```text
-masters_nudge_cli.py recent-nudges --limit <count>
+python masters_nudge_cli.py recent-nudges --limit 10
 ```
 
-Use 10 when the user does not provide a count. Do not paste raw JSON. Present
-each returned record in plain language with its time and returned text. Render
-an `intervene` record as: current choice, structural cost, direction, and
-evidence. For a legacy record containing `relationship` or `finding`, present
-that stored text without inventing missing fields. If there are no records, say
-so directly. Explain diagnostics without dumping the JSON.
-
-Call these audit records "returned to the Host," not "read," "adopted," or
-"injected." A record proves that the Hook returned a Nudge to Claude Code or
-Codex. It cannot prove that the main model read it, accepted it, or changed its
-decision because of it. Session data older than 30 days is removed when a new
-task starts.
+Explain each stored attempt's time, outcome and feedback in plain language. A null outcome is an unfinished attempt;
+feedback is a completed finding; silence is a completed no-feedback judgment; fault is an error.
+The result of an older round keeps its recorded outcome even when a new request prevents delivery.
+If historical records use other outcome names, report them as historical values, not current result types.
+Only delivered=1 confirms the hook wrote its response to Codex. It does not prove Actor adoption.
+delivered=0 is not proof that the hook sent nothing: writing the delivery receipt can also fail.
+The detail contains source materials, Provider output, repository reads, duration and available usage.
+Report missing fields as unavailable. Do not invent a retention deadline or infer an unrecorded delivery.

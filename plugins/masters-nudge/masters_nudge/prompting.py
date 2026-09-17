@@ -1,32 +1,17 @@
-"""Prompt assembly and agent-visible Nudge formatting."""
-
-from __future__ import annotations
-
+"""Fixed instructions and the only Actor-facing feedback rendering."""
 from pathlib import Path
-from typing import Callable
+from .contracts import Feedback, ToolFault, FEEDBACK_MAX_CHARS
 
 
-def delivery_text(
-    message: str,
-    evidence: tuple[str, ...] | list[str],
-) -> str:
-    evidence_text = ", ".join(str(item).strip() for item in evidence if str(item).strip())
-    return (
-        f"Nudge：{str(message).strip()}\n"
-        f"證據：{evidence_text}\n"
-        "請重新比較可行解法；Actor 自行決定、實作與驗證。"
-    )
+def delivery_text(feedback: Feedback) -> str:
+    return f"Masters’ Nudge：待執行者判斷\n{feedback.message}"
 
 
-def load_system_prompt(
-    *,
-    prompt_file: Path,
-    log_error: Callable[[str], None] | None = None,
-) -> str:
-    logger = log_error or (lambda _message: None)
+def load_system_prompt(*, prompt_file: Path) -> str:
     try:
-        base_prompt = prompt_file.read_text(encoding="utf-8").strip()
-    except Exception as exc:
-        logger(f"prompt file read failed: {exc}")
-        return ""
-    return base_prompt + "\n"
+        text = prompt_file.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        raise ToolFault("configuration", f"無法讀取 Provider 提示：{exc}") from exc
+    if not text:
+        raise ToolFault("configuration", "Provider 提示是空的")
+    return text.replace("$FEEDBACK_MAX_CHARS", str(FEEDBACK_MAX_CHARS))

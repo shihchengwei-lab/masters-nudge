@@ -1,22 +1,20 @@
 {
   "description": "Masters’ Nudge lifecycle hooks for Codex.",
   "hooks": {
-    "UserPromptSubmit": [
+    "PostToolBatch": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
             "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli",
-            "timeout": 5,
-            "additionalContextLimit": 256
+            "timeout": 120
           }
         ]
       }
     ],
-    "PostToolBatch": [
+    "UserPromptSubmit": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",

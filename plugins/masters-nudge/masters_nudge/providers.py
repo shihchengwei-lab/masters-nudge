@@ -1,20 +1,17 @@
-"""Nudge provider clients, independent of the coding-agent host."""
-
+"""Only the Codex Provider transport; subprocess failure is always explicit."""
 from __future__ import annotations
-
 import json
 import os
 import signal
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Callable
-
-from .local_ollama import DEFAULT_OLLAMA_URL, call_local_ollama_result
-from .provider_contract import call_result, parse_nudge_result
+from .contracts import MaterialLine, ProviderRun, ToolFault, json_text
+from .read_only_repo_mcp import read_audit
 from .runtime import provider_environment
-
 
 Logger = Callable[[str], None]
 
@@ -113,256 +110,83 @@ def _run_cli_process(
     )
 
 
-def load_output_schema_json(schema_path: Path, log_error: Logger = _noop) -> str:
-    try:
-        schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        log_error(f"Nudge schema unavailable: {exc}")
-        return ""
-    if not isinstance(schema, dict):
-        log_error("Nudge schema root must be an object")
-        return ""
-    return json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
-
-
-def parse_schema_result(stdout: str) -> dict:
-    return parse_nudge_result(stdout)
-
-
-def _parse_codex_jsonl_result(stdout: str) -> dict:
-    recovered = call_result()
-    for line in str(stdout or "").splitlines():
-        try:
-            event = json.loads(line)
-        except (TypeError, ValueError):
-            continue
-        if event.get("type") != "item.completed":
-            continue
-        item = event.get("item")
-        if not isinstance(item, dict) or item.get("type") != "agent_message":
-            continue
-        parsed = parse_schema_result(str(item.get("text") or ""))
-        if not parsed.get("error_kind"):
-            recovered = parsed
-    return recovered
-
-
-def call_claude_result(
-    system_prompt: str,
-    nudge_input: str,
-    model: str,
-    *,
-    schema_path: Path,
-    timeout_sec: int,
-    log_error: Logger = _noop,
-) -> dict:
-    schema_json = load_output_schema_json(schema_path, log_error)
-    if not schema_json:
-        return call_result()
-
-    handle = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    handle.write(system_prompt)
-    handle.close()
-    try:
-        result = _run_cli_process(
-            [
-                "claude",
-                "-p",
-                nudge_input,
-                "--model",
-                model,
-                "--effort",
-                "medium",
-                "--no-session-persistence",
-                "--system-prompt-file",
-                handle.name,
-                "--tools",
-                "",
-                "--setting-sources",
-                "",
-                "--output-format",
-                "json",
-                "--json-schema",
-                schema_json,
-            ],
-            input_text=None,
-            environment=provider_environment(),
-            timeout_sec=timeout_sec,
-            log_error=log_error,
-        )
-        if result.returncode != 0:
-            detail = str(result.stderr or result.stdout or "")[:500]
-            log_error(f"claude CLI exit {result.returncode}: {detail}")
-            return call_result(error_kind="nonzero_exit")
-        parsed = parse_schema_result(result.stdout)
-        return parsed
-    except subprocess.TimeoutExpired as exc:
-        partial_stdout = (
-            getattr(exc, "stdout", None) or getattr(exc, "output", None) or ""
-        )
-        partial_stderr = getattr(exc, "stderr", None) or ""
-        if isinstance(partial_stdout, bytes):
-            partial_stdout = partial_stdout.decode("utf-8", errors="replace")
-        if isinstance(partial_stderr, bytes):
-            partial_stderr = partial_stderr.decode("utf-8", errors="replace")
-        parsed = parse_schema_result(str(partial_stdout))
-        if not parsed.get("error_kind"):
-            log_error("claude CLI timed out after complete structured output; recovered")
-            return parsed
-        error_kind = (
-            "timeout_after_partial_output"
-            if str(partial_stdout).strip()
-            else "timeout_before_output"
-        )
-        detail = str(partial_stderr).strip()[:500]
-        log_error(
-            f"claude CLI {error_kind}"
-            + (f": {detail}" if detail else "")
-        )
-        return call_result(error_kind=error_kind)
-    except FileNotFoundError:
-        log_error("claude CLI not found in PATH")
-        return call_result(error_kind="not_found")
-    finally:
-        try:
-            os.unlink(handle.name)
-        except OSError:
-            pass
-
 
 def resolve_codex_bin() -> str | None:
-    direct = shutil.which("codex")
-    if direct and os.path.exists(direct):
-        return direct
-    candidates = [
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex.cmd"),
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex.exe"),
-        os.path.expanduser(r"~\AppData\Roaming\npm\codex"),
-        os.path.expanduser("~/.codex/bin/codex"),
-        "/usr/local/bin/codex",
-        "/usr/bin/codex",
-    ]
-    return next((candidate for candidate in candidates if os.path.exists(candidate)), None)
+    return shutil.which("codex")
 
 
 def call_codex_result(
-    system_prompt: str,
-    nudge_input: str,
-    model: str,
-    *,
-    schema_path: Path,
-    timeout_sec: int,
-    log_error: Logger = _noop,
-    codex_bin_resolver: Callable[[], str | None] = resolve_codex_bin,
-) -> dict:
-    codex_bin = codex_bin_resolver()
-    if not codex_bin:
-        log_error("codex CLI not found (checked PATH + common npm paths)")
-        return call_result(error_kind="not_found")
-    if not load_output_schema_json(schema_path, log_error):
-        return call_result()
-
-    combined = f"{system_prompt}\n\n---\n\n{nudge_input}"
-    use_shell = codex_bin.lower().endswith((".cmd", ".bat"))
-    with tempfile.TemporaryDirectory(prefix="masters-nudge-provider-") as temp_dir:
-        output_path = Path(temp_dir) / "output.json"
+    system_prompt: str, nudge_input: str, model: str, *, schema_path: Path,
+    timeout_sec: int, workspace_root: str, remaining_chars: int,
+    log_error: Logger = _noop, codex_bin_resolver=resolve_codex_bin,
+) -> ProviderRun:
+    binary = codex_bin_resolver()
+    if not binary:
+        raise ToolFault("configuration", "找不到 Codex Provider 執行檔")
+    if not schema_path.is_file():
+        raise ToolFault("configuration", "找不到反饋輸出契約")
+    with tempfile.TemporaryDirectory(prefix="masters-nudge-provider-") as directory:
+        root = Path(directory)
+        audit = root / "reads.jsonl"
+        output = root / "output.json"
+        script = Path(__file__).with_name("read_only_repo_mcp.py")
+        args = [script.as_posix(), "--root", Path(workspace_root).as_posix(),
+                "--budget", str(remaining_chars), "--audit", audit.as_posix()]
+        command = [
+            binary, "-c", "features.shell_tool=false",
+            "-c", "features.view_image=false",
+            "-c", "features.plugins=false",
+            "-c", "features.multi_agent=false",
+            "-c", 'web_search="disabled"',
+            "-c", "project_doc_max_bytes=0",
+            "-c", f"mcp_servers.readrepo.command={json_text(Path(sys.executable).as_posix())}",
+            "-c", f"mcp_servers.readrepo.args={json_text(args)}",
+            "-c", "mcp_servers.readrepo.required=true",
+            "-c", 'mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]',
+            "-c", 'mcp_servers.readrepo.default_tools_approval_mode="approve"',
+            "exec", "--skip-git-repo-check", "--ephemeral", "--ignore-user-config",
+            "--json", "-s", "read-only", "-m", model, "--output-schema", str(schema_path),
+            "-o", str(output), "-",
+        ]
+        shell = binary.lower().endswith((".cmd", ".bat"))
         try:
-            command = [
-                codex_bin,
-                "-c",
-                "features.shell_tool=false",
-                "-c",
-                "project_doc_max_bytes=0",
-                "exec",
-                "--skip-git-repo-check",
-                "--ephemeral",
-                "--ignore-user-config",
-                "--json",
-                "-s",
-                "read-only",
-                "-m",
-                model,
-                "--output-schema",
-                str(schema_path),
-                "-o",
-                str(output_path),
-                "-",
-            ]
-            if use_shell:
-                command_value: list[str] | str = subprocess.list2cmdline(command)
-            else:
-                command_value = command
             result = _run_cli_process(
-                command_value,
-                input_text=combined,
-                cwd=temp_dir,
-                environment=provider_environment(),
-                timeout_sec=timeout_sec,
-                shell=use_shell,
-                log_error=log_error,
+                subprocess.list2cmdline(command) if shell else command,
+                input_text=f"{system_prompt}\n\n{nudge_input}", cwd=directory,
+                environment=provider_environment(), timeout_sec=timeout_sec, shell=shell, log_error=log_error,
             )
-            if result.returncode != 0:
-                log_error(f"codex exit {result.returncode}: {result.stderr[:500]}")
-                return call_result(error_kind="nonzero_exit")
+        except subprocess.TimeoutExpired as exc:
+            raise ToolFault("timeout", "Provider 未在時限內完成", evidence={
+                "trace": read_audit(audit), "raw_output": output.read_text(encoding="utf-8") if output.exists() else "",
+                "stdout": str(exc.output or ""), "stderr": str(exc.stderr or "")}) from exc
+        except OSError as exc:
+            raise ToolFault("provider", str(exc)) from exc
+        if result.returncode:
+            raise ToolFault("provider", f"Codex 結束碼 {result.returncode}：{result.stderr[:500]}",
+                            evidence={"trace": read_audit(audit), "stdout": result.stdout, "stderr": result.stderr})
+        trace = read_audit(audit)
+        if not any(entry["name"] == "initialize" for entry in trace):
+            raise ToolFault("mcp_startup", "Provider 的唯讀工具未成功初始化",
+                            evidence={"stdout": result.stdout, "stderr": result.stderr})
+        if any(entry["fault"] for entry in trace):
+            raise ToolFault("mcp", next(entry["fault"] for entry in trace if entry["fault"]),
+                            evidence={"trace": trace, "stdout": result.stdout, "stderr": result.stderr})
+        if sum(len(entry["text"]) for entry in trace) > remaining_chars:
+            raise ToolFault("mcp_budget", "讀取材料超過共同上限")
+        materials = []
+        for entry in trace:
+            if entry["text"]:
+                materials.extend(MaterialLine(**line) for line in json.loads(entry["text"]).get("lines", []))
+        try:
+            raw = output.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ToolFault("output", "Provider 沒有輸出檔案") from exc
+        usage = {}
+        for line in result.stdout.splitlines():
             try:
-                raw_output = output_path.read_text(encoding="utf-8")
-            except Exception as exc:
-                log_error(f"codex output read failed: {exc}")
-                return call_result(error_kind="invalid_output")
-            parsed = parse_schema_result(raw_output)
-            event_result = _parse_codex_jsonl_result(result.stdout)
-            if not event_result.get("error_kind"):
-                parsed = event_result
-            return parsed
-        except subprocess.TimeoutExpired:
-            log_error("codex timeout")
-            return call_result(error_kind="timeout")
-        except FileNotFoundError:
-            log_error(f"codex CLI not executable: {codex_bin}")
-            return call_result(error_kind="not_found")
-
-
-def dispatch_call_result(
-    provider: str,
-    system_prompt: str,
-    nudge_input: str,
-    model: str,
-    *,
-    schema_path: Path,
-    timeout_sec: int,
-    ollama_url: str = DEFAULT_OLLAMA_URL,
-    log_error: Logger = _noop,
-) -> dict:
-    if provider in ("openai", "codex"):
-        return call_codex_result(
-            system_prompt,
-            nudge_input,
-            model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            log_error=log_error,
-        )
-    if provider == "anthropic":
-        return call_claude_result(
-            system_prompt,
-            nudge_input,
-            model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            log_error=log_error,
-        )
-    if provider == "ollama":
-        return call_local_ollama_result(
-            system_prompt,
-            nudge_input,
-            model,
-            schema_path=schema_path,
-            timeout_sec=timeout_sec,
-            base_url=ollama_url,
-            log_error=log_error,
-            parse_result=parse_schema_result,
-        )
-    log_error(f"unsupported Nudge Provider: {provider!r}")
-    return call_result()
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if event.get("type") == "turn.completed":
+                usage = event.get("usage") or {}
+        return ProviderRun(raw, tuple(materials), usage, tuple(trace))

@@ -1,218 +1,59 @@
-"""Translate Codex hook payloads to the host-neutral Nudge core."""
-
-from __future__ import annotations
-
-from collections.abc import Mapping
-import json
-import re
-from pathlib import Path
-from typing import Any
-
-import source_context
-
-from . import prompting, storage
-from .contracts import (
-    CompletedMutation,
-    SessionRef,
-    ToolCompleted,
-    completed_mutation_from_input,
-    find_git_root,
-)
+"""Translate the native Codex hook contract without inferring Actor intent."""
+from .contracts import SessionRef, ToolCompleted, ToolFault
 from .core import NudgeCore
-from .evidence import observe_tool_batch
-from .runtime import PROVIDER_TIMEOUT_SEC, active_guard
-
+from .prompting import delivery_text
+from .runtime import active_guard
 
 AUDIT_MARKER_KEY = "_masters_nudge"
-POST_TOOL_BATCH_EVENT = "PostToolBatch"
-GOAL_CONTEXT_RE = re.compile(
-    r"<codex_internal_context\s+source=[\"']goal[\"'][^>]*>"
-    r".*?<objective>\s*(.*?)\s*</objective>",
-    re.IGNORECASE | re.DOTALL,
-)
-CODEX_APPLY_PATCH_OPERATIONS = (
-    "*** Add File:",
-    "*** Update File:",
-    "*** Delete File:",
-)
 
 
-def _codex_mutation_evidence(
-    tool_name: str, tool_input: object
-) -> CompletedMutation | None:
-    direct = completed_mutation_from_input(tool_input)
-    if direct is not None:
-        return direct
-    if tool_name != "apply_patch" or not isinstance(tool_input, Mapping):
-        return None
-    command = tool_input.get("command")
-    if not isinstance(command, str):
-        return None
-    lines = command.strip().splitlines()
-    if (
-        len(lines) < 3
-        or lines[0] != "*** Begin Patch"
-        or lines[-1] != "*** End Patch"
-        or not any(line.startswith(CODEX_APPLY_PATCH_OPERATIONS) for line in lines[1:-1])
-    ):
-        return None
-    return completed_mutation_from_input({"patch": command})
-
-
-def _goal_from_transcript(transcript_path: str) -> str:
-    if not transcript_path:
-        return ""
-    try:
-        lines = Path(transcript_path).read_text(encoding="utf-8").splitlines()
-    except OSError:
-        return ""
-    objective = ""
-    for line in lines:
-        try:
-            item = json.loads(line)
-        except (TypeError, ValueError):
-            continue
-        payload = item.get("payload") if isinstance(item, dict) else None
-        if not isinstance(payload, dict) or payload.get("role") != "user":
-            continue
-        for block in payload.get("content") or []:
-            if not isinstance(block, dict) or block.get("type") != "input_text":
-                continue
-            match = GOAL_CONTEXT_RE.search(str(block.get("text") or ""))
-            if match:
-                objective = match.group(1).strip()
-    return objective
-
-
-def _task_anchor(payload: dict[str, Any]) -> str:
-    goal = payload.get("goal")
-    objective = (
-        str(goal.get("objective") or "").strip()
-        if isinstance(goal, dict)
-        else str(payload.get("objective") or "").strip()
-    )
-    if not objective:
-        objective = _goal_from_transcript(str(payload.get("transcript_path") or ""))
-    prompt = str(payload.get("prompt") or "").strip()
-    if objective and prompt and prompt != objective:
-        return f"Goal:\n{objective}\n\nCurrent request:\n{prompt}"
-    return objective or prompt
-
-
-def _session(payload: dict[str, Any]) -> SessionRef:
-    cwd = str(payload.get("cwd") or "")
-    return SessionRef(
-        "codex_cli",
-        str(payload.get("session_id") or "unknown"),
-        cwd=cwd,
-        repo_root=find_git_root(cwd),
-    )
-
-
-def normalize_tool_batch(payload: dict[str, Any]) -> list[ToolCompleted] | None:
-    event_name = str(payload.get("hook_event_name") or "")
-    if event_name != POST_TOOL_BATCH_EVENT:
-        return []
-    tool_calls = payload.get("tool_calls")
-    if not isinstance(tool_calls, list):
-        return None
-    session = _session(payload)
-    events: list[ToolCompleted] = []
-    for item in tool_calls:
-        if (
-            not isinstance(item, dict)
-            or not isinstance(item.get("tool_name"), str)
-            or not item["tool_name"].strip()
-            or "tool_input" not in item
-            or "tool_response" not in item
-        ):
-            return None
-        response = item["tool_response"]
-        tool_name = item["tool_name"]
-        tool_input = item["tool_input"]
-        events.append(
-            ToolCompleted(
-                session,
-                tool_name,
-                tool_input=tool_input,
-                tool_output=response,
-                mutation=_codex_mutation_evidence(tool_name, tool_input),
-                native_event_name=event_name,
-            )
-        )
-    return events
-
-
-def build_hook_output(
-    event_name: str,
-    message: str,
-    evidence: tuple[str, ...],
-) -> dict[str, Any]:
-    return {
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": prompting.delivery_text(message, evidence),
-        }
-    }
+def session_from_payload(payload: dict) -> SessionRef:
+    for key in ("session_id", "turn_id", "cwd"):
+        if not isinstance(payload.get(key), str) or not payload[key].strip():
+            raise ToolFault("input", f"事件缺少 {key}")
+    return SessionRef(payload["session_id"], payload["turn_id"], payload["cwd"],
+                      payload.get("transcript_path") or "")
 
 
 class CodexAdapter:
-    def __init__(self, core: NudgeCore) -> None:
+    def __init__(self, core: NudgeCore):
         self.core = core
-        self.data_dir = core.settings.paths.data_dir
 
-    def process(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+    def process(self, payload: dict) -> dict | None:
         if active_guard():
             return None
-        event_name = str(payload.get("hook_event_name") or "")
-        session = _session(payload)
-        if event_name == "UserPromptSubmit":
-            anchor = _task_anchor(payload)
-            if anchor:
-                storage.start_turn(self.data_dir, session, anchor)
-            return None
-        events = normalize_tool_batch(payload)
-        if events is None:
-            self.core.log_error("Codex PostToolBatch ignored: malformed tool_calls")
-            return None
-        if not events:
-            return None
-        state = storage.load_turn_state(self.data_dir, session)
-        if not state.get("task_anchor"):
-            anchor = _task_anchor(payload)
-            if anchor:
-                storage.start_turn(self.data_dir, session, anchor)
-        observed = observe_tool_batch(self.data_dir, events)
-        if not observed.eligible:
-            return None
-        if storage.nudge_delivered(self.data_dir, session):
-            return None
         try:
-            observation = source_context.build_observation(
-                str(observed.turn_state.get("task_anchor") or ""),
-                events,
-            )
-        except (source_context.ObservationTooLargeError, ValueError) as exc:
-            self.core.log_error(f"Codex Nudge skipped: {exc}")
-            return None
-        try:
-            nudge = self.core.nudge_once(
-                observation, timeout_sec=PROVIDER_TIMEOUT_SEC
-            )
-        except Exception as exc:
-            self.core.log_error(f"Codex Nudge failed: {exc}")
-            return None
-        if nudge is None:
-            return None
-        output = build_hook_output(
-            event_name,
-            nudge.message,
-            nudge.evidence,
-        )
-        output[AUDIT_MARKER_KEY] = {
-            "session": session,
-            "message": nudge.message,
-            "evidence": nudge.evidence,
-            "returned_via": event_name,
-        }
-        return output
+            name = payload.get("hook_event_name")
+            if name not in ("UserPromptSubmit", "PostToolBatch"):
+                return None
+            session = session_from_payload(payload)
+            if name == "UserPromptSubmit":
+                prompt = payload.get("prompt")
+                if not isinstance(prompt, str):
+                    raise ToolFault("input", "使用者事件缺少 prompt")
+                goal = payload.get("goal") or {}
+                self.core.start_round(session, prompt, goal.get("objective", "") if isinstance(goal, dict) else "")
+                return None
+            raw_events = payload.get("tool_calls")
+            if not isinstance(raw_events, list):
+                raise ToolFault("input", "修改事件缺少 tool_calls")
+            events = []
+            for raw in raw_events:
+                if not isinstance(raw, dict) or not {"tool_use_id", "tool_name", "tool_input", "tool_response"} <= raw.keys():
+                    raise ToolFault("input", "本批工具資料不完整")
+                if not all(isinstance(raw[k], str) and raw[k] for k in ("tool_use_id", "tool_name")):
+                    raise ToolFault("input", "工具名稱或編號不合法")
+                events.append(ToolCompleted(**{k: raw[k] for k in
+                                              ("tool_use_id", "tool_name", "tool_input", "tool_response")}))
+            result = self.core.process_batch(session, tuple(events))
+            if result is None:
+                return None
+            attempt, feedback = result
+            return {"hookSpecificOutput": {"hookEventName": "PostToolBatch",
+                                            "additionalContext": delivery_text(feedback)},
+                    AUDIT_MARKER_KEY: attempt}
+        except ToolFault as fault:
+            self.core.log_error(str(fault))
+            if self.core.settings.strict:
+                raise
+            return {"systemMessage": f"本輪反饋未執行（{fault.kind}）"}
