@@ -95,14 +95,14 @@ def runtime_helpers(binary: Path, *, windows: bool) -> dict:
     return {runner.name: {"path": str(runner), "sha256": hashlib.sha256(runner.read_bytes()).hexdigest()}}
 
 
-def trial_invalid_reason(fault: str, exit_code: int, batches: list, attempts: list) -> str:
+def trial_invalid_reason(fault: str, exit_code: int, batches: list, attempts: list, *, require_attempts: bool = True) -> str:
     if fault:
         return fault
     if exit_code:
         return f"Actor 或啟動環境結束碼 {exit_code}"
-    if not batches:
+    if require_attempts and not batches:
         return "未收到原生 PostToolBatch，沒有測到工具"
-    if not attempts:
+    if require_attempts and not attempts:
         return "沒有明確修改觸發 Provider，沒有測到完整工具"
     if any(attempt["outcome"] not in ("feedback", "silence") for attempt in attempts):
         return "Provider 判斷故障、中斷或被取代，本輪無效"
@@ -120,6 +120,14 @@ def packaged_hook_overrides(package: Path) -> list[str]:
     return [argument for event, groups in hooks.items() for argument in ("-c", f"hooks.{event}={toml(groups)}")]
 
 
+def arm_hook_arguments(package: Path, arm: str) -> list[str]:
+    if arm == "direct":
+        return []
+    if arm == "nudge":
+        return packaged_hook_overrides(package)
+    raise ValueError(f"未知測試臂：{arm}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--actor-bin", type=Path, required=True)
@@ -128,6 +136,7 @@ def main():
     parser.add_argument("--verification-python", type=Path, default=Path(sys.executable))
     parser.add_argument("--provider-model", help="Only override the Provider, for explicit fault-path tests")
     parser.add_argument("--mode", choices=("formal", "production"), default="formal")
+    parser.add_argument("--arm", choices=("direct", "nudge"), default="nudge")
     parser.add_argument("--human-output", action="store_true", help="Capture visible hook status from the human CLI renderer")
     cases = parser.add_mutually_exclusive_group()
     cases.add_argument("--split-state", action="store_true", help="Keep state ownership in a separate source file")
@@ -159,9 +168,10 @@ def main():
         (data / "config.json").write_text(json.dumps({"provider": "openai", "model": args.provider_model or args.model}))
         hook = ROOT / "plugins/masters-nudge/hook_entry.py"
         package_hashes = {name: hashlib.sha256((hook.parent / name).read_bytes()).hexdigest() for name in package_files()}
+        hook_arguments = arm_hook_arguments(hook.parent, args.arm)
         command = [str(binary), "-c", "project_doc_max_bytes=0", "-c", "features.multi_agent=false",
-                   "-c", 'windows.sandbox="elevated"', "--enable", "hooks", "--disable", "plugins",
-                   *packaged_hook_overrides(hook.parent),
+                   "-c", 'windows.sandbox="elevated"',
+                   *(["--enable", "hooks", "--disable", "plugins", *hook_arguments] if hook_arguments else ["--disable", "hooks", "--disable", "plugins"]),
                    "exec", "--ignore-user-config", "--ignore-rules", "--dangerously-bypass-hook-trust",
                    "--skip-git-repo-check", "--ephemeral", *([] if args.human_output else ["--json"]), "-s", "workspace-write",
                    "-m", args.model, "-C", str(workspace), "-o", str(root / "final.txt"), "-"]
@@ -212,7 +222,8 @@ def main():
                 batches = [dict(row) for row in db.execute("SELECT * FROM batches ORDER BY received")]
         if not invalid and (data / "error.log").exists():
             invalid = (data / "error.log").read_text(encoding="utf-8")
-        invalid = trial_invalid_reason(invalid, process.returncode, batches, attempts)
+        invalid = trial_invalid_reason(invalid, process.returncode, batches, attempts,
+                                       require_attempts=args.arm == "nudge")
         final_files, capture_errors = capture_sources(workspace)
         if capture_errors:
             invalid = invalid or "無法完整保存 Actor 成品：" + json.dumps(capture_errors, ensure_ascii=False)
@@ -221,7 +232,8 @@ def main():
         if (not invalid or args.mode == "production") and process.returncode == 0:
             verification = subprocess.run([sys.executable, "-B", "-c", verify],
                 cwd=workspace, capture_output=True, text=True, timeout=10)
-        report = {"scope": "native Actor and complete packaged tool", "binary": str(binary),
+        report = {"scope": "native Actor and complete packaged tool" if args.arm == "nudge" else "native Actor without Masters' Nudge",
+                  "arm": args.arm, "binary": str(binary),
                   "runtime_helpers": helpers, "command": command,
                   "mode": args.mode, "provider_model": args.provider_model or args.model,
                   "package_sha256": package_hashes,
@@ -241,7 +253,7 @@ def main():
         (args.output / "result.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"output": str(args.output), "invalid": invalid, "attempts": len(attempts),
                           "batches": len(batches), "contract_exit_code": report["contract_exit_code"]}, ensure_ascii=True))
-        return int(bool(invalid) or not attempts or report["contract_exit_code"] != 0)
+        return int(bool(invalid) or (args.arm == "nudge" and not attempts) or report["contract_exit_code"] != 0)
 
 
 if __name__ == "__main__":

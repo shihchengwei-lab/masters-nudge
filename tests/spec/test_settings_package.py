@@ -112,6 +112,10 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolBatch"})
 
+    def test_provider_aims_below_the_hard_feedback_limit(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        self.assertIn("Aim for at most 100 characters", prompt)
+
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

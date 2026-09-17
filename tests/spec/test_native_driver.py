@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 from pathlib import Path
 
-from tools.verify_spec_actor import runtime_helpers, trial_invalid_reason, packaged_hook_overrides, prepare_case, capture_sources, actor_workspace
+from tools.verify_spec_actor import runtime_helpers, trial_invalid_reason, packaged_hook_overrides, prepare_case, capture_sources, actor_workspace, arm_hook_arguments
 
 
 class NativeDriverTests(unittest.TestCase):
@@ -67,6 +67,11 @@ class NativeDriverTests(unittest.TestCase):
         self.assertIn("PLUGIN_ROOT", overrides[1])
         self.assertIn("hooks.UserPromptSubmit=", overrides[3])
 
+    def test_direct_arm_has_no_hook_arguments_and_nudge_arm_uses_the_package(self):
+        package = Path(__file__).resolve().parents[2] / "plugins/masters-nudge"
+        self.assertEqual(arm_hook_arguments(package, "direct"), [])
+        self.assertEqual(arm_hook_arguments(package, "nudge"), packaged_hook_overrides(package))
+
     def test_missing_windows_runner_is_rejected_before_actor(self):
         with tempfile.TemporaryDirectory() as raw:
             binary = Path(raw) / "codex.exe"
@@ -82,5 +87,6 @@ class NativeDriverTests(unittest.TestCase):
         self.assertTrue(trial_invalid_reason("", 0, [{"event": "read"}], []))
         self.assertTrue(trial_invalid_reason("", 1, [{}], [{"outcome": "silence"}]))
         self.assertEqual(trial_invalid_reason("", 0, [{}], [{"outcome": "silence"}]), "")
+        self.assertEqual(trial_invalid_reason("", 0, [], [], require_attempts=False), "")
         self.assertTrue(trial_invalid_reason("", 0, [{}], [{"outcome": "fault"}]))
         self.assertTrue(trial_invalid_reason("", 0, [{}], [{"outcome": None}]))

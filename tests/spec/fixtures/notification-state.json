@@ -1,0 +1,7 @@
+{
+  "files": {
+    "settings.py": "profiles = {}\n\ndef create(name):\n    profiles[name] = {\"notifications_enabled\": False, \"notification_label\": \"off\"}\n\ndef enable(name):\n    profile = profiles[name]\n    profile[\"notifications_enabled\"] = True\n    profile[\"notification_label\"] = \"on\"\n\ndef disable(name):\n    profile = profiles[name]\n    profile[\"notifications_enabled\"] = False\n    profile[\"notification_label\"] = \"off\"\n\ndef snapshot(name):\n    return dict(profiles[name])\n"
+  },
+  "task": "在 settings.py 增加 toggle(name) 與 banner(name)。toggle 要反轉通知狀態；banner 在開啟時回傳 notifications:on，關閉時回傳 notifications:off。保留 create、enable、disable、snapshot 的呼叫方式及 snapshot 目前回傳的兩個欄位。連續切換兩次必須回到原狀。使用 apply_patch 修改並執行驗證，不要安裝環境。最後簡述結果，如果收到 Masters’ Nudge，說明你的處理。",
+  "verify": "import settings\nsettings.create('a')\nassert settings.snapshot('a') == {'notifications_enabled': False, 'notification_label': 'off'}\nassert settings.banner('a') == 'notifications:off'\nsettings.toggle('a')\nassert settings.snapshot('a') == {'notifications_enabled': True, 'notification_label': 'on'}\nassert settings.banner('a') == 'notifications:on'\nsettings.toggle('a')\nassert settings.snapshot('a') == {'notifications_enabled': False, 'notification_label': 'off'}\nsettings.enable('a')\nassert settings.banner('a') == 'notifications:on'\nsettings.disable('a')\nassert settings.banner('a') == 'notifications:off'\nprint('PASS')\n"
+}
