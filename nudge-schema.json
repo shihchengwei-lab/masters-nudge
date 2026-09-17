@@ -63,15 +63,18 @@
             },
             "fact": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 38
             },
             "relationship": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 38
             },
             "question": {
               "type": "string",
-              "minLength": 1
+              "minLength": 1,
+              "maxLength": 42
             }
           }
         }

@@ -31,6 +31,12 @@ class ContractTests(unittest.TestCase):
             with self.subTest(item=item), self.assertRaises(ToolFault):
                 parse_feedback(json.dumps(item))
 
+    def test_schema_field_limits_make_the_combined_limit_unrepresentable(self):
+        schema = json.loads((Path(__file__).resolve().parents[2] / "nudge-schema.json").read_text(encoding="utf-8"))
+        feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
+        limits = [feedback[name]["maxLength"] for name in ("fact", "relationship", "question")]
+        self.assertLessEqual(sum(limits) + 2, 120)
+
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
         current = MaterialLine("current_structure", "now.py", 1, "current = True")
