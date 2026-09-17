@@ -83,7 +83,14 @@ class MaterialPacket:
     transcript_path: str = ""
 
     def categories(self) -> dict:
-        return {source: [asdict(line) for line in self.lines if line.source == source] for source in SOURCES}
+        categories = {}
+        for source in SOURCES:
+            grouped = {}
+            for line in self.lines:
+                if line.source == source:
+                    grouped.setdefault(line.path, []).append({"line": line.line, "text": line.text})
+            categories[source] = [{"path": path, "lines": lines} for path, lines in grouped.items()]
+        return categories
 
     @property
     def material_chars(self) -> int:
