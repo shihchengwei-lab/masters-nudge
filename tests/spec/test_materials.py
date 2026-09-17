@@ -36,6 +36,7 @@ class ContractTests(unittest.TestCase):
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
         limits = [feedback[name]["maxLength"] for name in ("fact", "relationship", "question")]
         self.assertLessEqual(sum(limits) + 2, 120)
+        self.assertEqual(feedback["question"]["pattern"], "^[^?？]*[?？]$")
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
