@@ -116,17 +116,18 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
 
-    def test_provider_prompt_traces_one_behavior_through_current_and_alternative_paths(self):
+    def test_provider_prompt_reasons_from_required_roots_before_downstream_checks(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
+        roots = normalized.index("separate what the task requires from choices introduced by the implementation")
         checks = normalized.index("focus on these six checks")
-        scene = normalized.index("one concrete input through the current program")
-        self.assertLess(checks, scene)
-        self.assertIn("the task-required result", normalized)
-        self.assertIn("trace the same input again", normalized)
+        self.assertLess(roots, checks)
+        self.assertIn("first compare removing it entirely with keeping it", normalized)
+        self.assertIn("earliest remaining choice", normalized)
+        self.assertIn("trace each alternative to the same task-required result", normalized)
         self.assertIn("both the decisions removed and the decisions introduced", normalized)
         self.assertIn("can interrupt the Actor only once", normalized)
-        self.assertNotIn("circled several supported structural doubts", normalized)
+        self.assertNotIn("trace the same input again", normalized)
 
     def test_provider_prompt_does_not_force_the_internal_alternative_into_the_question(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
