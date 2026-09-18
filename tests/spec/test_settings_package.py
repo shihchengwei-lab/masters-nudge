@@ -128,6 +128,15 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertIn("can interrupt the Actor only once", normalized)
         self.assertNotIn("circled several supported structural doubts", normalized)
 
+    def test_provider_prompt_does_not_force_the_internal_alternative_into_the_question(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+        self.assertIn("replace its relationship with one concrete alternative", normalized)
+        self.assertIn("The three fields form one continuous message", normalized)
+        self.assertIn("question states only the remaining uncertainty", normalized)
+        self.assertNotIn("alternative you would ask about", normalized)
+        self.assertIn('"question":"哪個必要行為要求保留兩份狀態？"', prompt)
+
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
