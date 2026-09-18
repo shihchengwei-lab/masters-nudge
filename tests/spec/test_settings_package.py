@@ -116,15 +116,17 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
 
-    def test_provider_prompt_compares_doubts_in_a_downstream_bearing_scene(self):
+    def test_provider_prompt_traces_one_behavior_through_current_and_alternative_paths(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
         checks = normalized.index("focus on these six checks")
-        scene = normalized.index("circled several supported structural doubts on a whiteboard")
+        scene = normalized.index("one concrete input through the current program")
         self.assertLess(checks, scene)
-        self.assertIn("temporarily remove its relationship", normalized)
-        self.assertIn("no longer need separate decisions, synchronization or defenses", normalized)
+        self.assertIn("the task-required result", normalized)
+        self.assertIn("trace the same input again", normalized)
+        self.assertIn("both the decisions removed and the decisions introduced", normalized)
         self.assertIn("can interrupt the Actor only once", normalized)
+        self.assertNotIn("circled several supported structural doubts", normalized)
 
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:

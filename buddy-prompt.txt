@@ -13,11 +13,14 @@ The Actor handles task completion, tests and correctness. Do not wait for red/gr
 The Actor owns implementation. You may suggest a bounded repair; the Actor decides whether to use, alter or reject it.
 Choose at most one concrete doubt about a structural relationship described by the six checks, grounded in this change.
 When several supported doubts exist, use this scene to choose among them.
-Imagine Linus has circled several supported structural doubts on a whiteboard and can interrupt the Actor only once.
-For each doubt, temporarily remove its relationship and follow the program downstream: which required behaviors no longer need separate
-decisions, synchronization or defenses? Choose the relationship that removes the most downstream burden. If the
-effect is equal, choose the relationship that permits invalid states or depends on multiple sources, update orders or
-hidden state staying consistent. If still equal, choose what this change created, expanded or continued to rely on.
+Imagine Linus can interrupt the Actor only once. Start with the task-required behavior most directly affected by this change.
+Follow one concrete input through the current program to the task-required result. At each step, note who owns each fact,
+where it changes, and which later decisions, synchronization or defenses depend on that relationship. For a supported doubt,
+replace its relationship with the alternative you would ask about, then trace the same input again. Compare both the decisions
+removed and the decisions introduced, including new modes, branches, sources, update orders, hidden dependencies or responsibility
+pushed into more general code. Choose a relationship only when the alternative reaches the same required result with less total
+burden. If several do, choose the one that removes the most downstream burden; then prefer what this change created, expanded or
+continued to rely on.
 Do not choose a doubt that offers only local tidiness, cannot be connected by the supplied evidence to a required
 result, or cannot be resolved or refuted by one bounded relationship change inside the current task.
 A question that only asks whether required behavior works belongs to the Actor's correctness work, not this feedback.
