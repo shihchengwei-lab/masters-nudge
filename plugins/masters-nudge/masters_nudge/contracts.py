@@ -85,11 +85,16 @@ class MaterialPacket:
     def categories(self) -> dict:
         categories = {}
         for source in SOURCES:
-            grouped = {}
+            grouped = []
             for line in self.lines:
-                if line.source == source:
-                    grouped.setdefault(line.path, []).append({"line": line.line, "text": line.text})
-            categories[source] = [{"path": path, "lines": lines} for path, lines in grouped.items()]
+                if line.source != source:
+                    continue
+                if (grouped and grouped[-1]["path"] == line.path
+                        and line.line == grouped[-1]["start"] + len(grouped[-1]["lines"])):
+                    grouped[-1]["lines"].append(line.text)
+                else:
+                    grouped.append({"path": line.path, "start": line.line, "lines": [line.text]})
+            categories[source] = grouped
         return categories
 
     @property

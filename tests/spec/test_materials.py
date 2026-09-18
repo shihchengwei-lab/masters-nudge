@@ -70,9 +70,22 @@ class ContractTests(unittest.TestCase):
     def test_packet_groups_one_path_instead_of_repeating_it_for_every_line(self):
         packet = MaterialPacket(material_lines("batch_change", "tool/edit/input", "a\nb\nc"), "repo")
         category = packet.categories()["batch_change"]
-        self.assertEqual(category, [{"path": "tool/edit/input", "lines": [
-            {"line": 1, "text": "a"}, {"line": 2, "text": "b"}, {"line": 3, "text": "c"}]}])
+        self.assertEqual(category, [{"path": "tool/edit/input", "start": 1,
+                                     "lines": ["a", "b", "c"]}])
         self.assertEqual(packet.render().count("tool/edit/input"), 1)
+
+    def test_expected_large_patch_keeps_all_original_lines_within_budget(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+        patch = "*** Begin Patch\n" + "\n".join("+" + "x" * 38 for _ in range(293)) + "\n*** End Patch"
+        event = ToolCompleted("edit-1", "apply_patch", {"command": patch}, "Success\n" + "ok\n" * 90)
+        task = "t" * 1048
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": task, "request": task}, (event,))
+        change = [line.text for line in packet.lines if line.source == "batch_change"]
+        self.assertEqual(change, patch.splitlines())
+        self.assertLessEqual(packet.material_chars, 20000)
 
     def test_oversize_success_output_is_compressed_without_losing_task_or_change(self):
         from masters_nudge.contracts import SessionRef, ToolCompleted
