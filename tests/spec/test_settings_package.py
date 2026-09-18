@@ -116,6 +116,17 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
 
+    def test_provider_prompt_orders_competing_doubts_by_downstream_bearing(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        downstream = prompt.index("carries more downstream results")
+        invalid = prompt.index("permits invalid states")
+        changed = prompt.index("created, expanded, or continued to rely on")
+        bounded = prompt.index("bounded relationship change inside the current task")
+        self.assertLess(downstream, invalid)
+        self.assertLess(invalid, changed)
+        self.assertLess(changed, bounded)
+        self.assertIn("only local tidiness", prompt)
+
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
