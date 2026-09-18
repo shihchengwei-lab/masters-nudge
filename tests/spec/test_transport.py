@@ -40,6 +40,11 @@ class TransportTests(unittest.TestCase):
         self.assertEqual(process.call_args.kwargs["input_text"].count("PACKET-unique"), 1)
         self.assertEqual(result.usage["input_tokens"], 123)
 
+    def test_mcp_process_explicitly_uses_utf8(self):
+        with mock.patch.object(providers, "_run_cli_process", side_effect=self.fake_process) as process:
+            self.call()
+        self.assertIn('mcp_servers.readrepo.env={PYTHONIOENCODING="utf-8"}', process.call_args.args[0])
+
     def test_successful_null_without_mcp_startup_is_a_fault(self):
         def process(command, **kwargs):
             Path(command[command.index("-o") + 1]).write_text('{"feedback":null}')

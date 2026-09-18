@@ -141,6 +141,7 @@ def call_codex_result(
             "-c", "project_doc_max_bytes=0",
             "-c", f"mcp_servers.readrepo.command={json_text(Path(sys.executable).as_posix())}",
             "-c", f"mcp_servers.readrepo.args={json_text(args)}",
+            "-c", 'mcp_servers.readrepo.env={PYTHONIOENCODING="utf-8"}',
             "-c", "mcp_servers.readrepo.required=true",
             "-c", 'mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]',
             "-c", 'mcp_servers.readrepo.default_tools_approval_mode="approve"',
