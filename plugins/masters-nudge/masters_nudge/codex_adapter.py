@@ -1,4 +1,4 @@
-"""Translate the native Codex hook contract without inferring Actor intent."""
+"""Translate Codex task and completed-patch events without inferring Actor intent."""
 from .contracts import SessionRef, ToolCompleted, ToolFault
 from .core import NudgeCore
 from .prompting import delivery_text
@@ -24,7 +24,7 @@ class CodexAdapter:
             return None
         try:
             name = payload.get("hook_event_name")
-            if name not in ("UserPromptSubmit", "PostToolBatch"):
+            if name not in ("UserPromptSubmit", "PostToolUse"):
                 return None
             session = session_from_payload(payload)
             if name == "UserPromptSubmit":
@@ -34,22 +34,20 @@ class CodexAdapter:
                 goal = payload.get("goal") or {}
                 self.core.start_round(session, prompt, goal.get("objective", "") if isinstance(goal, dict) else "")
                 return None
-            raw_events = payload.get("tool_calls")
-            if not isinstance(raw_events, list):
-                raise ToolFault("input", "修改事件缺少 tool_calls")
-            events = []
-            for raw in raw_events:
-                if not isinstance(raw, dict) or not {"tool_use_id", "tool_name", "tool_input", "tool_response"} <= raw.keys():
-                    raise ToolFault("input", "本批工具資料不完整")
-                if not all(isinstance(raw[k], str) and raw[k] for k in ("tool_use_id", "tool_name")):
-                    raise ToolFault("input", "工具名稱或編號不合法")
-                events.append(ToolCompleted(**{k: raw[k] for k in
-                                              ("tool_use_id", "tool_name", "tool_input", "tool_response")}))
-            result = self.core.process_batch(session, tuple(events))
+            tool_name = payload.get("tool_name")
+            if tool_name != "apply_patch":
+                return None
+            if not {"tool_use_id", "tool_input", "tool_response"} <= payload.keys():
+                raise ToolFault("input", "修改事件資料不完整")
+            tool_use_id = payload["tool_use_id"]
+            if not isinstance(tool_use_id, str) or not tool_use_id:
+                raise ToolFault("input", "工具編號不合法")
+            event = ToolCompleted(tool_use_id, tool_name, payload["tool_input"], payload["tool_response"])
+            result = self.core.process_event(session, event)
             if result is None:
                 return None
             attempt, feedback = result
-            return {"hookSpecificOutput": {"hookEventName": "PostToolBatch",
+            return {"hookSpecificOutput": {"hookEventName": "PostToolUse",
                                             "additionalContext": delivery_text(feedback)},
                     AUDIT_MARKER_KEY: attempt}
         except ToolFault as fault:

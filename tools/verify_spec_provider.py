@@ -48,10 +48,9 @@ def main():
         try:
             change = ('*** Begin Patch\n*** Add File: view.py\n+from job import label\n+\n+def view(job):\n+    return label(job)\n*** End Patch'
                       if args.indirect else '*** Begin Patch\n*** Update File: job.py\n@@\n-def label(job):\n-    return job["status"]\n+def label(job):\n+    return "done" if job["is_done"] else job["status"]\n*** End Patch')
-            result = adapter.process(dict(common, hook_event_name="PostToolBatch", tool_calls=[{
-                "tool_use_id": "edit-1", "tool_name": "apply_patch",
-                "tool_input": change,
-                "tool_response": "Success. Added view.py" if args.indirect else "Success. Updated job.py"}]))
+            result = adapter.process(dict(common, hook_event_name="PostToolUse",
+                tool_use_id="edit-1", tool_name="apply_patch", tool_input=change,
+                tool_response="Success. Added view.py" if args.indirect else "Success. Updated job.py"))
         except Exception as exc:
             fault = str(exc)
         attempts = core.journal.recent()

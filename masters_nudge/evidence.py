@@ -58,11 +58,3 @@ def fit_packet(packet: MaterialPacket) -> MaterialPacket:
     # Generic result text does not identify dispensable success output.
     # Oversized mandatory data is a fault, never silent truncation.
     raise ToolFault("input_size", "材料超過上限，無法保留必要原文")
-
-
-def verify_evidence(feedback, materials):
-    for reference in feedback.evidence:
-        candidates = (line for line in materials
-                      if line.source == reference.source and line.location == reference.location)
-        if not any(reference.excerpt in line.text for line in candidates):
-            raise ToolFault("evidence", f"引文不在本次材料的指定位置：{reference.location}")

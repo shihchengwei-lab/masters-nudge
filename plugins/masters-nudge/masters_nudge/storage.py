@@ -17,7 +17,7 @@ class Journal:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS rounds(
                     session TEXT PRIMARY KEY, turn TEXT NOT NULL, goal TEXT NOT NULL, request TEXT NOT NULL,
-                    round_id TEXT NOT NULL, pending_events TEXT NOT NULL DEFAULT '');
+                    round_id TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS attempts(
                     id TEXT PRIMARY KEY, session TEXT NOT NULL, turn TEXT NOT NULL,
                     started REAL NOT NULL, finished REAL, outcome TEXT, delivered INTEGER NOT NULL DEFAULT 0,
@@ -31,9 +31,6 @@ class Journal:
                 columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
                 if "round_id" not in columns:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
-            round_columns = {row["name"] for row in db.execute("PRAGMA table_info(rounds)")}
-            if "pending_events" not in round_columns:
-                db.execute("ALTER TABLE rounds ADD COLUMN pending_events TEXT NOT NULL DEFAULT ''")
             for row in db.execute("SELECT session,turn FROM rounds WHERE round_id=''").fetchall():
                 round_id = uuid.uuid4().hex
                 db.execute("UPDATE rounds SET round_id=? WHERE session=?", (round_id, row["session"]))
@@ -58,37 +55,13 @@ class Journal:
             db.execute("BEGIN IMMEDIATE")
             old = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
             original = goal or (old["goal"] if old else request)
-            db.execute("INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id,pending_events) "
-                       "VALUES(?,?,?,?,?,?)",
-                       (session.session_id, session.turn_id, original, request, uuid.uuid4().hex, ""))
+            db.execute("INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id) VALUES(?,?,?,?,?)",
+                       (session.session_id, session.turn_id, original, request, uuid.uuid4().hex))
 
     def record_batch(self, session: SessionRef, payload: object):
         with self.connect() as db:
             db.execute("INSERT INTO batches VALUES(?,?,?,?)",
                        (session.session_id, session.turn_id, time.time(), json_text(payload)))
-
-    def events_for_judgment(self, session: SessionRef, payload: list[dict],
-                            *, has_modification: bool) -> list[dict] | None:
-        """Delay the first explicit change until the following tool batch."""
-        with self.connect() as db:
-            db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
-            if row is None:
-                raise ToolFault("input", "缺少本輪使用者要求事件")
-            if row["turn"] != session.turn_id:
-                return None
-            if row["pending_events"]:
-                pending = json.loads(row["pending_events"])
-                db.execute("UPDATE rounds SET pending_events='' WHERE session=?", (session.session_id,))
-                return [*pending, *payload]
-            attempted = db.execute("SELECT 1 FROM attempts WHERE round_id=? LIMIT 1",
-                                   (row["round_id"],)).fetchone()
-            if attempted:
-                return payload if has_modification else None
-            if has_modification:
-                db.execute("UPDATE rounds SET pending_events=? WHERE session=?",
-                           (json_text(payload), session.session_id))
-            return None
 
     def begin(self, session: SessionRef) -> tuple[str, dict] | None:
         with self.connect() as db:

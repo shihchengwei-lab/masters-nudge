@@ -29,7 +29,7 @@ class SettingsPackageTests(unittest.TestCase):
                 settings = RuntimeSettings("openai", "model", RuntimePaths(ROOT, root, root, root / "error.log"), strict=strict)
                 core = Mock()
                 core.journal.delivered.side_effect = sqlite3.OperationalError("disk I/O error")
-                response = {"hookSpecificOutput": {"hookEventName": "PostToolBatch", "additionalContext": "feedback"},
+                response = {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "feedback"},
                             "_masters_nudge": "attempt-1"}
                 output = io.StringIO()
                 with patch.object(sys, "argv", ["hook_entry.py"]), \
@@ -110,7 +110,7 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertEqual(check_plugin(), [])
         self.assertFalse((ROOT / ".claude-plugin/marketplace.json").exists())
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
-        self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolBatch"})
+        self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse"})
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -150,7 +150,7 @@ class SettingsPackageTests(unittest.TestCase):
             result = subprocess.run(command, input=json.dumps(event), capture_output=True, text=True, env=env, cwd=root, timeout=10)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout, "")
-            bad = dict(event, hook_event_name="PostToolBatch")
+            bad = dict(event, hook_event_name="PostToolUse", tool_name="apply_patch")
             for strict in ("0", "1"):
                 result = subprocess.run(command, input=json.dumps(bad), capture_output=True, text=True,
                                         env={**env, "MASTERS_NUDGE_TEST_MODE": strict}, cwd=root, timeout=10)

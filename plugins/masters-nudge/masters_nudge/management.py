@@ -83,4 +83,4 @@ def doctor(root: Path, host="codex", *, environ=None, **_unused) -> dict:
             "provider": settings.provider, "model": settings.model,
             "codex_cli": binary or "", "provider_authenticated": authenticated,
             "plugin_enabled": installed, "missing_files": missing, "error": error,
-            "unverified": ["PostToolBatch 事件支援與完整反饋交付，須實測確認"] }
+            "unverified": ["PostToolUse 事件支援與完整反饋交付，須實測確認"] }

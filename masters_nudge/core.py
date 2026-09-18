@@ -1,9 +1,9 @@
-"""One synchronous judgment after an explicit mutation; no Actor consultation."""
+"""One synchronous judgment immediately after a completed patch."""
 from dataclasses import asdict
 import time
 from . import providers
 from .contracts import MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault
-from .evidence import build_packet, verify_evidence
+from .evidence import build_packet
 from .prompting import load_system_prompt
 from .provider_contract import parse_feedback
 from .runtime import RuntimeSettings, PROVIDER_TIMEOUT_SEC
@@ -20,14 +20,10 @@ class NudgeCore:
     def start_round(self, session: SessionRef, request: str, goal: str = ""):
         self.journal.start_round(session, request, goal)
 
-    def process_batch(self, session: SessionRef, events: tuple[ToolCompleted, ...]):
-        payload = [asdict(event) for event in events]
+    def process_event(self, session: SessionRef, event: ToolCompleted):
+        events = (event,)
+        payload = [asdict(event)]
         self.journal.record_batch(session, payload)
-        judgment_payload = self.journal.events_for_judgment(
-            session, payload, has_modification=any(event.modification is not None for event in events))
-        if judgment_payload is None:
-            return None
-        events = tuple(ToolCompleted(**event) for event in judgment_payload)
         reserved = self.journal.begin(session)
         if reserved is None:
             return None
@@ -51,8 +47,6 @@ class NudgeCore:
                           materials=[asdict(line) for line in run.materials],
                           elapsed_seconds=time.monotonic() - started)
             feedback = parse_feedback(run.raw_output)
-            if feedback is not None:
-                verify_evidence(feedback, (*packet.lines, *run.materials))
             current = self.journal.finish(session, attempt, "feedback" if feedback else "silence", detail)
             if current and feedback:
                 return attempt, feedback

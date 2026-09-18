@@ -101,7 +101,7 @@ def trial_invalid_reason(fault: str, exit_code: int, batches: list, attempts: li
     if exit_code:
         return f"Actor 或啟動環境結束碼 {exit_code}"
     if require_attempts and not batches:
-        return "未收到原生 PostToolBatch，沒有測到工具"
+        return "未收到原生 PostToolUse，沒有測到工具"
     if require_attempts and not attempts:
         return "沒有明確修改觸發 Provider，沒有測到完整工具"
     if any(attempt["outcome"] not in ("feedback", "silence") for attempt in attempts):

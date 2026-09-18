@@ -5,7 +5,7 @@
 在執行者修改程式之後，提供一則小幅反饋，讓執行者重新判斷資料關係。
 工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；目前重構驗收進度見 [驗收紀錄](docs/spec-refactor-progress.zh-TW.md)。
 
-使用者要求先交給執行者。工具在原生 PostToolBatch 第一次收到明確修改時先保存材料，等下一批工具操作後，再將任務、修改及兩批工具結果交給
+使用者要求先交給執行者。每次 `apply_patch` 成功後，工具透過原生 PostToolUse，立即將任務、這次修改、成功結果及修改後工作區交給
 OpenAI Provider。Provider 以 Linus Torvalds 的六條思考準則查看材料，需要更多脈絡時自行搜尋或讀檔。
 執行者決定是否採納建議，負責實作及驗證。
 
@@ -15,12 +15,12 @@ OpenAI Provider。Provider 以 Linus Torvalds 的六條思考準則查看材料�
 ## 支援範圍
 
 - Python 3.10+、Git 工作區、已登入的 Codex Provider。
-- Actor 需使用能提供 UserPromptSubmit、PostToolBatch 與 turn_id 的 Codex。
+- Actor 需使用能提供 UserPromptSubmit、PostToolUse 與 turn_id 的 Codex。
 - Provider 僅 OpenAI／Codex，沒有其他供應商的替代路徑。
 - MCP 只允許工作區文字搜尋、範圍讀檔；本批材料與後續讀取共用容量限制。
 - 工具輸入必須有完整修改文字、差異或路徑與寫入內容。看不出修改內容的命令列寫檔不在支援範圍。
 
-本機有自行維護的 PostToolBatch Codex 版本；一般 Codex 安裝是否支援，必須實際核對。
+Codex 是否完整提供 PostToolUse 事件及反饋交付，必須以實際執行確認。
 尚未完成驗收的版本不宣告已可正常交付；請以驗收紀錄為準。
 
 ## 設定與紀錄

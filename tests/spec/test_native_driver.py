@@ -62,7 +62,7 @@ class NativeDriverTests(unittest.TestCase):
         package = Path(__file__).resolve().parents[2] / "plugins/masters-nudge"
         overrides = packaged_hook_overrides(package)
         self.assertEqual(len(overrides), 4)
-        self.assertIn("hooks.PostToolBatch=", overrides[1])
+        self.assertIn("hooks.PostToolUse=", overrides[1])
         self.assertIn("run_python.cmd", overrides[1])
         self.assertIn("PLUGIN_ROOT", overrides[1])
         self.assertIn("hooks.UserPromptSubmit=", overrides[3])

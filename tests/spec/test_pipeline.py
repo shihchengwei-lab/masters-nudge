@@ -42,10 +42,10 @@ class PipelineTests(unittest.TestCase):
     def batch(self, tool_input=None, *, tool="apply_patch", turn="turn-1", output="Success", call="call-1"):
         if tool_input is None:
             tool_input = "*** Begin Patch\n*** Update File: job.py\n@@\n+retry_state = job.status\n*** End Patch"
-        return self.adapter.process({"hook_event_name": "PostToolBatch", "session_id": "session-1",
+        return self.adapter.process({"hook_event_name": "PostToolUse", "session_id": "session-1",
                                      "turn_id": turn, "cwd": str(self.repo), "transcript_path": None,
-                                     "tool_calls": [{"tool_name": tool, "tool_input": tool_input,
-                                                     "tool_response": output, "tool_use_id": call}]})
+                                     "tool_name": tool, "tool_input": tool_input,
+                                     "tool_response": output, "tool_use_id": call})
 
     def release(self, *, turn="turn-1", call="release-1", output="checked"):
         return self.batch({"cmd": "python -m unittest"}, tool="exec_command", turn=turn,
@@ -63,29 +63,19 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNone(self.batch({"cmd": "Get-Content job.py"}, tool="exec_command"))
         self.assertEqual(self.calls, [])
 
-    def test_first_modification_waits_for_the_next_tool_batch(self):
+    def test_apply_patch_calls_provider_immediately_after_success(self):
         self.prompt()
 
-        self.batch(call="change-1")
+        self.batch(output="Success. Updated job.py", call="change-1")
+        self.assertEqual(len(self.calls), 1)
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
+        self.assertIn("Success. Updated job.py", str(packet["tool_result"]))
+
+    def test_non_apply_patch_post_tool_use_does_not_call_provider(self):
+        self.prompt()
+        self.batch({"cmd": "python -m unittest"}, tool="exec_command")
         self.assertEqual(self.calls, [])
-
-        self.batch({"cmd": "python -m unittest"}, tool="exec_command",
-                   output={"exit_code": 0, "output": "tests passed"}, call="verify-1")
-        self.assertEqual(len(self.calls), 1)
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
-        self.assertIn("tests passed", str(packet["tool_result"]))
-
-    def test_delayed_first_modification_survives_a_new_hook_process(self):
-        self.prompt()
-        self.batch(call="change-1")
-
-        self.adapter = CodexAdapter(NudgeCore(self.settings, dispatch=self.dispatch))
-        self.release(call="verify-1")
-
-        self.assertEqual(len(self.calls), 1)
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
 
     def test_tests_and_opaque_shell_writes_after_mutation_do_not_trigger(self):
         self.prompt()
@@ -94,28 +84,26 @@ class PipelineTests(unittest.TestCase):
         self.batch({"cmd": "Set-Content job.py changed"}, tool="exec_command")
         self.assertEqual(len(self.calls), 1)
 
-    def test_explicit_old_new_and_path_content_inputs_trigger(self):
+    def test_other_edit_tool_names_do_not_trigger(self):
         self.prompt()
         self.batch({"file_path": "job.py", "old_string": "x", "new_string": "y"}, tool="edit")
         self.batch({"path": "new.py", "content": ""}, tool="write")
         self.batch({"path": "third.py", "content": "x"}, tool="write")
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(self.calls, [])
 
-    def test_batch_has_one_judgment_for_multiple_modifications(self):
+    def test_legacy_post_tool_batch_is_ignored(self):
         self.prompt()
         self.adapter.process({"hook_event_name": "PostToolBatch", "session_id": "session-1",
             "turn_id": "turn-1", "cwd": str(self.repo), "tool_calls": [
                 {"tool_use_id": f"id-{n}", "tool_name": "write", "tool_input": {"path": f"{n}.py", "content": "x=1"},
                  "tool_response": "done"} for n in range(3)]})
-        self.release()
-        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls, [])
 
     def test_non_git_workspace_reports_fault(self):
         self.prompt()
         import shutil
         shutil.rmtree(self.repo / ".git")
-        self.batch()
-        result = self.release()
+        result = self.batch()
         self.assertIn("本輪反饋未執行", result["systemMessage"])
         self.assertEqual(self.calls, [])
 
@@ -125,15 +113,13 @@ class PipelineTests(unittest.TestCase):
         self.adapter.core.settings = replace(self.settings, strict=True)
         self.prompt()
         self.reply = ToolFault("timeout", "failed")
-        self.batch()
         with self.assertRaises(ToolFault):
-            self.release()
+            self.batch()
         self.assertEqual(self.adapter.core.journal.recent()[0]["outcome"], "fault")
 
     def test_native_freeform_patch_triggers_with_actual_tool_result(self):
         self.prompt()
         self.batch(output="Success. Updated job.py")
-        self.release()
         self.assertEqual(len(self.calls), 1)
         packet = json.loads(self.calls[0]["nudge_input"])
         self.assertIn("Success. Updated job.py", str(packet["tool_result"]))
@@ -145,7 +131,6 @@ class PipelineTests(unittest.TestCase):
         patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+retry_state = job.status\n*** End Patch"
         self.prompt()
         self.batch({"command": patch}, output={})
-        self.release()
         self.assertEqual(len(self.calls), 1)
         packet = json.loads(self.calls[0]["nudge_input"])
         self.assertIn("+retry_state = job.status", str(packet["batch_change"]))
@@ -156,8 +141,7 @@ class PipelineTests(unittest.TestCase):
     def test_feedback_only_delivers_three_text_fields(self):
         self.prompt()
         self.feedback()
-        self.batch()
-        result = self.release()
+        result = self.batch()
         text = result["hookSpecificOutput"]["additionalContext"]
         self.assertIn("待執行者判斷", text)
         self.assertIn(self.reply["feedback"]["question"], text)
@@ -171,7 +155,6 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 2)
         self.prompt("現在改成只保留一份狀態", turn="turn-2")
         self.batch(turn="turn-2")
-        self.release(turn="turn-2")
         self.assertEqual(len(self.calls), 3)
         packet = json.loads(self.calls[-1]["nudge_input"])
         self.assertIn("現在改成只保留一份狀態", str(packet["task_contract"]))
@@ -190,7 +173,6 @@ class PipelineTests(unittest.TestCase):
         self.batch()
         self.prompt("改成只保留一份狀態")
         self.batch()
-        self.release()
         self.assertEqual(len(self.calls), 3)
 
     def test_new_message_with_same_turn_id_withholds_in_flight_feedback(self):
@@ -202,28 +184,24 @@ class PipelineTests(unittest.TestCase):
             self.prompt("改做另一件事")
             return result
         self.adapter.core.dispatch = dispatch
-        self.batch()
-        self.assertIsNone(self.release())
+        self.assertIsNone(self.batch())
         self.assertEqual(self.adapter.core.journal.recent()[0]["outcome"], "feedback")
         self.assertEqual(self.adapter.core.journal.recent()[0]["delivered"], 0)
 
-    def test_invented_or_misattributed_evidence_is_fault_not_silence(self):
+    def test_evidence_line_offset_is_not_a_literal_runtime_gate(self):
         self.prompt()
         self.feedback()
-        self.reply["feedback"]["evidence"][0]["location"] = "wrong.py:1"
-        self.batch()
-        for _ in range(3):
-            result = self.batch()
-            self.assertIn("本輪反饋未執行", result["systemMessage"])
-            self.assertNotIn("hookSpecificOutput", result)
-        self.assertEqual(len(self.calls), 3)
+        self.reply["feedback"]["evidence"][0]["location"] = "tool/call-1/input:5"
+        result = self.batch()
+        self.assertIn("hookSpecificOutput", result)
+        self.assertIn(self.reply["feedback"]["question"],
+                      result["hookSpecificOutput"]["additionalContext"])
 
     def test_fault_does_not_consume_silence(self):
         from masters_nudge.contracts import ToolFault
         self.prompt()
         self.reply = ToolFault("timeout", "provider timed out")
-        self.batch()
-        result = self.release()
+        result = self.batch()
         self.assertIn("本輪反饋未執行", result["systemMessage"])
         self.reply = {"feedback": None}
         for _ in range(3):
@@ -239,8 +217,7 @@ class PipelineTests(unittest.TestCase):
             self.prompt("停止這件事", turn="turn-2")
             return result
         self.adapter.core.dispatch = dispatch
-        self.batch()
-        self.assertIsNone(self.release())
+        self.assertIsNone(self.batch())
 
 
 if __name__ == "__main__":

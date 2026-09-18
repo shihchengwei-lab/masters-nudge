@@ -5,16 +5,16 @@ English | [繁體中文](README.zh-TW.md)
 Small engineering feedback after the Actor changes code. [SPEC.zh-TW.md](SPEC.zh-TW.md) is the authority;
 [refactor acceptance](docs/spec-refactor-progress.zh-TW.md) records current verification.
 
-UserPromptSubmit records the task without calling a Provider. The first native PostToolBatch carrying explicit change
-data is held until the following tool batch, then starts one OpenAI/Codex judgment with both batches. The Provider uses one Linus Torvalds anchor and six checks, optionally searching or
+UserPromptSubmit records the task without calling a Provider. Each successful `apply_patch` starts one OpenAI/Codex
+judgment through native PostToolUse with the completed patch, its result, and the updated workspace. The Provider uses one Linus Torvalds anchor and six checks, optionally searching or
 reading related repository files through read-only MCP tools. The Actor owns implementation and verification.
 
 Each user-message round stops at three feedbacks or two silences. New requests reset the allowance; latest conflicting
 requirements win. Failures are visible and never counted as silence.
 
-Requires Python 3.10+, Git, a logged-in Codex Provider, and an Actor runtime exposing UserPromptSubmit/PostToolBatch
+Requires Python 3.10+, Git, a logged-in Codex Provider, and an Actor runtime exposing UserPromptSubmit/PostToolUse
 with turn_id. Opaque shell mutations are unsupported. Claude and Ollama are suspended; no fallback is used.
-The private PostToolBatch runtime must be verified separately from a normal Codex installation.
+PostToolUse event support and feedback delivery must be verified in the actual Codex runtime.
 
 The five optional material categories and all MCP reads share one budget. Evidence is verified against the exact
 source and location received during that judgment. Only the short fact, relationship and question reach the Actor.
