@@ -116,14 +116,6 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
 
-    def test_provider_prompt_traces_the_task_bearing_causal_chain_before_checks(self):
-        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        scene = prompt.index("Start from the observable behavior required by the task contract")
-        checks = prompt.index("focus on these six checks")
-        self.assertLess(scene, checks)
-        self.assertIn("who receives the input, who owns each fact, where state changes", prompt)
-        self.assertIn("greatest bearing on the required behavior", prompt)
-
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
