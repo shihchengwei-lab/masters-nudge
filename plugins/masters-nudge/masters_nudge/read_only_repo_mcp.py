@@ -98,37 +98,38 @@ class RepositoryTools:
         if not isinstance(query, str) or not query or type(count) is not int or not 1 <= count <= 50:
             raise ToolFault("mcp_input", "搜尋文字或筆數不合法")
         prefix = self._path(args.get("path", ""))
-        listed = self._git("ls-files", "-z", "--cached", "--others", "--exclude-standard")
-        if listed.returncode:
-            raise ToolFault("mcp_git", "無法列出工作區檔案")
+        if not prefix.exists():
+            return
+        relative_prefix = prefix.relative_to(self.root).as_posix() or "."
+        searched = subprocess.run(
+            [
+                "rg", "--fixed-strings", "--line-number", "--with-filename",
+                "--no-heading", "--color", "never", "--hidden", "--glob", "!.git/**",
+                "--max-count", str(count), "--", query, relative_prefix,
+            ],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=15,
+        )
+        if searched.returncode not in (0, 1):
+            raise ToolFault("mcp_search", searched.stderr.strip() or "無法搜尋工作區")
         found = 0
-        for raw in sorted(set(listed.stdout.split(b"\0"))):
-            if not raw:
+        for raw in searched.stdout.splitlines():
+            parts = raw.split(":", 2)
+            if len(parts) != 3:
                 continue
-            path = self._path(raw.decode("utf-8"))
-            if prefix != path and prefix not in path.parents:
-                continue
-            relative = path.relative_to(self.root).as_posix()
-            ignored = self._git("check-ignore", "--no-index", "--", relative)
-            if ignored.returncode == 0:
-                continue
-            if ignored.returncode != 1:
-                raise ToolFault("mcp_git", "無法確認忽略規則")
-            if not path.is_file():
-                continue
+            relative, number, text = parts
             try:
-                with path.open(encoding="utf-8") as stream:
-                    for number, text in enumerate(stream, 1):
-                        if "\0" in text:
-                            break
-                        if query in text:
-                            yield MaterialLine("current_structure", relative, number, text.rstrip("\r\n"))
-                            found += 1
-                            if found >= count:
-                                return
-            except UnicodeError:
-                # Search is a text-file operation; explicit read of binary data fails.
+                line_number = int(number)
+            except ValueError:
                 continue
+            yield MaterialLine("current_structure", Path(relative).as_posix(), line_number, text)
+            found += 1
+            if found >= count:
+                return
 
     def call(self, name: str, args: dict) -> dict:
         history = read_audit(self.audit)

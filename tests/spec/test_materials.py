@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from masters_nudge.contracts import MaterialLine, MaterialPacket, ToolFault, material_lines
 from masters_nudge.evidence import fit_packet
@@ -154,6 +155,14 @@ class RepositoryTests(unittest.TestCase):
         entries = [json.loads(line) for line in (self.root / "reads.jsonl").read_text().splitlines()]
         self.assertLessEqual(sum(len(row["text"]) for row in entries), 1000)
         self.assertTrue(any(row["exhausted"] for row in entries))
+
+    def test_search_does_not_spawn_one_git_process_per_file(self):
+        for number in range(30):
+            (self.repo / f"module_{number}.py").write_text("ordinary = 1\n", encoding="utf-8")
+        with mock.patch.object(self.tools, "_git", wraps=self.tools._git) as git:
+            result = self.tools.call("search_repo", {"query": "missing_identifier"})
+        self.assertFalse(result["isError"])
+        self.assertLessEqual(git.call_count, 1)
 
     def test_outside_ignored_and_write_requests_are_faults(self):
         for name, args in (("read_file", {"path": "../secret"}), ("read_file", {"path": "secret.txt"}),
