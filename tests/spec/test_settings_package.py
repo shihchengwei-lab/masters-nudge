@@ -116,7 +116,7 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
         self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 120)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 90)
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
