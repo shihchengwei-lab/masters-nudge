@@ -101,12 +101,28 @@ class TransportTests(unittest.TestCase):
 
     def test_timeout_terminates_provider_process_tree(self):
         process = mock.Mock(pid=4321)
-        process.communicate.side_effect = subprocess.TimeoutExpired("provider", 1)
+        process.wait.side_effect = subprocess.TimeoutExpired("provider", 1)
         with mock.patch.object(providers.subprocess, "Popen", return_value=process), \
              mock.patch.object(providers, "_terminate_process_tree", return_value=("partial", "")) as terminate:
             with self.assertRaises(subprocess.TimeoutExpired):
                 providers._run_cli_process(["provider"], input_text="data", environment={}, timeout_sec=1)
         terminate.assert_called_once_with(process, log_error=providers._noop)
+
+    @unittest.skipUnless(os.name == "nt", "Windows inherited-handle behavior")
+    def test_exited_provider_does_not_wait_for_a_descendant_holding_its_output(self):
+        child = "import time; time.sleep(3)"
+        provider = (
+            "import subprocess,sys; "
+            f"subprocess.Popen([sys.executable,'-c',{child!r}],stdout=sys.stdout,stderr=sys.stderr)"
+        )
+        probe = (
+            "import sys,time; from masters_nudge.providers import _run_cli_process; "
+            "started=time.monotonic(); "
+            f"_run_cli_process([sys.executable,'-c',{provider!r}],environment={{}},timeout_sec=1); "
+            "raise SystemExit(0 if time.monotonic()-started < 1.5 else 1)"
+        )
+        result = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, timeout=5)
+        self.assertEqual(result.returncode, 0)
 
     @unittest.skipUnless(os.name == "nt", "Windows pipe behavior")
     def test_timeout_still_applies_when_child_never_reads_large_stdin(self):

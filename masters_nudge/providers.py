@@ -82,15 +82,17 @@ def _run_cli_process(
     # Windows' communicate(input=...) writes to the pipe synchronously before
     # waiting with a deadline. A child that stops reading can therefore bypass
     # the timeout. A file-backed stdin makes the deadline own the whole wait.
-    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") if input_text is not None else _null_stdin() as input_stream:
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") if input_text is not None else _null_stdin() as input_stream, \
+         tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stdout_stream, \
+         tempfile.TemporaryFile(mode="w+", encoding="utf-8") as stderr_stream:
         if input_text is not None:
             input_stream.write(input_text)
             input_stream.seek(0)
         process = subprocess.Popen(
             command,
             stdin=input_stream if input_text is not None else None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=stdout_stream,
+            stderr=stderr_stream,
             text=True,
             encoding="utf-8",
             env=environment,
@@ -99,16 +101,18 @@ def _run_cli_process(
             **kwargs,
         )
         try:
-            stdout, stderr = process.communicate(timeout=timeout_sec)
+            process.wait(timeout=timeout_sec)
         except subprocess.TimeoutExpired as exc:
-            collected = _terminate_process_tree(process, log_error=log_error)
-            if isinstance(collected, tuple) and len(collected) == 2:
-                stdout, stderr = collected
-                if stdout:
-                    exc.output = stdout
-                if stderr:
-                    exc.stderr = stderr
+            _terminate_process_tree(process, log_error=log_error)
+            stdout_stream.seek(0)
+            stderr_stream.seek(0)
+            exc.output = stdout_stream.read()
+            exc.stderr = stderr_stream.read()
             raise
+        stdout_stream.seek(0)
+        stderr_stream.seek(0)
+        stdout = stdout_stream.read()
+        stderr = stderr_stream.read()
     return subprocess.CompletedProcess(
         command,
         process.returncode,
