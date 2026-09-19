@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +26,12 @@ class TransportTests(unittest.TestCase):
         Path(args[args.index("--audit") + 1]).write_text(json.dumps({"name": "initialize", "text": "", "fault": ""}) + "\n")
         return subprocess.CompletedProcess(command, 0, '{"type":"turn.completed","usage":{"input_tokens":123}}\n', "")
 
+    def test_windows_prefers_the_native_codex_process_over_the_command_wrapper(self):
+        locations = {"codex.exe": r"C:\native\codex.exe", "codex": r"C:\npm\codex.CMD"}
+        with mock.patch.object(providers.os, "name", "nt"), \
+             mock.patch.object(providers.shutil, "which", side_effect=locations.get):
+            self.assertEqual(providers.resolve_codex_bin(), locations["codex.exe"])
+
     def test_one_prompt_and_only_repository_tools(self):
         with mock.patch.object(providers, "_run_cli_process", side_effect=self.fake_process) as process:
             result = self.call()
@@ -33,6 +40,7 @@ class TransportTests(unittest.TestCase):
         self.assertIn("features.shell_tool=false", args)
         self.assertIn("features.view_image=false", args)
         self.assertIn("features.plugins=false", args)
+        self.assertIn('model_reasoning_effort="medium"', args)
         self.assertIn("mcp_servers.readrepo.required=true", args)
         self.assertIn('mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]', args)
         self.assertIn("read-only", args)
@@ -99,6 +107,51 @@ class TransportTests(unittest.TestCase):
             with self.assertRaises(subprocess.TimeoutExpired):
                 providers._run_cli_process(["provider"], input_text="data", environment={}, timeout_sec=1)
         terminate.assert_called_once_with(process, log_error=providers._noop)
+
+    @unittest.skipUnless(os.name == "nt", "Windows pipe behavior")
+    def test_timeout_still_applies_when_child_never_reads_large_stdin(self):
+        code = (
+            "import subprocess,sys; from masters_nudge.providers import _run_cli_process; "
+            "\ntry: _run_cli_process([sys.executable,'-c','import time; time.sleep(10)'],"
+            "input_text='x'*1000000,environment={},timeout_sec=1)"
+            "\nexcept subprocess.TimeoutExpired: raise SystemExit(0)"
+            "\nraise SystemExit(1)"
+        )
+        result = subprocess.run([sys.executable, "-c", code], cwd=ROOT, timeout=5)
+        self.assertEqual(result.returncode, 0)
+
+    def test_failed_turn_reports_service_error_instead_of_shell_warning(self):
+        message = 'Selected model is at capacity. Please try a different model.'
+        stdout = '\n'.join(json.dumps(event) for event in (
+            {'type': 'thread.started', 'thread_id': 'test'},
+            {'type': 'error', 'message': message},
+            {'type': 'turn.failed', 'error': {'message': message}},
+        ))
+        stderr = 'WARN shell_snapshot: Shell snapshot not supported yet for PowerShell'
+        result = subprocess.CompletedProcess([], 1, stdout, stderr)
+        with mock.patch.object(providers, '_run_cli_process', return_value=result) as process:
+            with self.assertRaises(ToolFault) as caught:
+                self.call()
+        self.assertEqual(caught.exception.detail, f'Codex 結束碼 1：{message}')
+        self.assertEqual(caught.exception.evidence['stdout'], stdout)
+        self.assertEqual(caught.exception.evidence['stderr'], stderr)
+        process.assert_called_once()
+
+    def test_failure_message_uses_terminal_event_then_error_then_stderr(self):
+        cases = (
+            ('{"type":"error","message":"earlier"}\n'
+             '{"type":"turn.failed","error":{"message":"final failure"}}', 'warning', 'final failure'),
+            ('{"type":"error","message":"authentication failed"}', 'warning', 'authentication failed'),
+            ('not json\n[]\nnull\n{"type":"turn.failed","error":null}', 'process failed', 'process failed'),
+            ('', '', '未提供錯誤訊息'),
+        )
+        for stdout, stderr, expected in cases:
+            with self.subTest(expected=expected):
+                result = subprocess.CompletedProcess([], 1, stdout, stderr)
+                with mock.patch.object(providers, '_run_cli_process', return_value=result):
+                    with self.assertRaises(ToolFault) as caught:
+                        self.call()
+                self.assertEqual(caught.exception.detail, f'Codex 結束碼 1：{expected}')
 
     def test_real_stdio_mcp_initializes_reads_and_records(self):
         with tempfile.TemporaryDirectory() as raw:

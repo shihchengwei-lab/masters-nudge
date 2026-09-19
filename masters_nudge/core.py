@@ -23,8 +23,7 @@ class NudgeCore:
     def process_event(self, session: SessionRef, event: ToolCompleted):
         events = (event,)
         payload = [asdict(event)]
-        self.journal.record_batch(session, payload)
-        reserved = self.journal.begin(session)
+        reserved = self.journal.begin(session, payload)
         if reserved is None:
             return None
         attempt, task = reserved
@@ -39,8 +38,7 @@ class NudgeCore:
                 system_prompt=load_system_prompt(prompt_file=self.settings.paths.runtime_dir / "buddy-prompt.txt"),
                 nudge_input=detail["packet"], model=self.settings.model,
                 schema_path=self.settings.paths.runtime_dir / "nudge-schema.json",
-                timeout_sec=task.get("provider_timeout_sec", PROVIDER_TIMEOUT_SEC),
-                workspace_root=packet.workspace,
+                timeout_sec=PROVIDER_TIMEOUT_SEC, workspace_root=packet.workspace,
                 remaining_chars=MATERIAL_MAX_CHARS - packet.material_chars,
                 log_error=self.log_error,
             )
@@ -48,7 +46,9 @@ class NudgeCore:
                           materials=[asdict(line) for line in run.materials],
                           elapsed_seconds=time.monotonic() - started)
             feedback = parse_feedback(run.raw_output)
-            current = self.journal.finish(session, attempt, "feedback" if feedback else "silence", detail)
+            current = self.journal.finish(
+                session, attempt, task, "feedback" if feedback else "silence", detail,
+            )
             if current and feedback:
                 return attempt, feedback
             return None
@@ -56,5 +56,5 @@ class NudgeCore:
             fault = exc if isinstance(exc, ToolFault) else ToolFault("internal", str(exc))
             detail["fault"] = {"kind": fault.kind, "detail": fault.detail}
             detail.update(fault.evidence)
-            self.journal.finish(session, attempt, "fault", detail)
+            self.journal.finish(session, attempt, task, "fault", detail)
             raise fault

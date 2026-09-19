@@ -12,7 +12,7 @@ from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 
 import masters_nudge_cli
-from masters_nudge.runtime import RuntimePaths, RuntimeSettings
+from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSettings
 from masters_nudge.settings import load_user_settings, save_provider
 from tools.build_plugin import check_plugin
 
@@ -112,19 +112,30 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse"})
 
+    def test_post_tool_hook_is_a_watchdog_not_the_provider_deadline(self):
+        hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
+        hook = hooks["PostToolUse"][0]["hooks"][0]
+        self.assertNotIn("timeout", hook)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 90)
+
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
 
-    def test_provider_prompt_reasons_from_required_roots_before_downstream_checks(self):
+    def test_provider_prompt_challenges_the_whole_change_before_inspecting_internals(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
-        roots = normalized.index("separate what the task requires from choices introduced by the implementation")
+        minimum = normalized.index("Without assuming the current change is necessary")
+        whole_change = normalized.index("Compare the change as a whole")
+        removal = normalized.index("compare removing it entirely, replacing it, and keeping it")
+        internals = normalized.index("inspect its internal ownership")
         checks = normalized.index("focus on these six checks")
-        self.assertLess(roots, checks)
-        self.assertIn("first compare removing it entirely with keeping it", normalized)
+        self.assertLess(minimum, whole_change)
+        self.assertLess(whole_change, removal)
+        self.assertLess(removal, internals)
+        self.assertLess(internals, checks)
+        self.assertNotIn("For every concept, input, mode, state, branch or abstraction", normalized)
         self.assertIn("earliest remaining choice", normalized)
-        self.assertIn("trace each alternative to the same task-required result", normalized)
         self.assertIn("both the decisions removed and the decisions introduced", normalized)
         self.assertIn("can interrupt the Actor only once", normalized)
         self.assertNotIn("trace the same input again", normalized)
@@ -135,6 +146,8 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertIn("replace its relationship with one concrete alternative", normalized)
         self.assertIn("The three fields form one continuous message", normalized)
         self.assertIn("question states only the remaining uncertainty", normalized)
+        self.assertIn("Prefer asking whether the concrete alternative removes the identified burden", normalized)
+        self.assertIn("do not squeeze the full internal comparison into the question", normalized)
         self.assertNotIn("alternative you would ask about", normalized)
         self.assertIn('"question":"哪個必要行為要求保留兩份狀態？"', prompt)
 

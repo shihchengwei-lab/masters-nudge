@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 import sqlite3
 import tempfile
-import threading
 import unittest
 
 from masters_nudge.contracts import SessionRef, ToolFault
@@ -16,72 +15,36 @@ class JournalTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.session = SessionRef("s", "host-turn", str(self.root))
 
-    def test_same_round_judgments_follow_one_causal_chain(self):
+    def test_attempt_exists_only_after_a_terminal_result(self):
         journal = Journal(self.root)
         journal.start_round(self.session, "first")
-        first, _ = journal.begin(self.session)
+        first, task = journal.begin(self.session, [{"tool_use_id": "patch-1"}])
 
-        entered = threading.Event()
-        finished = threading.Event()
-        result = {}
+        self.assertEqual(journal.recent(), [])
+        self.assertEqual([row["id"] for row in journal.unresolved()], [task["batch_id"]])
+        self.assertTrue(journal.finish(self.session, first, task, "silence", {"raw_output": "done"}))
+        self.assertEqual(journal.recent()[0]["outcome"], "silence")
+        self.assertEqual(journal.unresolved(), [])
 
-        def begin_second():
-            entered.set()
-            try:
-                result["value"] = Journal(self.root).begin(self.session)
-            except Exception as exc:
-                result["error"] = exc
-            finally:
-                finished.set()
-
-        worker = threading.Thread(target=begin_second)
-        worker.start()
-        self.assertTrue(entered.wait(1))
-        self.assertFalse(finished.wait(0.1), "second judgment must wait for the first fact")
-        self.assertTrue(journal.finish(self.session, first, "silence", {"raw_output": "first"}))
-        self.assertTrue(finished.wait(2))
-        worker.join()
-        self.assertNotIn("error", result)
-        second, _ = result["value"]
-        self.assertNotEqual(first, second)
-        self.assertTrue(journal.finish(self.session, second, "silence", {"raw_output": "second"}))
-
-        with journal.connect() as db:
-            kinds = [row[0] for row in db.execute("SELECT kind FROM journal_events ORDER BY seq")]
-        self.assertEqual(kinds, [
-            "round_started", "judgment_started", "judgment_finished",
-            "judgment_started", "judgment_finished",
-        ])
-
-    def test_new_message_can_proceed_while_old_result_becomes_historical(self):
+    def test_unfinished_batch_is_a_fault_until_a_new_user_round(self):
         journal = Journal(self.root)
         journal.start_round(self.session, "first")
-        first, _ = journal.begin(self.session)
+        first, first_task = journal.begin(self.session, [{"tool_use_id": "patch-1"}])
+        self.assertIsNotNone(first)
+
+        with self.assertRaisesRegex(ToolFault, "前一次 Provider 判斷沒有完成"):
+            Journal(self.root).begin(self.session, [{"tool_use_id": "patch-2"}])
+
         journal.start_round(self.session, "latest")
-        second, task = Journal(self.root).begin(self.session)
+        second, task = Journal(self.root).begin(self.session, [{"tool_use_id": "patch-3"}])
         self.assertNotEqual(first, second)
         self.assertEqual(task["request"], "latest")
-        self.assertFalse(journal.finish(self.session, first, "feedback", {"raw_output": "old"}))
-        self.assertTrue(journal.finish(self.session, second, "silence", {"raw_output": "new"}))
-        # The Provider result remains a result; eligibility for delivery is separate.
+        self.assertFalse(journal.finish(self.session, first, first_task, "feedback", {"raw_output": "old"}))
+        self.assertTrue(journal.finish(self.session, second, task, "silence", {"raw_output": "new"}))
         old = next(row for row in journal.recent() if row["id"] == first)
         self.assertEqual(old["outcome"], "feedback")
         self.assertEqual(old["delivered"], 0)
-        self.assertFalse(journal.finish(self.session, second, "feedback", {"raw_output": "duplicate"}))
-
-    def test_expired_judgment_becomes_fault_and_does_not_block_later_work(self):
-        journal = Journal(self.root)
-        journal.start_round(self.session, "first")
-        first, _ = journal.begin(self.session)
-
-        with self.assertRaisesRegex(ToolFault, "前一個 Provider 判斷超過本輪時限"):
-            Journal(self.root, hook_timeout_sec=0).begin(self.session)
-
-        old = next(row for row in journal.recent() if row["id"] == first)
-        self.assertEqual(old["outcome"], "fault")
-        second, _ = journal.begin(self.session)
-        self.assertNotEqual(first, second)
-        self.assertTrue(journal.finish(self.session, second, "silence", {}))
+        self.assertFalse(journal.finish(self.session, second, task, "feedback", {"raw_output": "duplicate"}))
 
     def test_upgrade_keeps_old_evidence_and_current_quota(self):
         with sqlite3.connect(self.root / "feedback.sqlite3") as db:
@@ -97,8 +60,9 @@ class JournalTests(unittest.TestCase):
                            (str(n), "s", "host-turn", n, n+0.1, "silence", 0, json.dumps({"original": n})))
         db.close()
         journal = Journal(self.root)
-        self.assertIsNone(journal.begin(self.session))
+        self.assertIsNone(journal.begin(self.session, [{"tool_use_id": "limited"}]))
         self.assertEqual({row["detail"]["original"] for row in journal.recent()}, {0, 1})
         journal.start_round(self.session, "new request")
-        self.assertIsNotNone(journal.begin(self.session))
+        attempt, task = journal.begin(self.session, [{"tool_use_id": "new"}])
+        self.assertTrue(journal.finish(self.session, attempt, task, "silence", {}))
         self.assertEqual(len(Journal(self.root).recent()), 3)

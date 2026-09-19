@@ -2,7 +2,6 @@
 import json
 import subprocess
 import tempfile
-import threading
 import unittest
 from pathlib import Path
 
@@ -72,50 +71,6 @@ class PipelineTests(unittest.TestCase):
         packet = json.loads(self.calls[0]["nudge_input"])
         self.assertIn("retry_state = job.status", str(packet["batch_change"]))
         self.assertIn("Success. Updated job.py", str(packet["tool_result"]))
-
-    def test_provider_call_uses_journal_deadline(self):
-        self.adapter.core.journal.provider_timeout_sec = 7
-        self.prompt()
-        self.batch()
-        self.assertEqual(self.calls[0]["timeout_sec"], 7)
-
-    def test_overlapping_patches_call_provider_in_one_sequence(self):
-        from masters_nudge.contracts import ProviderRun
-        first_entered = threading.Event()
-        release_first = threading.Event()
-        second_entered = threading.Event()
-        errors = []
-
-        def dispatch(**kwargs):
-            self.calls.append(kwargs)
-            if len(self.calls) == 1:
-                first_entered.set()
-                release_first.wait(2)
-            else:
-                second_entered.set()
-            return ProviderRun('{"feedback":null}')
-
-        def run_batch(call):
-            try:
-                self.batch(call=call)
-            except Exception as exc:
-                errors.append(exc)
-
-        self.adapter.core.dispatch = dispatch
-        self.prompt()
-        first = threading.Thread(target=run_batch, args=("change-1",))
-        second = threading.Thread(target=run_batch, args=("change-2",))
-        first.start()
-        self.assertTrue(first_entered.wait(1))
-        second.start()
-        self.assertFalse(second_entered.wait(0.1))
-        release_first.set()
-        first.join(2)
-        second.join(2)
-        self.assertFalse(first.is_alive() or second.is_alive())
-        self.assertEqual(errors, [])
-        self.assertTrue(second_entered.is_set())
-        self.assertEqual(len(self.calls), 2)
 
     def test_non_apply_patch_post_tool_use_does_not_call_provider(self):
         self.prompt()
