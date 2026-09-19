@@ -115,8 +115,8 @@ class SettingsPackageTests(unittest.TestCase):
     def test_post_tool_hook_is_a_watchdog_not_the_provider_deadline(self):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
-        self.assertNotIn("timeout", hook)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 90)
+        self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 120)
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
