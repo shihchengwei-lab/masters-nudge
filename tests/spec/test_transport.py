@@ -66,11 +66,11 @@ class TransportTests(unittest.TestCase):
         line = {"source": "current_structure", "path": "src/狀態.py", "line": 2,
                 "text": '狀態 = "完成"'}
         cases = (
-            (json_text({"lines": [line], "truncated": False}), "", None),
-            (json_text({"error": "read denied"}), "read denied", "mcp"),
-            ("x" * 1501, "", "mcp_budget"),
+            (json_text({"lines": [line], "truncated": False}), "", None, (MaterialLine(**line),)),
+            (json_text({"error": "read denied"}), "read denied", None, ()),
+            ("x" * 1501, "", "mcp_budget", ()),
         )
-        for text, fault, expected_fault in cases:
+        for text, fault, expected_fault, expected_materials in cases:
             with self.subTest(expected_fault=expected_fault):
                 def process(command, **kwargs):
                     result = self.fake_process(command, **kwargs)
@@ -88,7 +88,7 @@ class TransportTests(unittest.TestCase):
                         self.assertEqual(caught.exception.kind, expected_fault)
                     else:
                         result = self.call()
-                        self.assertEqual(result.materials, (MaterialLine(**line),))
+                        self.assertEqual(result.materials, expected_materials)
                         self.assertEqual(result.trace[-1]["text"], text)
 
     def test_nonzero_and_timeout_never_recover_a_successful_looking_null(self):

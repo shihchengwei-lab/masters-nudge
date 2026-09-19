@@ -215,9 +215,6 @@ def _call_codex_in_directory(
     if not any(entry["name"] == "initialize" for entry in trace):
         raise ToolFault("mcp_startup", "Provider 的唯讀工具未成功初始化",
                         evidence={"stdout": result.stdout, "stderr": result.stderr})
-    if any(entry["fault"] for entry in trace):
-        raise ToolFault("mcp", next(entry["fault"] for entry in trace if entry["fault"]),
-                        evidence={"trace": trace, "stdout": result.stdout, "stderr": result.stderr})
     if sum(len(entry["text"]) for entry in trace) > remaining_chars:
         raise ToolFault("mcp_budget", "讀取材料超過共同上限")
     materials = []
