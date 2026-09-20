@@ -4,12 +4,12 @@
 
 在執行者修改程式之後，提供一則小幅反饋，讓執行者重新判斷資料關係。
 工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；目前衛冕版的效果證據見
-[直接通道對比結果](experiments/champion-vs-preserved-result-20260920/RESULT.zh-TW.md)。
+[直接通道對比結果](experiments/champion-vs-preserved-result-20260920/RESULT.zh-TW.md)及
+[Actor 重新判斷提示對比](benchmark/formal-v1/DELIVERY-RESULTS.md)。
 
 使用者要求先交給執行者。每次 `apply_patch` 成功後，工具透過原生 PostToolUse，立即將任務、這次修改、成功結果及修改後工作區交給
 OpenAI Provider。Provider 以 Linus Torvalds 的六條思考準則查看材料，需要更多脈絡時自行搜尋或讀檔。
-有反饋時，工具保留原本的成功工具結果，再把 `OBSERVED`、`VIOLATES`、`PREFER` 三欄附在同一則結果後面。
-執行者決定是否採納建議，負責實作及驗證。
+有反饋時，工具保留原本的成功工具結果，再把 `OBSERVED`、`VIOLATES`、`PREFER` 三欄附在同一則結果後面，並要求執行者先判斷目前做法是否為任務必要。執行者仍決定是否採納建議，並負責實作及驗證。
 
 每輪最多三次反饋或兩次沉默；任一上限到達便停止。使用者新訊息重置額度，衝突要求以最新的為準。
 正常但沒有具體疑點時沉默。工具錯誤另外顯示「本輪反饋未執行」，不冒充沉默，不計入額度。

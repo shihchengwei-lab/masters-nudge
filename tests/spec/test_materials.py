@@ -20,7 +20,9 @@ class ContractTests(unittest.TestCase):
         feedback = parse_feedback(json.dumps(self.feedback()))
         self.assertEqual(
             delivery_text(feedback),
-            "Masters’ Nudge\nOBSERVED: x := y\nVIOLATES: sources(y) = 2\nPREFER: consumer <- y",
+            "Masters’ Nudge\nOBSERVED: x := y\nVIOLATES: sources(y) = 2\nPREFER: consumer <- y\n"
+            "Before continuing, decide whether OBSERVED is required by the task. "
+            "If not, consider PREFER. Implementation remains yours.",
         )
 
     def test_output_limits_and_partial_feedback(self):

@@ -4,7 +4,11 @@ from .contracts import Feedback, ToolFault, FEEDBACK_MAX_CHARS
 
 
 def delivery_text(feedback: Feedback) -> str:
-    return f"Masters’ Nudge\n{feedback.message}"
+    return (
+        f"Masters’ Nudge\n{feedback.message}\n"
+        "Before continuing, decide whether OBSERVED is required by the task. "
+        "If not, consider PREFER. Implementation remains yours."
+    )
 
 
 def load_system_prompt(*, prompt_file: Path) -> str:
