@@ -40,7 +40,7 @@ class NudgeCore:
                 schema_path=self.settings.paths.runtime_dir / "nudge-schema.json",
                 timeout_sec=task.get("provider_timeout_sec", PROVIDER_TIMEOUT_SEC),
                 workspace_root=packet.workspace,
-                remaining_chars=MATERIAL_MAX_CHARS - packet.material_chars,
+                remaining_chars=max(0, MATERIAL_MAX_CHARS - packet.material_chars),
                 log_error=self.log_error,
             )
             detail.update(raw_output=run.raw_output, usage=run.usage, trace=run.trace,

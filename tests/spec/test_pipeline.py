@@ -73,6 +73,15 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("retry_state = job.status", str(packet["batch_change"]))
         self.assertIn("Success. Updated job.py", str(packet["tool_result"]))
 
+    def test_required_material_over_target_still_calls_provider_without_repo_budget(self):
+        self.prompt("t" * 12000)
+        patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+" + "x" * 9000 + "\n*** End Patch"
+        self.batch(tool_input=patch)
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.calls[0]["remaining_chars"], 0)
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(len(packet["task_contract"]), 1)
+
     def test_overlapping_patches_call_provider_in_one_sequence(self):
         from masters_nudge.contracts import ProviderRun
         first_entered = threading.Event()

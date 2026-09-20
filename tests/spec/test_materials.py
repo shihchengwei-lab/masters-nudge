@@ -63,8 +63,18 @@ class ContractTests(unittest.TestCase):
     def test_packet_can_have_empty_sources_and_never_silently_truncates_contract(self):
         packet = MaterialPacket(material_lines("task_contract", "task/latest", "保留 A"), "repo")
         self.assertEqual(json.loads(fit_packet(packet).render())["before_structure"], [])
-        with self.assertRaises(ToolFault):
-            fit_packet(MaterialPacket(material_lines("task_contract", "task/latest", "x" * 21000), "repo"))
+        oversized = MaterialPacket(material_lines("task_contract", "task/latest", "x" * 21000), "repo")
+        self.assertEqual(fit_packet(oversized), oversized)
+
+    def test_equal_goal_and_request_have_one_latest_contract_copy(self):
+        from masters_nudge.contracts import SessionRef
+        from masters_nudge.evidence import build_packet
+        task = "same contract"
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": task, "request": task}, ())
+        contracts = [line for line in packet.lines if line.source == "task_contract"]
+        self.assertEqual([(line.path, line.text) for line in contracts], [("task/latest", task)])
 
     def test_shared_budget_counts_five_categories_not_transport_metadata(self):
         packet = MaterialPacket(material_lines("task_contract", "task/latest", "保留 A"),
