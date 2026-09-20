@@ -2,6 +2,7 @@
 import json
 import subprocess
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -55,8 +56,8 @@ class PipelineTests(unittest.TestCase):
         self.reply = {"feedback": {"criterion": 4,
             "evidence": [{"source": "batch_change", "location": "tool/call-1/input:4",
                           "excerpt": "retry_state = job.status"}],
-            "fact": "retry_state 複製 job.status", "relationship": "同一狀態有兩份表示",
-            "question": "若只保留 job.status，哪個行為仍需要複本？"}}
+            "observed": "retry_state := job.status", "violates": "sources(job.status) = 2",
+            "prefer": "UI <- job.status"}}
 
     def test_prompt_and_reads_do_not_call_provider(self):
         self.assertIsNone(self.prompt())
@@ -71,6 +72,44 @@ class PipelineTests(unittest.TestCase):
         packet = json.loads(self.calls[0]["nudge_input"])
         self.assertIn("retry_state = job.status", str(packet["batch_change"]))
         self.assertIn("Success. Updated job.py", str(packet["tool_result"]))
+
+    def test_overlapping_patches_call_provider_in_one_sequence(self):
+        from masters_nudge.contracts import ProviderRun
+        first_entered = threading.Event()
+        release_first = threading.Event()
+        second_entered = threading.Event()
+        errors = []
+
+        def dispatch(**kwargs):
+            self.calls.append(kwargs)
+            if len(self.calls) == 1:
+                first_entered.set()
+                release_first.wait(2)
+            else:
+                second_entered.set()
+            return ProviderRun('{"feedback":null}')
+
+        def run_batch(call):
+            try:
+                self.batch(call=call)
+            except Exception as exc:
+                errors.append(exc)
+
+        self.adapter.core.dispatch = dispatch
+        self.prompt()
+        first = threading.Thread(target=run_batch, args=("change-1",))
+        second = threading.Thread(target=run_batch, args=("change-2",))
+        first.start()
+        self.assertTrue(first_entered.wait(1))
+        second.start()
+        self.assertFalse(second_entered.wait(0.1))
+        release_first.set()
+        first.join(2)
+        second.join(2)
+        self.assertFalse(first.is_alive() or second.is_alive())
+        self.assertEqual(errors, [])
+        self.assertTrue(second_entered.is_set())
+        self.assertEqual(len(self.calls), 2)
 
     def test_non_apply_patch_post_tool_use_does_not_call_provider(self):
         self.prompt()
@@ -138,13 +177,17 @@ class PipelineTests(unittest.TestCase):
         self.batch({"command": "Write-Output '*** Begin Patch'"}, tool="Bash")
         self.assertEqual(len(self.calls), 1)
 
-    def test_feedback_only_delivers_three_text_fields(self):
+    def test_feedback_delivers_fixed_formal_fields(self):
         self.prompt()
         self.feedback()
-        result = self.batch()
-        text = result["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("待執行者判斷", text)
-        self.assertIn(self.reply["feedback"]["question"], text)
+        result = self.batch(output={"ok": True})
+        self.assertFalse(result["continue"])
+        self.assertNotIn("hookSpecificOutput", result)
+        text = result["stopReason"]
+        self.assertTrue(text.startswith('{"ok":true}\n\n'))
+        self.assertIn("OBSERVED: retry_state := job.status", text)
+        self.assertIn("VIOLATES: sources(job.status) = 2", text)
+        self.assertIn("PREFER: UI <- job.status", text)
         self.assertNotIn("tool/call-1", text)
         self.assertNotIn("criterion", text)
 
@@ -193,11 +236,9 @@ class PipelineTests(unittest.TestCase):
         self.feedback()
         self.reply["feedback"]["evidence"][0]["location"] = "tool/call-1/input:5"
         result = self.batch()
-        self.assertIn("hookSpecificOutput", result)
-        self.assertIn(self.reply["feedback"]["question"],
-                      result["hookSpecificOutput"]["additionalContext"])
+        self.assertIn(self.reply["feedback"]["prefer"], result["stopReason"])
 
-    def test_fault_does_not_consume_silence(self):
+    def test_fault_ends_the_round_without_becoming_silence(self):
         from masters_nudge.contracts import ToolFault
         self.prompt()
         self.reply = ToolFault("timeout", "provider timed out")
@@ -205,8 +246,10 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("本輪反饋未執行", result["systemMessage"])
         self.reply = {"feedback": None}
         for _ in range(3):
-            self.batch()
-        self.assertEqual(len(self.calls), 3)
+            result = self.batch()
+            self.assertIn("本輪反饋未執行", result["systemMessage"])
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(self.adapter.core.journal.unresolved(), [])
 
     def test_new_request_during_judgment_withholds_old_feedback(self):
         self.prompt()

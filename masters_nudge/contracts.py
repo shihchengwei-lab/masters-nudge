@@ -116,13 +116,13 @@ class Evidence:
 class Feedback:
     criterion: int
     evidence: tuple[Evidence, ...]
-    fact: str
-    relationship: str
-    question: str
+    observed: str
+    violates: str
+    prefer: str
 
     @property
     def message(self) -> str:
-        return f"{self.fact}；{self.relationship}。{self.question}"
+        return f"OBSERVED: {self.observed}\nVIOLATES: {self.violates}\nPREFER: {self.prefer}"
 
 
 @dataclass(frozen=True)

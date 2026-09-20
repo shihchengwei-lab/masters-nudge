@@ -13,13 +13,13 @@ if __package__ in (None, ""):
 from masters_nudge.contracts import MaterialLine, ToolFault, find_git_root, json_text
 
 TOOLS = [
-    {"name": "search_repo", "description": "Search literal text in the Git workspace; return exact file/line/text.",
+    {"name": "search_repo", "description": "Search literal text in the Git workspace; return exact file/line/text. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string", "minLength": 1},
          "path": {"type": "string"},
          "max_results": {"type": "integer", "minimum": 1, "maximum": 50}},
          "required": ["query"], "additionalProperties": False}},
-    {"name": "read_file", "description": "Read a file range in the Git workspace; return exact file/line/text.",
+    {"name": "read_file", "description": "Read a file range in the Git workspace; return exact file/line/text. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
      "inputSchema": {"type": "object", "properties": {
          "path": {"type": "string", "minLength": 1},
          "start_line": {"type": "integer", "minimum": 1},
@@ -165,7 +165,11 @@ class RepositoryTools:
                   "exhausted": exhausted, "lines": lines}
         with self.audit.open("a", encoding="utf-8") as stream:
             stream.write(json_text(record) + "\n")
-        return {"content": [{"type": "text", "text": text}], "isError": bool(fault)}
+        response = {"lines": lines, "truncated": truncated, "exhausted": exhausted}
+        if fault:
+            response["error"] = fault
+        return {"content": [{"type": "text", "text": json_text(response)}],
+                "isError": bool(fault)}
 
 
 def serve(tools: RepositoryTools):

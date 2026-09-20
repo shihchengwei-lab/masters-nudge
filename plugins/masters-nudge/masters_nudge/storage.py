@@ -9,12 +9,19 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .contracts import FEEDBACK_LIMIT, SILENCE_LIMIT, SessionRef, ToolFault, json_text
+from .runtime import HOOK_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC
+
+FINALIZATION_RESERVE_SEC = 20
 
 
 class Journal:
-    def __init__(self, directory: Path):
+    def __init__(self, directory: Path, *, hook_timeout_sec: float = HOOK_TIMEOUT_SEC,
+                 provider_timeout_sec: float = PROVIDER_TIMEOUT_SEC, poll_interval: float = 0.05):
         directory.mkdir(parents=True, exist_ok=True)
         self.path = directory / "feedback.sqlite3"
+        self.hook_timeout_sec = hook_timeout_sec
+        self.provider_timeout_sec = provider_timeout_sec
+        self.poll_interval = poll_interval
         with self.connect() as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS rounds(
@@ -28,6 +35,15 @@ class Journal:
                 CREATE TABLE IF NOT EXISTS batches(
                     id TEXT PRIMARY KEY, session TEXT NOT NULL, turn TEXT NOT NULL,
                     received REAL NOT NULL, payload TEXT NOT NULL, round_id TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS judgment_events(
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session TEXT NOT NULL, turn TEXT NOT NULL, round_id TEXT NOT NULL,
+                    happened REAL NOT NULL, kind TEXT NOT NULL,
+                    attempt TEXT NOT NULL, batch_id TEXT NOT NULL, payload TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS judgment_events_round_seq
+                    ON judgment_events(round_id, seq);
+                CREATE INDEX IF NOT EXISTS judgment_events_attempt_seq
+                    ON judgment_events(attempt, seq);
             """)
             db.execute("BEGIN IMMEDIATE")
             for table in ("rounds", "attempts"):
@@ -53,6 +69,7 @@ class Journal:
                            (round_id, row["session"], row["turn"]))
             for row in db.execute("SELECT rowid FROM batches WHERE id IS NULL OR id=''").fetchall():
                 db.execute("UPDATE batches SET id=? WHERE rowid=?", (uuid.uuid4().hex, row["rowid"]))
+            self._migrate_judgment_events(db)
 
     @contextmanager
     def connect(self):
@@ -77,8 +94,99 @@ class Journal:
                 (session.session_id, session.turn_id, original, request, uuid.uuid4().hex),
             )
 
+    @staticmethod
+    def _append_event(db, *, session: str, turn: str, round_id: str, kind: str,
+                      attempt: str, batch_id: str, payload: object = None,
+                      happened: float | None = None):
+        db.execute(
+            "INSERT INTO judgment_events(session,turn,round_id,happened,kind,attempt,batch_id,payload) "
+            "VALUES(?,?,?,?,?,?,?,?)",
+            (session, turn, round_id, time.time() if happened is None else happened,
+             kind, attempt, batch_id, json_text({} if payload is None else payload)),
+        )
+
+    def _migrate_judgment_events(self, db):
+        if db.execute("SELECT 1 FROM judgment_events LIMIT 1").fetchone():
+            return
+        for row in db.execute("SELECT * FROM attempts ORDER BY started,id").fetchall():
+            batch_id = row["batch_id"] or f"legacy-{row['id']}"
+            self._append_event(
+                db, session=row["session"], turn=row["turn"], round_id=row["round_id"],
+                kind="started", attempt=row["id"], batch_id=batch_id, happened=row["started"],
+            )
+            if row["outcome"] is not None:
+                self._append_event(
+                    db, session=row["session"], turn=row["turn"], round_id=row["round_id"],
+                    kind="finished", attempt=row["id"], batch_id=batch_id,
+                    happened=row["finished"] or row["started"],
+                    payload={"outcome": row["outcome"], "detail": json.loads(row["detail"])},
+                )
+
+    @staticmethod
+    def _fold_events(rows) -> list[dict]:
+        attempts = {}
+        for row in rows:
+            item = attempts.setdefault(row["attempt"], {
+                "id": row["attempt"], "batch_id": row["batch_id"],
+                "session": row["session"], "turn": row["turn"], "round_id": row["round_id"],
+                "queued": None, "started": None, "finished": None, "outcome": None, "detail": {},
+            })
+            if row["kind"] == "queued":
+                item["queued"] = row["happened"]
+            elif row["kind"] == "started":
+                item["started"] = row["happened"]
+            elif row["kind"] == "finished":
+                value = json.loads(row["payload"])
+                item.update(finished=row["happened"], outcome=value.get("outcome"),
+                            detail=value.get("detail") if isinstance(value.get("detail"), dict) else {})
+            elif row["kind"] == "skipped":
+                item.update(finished=row["happened"], outcome="skipped")
+        return list(attempts.values())
+
+    def _round_events(self, db, round_id: str) -> list[dict]:
+        return self._fold_events(db.execute(
+            "SELECT * FROM judgment_events WHERE round_id=? ORDER BY seq", (round_id,),
+        ))
+
+    def _finish_event(self, db, item: dict, outcome: str, detail: dict):
+        finished = time.time()
+        self._append_event(
+            db, session=item["session"], turn=item["turn"], round_id=item["round_id"],
+            kind="finished", attempt=item["id"], batch_id=item["batch_id"],
+            happened=finished, payload={"outcome": outcome, "detail": detail},
+        )
+        db.execute(
+            "INSERT OR IGNORE INTO attempts("
+            "id,session,turn,started,finished,outcome,delivered,detail,round_id,batch_id"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (item["id"], item["session"], item["turn"], item["started"] or item["queued"],
+             finished, outcome, 0, json_text(detail), item["round_id"], item["batch_id"]),
+        )
+
+    def _skip_queued(self, db, items: list[dict], cause: str):
+        """Make every follower terminal when its round can no longer produce judgments."""
+        for item in items:
+            if (item["id"] != cause and item["queued"] is not None
+                    and item["started"] is None and item["finished"] is None):
+                self._append_event(
+                    db, session=item["session"], turn=item["turn"], round_id=item["round_id"],
+                    kind="skipped", attempt=item["id"], batch_id=item["batch_id"],
+                    payload={"cause": cause},
+                )
+
+    @staticmethod
+    def _fault(items: list[dict]) -> dict | None:
+        return next((item for item in items if item["outcome"] == "fault"), None)
+
+    @staticmethod
+    def _tool_fault(item: dict) -> ToolFault:
+        fault = item["detail"].get("fault", {})
+        return ToolFault(fault.get("kind", "interrupted"),
+                         fault.get("detail", "前一個 Provider 判斷失敗"))
+
     def begin(self, session: SessionRef, payload: object) -> tuple[str, dict] | None:
-        """Record one eligible patch; no Provider attempt exists before its terminal result."""
+        """Queue one patch and claim it only after every earlier judgment is terminal."""
+        wait_started = time.monotonic()
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
@@ -86,13 +194,9 @@ class Journal:
                 raise ToolFault("input", "缺少本輪使用者要求事件")
             if row["turn"] != session.turn_id:
                 return None
-            unresolved = db.execute(
-                "SELECT b.id FROM batches b LEFT JOIN attempts a ON a.batch_id=b.id "
-                "WHERE b.round_id=? AND a.id IS NULL LIMIT 1",
-                (row["round_id"],),
-            ).fetchone()
-            if unresolved is not None:
-                raise ToolFault("interrupted", "前一次 Provider 判斷沒有完成，本輪工具故障")
+            fault = self._fault(self._round_events(db, row["round_id"]))
+            if fault is not None:
+                raise self._tool_fault(fault)
             counts = {item["outcome"]: item["n"] for item in db.execute(
                 "SELECT outcome, COUNT(*) n FROM attempts WHERE round_id=? GROUP BY outcome",
                 (row["round_id"],),
@@ -106,7 +210,77 @@ class Journal:
                 "INSERT INTO batches(id,session,turn,received,payload,round_id) VALUES(?,?,?,?,?,?)",
                 (batch_id, session.session_id, session.turn_id, started, json_text(payload), row["round_id"]),
             )
-            return attempt, {**dict(row), "batch_id": batch_id, "started": started}
+            self._append_event(
+                db, session=session.session_id, turn=session.turn_id, round_id=row["round_id"],
+                kind="queued", attempt=attempt, batch_id=batch_id, happened=started,
+            )
+
+        while True:
+            should_wait = False
+            fault_to_raise = None
+            with self.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                current = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
+                if current is None or current["turn"] != session.turn_id:
+                    return None
+                items = self._round_events(db, current["round_id"])
+                fault = self._fault(items)
+                if fault is not None:
+                    self._skip_queued(db, items, fault["id"])
+                    fault_to_raise = self._tool_fault(fault)
+                else:
+                    active = next((item for item in items if item["started"] is not None
+                                   and item["finished"] is None), None)
+                    if active is not None:
+                        deadline = active["started"] + self.provider_timeout_sec + FINALIZATION_RESERVE_SEC
+                        if time.time() >= deadline:
+                            detail = {"fault": {"kind": "timeout",
+                                               "detail": "前一個 Provider 判斷未在期限內留下結果"}}
+                            self._finish_event(db, active, "fault", detail)
+                            self._skip_queued(db, items, active["id"])
+                            fault_to_raise = ToolFault("timeout", detail["fault"]["detail"])
+                        else:
+                            should_wait = True
+                    else:
+                        queued = [item for item in items if item["queued"] is not None
+                                  and item["started"] is None and item["finished"] is None]
+                        queued.sort(key=lambda item: item["queued"])
+                        own = next(item for item in items if item["id"] == attempt)
+                        if queued and queued[0]["id"] == attempt:
+                            counts = {item["outcome"]: item["n"] for item in db.execute(
+                                "SELECT outcome, COUNT(*) n FROM attempts WHERE round_id=? GROUP BY outcome",
+                                (current["round_id"],),
+                            )}
+                            if (counts.get("feedback", 0) >= FEEDBACK_LIMIT
+                                    or counts.get("silence", 0) >= SILENCE_LIMIT):
+                                self._append_event(
+                                    db, session=own["session"], turn=own["turn"], round_id=own["round_id"],
+                                    kind="skipped", attempt=attempt, batch_id=batch_id,
+                                )
+                                return None
+                            elapsed = time.monotonic() - wait_started
+                            remaining = self.hook_timeout_sec - elapsed - FINALIZATION_RESERVE_SEC
+                            if remaining <= 0:
+                                detail = {"fault": {"kind": "timeout",
+                                                   "detail": "等待前一個 Provider 判斷後已無執行時間"}}
+                                self._finish_event(db, own, "fault", detail)
+                                self._skip_queued(db, items, own["id"])
+                                fault_to_raise = ToolFault("timeout", detail["fault"]["detail"])
+                            else:
+                                claim_time = time.time()
+                                self._append_event(
+                                    db, session=own["session"], turn=own["turn"],
+                                    round_id=own["round_id"], kind="started", attempt=attempt,
+                                    batch_id=batch_id, happened=claim_time,
+                                )
+                                return attempt, {**dict(current), "batch_id": batch_id,
+                                                 "started": claim_time,
+                                                 "provider_timeout_sec": min(self.provider_timeout_sec, remaining)}
+                        should_wait = True
+            if fault_to_raise is not None:
+                raise fault_to_raise
+            if should_wait:
+                time.sleep(self.poll_interval)
 
     def finish(
         self, session: SessionRef, attempt: str, task: dict, outcome: str, detail: dict,
@@ -118,26 +292,12 @@ class Journal:
             return False
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            batch = db.execute(
-                "SELECT * FROM batches WHERE id=? AND round_id=?",
-                (batch_id, round_id),
-            ).fetchone()
-            existing = db.execute(
-                "SELECT 1 FROM attempts WHERE id=? OR batch_id=? LIMIT 1",
-                (attempt, batch_id),
-            ).fetchone()
-            if batch is None or existing is not None:
+            items = self._round_events(db, round_id)
+            item = next((value for value in items if value["id"] == attempt
+                         and value["batch_id"] == batch_id), None)
+            if item is None or item["started"] is None or item["finished"] is not None:
                 return False
-            finished = time.time()
-            db.execute(
-                "INSERT INTO attempts("
-                "id,session,turn,started,finished,outcome,delivered,detail,round_id,batch_id"
-                ") VALUES(?,?,?,?,?,?,?,?,?,?)",
-                (
-                    attempt, batch["session"], batch["turn"], task.get("started", batch["received"]),
-                    finished, outcome, 0, json_text(detail), round_id, batch_id,
-                ),
-            )
+            self._finish_event(db, item, outcome, detail)
             current = db.execute(
                 "SELECT round_id FROM rounds WHERE session=?",
                 (session.session_id,),
@@ -151,8 +311,10 @@ class Journal:
     def unresolved(self) -> list[dict]:
         with self.connect() as db:
             return [dict(row) for row in db.execute(
-                "SELECT b.* FROM batches b LEFT JOIN attempts a ON a.batch_id=b.id "
-                "WHERE b.round_id<>'' AND a.id IS NULL ORDER BY b.received"
+                "SELECT b.* FROM batches b WHERE b.round_id<>'' AND EXISTS("
+                "SELECT 1 FROM judgment_events q WHERE q.batch_id=b.id AND q.kind IN ('queued','started')"
+                ") AND NOT EXISTS(SELECT 1 FROM judgment_events f WHERE f.batch_id=b.id "
+                "AND f.kind IN ('finished','skipped')) ORDER BY b.received"
             )]
 
     def recent(self, limit: int = 20) -> list[dict]:

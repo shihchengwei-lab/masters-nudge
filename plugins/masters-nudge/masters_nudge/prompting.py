@@ -4,7 +4,7 @@ from .contracts import Feedback, ToolFault, FEEDBACK_MAX_CHARS
 
 
 def delivery_text(feedback: Feedback) -> str:
-    return f"Masters’ Nudge：待執行者判斷\n{feedback.message}"
+    return f"Masters’ Nudge\n{feedback.message}"
 
 
 def load_system_prompt(*, prompt_file: Path) -> str:

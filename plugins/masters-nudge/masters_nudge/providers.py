@@ -39,7 +39,7 @@ def _terminate_process_tree(
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
-                timeout=10,
+                timeout=3,
                 **_provider_process_kwargs(),
             )
         else:
@@ -53,14 +53,14 @@ def _terminate_process_tree(
         except OSError:
             pass
     try:
-        stdout, stderr = process.communicate(timeout=5)
+        stdout, stderr = process.communicate(timeout=1)
     except (OSError, subprocess.TimeoutExpired):
         try:
             process.kill()
         except OSError:
             pass
         try:
-            stdout, stderr = process.communicate(timeout=1)
+            stdout, stderr = process.communicate(timeout=0.5)
         except (OSError, subprocess.TimeoutExpired):
             return "", ""
     return str(stdout or ""), str(stderr or "")

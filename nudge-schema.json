@@ -16,9 +16,9 @@
           "required": [
             "criterion",
             "evidence",
-            "fact",
-            "relationship",
-            "question"
+            "observed",
+            "violates",
+            "prefer"
           ],
           "properties": {
             "criterion": {
@@ -61,21 +61,20 @@
                 }
               }
             },
-            "fact": {
+            "observed": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 38
+              "maxLength": 30
             },
-            "relationship": {
+            "violates": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 38
+              "maxLength": 30
             },
-            "question": {
+            "prefer": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 42,
-              "pattern": "^[^?？]*[?？]$"
+              "maxLength": 30
             }
           }
         }

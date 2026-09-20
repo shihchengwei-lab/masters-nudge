@@ -7,3 +7,6 @@ __pycache__/
 
 # Local-only handoff notes between Agent sessions; never committed.
 HANDOFF.md
+
+# Local project instructions for Codex; never committed.
+/AGENTS.md

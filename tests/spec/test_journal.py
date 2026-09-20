@@ -26,14 +26,11 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(journal.recent()[0]["outcome"], "silence")
         self.assertEqual(journal.unresolved(), [])
 
-    def test_unfinished_batch_is_a_fault_until_a_new_user_round(self):
+    def test_new_user_round_can_start_while_old_result_becomes_historical(self):
         journal = Journal(self.root)
         journal.start_round(self.session, "first")
         first, first_task = journal.begin(self.session, [{"tool_use_id": "patch-1"}])
         self.assertIsNotNone(first)
-
-        with self.assertRaisesRegex(ToolFault, "前一次 Provider 判斷沒有完成"):
-            Journal(self.root).begin(self.session, [{"tool_use_id": "patch-2"}])
 
         journal.start_round(self.session, "latest")
         second, task = Journal(self.root).begin(self.session, [{"tool_use_id": "patch-3"}])
@@ -45,6 +42,37 @@ class JournalTests(unittest.TestCase):
         self.assertEqual(old["outcome"], "feedback")
         self.assertEqual(old["delivered"], 0)
         self.assertFalse(journal.finish(self.session, second, task, "feedback", {"raw_output": "duplicate"}))
+
+    def test_expired_judgment_is_a_durable_fault(self):
+        journal = Journal(self.root, provider_timeout_sec=-20)
+        journal.start_round(self.session, "first")
+        first, _ = journal.begin(self.session, [{"tool_use_id": "patch-1"}])
+
+        with self.assertRaisesRegex(ToolFault, "未在期限內留下結果"):
+            Journal(self.root, provider_timeout_sec=-20).begin(
+                self.session, [{"tool_use_id": "patch-2"}],
+            )
+
+        result = next(row for row in journal.recent() if row["id"] == first)
+        self.assertEqual(result["outcome"], "fault")
+        self.assertEqual(journal.unresolved(), [])
+        with self.assertRaisesRegex(ToolFault, "未在期限內留下結果"):
+            journal.begin(self.session, [{"tool_use_id": "patch-3"}])
+        self.assertEqual(journal.unresolved(), [])
+
+    def test_exhausted_hook_budget_is_a_durable_fault(self):
+        journal = Journal(self.root)
+        journal.start_round(self.session, "first")
+        first, task = journal.begin(self.session, [{"tool_use_id": "patch-1"}])
+        self.assertTrue(journal.finish(self.session, first, task, "silence", {}))
+
+        with self.assertRaisesRegex(ToolFault, "已無執行時間"):
+            Journal(self.root, hook_timeout_sec=0).begin(
+                self.session, [{"tool_use_id": "patch-2"}],
+            )
+
+        self.assertEqual(journal.unresolved(), [])
+        self.assertEqual(journal.recent()[0]["outcome"], "fault")
 
     def test_upgrade_keeps_old_evidence_and_current_quota(self):
         with sqlite3.connect(self.root / "feedback.sqlite3") as db:

@@ -13,13 +13,15 @@ def parse_feedback(raw: str) -> Feedback | None:
     item = value["feedback"]
     if item is None:
         return None
-    if not isinstance(item, dict) or set(item) != {"criterion", "evidence", "fact", "relationship", "question"}:
+    if not isinstance(item, dict) or set(item) != {"criterion", "evidence", "observed", "violates", "prefer"}:
         raise ToolFault("output", "反饋欄位不符合契約")
     if type(item["criterion"]) is not int or not 1 <= item["criterion"] <= 6:
         raise ToolFault("output", "criterion 必須是 1 到 6")
-    for key in ("fact", "relationship", "question"):
+    for key in ("observed", "violates", "prefer"):
         if not isinstance(item[key], str) or not item[key].strip():
             raise ToolFault("output", f"{key} 必須是非空文字")
+        if len(item[key]) > 30:
+            raise ToolFault("output", f"{key} 超過 30 字")
     refs = item["evidence"]
     if not isinstance(refs, list) or not 1 <= len(refs) <= 2:
         raise ToolFault("output", "必須提供一至兩筆引文")
@@ -32,10 +34,7 @@ def parse_feedback(raw: str) -> Feedback | None:
         if ref["source"] not in SOURCES or len(ref["excerpt"]) > FEEDBACK_MAX_CHARS:
             raise ToolFault("output", "引文來源或長度不符合契約")
         evidence.append(Evidence(**ref))
-    feedback = Feedback(item["criterion"], tuple(evidence), item["fact"], item["relationship"], item["question"])
+    feedback = Feedback(item["criterion"], tuple(evidence), item["observed"], item["violates"], item["prefer"])
     if len(feedback.message) > FEEDBACK_MAX_CHARS:
         raise ToolFault("output", "反饋超過 120 字")
-    question = feedback.question.rstrip()
-    if not question.endswith(("?", "？")) or question.count("?") + question.count("？") != 1:
-        raise ToolFault("output", "question 必須只有一個問句")
     return feedback

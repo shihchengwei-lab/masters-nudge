@@ -108,6 +108,22 @@ class TransportTests(unittest.TestCase):
                 providers._run_cli_process(["provider"], input_text="data", environment={}, timeout_sec=1)
         terminate.assert_called_once_with(process, log_error=providers._noop)
 
+    @unittest.skipUnless(os.name == "nt", "Windows process-tree cleanup")
+    def test_timeout_cleanup_finishes_inside_host_reserve(self):
+        process = mock.Mock(pid=4321)
+        process.communicate.side_effect = [
+            subprocess.TimeoutExpired("provider", 1),
+            subprocess.TimeoutExpired("provider", 0.5),
+        ]
+        with mock.patch.object(providers.subprocess, "run",
+                               side_effect=subprocess.TimeoutExpired("taskkill", 3)) as run:
+            self.assertEqual(providers._terminate_process_tree(process), ("", ""))
+        self.assertEqual(run.call_args.kwargs["timeout"], 3)
+        self.assertEqual(
+            [call.kwargs["timeout"] for call in process.communicate.call_args_list],
+            [1, 0.5],
+        )
+
     @unittest.skipUnless(os.name == "nt", "Windows inherited-handle behavior")
     def test_exited_provider_does_not_wait_for_a_descendant_holding_its_output(self):
         child = "import time; time.sleep(3)"

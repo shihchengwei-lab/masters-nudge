@@ -1,5 +1,5 @@
 """Translate Codex task and completed-patch events without inferring Actor intent."""
-from .contracts import SessionRef, ToolCompleted, ToolFault
+from .contracts import SessionRef, ToolCompleted, ToolFault, json_text
 from .core import NudgeCore
 from .prompting import delivery_text
 from .runtime import active_guard
@@ -47,9 +47,13 @@ class CodexAdapter:
             if result is None:
                 return None
             attempt, feedback = result
-            return {"hookSpecificOutput": {"hookEventName": "PostToolUse",
-                                            "additionalContext": delivery_text(feedback)},
-                    AUDIT_MARKER_KEY: attempt}
+            original = event.tool_response
+            original_text = original if isinstance(original, str) else json_text(original)
+            return {
+                "continue": False,
+                "stopReason": f"{original_text}\n\n{delivery_text(feedback)}",
+                AUDIT_MARKER_KEY: attempt,
+            }
         except ToolFault as fault:
             self.core.log_error(str(fault))
             if self.core.settings.strict:

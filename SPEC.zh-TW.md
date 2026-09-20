@@ -149,9 +149,9 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
         "excerpt": "render(job.status, retry_state)"
       }
     ],
-    "fact": "`retry_state` 由 `job.status` 複製，畫面同時讀取兩者",
-    "relationship": "`retry_state` 與 `job.status` 都成為畫面的狀態來源",
-    "question": "哪個必要行為要求保留兩份狀態？"
+    "observed": "retry_state := job.status",
+    "violates": "sources(job.status) = 2",
+    "prefer": "UI <- job.status"
   }
 }
 ```
@@ -163,23 +163,25 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 - `source` 只能是 `task_contract`、`before_structure`、`batch_change`、`current_structure` 或 `tool_result`。
 - `location` 指出材料所在的檔案、行號、命令或段落。
 - `excerpt` 每筆最多 120 字。
-- `fact` 只寫材料能直接核對的事實，不含評價。
-- `relationship` 只寫證據已能成立的具體關係，不得把推測的後果寫成已證實事實，也不得只寫原則名稱。
-- `question` 只能有一個問句，只寫尚未證實的疑點。優先詢問具體替代關係能否保留必要結果並減少已指出的負擔，而非要求執行者為原選擇辯護。沿用 `fact` 與 `relationship` 已交代的內容，不重述，也不把完整比較塞進問句；必須有明確邊界、能被現有程式碼反證，不能寫成命令。
+- `observed` 用常見程式、型別、斷言或資料流記法，寫出材料能直接核對的關係。
+- `violates` 寫出該關係破壞的不變條件，或增加的具體結構負擔；不得只寫原則名稱。
+- `prefer` 寫出能達到相同必要結果、負擔較少的替代關係；不得寫成命令或擴大任務範圍。
 
-`criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。執行者只收到：
+`criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。執行者固定收到：
 
 ```text
-{fact}；{relationship}。{question}
+OBSERVED: {observed}
+VIOLATES: {violates}
+PREFER: {prefer}
 ```
 
-`fact`、`relationship` 與 `question` 是一則連續訊息，組合後最多 120 字。各欄不需要單獨自足，不得重述前面已經清楚的識別碼或內容。
+三個欄位各最多 30 字，連同固定標籤與換行不得超過 120 字。三欄是一組關係，不得重述前面已經清楚的識別碼或內容。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。
 
-反饋直接從程式識別碼或具體關係開始。禁止問候、鋪陳、稱讚、道歉、語氣緩衝及原則名稱；也禁止「值得注意」「建議考慮」「或許可以」「為了更好」「請重構」「改善架構」及「考慮抽象化」等無法縮小問題的詞句。
+反饋直接寫程式識別碼與關係。禁止問候、鋪陳、稱讚、道歉、語氣緩衝及空泛原則名稱；也禁止「值得注意」「建議考慮」「或許可以」「為了更好」「請重構」「改善架構」及「考慮抽象化」等無法縮小問題的詞句。
 
 ### 正例
 
-材料顯示 `src/job.ts:81` 新增 `retry_state = job.status`，而 `src/ui.ts:24` 同時讀取 `job.status` 與 `retry_state`。上方的「有反饋時」JSON 是合法輸出：已證實的部分寫成事實與關係，尚待確認的必要性留在問句中，並以可反證的方式提出單一修法建議。
+材料顯示 `src/job.ts:81` 新增 `retry_state = job.status`，而 `src/ui.ts:24` 同時讀取 `job.status` 與 `retry_state`。上方 JSON 是合法輸出：直接表示觀察到的賦值、兩個來源的負擔，以及保留單一來源的替代資料流。
 
 ### 反例：抽象噪音
 
@@ -188,9 +190,9 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
   "feedback": {
     "criterion": 4,
     "evidence": [],
-    "fact": "狀態管理太複雜",
-    "relationship": "違反單一來源原則",
-    "question": "能否簡化？"
+    "observed": "state 很複雜",
+    "violates": "架構不佳",
+    "prefer": "改善設計"
   }
 }
 ```
@@ -210,9 +212,9 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
         "excerpt": "retry_state = job.status"
       }
     ],
-    "fact": "`retry_state` 複製 `job.status`",
-    "relationship": "兩者需要同步",
-    "question": "請刪除 `retry_state`，重構所有相關畫面與測試。"
+    "observed": "retry_state := job.status",
+    "violates": "sources(job.status) = 2",
+    "prefer": "刪除所有相關程式與測試"
   }
 }
 ```
@@ -227,7 +229,7 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 - **Provider 傳輸層**：由 `masters_nudge/providers.py` 負責。它獨自管理外部模型的期限、子程序、輸出檔與暫存目錄；所有子程序結束後才把結果或故障交還 Nudge 核心。外部模型判斷哪些結構與本批明確修改相關，必要時透過 MCP 搜尋或讀取；依第三節選出最多一個疑點；依第五節輸出反饋或沉默。Provider 不修改工作區，也不驗證執行者是否完成任務。
 - **MCP**：由 `masters_nudge/read_only_repo_mcp.py` 提供。執行 Provider 要求的唯讀搜尋與讀取，保留檔案、行號與原文並遵守第四節的資料上限。MCP 不判斷相關性或程式碼品味。
 
-Provider 傳輸層以 90 秒為正常判斷期限，並在期限內負責停止子程序、收集證據及回傳故障。Windows 直接啟動 `codex.exe`，使 Provider 傳輸層持有真正的 Provider 程序；找不到原生執行檔時才使用命令包裝檔。`PostToolUse` 不另設外層期限，使用 Codex 內建的 600 秒最後保護；外層期限不參與正常 Provider 判斷，避免兩個期限同時爭奪同一次呼叫的收尾權。
+Provider 傳輸層以 90 秒為正常判斷期限，並在期限內負責停止子程序、收集證據及回傳故障。Windows 直接啟動 `codex.exe`，使 Provider 傳輸層持有真正的 Provider 程序；找不到原生執行檔時才使用命令包裝檔。每個 `PostToolUse` 最多執行 180 秒，並保留最後 20 秒寫入結果；輪到該批次時，Provider 可用時間取 90 秒與剩餘時間中的較小值。
 
 ## 7. 呼叫與反饋時機
 
@@ -237,7 +239,9 @@ Provider 傳輸層以 90 秒為正常判斷期限，並在期限內負責停止�
 
 每次判斷的思考條目、資料內容、輸出契約與次數上限都相同。
 
-成功修改先留下「已收到修改」事實。只有 Provider 已經回傳反饋、沉默或工具故障時，才新增一筆判斷結果；資料庫不存在「判斷仍在進行」這種可永久殘留的狀態。若同一輪下一次修改到達時，前一次修改仍沒有判斷結果，工具直接回報故障，不等待、不重試，也不由後一次 Hook 代替前一次收尾。新一輪使用者訊息不受舊輪故障阻擋。
+成功修改先留下「已收到修改」事實。同一輪依收到順序一次只執行一個 Provider；後到的 Hook 等待前一個結果，不會同時修改同一份判斷狀態，也不代替前一個 Provider 正常收尾。
+
+每個批次最後必須留下反饋、沉默、工具故障或因同輪故障而略過其中一種終點。Provider 逾時時，作用中的批次記為工具故障，已等待的批次在同一次資料庫交易中全部記為略過；之後同一輪的新 Hook 直接回報同一個工具故障，不再建立新批次。等待者輪到時若已沒有足夠執行時間，該等待者記為工具故障，其後等待者同樣記為略過。新一輪使用者訊息建立新的輪次，不受舊輪故障阻擋。
 
 若 Provider 回傳反饋，Codex 接入層將反饋單獨回傳到執行者下一次推理的末端，並標示為「Masters’ Nudge：待執行者判斷」。反饋的強度來自最近位置、已查證事實與尚未回答的問題，不使用更強硬的命令或擴大修改範圍。
 

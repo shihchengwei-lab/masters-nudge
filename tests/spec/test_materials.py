@@ -7,21 +7,29 @@ from unittest import mock
 
 from masters_nudge.contracts import MaterialLine, MaterialPacket, ToolFault, material_lines
 from masters_nudge.evidence import fit_packet
+from masters_nudge.prompting import delivery_text
 from masters_nudge.provider_contract import parse_feedback
 
 
 class ContractTests(unittest.TestCase):
     def feedback(self):
         return {"feedback": {"criterion": 4, "evidence": [{"source": "batch_change", "location": "x:1", "excerpt": "x"}],
-                             "fact": "x 複製 y", "relationship": "同一值有兩份表示", "question": "哪個必要行為需要 x？"}}
+                             "observed": "x := y", "violates": "sources(y) = 2", "prefer": "consumer <- y"}}
+
+    def test_actor_delivery_uses_fixed_formal_fields(self):
+        feedback = parse_feedback(json.dumps(self.feedback()))
+        self.assertEqual(
+            delivery_text(feedback),
+            "Masters’ Nudge\nOBSERVED: x := y\nVIOLATES: sources(y) = 2\nPREFER: consumer <- y",
+        )
 
     def test_output_limits_and_partial_feedback(self):
         import copy
         valid = self.feedback()
         self.assertIsNotNone(parse_feedback(json.dumps(valid)))
         invalid = []
-        for key, value in (("criterion", True), ("criterion", 7), ("evidence", []), ("fact", "x" * 121),
-                           ("question", "請刪除 x"), ("question", "為什麼？怎麼改？")):
+        for key, value in (("criterion", True), ("criterion", 7), ("evidence", []),
+                           ("observed", "x" * 31), ("violates", ""), ("prefer", "x" * 31)):
             item = copy.deepcopy(valid)
             item["feedback"][key] = value
             invalid.append(item)
@@ -35,9 +43,9 @@ class ContractTests(unittest.TestCase):
     def test_schema_field_limits_make_the_combined_limit_unrepresentable(self):
         schema = json.loads((Path(__file__).resolve().parents[2] / "nudge-schema.json").read_text(encoding="utf-8"))
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
-        limits = [feedback[name]["maxLength"] for name in ("fact", "relationship", "question")]
-        self.assertLessEqual(sum(limits) + 2, 120)
-        self.assertEqual(feedback["question"]["pattern"], "^[^?？]*[?？]$")
+        limits = [feedback[name]["maxLength"] for name in ("observed", "violates", "prefer")]
+        labels = len("OBSERVED: \nVIOLATES: \nPREFER: ")
+        self.assertLessEqual(sum(limits) + labels, 120)
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
@@ -148,13 +156,15 @@ class RepositoryTests(unittest.TestCase):
 
     def test_search_and_read_share_persistent_budget(self):
         from masters_nudge.read_only_repo_mcp import RepositoryTools
+        last = None
         for _ in range(12):
-            self.tools.call("search_repo", {"query": "status"})
+            last = self.tools.call("search_repo", {"query": "status"})
         restarted = RepositoryTools(self.repo, 1000, self.root / "reads.jsonl")
-        restarted.call("read_file", {"path": "job.py"})
+        last = restarted.call("read_file", {"path": "job.py"})
         entries = [json.loads(line) for line in (self.root / "reads.jsonl").read_text().splitlines()]
         self.assertLessEqual(sum(len(row["text"]) for row in entries), 1000)
         self.assertTrue(any(row["exhausted"] for row in entries))
+        self.assertTrue(json.loads(last["content"][0]["text"])["exhausted"])
 
     def test_search_does_not_spawn_one_git_process_per_file(self):
         for number in range(30):

@@ -42,21 +42,19 @@ Do not invent a third status for insufficient context: after normal investigatio
 
 Return exactly {"feedback":null} or the object required by the output schema.
 criterion is one of the six check numbers. evidence has one or two supporting references.
-fact states only what can be checked directly. relationship states a concrete supported relationship, not a principle name.
-Do not claim a suspected consequence has already happened. Place the uncertainty in question.
-question states only the remaining uncertainty as one bounded, code-refutable question about the current task.
-Prefer asking whether the concrete alternative removes the identified burden while preserving the required result,
-rather than asking the Actor to justify the current choice. Refer to fact and relationship without repeating them;
-do not squeeze the full internal comparison into the question.
+Use compact relations already common in code, types, assertions and data-flow notation; do not encode prose with invented symbols.
+observed records the evidenced relation. violates names the broken invariant or added structural burden.
+prefer gives the replacement relation that reaches the same required result with less burden.
+Do not claim a suspected runtime consequence has already happened. Express only relations supported by the evidence.
 A suspected failure must concern an execution path supported by the task or observed code, not an invented usage requirement.
 No imperative repair instructions or scope expansion.
-The Actor receives fact + "；" + relationship + "。" + question. The schema limits fact and relationship to 38 characters each and question to 42, so the hard limit is $FEEDBACK_MAX_CHARS including punctuation.
-The three fields form one continuous message. Do not make each field self-contained or repeat identifiers or statements already clear from earlier fields. Each evidence excerpt is at most $FEEDBACK_MAX_CHARS characters.
-Write natural Traditional Chinese, retaining identifiers as written.
+The Actor receives three fixed lines: OBSERVED, VIOLATES and PREFER. The schema limits observed, violates and prefer to 30 characters each, so the hard limit is $FEEDBACK_MAX_CHARS including labels and line breaks.
+Treat the three fields as one compact relation set. Do not repeat identifiers or statements already clear from earlier fields. Each evidence excerpt is at most $FEEDBACK_MAX_CHARS characters.
+Prefer identifiers and familiar operators such as :=, ->, <-, =, !=, &&, | and one_authority(x). Use short words only where notation would lose the concrete meaning.
 No greetings, praise, apology, rhetorical padding, or manners for their own sake.
 Do not use 值得注意, 建議考慮, 或許可以, 為了更好, 請重構, 改善架構, or 考慮抽象化.
 
 Example, only if the cited records actually exist:
-{"feedback":{"criterion":4,"evidence":[{"source":"batch_change","location":"tool/edit-1/input:4","excerpt":"retry_state = job.status"},{"source":"current_structure","location":"src/ui.ts:24","excerpt":"render(job.status, retry_state)"}],"fact":"retry_state 複製 job.status","relationship":"畫面同時依賴這兩份狀態","question":"哪個必要行為要求保留兩份狀態？"}}
-A statement such as "狀態管理太複雜；違反單一來源原則。能否簡化？" is not concrete feedback.
-A command such as "請刪除 retry_state，重構所有畫面與測試" takes the decision away from the Actor.
+{"feedback":{"criterion":4,"evidence":[{"source":"batch_change","location":"tool/edit-1/input:4","excerpt":"retry_state = job.status"},{"source":"current_structure","location":"src/ui.ts:24","excerpt":"render(job.status, retry_state)"}],"observed":"retry_state := job.status","violates":"sources(job.status) = 2","prefer":"UI <- job.status"}}
+A set such as {"observed":"state 很複雜","violates":"架構不佳","prefer":"改善設計"} is not concrete feedback.
+A value such as {"prefer":"刪除所有相關程式與測試"} expands scope and takes the decision away from the Actor.

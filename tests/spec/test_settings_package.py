@@ -29,7 +29,7 @@ class SettingsPackageTests(unittest.TestCase):
                 settings = RuntimeSettings("openai", "model", RuntimePaths(ROOT, root, root, root / "error.log"), strict=strict)
                 core = Mock()
                 core.journal.delivered.side_effect = sqlite3.OperationalError("disk I/O error")
-                response = {"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": "feedback"},
+                response = {"continue": False, "stopReason": "tool result\n\nfeedback",
                             "_masters_nudge": "attempt-1"}
                 output = io.StringIO()
                 with patch.object(sys, "argv", ["hook_entry.py"]), \
@@ -41,7 +41,7 @@ class SettingsPackageTests(unittest.TestCase):
                     code = hook_entry.main()
                 self.assertEqual(code, int(strict))
                 self.assertEqual(len(output.getvalue().splitlines()), 1)
-                self.assertEqual(json.loads(output.getvalue())["hookSpecificOutput"]["additionalContext"], "feedback")
+                self.assertEqual(json.loads(output.getvalue())["stopReason"], "tool result\n\nfeedback")
                 self.assertNotIn("systemMessage", json.loads(output.getvalue()))
                 self.assertIn("disk I/O error", settings.paths.error_log.read_text(encoding="utf-8"))
 
@@ -120,7 +120,7 @@ class SettingsPackageTests(unittest.TestCase):
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        self.assertIn("schema limits fact and relationship to 38 characters each and question to 42", prompt)
+        self.assertIn("schema limits observed, violates and prefer to 30 characters each", prompt)
 
     def test_provider_prompt_challenges_the_whole_change_before_inspecting_internals(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -140,16 +140,15 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertIn("can interrupt the Actor only once", normalized)
         self.assertNotIn("trace the same input again", normalized)
 
-    def test_provider_prompt_does_not_force_the_internal_alternative_into_the_question(self):
+    def test_provider_prompt_emits_the_selected_alternative_as_formal_relation(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
         self.assertIn("replace its relationship with one concrete alternative", normalized)
-        self.assertIn("The three fields form one continuous message", normalized)
-        self.assertIn("question states only the remaining uncertainty", normalized)
-        self.assertIn("Prefer asking whether the concrete alternative removes the identified burden", normalized)
-        self.assertIn("do not squeeze the full internal comparison into the question", normalized)
-        self.assertNotIn("alternative you would ask about", normalized)
-        self.assertIn('"question":"哪個必要行為要求保留兩份狀態？"', prompt)
+        self.assertIn("observed records the evidenced relation", normalized)
+        self.assertIn("violates names the broken invariant", normalized)
+        self.assertIn("prefer gives the replacement relation", normalized)
+        self.assertIn('"prefer":"UI <- job.status"', prompt)
+        self.assertNotIn("question states", normalized)
 
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:

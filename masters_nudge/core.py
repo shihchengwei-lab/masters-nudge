@@ -38,7 +38,8 @@ class NudgeCore:
                 system_prompt=load_system_prompt(prompt_file=self.settings.paths.runtime_dir / "buddy-prompt.txt"),
                 nudge_input=detail["packet"], model=self.settings.model,
                 schema_path=self.settings.paths.runtime_dir / "nudge-schema.json",
-                timeout_sec=PROVIDER_TIMEOUT_SEC, workspace_root=packet.workspace,
+                timeout_sec=task.get("provider_timeout_sec", PROVIDER_TIMEOUT_SEC),
+                workspace_root=packet.workspace,
                 remaining_chars=MATERIAL_MAX_CHARS - packet.material_chars,
                 log_error=self.log_error,
             )
