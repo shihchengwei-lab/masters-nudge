@@ -8,8 +8,8 @@ from .settings import load_user_settings
 
 DEFAULT_MODEL = "gpt-5.6-sol"
 PROVIDER_REASONING_EFFORT = "medium"
-PROVIDER_TIMEOUT_SEC = 150
-HOOK_TIMEOUT_SEC = 240
+PROVIDER_TIMEOUT_SEC = 240
+HOOK_TIMEOUT_SEC = 360
 
 
 @dataclass(frozen=True)

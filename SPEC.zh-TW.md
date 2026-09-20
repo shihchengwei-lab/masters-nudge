@@ -230,7 +230,7 @@ Before continuing, decide whether OBSERVED is required by the task. If not, cons
 - **Provider 傳輸層**：由 `masters_nudge/providers.py` 負責。它獨自管理外部模型的期限、子程序、輸出檔與暫存目錄；所有子程序結束後才把結果或故障交還 Nudge 核心。外部模型判斷哪些結構與本批明確修改相關，必要時透過 MCP 搜尋或讀取；依第三節選出最多一個疑點；依第五節輸出反饋或沉默。Provider 不修改工作區，也不驗證執行者是否完成任務。
 - **MCP**：由 `masters_nudge/read_only_repo_mcp.py` 提供。執行 Provider 要求的唯讀搜尋與讀取，保留檔案、行號與原文並遵守第四節的資料上限。MCP 不判斷相關性或程式碼品味。
 
-Provider 傳輸層以 150 秒為正常判斷期限，並在期限內負責停止子程序、收集證據及回傳故障。Windows 直接啟動 `codex.exe`，使 Provider 傳輸層持有真正的 Provider 程序；找不到原生執行檔時才使用命令包裝檔。每個 `PostToolUse` 最多執行 240 秒，並保留最後 20 秒寫入結果；輪到該批次時，Provider 可用時間取 150 秒與剩餘時間中的較小值。
+Provider 傳輸層以 240 秒為正常判斷期限，並在期限內負責停止子程序、收集證據及回傳故障。Windows 直接啟動 `codex.exe`，使 Provider 傳輸層持有真正的 Provider 程序；找不到原生執行檔時才使用命令包裝檔。每個 `PostToolUse` 最多執行 360 秒，並保留最後 20 秒寫入結果；輪到該批次時，Provider 可用時間取 240 秒與剩餘時間中的較小值。
 
 ## 7. 呼叫與反饋時機
 

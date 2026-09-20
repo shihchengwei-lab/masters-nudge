@@ -12,7 +12,7 @@ from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 
 import masters_nudge_cli
-from masters_nudge.runtime import PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSettings
+from masters_nudge.runtime import HOOK_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSettings
 from masters_nudge.settings import load_user_settings, save_provider
 from tools.build_plugin import check_plugin
 
@@ -116,7 +116,9 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
         self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 150)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 240)
+        self.assertEqual(HOOK_TIMEOUT_SEC, 360)
+        self.assertEqual(hook["timeout"], HOOK_TIMEOUT_SEC)
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
