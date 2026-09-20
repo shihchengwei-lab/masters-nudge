@@ -116,7 +116,7 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
         self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 90)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 150)
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -146,9 +146,34 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertIn("replace its relationship with one concrete alternative", normalized)
         self.assertIn("observed records the evidenced relation", normalized)
         self.assertIn("violates names the broken invariant", normalized)
-        self.assertIn("prefer gives the replacement relation", normalized)
+        self.assertIn("prefer states the concrete invariant, ownership or data-flow relation", normalized)
+        self.assertIn("not an edit operation", normalized)
+        self.assertIn("name which existing concept, state, branch or source becomes unnecessary", normalized)
+        self.assertIn("express the resulting relation instead", normalized)
+        self.assertNotIn("prefer gives the replacement relation", normalized)
         self.assertIn('"prefer":"UI <- job.status"', prompt)
         self.assertNotIn("question states", normalized)
+
+    def test_provider_prompt_speaks_when_two_concrete_relations_are_supported(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+        self.assertIn("evidence supports both OBSERVED and a task-preserving PREFER", normalized)
+        self.assertIn("do not need to prove that PREFER is globally superior", normalized)
+        self.assertIn("feedback:null only when either relation cannot be made concrete", normalized)
+        self.assertNotIn("Choose a relationship only when the alternative reaches", normalized)
+        self.assertNotIn("Do not choose a doubt that offers only local tidiness", normalized)
+
+    def test_provider_prompt_compares_candidates_before_selecting(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+        first = normalized.index("Do not stop at the first supported doubt")
+        whole = normalized.index("strongest evidence-supported whole-change alternative")
+        internal = normalized.index("strongest evidence-supported internal-relationship alternative")
+        choose = normalized.index("Among the supported relationships, choose")
+        self.assertLess(first, whole)
+        self.assertLess(whole, internal)
+        self.assertLess(internal, choose)
+        self.assertIn("Omit one side only when the evidence supports none", normalized)
 
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:

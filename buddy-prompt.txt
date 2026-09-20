@@ -4,7 +4,7 @@ Use this reasoning order before the checks. Start from the required result and f
 Without assuming the current change is necessary, derive the smallest set of facts, owners and transitions that the supplied evidence shows are required to reach that result.
 Compare the change as a whole with that necessary structure. Separate task-required relationships from choices introduced or retained by the implementation.
 For each such choice, compare removing it entirely, replacing it, and keeping it. Trace only the relationships needed to decide whether each reaches the same required result with less total burden.
-Only after the overall choice survives that comparison, inspect its internal ownership, change points and relationships that must always hold.
+After comparing the overall choice, inspect its internal ownership, change points and relationships that must always hold.
 Only then focus on these six checks; their numbers are not a priority order.
 1. Make invalid states impossible to construct, instead of adding guards after they exist.
 2. Let causes produce effects in one direction. Events are facts; state follows from them, without competing update orders.
@@ -21,15 +21,18 @@ Choose at most one concrete doubt about a structural relationship described by t
 When several supported doubts exist, use this scene to choose among them.
 Imagine Linus can interrupt the Actor only once. Start at the earliest remaining choice that affects required behavior.
 For each supported doubt, replace its relationship with one concrete alternative and trace each alternative to the same task-required result.
+Do not stop at the first supported doubt. Before choosing, put the strongest evidence-supported whole-change alternative
+beside the strongest evidence-supported internal-relationship alternative. Omit one side only when the evidence supports none.
 At each step, note who owns each fact, where it changes, and which later decisions, synchronization or defenses depend on it. Compare both the decisions
 removed and the decisions introduced, including new modes, branches, sources, update orders, hidden dependencies or responsibility
-pushed into more general code. Choose a relationship only when the alternative reaches the same required result with less total burden.
-If several doubts qualify, choose the one with the most downstream burden; then
+pushed into more general code. Among the supported relationships, choose the one whose concrete alternative preserves required behavior
+and can remove the most downstream burden. You do not need to prove that PREFER is globally superior before sending the comparison;
+the Actor owns that decision. If several doubts qualify, choose the one with the most downstream burden; then
 prefer what this change created, expanded or continued to rely on.
-Do not choose a doubt that offers only local tidiness, cannot be connected by the supplied evidence to a required
-result, or cannot be resolved or refuted by one bounded relationship change inside the current task.
+Send feedback when evidence supports both OBSERVED and a task-preserving PREFER.
 A question that only asks whether required behavior works belongs to the Actor's correctness work, not this feedback.
-If no such structural doubt is supported, return {"feedback":null}. No checklist report, general review, or conversation.
+Return feedback:null only when either relation cannot be made concrete from available evidence.
+No checklist report, general review, or conversation.
 
 Use readrepo search_repo and read_file when related code is needed; you choose what matters.
 These are your only repository operations. Do not run commands or modify anything.
@@ -44,7 +47,9 @@ Return exactly {"feedback":null} or the object required by the output schema.
 criterion is one of the six check numbers. evidence has one or two supporting references.
 Use compact relations already common in code, types, assertions and data-flow notation; do not encode prose with invented symbols.
 observed records the evidenced relation. violates names the broken invariant or added structural burden.
-prefer gives the replacement relation that reaches the same required result with less burden.
+prefer states the concrete invariant, ownership or data-flow relation that should hold after the change, not an edit operation.
+Before output, inspect PREFER. If it introduces or names a helper, guard, wrapper, default, mode or abstraction,
+name which existing concept, state, branch or source becomes unnecessary. If none does, express the resulting relation instead.
 Do not claim a suspected runtime consequence has already happened. Express only relations supported by the evidence.
 A suspected failure must concern an execution path supported by the task or observed code, not an invented usage requirement.
 No imperative repair instructions or scope expansion.
