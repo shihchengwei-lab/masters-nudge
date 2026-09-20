@@ -10,3 +10,21 @@ HANDOFF.md
 
 # Local project instructions for Codex; never committed.
 /AGENTS.md
+
+# Local experiment history. Keep only the current champion evidence in Git.
+/experiments/*
+!/experiments/champion-vs-preserved-result-20260920/
+/experiments/champion-vs-preserved-result-20260920/PARTIAL.zh-TW.md
+
+# Superseded design and acceptance records kept locally for reference.
+/docs/codex-post-tool-batch-issue-draft.md
+/docs/model-communication-protocol-handoff.zh-TW.md
+/docs/spec-refactor-progress.zh-TW.md
+/docs/assets/actual-nudge-run.png
+
+# Local calibration cases from historical comparisons.
+/tests/spec/fixtures/access-policy.json
+/tests/spec/fixtures/cart-derived-state.json
+/tests/spec/fixtures/document-state.json
+/tests/spec/fixtures/inventory-reservation.json
+/tests/spec/fixtures/session-identity.json

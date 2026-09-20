@@ -128,7 +128,7 @@ This is distinct from:
 
 ## Local evidence
 
-- `PARTIAL.zh-TW.md`: experiment stop record
+- local-only `PARTIAL.zh-TW.md`: experiment stop record
 - `replay_fault.py`: exact-payload replay driver
 - `%TEMP%/mn-ab-preserved-result-expanded-20260920-v2/fault-replay/result.json`: replay result
 - `%TEMP%/mn-ab-preserved-result-expanded-20260920-v2/runs/django__django-12273/repeat-1/B/masters-nudge-data/feedback.sqlite3`: queued/started facts
