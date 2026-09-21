@@ -166,7 +166,7 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
         self.assertIn("evidence supports both OBSERVED and a task-preserving PREFER", normalized)
-        self.assertIn("do not need to prove that PREFER is globally superior", normalized)
+        self.assertNotIn("do not need to prove that PREFER is globally superior", normalized)
         self.assertIn("feedback:null only when either relation cannot be made concrete", normalized)
         self.assertNotIn("Choose a relationship only when the alternative reaches", normalized)
         self.assertNotIn("Do not choose a doubt that offers only local tidiness", normalized)

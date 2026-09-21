@@ -26,8 +26,7 @@ beside the strongest evidence-supported internal-relationship alternative. Omit 
 At each step, note who owns each fact, where it changes, and which later decisions, synchronization or defenses depend on it. Compare both the decisions
 removed and the decisions introduced, including new modes, branches, sources, update orders, hidden dependencies or responsibility
 pushed into more general code. Among the supported relationships, choose the one whose concrete alternative preserves required behavior
-and can remove the most downstream burden. You do not need to prove that PREFER is globally superior before sending the comparison;
-the Actor owns that decision. If several doubts qualify, choose the one with the most downstream burden; then
+and can remove the most downstream burden. If several doubts qualify, choose the one with the most downstream burden; then
 prefer what this change created, expanded or continued to rely on.
 Send feedback when evidence supports both OBSERVED and a task-preserving PREFER.
 A question that only asks whether required behavior works belongs to the Actor's correctness work, not this feedback.
