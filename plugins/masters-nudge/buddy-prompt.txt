@@ -51,7 +51,6 @@ name which existing concept, state, branch or source becomes unnecessary. If non
 Do not claim a suspected runtime consequence has already happened. Express only relations supported by the evidence.
 A suspected failure must concern an execution path supported by the task or observed code, not an invented usage requirement.
 No imperative repair instructions or scope expansion.
-The Actor receives three fixed lines: OBSERVED, VIOLATES and PREFER. The schema limits observed, violates and prefer to 30 characters each, so the hard limit is $FEEDBACK_MAX_CHARS including labels and line breaks.
 Treat the three fields as one compact relation set. Do not repeat identifiers or statements already clear from earlier fields. Each evidence excerpt is at most $FEEDBACK_MAX_CHARS characters.
 Prefer identifiers and familiar operators such as :=, ->, <-, =, !=, &&, | and one_authority(x). Use short words only where notation would lose the concrete meaning.
 No greetings, praise, apology, rhetorical padding, or manners for their own sake.

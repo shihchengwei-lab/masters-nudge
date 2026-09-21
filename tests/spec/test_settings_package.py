@@ -128,7 +128,9 @@ class SettingsPackageTests(unittest.TestCase):
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
-        self.assertIn("schema limits observed, violates and prefer to 30 characters each", prompt)
+        self.assertNotIn("The Actor receives three fixed lines", prompt)
+        self.assertNotIn("including labels and line breaks", prompt)
+        self.assertIn("Treat the three fields as one compact relation set", prompt)
 
     def test_provider_prompt_challenges_the_whole_change_before_inspecting_internals(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
