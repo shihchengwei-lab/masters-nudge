@@ -29,8 +29,11 @@ class SettingsPackageTests(unittest.TestCase):
                 settings = RuntimeSettings("openai", "model", RuntimePaths(ROOT, root, root, root / "error.log"), strict=strict)
                 core = Mock()
                 core.journal.delivered.side_effect = sqlite3.OperationalError("disk I/O error")
-                response = {"continue": False, "stopReason": "tool result\n\nfeedback",
-                            "_masters_nudge": "attempt-1"}
+                response = {"hookSpecificOutput": {
+                                "hookEventName": "PostToolUse",
+                                "additionalContext": "feedback",
+                            },
+                             "_masters_nudge": "attempt-1"}
                 output = io.StringIO()
                 with patch.object(sys, "argv", ["hook_entry.py"]), \
                      patch.object(sys, "stdin", Mock(buffer=io.BytesIO(b"{}"))), \
@@ -41,7 +44,10 @@ class SettingsPackageTests(unittest.TestCase):
                     code = hook_entry.main()
                 self.assertEqual(code, int(strict))
                 self.assertEqual(len(output.getvalue().splitlines()), 1)
-                self.assertEqual(json.loads(output.getvalue())["stopReason"], "tool result\n\nfeedback")
+                self.assertEqual(
+                    json.loads(output.getvalue())["hookSpecificOutput"]["additionalContext"],
+                    "feedback",
+                )
                 self.assertNotIn("systemMessage", json.loads(output.getvalue()))
                 self.assertIn("disk I/O error", settings.paths.error_log.read_text(encoding="utf-8"))
 

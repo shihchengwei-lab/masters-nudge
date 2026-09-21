@@ -167,7 +167,7 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 - `violates` 寫出該關係破壞的不變條件，或增加的具體結構負擔；不得只寫原則名稱。
 - `prefer` 寫出修改後應成立的具體不變條件、擁有關係或資料流，不寫成修改步驟。若三欄提到新增 helper、防守、wrapper、預設值、模式或抽象，必須同時指出哪個既有概念、狀態、分支或資料來源因此不再必要；否則改寫成最後要成立的關係。不得擴大任務範圍。
 
-`criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。執行者固定收到：
+`criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。Codex 接入層透過 `PostToolUse` 的 `hookSpecificOutput.additionalContext` 將以下內容加入執行者脈絡，並保留原工具結果：
 
 ```text
 OBSERVED: {observed}
@@ -225,7 +225,7 @@ Before continuing, decide whether OBSERVED is required by the task. If not, cons
 ## 6. 各層責任
 
 - **執行者**：正在完成使用者任務的 Codex。負責理解需求、選擇做法、修改、驗證，並決定採用、改寫或否決反饋。
-- **Codex 接入層**：由 `hook_entry.py` 與 `masters_nudge/codex_adapter.py` 負責。接收 Codex 的事件，把使用者原文、工具輸入、工具結果、工作目錄及對話位置交給 Nudge 核心；取得合法反饋時保留原工具結果並附上反饋，工具故障時回傳故障狀態。接入層不判斷程式碼品味，不終止 Provider，也不清理 Provider 的檔案。
+- **Codex 接入層**：由 `hook_entry.py` 與 `masters_nudge/codex_adapter.py` 負責。接收 Codex 的事件，把使用者原文、工具輸入、工具結果、工作目錄及對話位置交給 Nudge 核心；取得合法反饋時以 `hookSpecificOutput.additionalContext` 附加模型可見脈絡，讓 Codex 保留原工具結果，工具故障時回傳故障狀態。接入層不判斷程式碼品味，不終止 Provider，也不清理 Provider 的檔案。
 - **Nudge 核心**：由 `masters_nudge/core.py`、`masters_nudge/contracts.py`、`masters_nudge/evidence.py` 與 `masters_nudge/storage.py` 負責。一次同步 Hook 從收到成功修改起，依序建立資料包、呼叫一次 Provider、檢查第五節的 JSON 形狀，最後留下反饋、沉默或工具故障其中一個結果。材料判斷由 Provider 負責；Nudge 核心不重新解讀引文，也不猜測哪些檔案或關係最重要。
 - **Provider 傳輸層**：由 `masters_nudge/providers.py` 負責。它獨自管理外部模型的期限、子程序、輸出檔與暫存目錄；所有子程序結束後才把結果或故障交還 Nudge 核心。外部模型判斷哪些結構與本批明確修改相關，必要時透過 MCP 搜尋或讀取；依第三節選出最多一個疑點；依第五節輸出反饋或沉默。Provider 不修改工作區，也不驗證執行者是否完成任務。
 - **MCP**：由 `masters_nudge/read_only_repo_mcp.py` 提供。執行 Provider 要求的唯讀搜尋與讀取，保留檔案、行號與原文並遵守第四節的資料上限。MCP 不判斷相關性或程式碼品味。

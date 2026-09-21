@@ -190,10 +190,12 @@ class PipelineTests(unittest.TestCase):
         self.prompt()
         self.feedback()
         result = self.batch(output={"ok": True})
-        self.assertFalse(result["continue"])
-        self.assertNotIn("hookSpecificOutput", result)
-        text = result["stopReason"]
-        self.assertTrue(text.startswith('{"ok":true}\n\n'))
+        self.assertNotIn("continue", result)
+        self.assertNotIn("stopReason", result)
+        specific = result["hookSpecificOutput"]
+        self.assertEqual(specific["hookEventName"], "PostToolUse")
+        text = specific["additionalContext"]
+        self.assertTrue(text.startswith("Masters’ Nudge\n"))
         self.assertIn("OBSERVED: retry_state := job.status", text)
         self.assertIn("VIOLATES: sources(job.status) = 2", text)
         self.assertIn("PREFER: UI <- job.status", text)
@@ -245,7 +247,10 @@ class PipelineTests(unittest.TestCase):
         self.feedback()
         self.reply["feedback"]["evidence"][0]["location"] = "tool/call-1/input:5"
         result = self.batch()
-        self.assertIn(self.reply["feedback"]["prefer"], result["stopReason"])
+        self.assertIn(
+            self.reply["feedback"]["prefer"],
+            result["hookSpecificOutput"]["additionalContext"],
+        )
 
     def test_fault_ends_the_round_without_becoming_silence(self):
         from masters_nudge.contracts import ToolFault
