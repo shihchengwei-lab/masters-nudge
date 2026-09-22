@@ -132,9 +132,9 @@ class TransportTests(unittest.TestCase):
             f"subprocess.Popen([sys.executable,'-c',{child!r}],stdout=sys.stdout,stderr=sys.stderr)"
         )
         probe = (
-            "import sys,time; from masters_nudge.providers import _run_cli_process; "
+            "import os,sys,time; from masters_nudge.providers import _run_cli_process; "
             "started=time.monotonic(); "
-            f"_run_cli_process([sys.executable,'-c',{provider!r}],environment={{}},timeout_sec=1); "
+            f"_run_cli_process([sys.executable,'-c',{provider!r}],environment=dict(os.environ),timeout_sec=1); "
             "raise SystemExit(0 if time.monotonic()-started < 1.5 else 1)"
         )
         result = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, timeout=5)
@@ -143,9 +143,9 @@ class TransportTests(unittest.TestCase):
     @unittest.skipUnless(os.name == "nt", "Windows pipe behavior")
     def test_timeout_still_applies_when_child_never_reads_large_stdin(self):
         code = (
-            "import subprocess,sys; from masters_nudge.providers import _run_cli_process; "
+            "import os,subprocess,sys; from masters_nudge.providers import _run_cli_process; "
             "\ntry: _run_cli_process([sys.executable,'-c','import time; time.sleep(10)'],"
-            "input_text='x'*1000000,environment={},timeout_sec=1)"
+            "input_text='x'*1000000,environment=dict(os.environ),timeout_sec=1)"
             "\nexcept subprocess.TimeoutExpired: raise SystemExit(0)"
             "\nraise SystemExit(1)"
         )

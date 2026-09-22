@@ -42,13 +42,14 @@ def actor_workspace(result_directory: Path):
     # Python's private TemporaryDirectory uses OWNER RIGHTS on Windows. Files
     # created there by the sandbox account become unreadable to the Provider.
     # An ordinary directory inherits the result directory's user permissions.
-    parent = result_directory.resolve()
+    parent = Path(result_directory)
+    resolved_parent = parent.resolve()
     workspace = parent / "workspace"
     workspace.mkdir()
     try:
         yield workspace
     finally:
-        if workspace.resolve().parent != parent:
+        if workspace.resolve().parent != resolved_parent:
             raise ValueError("測試工作區路徑已改變，停止清理")
         shutil.rmtree(workspace)
 

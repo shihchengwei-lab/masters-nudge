@@ -101,35 +101,30 @@ class RepositoryTools:
         if not prefix.exists():
             return
         relative_prefix = prefix.relative_to(self.root).as_posix() or "."
-        searched = subprocess.run(
-            [
-                "rg", "--fixed-strings", "--line-number", "--with-filename",
-                "--no-heading", "--color", "never", "--hidden", "--glob", "!.git/**",
-                "--max-count", str(count), "--", query, relative_prefix,
-            ],
-            cwd=self.root,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=15,
+        listed = self._git(
+            "ls-files", "-z", "--cached", "--others", "--exclude-standard",
+            "--", relative_prefix,
         )
-        if searched.returncode not in (0, 1):
-            raise ToolFault("mcp_search", searched.stderr.strip() or "無法搜尋工作區")
+        if listed.returncode:
+            raise ToolFault("mcp_search", listed.stderr.decode("utf-8", errors="replace").strip()
+                            or "無法列出工作區檔案")
         found = 0
-        for raw in searched.stdout.splitlines():
-            parts = raw.split(":", 2)
-            if len(parts) != 3:
+        for raw_path in listed.stdout.split(b"\0"):
+            if not raw_path:
                 continue
-            relative, number, text = parts
-            try:
-                line_number = int(number)
-            except ValueError:
-                continue
-            yield MaterialLine("current_structure", Path(relative).as_posix(), line_number, text)
-            found += 1
-            if found >= count:
-                return
+            relative = raw_path.decode("utf-8", errors="surrogateescape")
+            path = self.root / relative
+            with path.open(encoding="utf-8", errors="replace") as stream:
+                for line_number, text in enumerate(stream, 1):
+                    if query not in text:
+                        continue
+                    yield MaterialLine(
+                        "current_structure", Path(relative).as_posix(), line_number,
+                        text.rstrip("\r\n"),
+                    )
+                    found += 1
+                    if found >= count:
+                        return
 
     def call(self, name: str, args: dict) -> dict:
         history = read_audit(self.audit)
