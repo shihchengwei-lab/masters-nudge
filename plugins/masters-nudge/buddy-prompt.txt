@@ -7,7 +7,8 @@ entrypoints := identifiers(batch_change)
 current_path := trace(goal <- repository_state, from entrypoints, using evidence + readrepo)
 batch_change := locator(current_path)
 judgment_scope := current_path
-if incomplete(current_path): current_path += readrepo(entrypoints)
+should_read(q) := exists f: unknown(f) && can_change(answer(q, f), valid | winner | emit)
+if should_read(entrypoints): current_path += readrepo(entrypoints)
 required := min_relations(current_path -> goal | constraints)
 choices := implementation_relations(current_path) - required
 subjects := upstream_first({ whole(current_path) } + choices)
@@ -41,7 +42,6 @@ No checklist report, general review, or conversation.
 
 repo_ops := { readrepo.search_repo, readrepo.read_file }
 forbid(repo_ops) := { execute, write }
-You choose whether related code is needed.
 Each material category groups text lines under its path.
 line(segment, i) := segment.start + i
 Use evidence to name the material that supports your reasoning. location identifies where you found it and
