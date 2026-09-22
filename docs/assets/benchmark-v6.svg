@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" role="img" aria-labelledby="title desc">
+  <title id="title">Masters' Nudge benchmark: B wins seven, A wins two, three ties</title>
+  <desc id="desc">Both arms completed twelve of twelve contracts. Masters' Nudge won seven code-taste comparisons versus two for a generic request, with three ties, at higher time and token cost.</desc>
+  <rect width="1200" height="460" rx="28" fill="#11131a"/>
+  <text x="56" y="66" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="31" font-weight="700">A vague request vs. a structural nudge</text>
+  <text x="56" y="101" fill="#aaa4ba" font-family="Segoe UI, sans-serif" font-size="19">6 repositories · 2 runs per arm · blind review · same contract</text>
+
+  <rect x="56" y="142" width="510" height="258" rx="20" fill="#1b1e28"/>
+  <text x="84" y="184" fill="#d9d4e7" font-family="Segoe UI, sans-serif" font-size="20" font-weight="600">CODE-TASTE WINS</text>
+  <text x="84" y="234" fill="#9f98ad" font-family="Segoe UI, sans-serif" font-size="18">“Please complete it with good taste”</text>
+  <rect x="84" y="250" width="112" height="28" rx="8" fill="#716b7b"/>
+  <text x="210" y="271" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="21" font-weight="700">A  2</text>
+  <text x="84" y="320" fill="#c9bff5" font-family="Segoe UI, sans-serif" font-size="18">Masters’ Nudge</text>
+  <rect x="84" y="336" width="392" height="28" rx="8" fill="#9b7cff"/>
+  <text x="490" y="357" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="21" font-weight="700">B  7</text>
+  <text x="84" y="389" fill="#8f899c" font-family="Segoe UI, sans-serif" font-size="16">3 ties</text>
+
+  <rect x="590" y="142" width="554" height="258" rx="20" fill="#1b1e28"/>
+  <text x="620" y="184" fill="#d9d4e7" font-family="Segoe UI, sans-serif" font-size="20" font-weight="600">WHAT IT COST</text>
+  <text x="620" y="235" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="42" font-weight="700">12/12</text>
+  <text x="790" y="235" fill="#aaa4ba" font-family="Segoe UI, sans-serif" font-size="18">contracts completed by both arms</text>
+  <line x1="620" y1="264" x2="1114" y2="264" stroke="#343846"/>
+  <text x="620" y="307" fill="#aaa4ba" font-family="Segoe UI, sans-serif" font-size="18">Elapsed time</text>
+  <text x="1114" y="307" text-anchor="end" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700">B +44.8%</text>
+  <text x="620" y="351" fill="#aaa4ba" font-family="Segoe UI, sans-serif" font-size="18">Non-cached input</text>
+  <text x="1114" y="351" text-anchor="end" fill="#f4f1ff" font-family="Segoe UI, sans-serif" font-size="22" font-weight="700">B +94.5%</text>
+  <text x="620" y="385" fill="#756f80" font-family="Segoe UI, sans-serif" font-size="15">32 Provider calls · 22 feedbacks · 10 silences</text>
+</svg>

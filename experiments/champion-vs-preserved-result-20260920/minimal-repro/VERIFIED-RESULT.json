@@ -1,0 +1,10 @@
+{
+  "platform": "Windows 11",
+  "codex_version": "codex-cli 0.155.1",
+  "hook_started": true,
+  "hook_completed_count": 0,
+  "turn_completed": true,
+  "turn_status": "interrupted",
+  "observation_window_seconds": 5,
+  "reproduced": true
+}

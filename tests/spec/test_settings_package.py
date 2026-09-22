@@ -120,6 +120,18 @@ class SettingsPackageTests(unittest.TestCase):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse"})
 
+    def test_current_version_and_benchmark_are_visible_in_public_docs(self):
+        manifest = json.loads(
+            (ROOT / "plugins/masters-nudge/.codex-plugin/plugin.json").read_text(encoding="utf-8")
+        )
+        for path in ("README.md", "README.zh-TW.md", "SPEC.zh-TW.md"):
+            self.assertIn(manifest["version"], (ROOT / path).read_text(encoding="utf-8"))
+        for path in ("README.md", "README.zh-TW.md"):
+            self.assertIn(
+                "benchmark/formal-v6/RESULTS.zh-TW.md",
+                (ROOT / path).read_text(encoding="utf-8"),
+            )
+
     def test_post_tool_hook_calls_the_persistent_mcp_synchronously(self):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
