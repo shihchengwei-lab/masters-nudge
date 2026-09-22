@@ -115,16 +115,27 @@ class SettingsPackageTests(unittest.TestCase):
     def test_generated_plugin_is_current(self):
         self.assertEqual(check_plugin(), [])
         self.assertFalse((ROOT / ".claude-plugin/marketplace.json").exists())
+        manifest = json.loads((ROOT / "plugins/masters-nudge/.codex-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse"})
 
-    def test_post_tool_hook_is_a_watchdog_not_the_provider_deadline(self):
+    def test_post_tool_hook_calls_the_persistent_mcp_synchronously(self):
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
+        self.assertEqual(hook["type"], "mcp_tool")
+        self.assertEqual((hook["server"], hook["tool"]), ("masters_nudge", "review_patch"))
+        self.assertNotIn("async", hook)
         self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 240)
-        self.assertEqual(HOOK_TIMEOUT_SEC, 360)
+        self.assertEqual(PROVIDER_TIMEOUT_SEC, 1200)
+        self.assertEqual(HOOK_TIMEOUT_SEC, 1320)
         self.assertEqual(hook["timeout"], HOOK_TIMEOUT_SEC)
+        self.assertEqual(set(hook["input"]), {
+            "hook_event_name", "session_id", "turn_id", "cwd", "transcript_path",
+            "tool_name", "tool_use_id", "tool_input", "tool_response",
+        })
+        user_hook = hooks["UserPromptSubmit"][0]["hooks"][0]
+        self.assertEqual(user_hook["type"], "command")
 
     def test_provider_prompt_explains_structural_feedback_limits(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
@@ -136,14 +147,18 @@ class SettingsPackageTests(unittest.TestCase):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
         normalized = " ".join(prompt.split())
         goal = normalized.index("goal := latest(task_contract)")
-        required = normalized.index("required := min_relations")
-        choices = normalized.index("choices := implementation_relations(evidence) - required")
-        subjects = normalized.index("subjects := upstream_first({ whole(change) } + choices)")
+        entrypoints = normalized.index("entrypoints := identifiers(batch_change)")
+        current_path = normalized.index("current_path := trace(goal <- repository_state")
+        required = normalized.index("required := min_relations(current_path -> goal | constraints)")
+        choices = normalized.index("choices := implementation_relations(current_path) - required")
+        subjects = normalized.index("subjects := upstream_first({ whole(current_path) } + choices)")
         alternatives = normalized.index("alternatives(r) := { keep(r), remove(r), replace(r) }")
         winner = normalized.index("winner(r) := argmin")
         candidates = normalized.index("candidates := {")
         selected = normalized.index("selected := argmax")
-        self.assertLess(goal, required)
+        self.assertLess(goal, entrypoints)
+        self.assertLess(entrypoints, current_path)
+        self.assertLess(current_path, required)
         self.assertLess(required, choices)
         self.assertLess(choices, subjects)
         self.assertLess(subjects, alternatives)
@@ -154,6 +169,19 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertNotIn("internal := best", normalized)
         self.assertNotIn("Without assuming the current change is necessary", normalized)
         self.assertNotIn("Imagine Linus can interrupt the Actor only once", normalized)
+
+    def test_provider_prompt_formalizes_only_deterministic_process(self):
+        prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")
+        normalized = " ".join(prompt.split())
+        self.assertIn("batch_change := locator(current_path)", normalized)
+        self.assertIn("judgment_scope := current_path", normalized)
+        self.assertIn("if incomplete(current_path): current_path += readrepo(entrypoints)", normalized)
+        self.assertIn("repo_ops := { readrepo.search_repo, readrepo.read_file }", normalized)
+        self.assertIn("forbid(repo_ops) := { execute, write }", normalized)
+        self.assertIn("line(segment, i) := segment.start + i", normalized)
+        self.assertIn("The six checks used by burden are not a priority order", normalized)
+        self.assertIn("Do not invent support that you did not receive", normalized)
+        self.assertIn("A suspected failure must concern an execution path supported by the task", normalized)
 
     def test_provider_prompt_emits_the_selected_alternative_as_formal_relation(self):
         prompt = (ROOT / "buddy-prompt.txt").read_text(encoding="utf-8")

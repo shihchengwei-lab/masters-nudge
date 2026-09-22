@@ -1,6 +1,6 @@
 """The source inventory is the only owner of packaged runtime membership."""
 GENERATED_FILES = (
-    "LICENSE", "buddy-prompt.txt", "hook_entry.py", "masters_nudge_cli.py", "nudge-schema.json",
+    "LICENSE", "buddy-prompt.txt", "hook_entry.py", "mcp_entry.py", "masters_nudge_cli.py", "nudge-schema.json",
     "masters_nudge/__init__.py", "masters_nudge/codex_adapter.py", "masters_nudge/contracts.py",
     "masters_nudge/core.py", "masters_nudge/evidence.py", "masters_nudge/management.py",
     "masters_nudge/plugin_inventory.py", "masters_nudge/provider_contract.py",
@@ -8,7 +8,7 @@ GENERATED_FILES = (
     "masters_nudge/runtime.py", "masters_nudge/settings.py", "masters_nudge/storage.py",
 )
 STATIC_FILES = (
-    ".codex-plugin/plugin.json", "hooks/hooks.json", "hooks/run_python.cmd", "hooks/run_python.sh",
+    ".codex-plugin/plugin.json", ".mcp.json", "hooks/hooks.json", "hooks/run_python.cmd", "hooks/run_python.sh",
     "skills/doctor/SKILL.md", "skills/select-provider/SKILL.md", "skills/recent-nudges/SKILL.md",
 )
 RETIRED_FILES = (

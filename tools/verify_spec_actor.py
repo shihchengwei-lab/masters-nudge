@@ -115,9 +115,16 @@ def packaged_hook_overrides(package: Path) -> list[str]:
             return "{" + ",".join(json.dumps(key) + "=" + toml(item) for key, item in value.items()) + "}"
         if isinstance(value, list):
             return "[" + ",".join(toml(item) for item in value) + "]"
+        if isinstance(value, str):
+            value = value.replace("${PLUGIN_ROOT}", str(package.resolve()).replace("\\", "/"))
         return json.dumps(value)
     hooks = json.loads((package / "hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
-    return [argument for event, groups in hooks.items() for argument in ("-c", f"hooks.{event}={toml(groups)}")]
+    servers = json.loads((package / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]
+    result = [argument for name, config in servers.items()
+              for argument in ("-c", f"mcp_servers.{name}={toml(config)}")]
+    result.extend(argument for event, groups in hooks.items()
+                  for argument in ("-c", f"hooks.{event}={toml(groups)}"))
+    return result
 
 
 def arm_hook_arguments(package: Path, arm: str) -> list[str]:

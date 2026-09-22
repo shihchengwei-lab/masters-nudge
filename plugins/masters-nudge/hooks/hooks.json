@@ -6,10 +6,21 @@
         "matcher": "^apply_patch$",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${PLUGIN_ROOT}/hooks/run_python.sh\" \"${PLUGIN_ROOT}/hook_entry.py\" --host codex_cli",
-            "commandWindows": "& \"$env:PLUGIN_ROOT\\hooks\\run_python.cmd\" \"$env:PLUGIN_ROOT\\hook_entry.py\" --host codex_cli",
-            "timeout": 360
+            "type": "mcp_tool",
+            "server": "masters_nudge",
+            "tool": "review_patch",
+            "input": {
+              "hook_event_name": "PostToolUse",
+              "session_id": "${session_id}",
+              "turn_id": "${turn_id}",
+              "cwd": "${cwd}",
+              "transcript_path": "${transcript_path}",
+              "tool_name": "${tool_name}",
+              "tool_use_id": "${tool_use_id}",
+              "tool_input": "${tool_input}",
+              "tool_response": "${tool_response}"
+            },
+            "timeout": 1320
           }
         ]
       }

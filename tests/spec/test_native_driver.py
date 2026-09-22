@@ -61,11 +61,13 @@ class NativeDriverTests(unittest.TestCase):
     def test_uses_packaged_hook_commands_including_launcher(self):
         package = Path(__file__).resolve().parents[2] / "plugins/masters-nudge"
         overrides = packaged_hook_overrides(package)
-        self.assertEqual(len(overrides), 4)
-        self.assertIn("hooks.PostToolUse=", overrides[1])
-        self.assertIn("run_python.cmd", overrides[1])
-        self.assertIn("PLUGIN_ROOT", overrides[1])
-        self.assertIn("hooks.UserPromptSubmit=", overrides[3])
+        self.assertEqual(len(overrides), 6)
+        self.assertIn("mcp_servers.masters_nudge=", overrides[1])
+        self.assertIn("mcp_entry.py", overrides[1])
+        self.assertNotIn("PLUGIN_ROOT", overrides[1])
+        self.assertIn("hooks.PostToolUse=", overrides[3])
+        self.assertIn('"type"="mcp_tool"', overrides[3])
+        self.assertIn("hooks.UserPromptSubmit=", overrides[5])
 
     def test_direct_arm_has_no_hook_arguments_and_nudge_arm_uses_the_package(self):
         package = Path(__file__).resolve().parents[2] / "plugins/masters-nudge"
