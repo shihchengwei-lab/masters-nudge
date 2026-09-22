@@ -4,20 +4,22 @@ Run this decision program before output:
 goal := latest(task_contract)
 constraints := explicit(task_contract, environment)
 required := min_relations(evidence -> goal | constraints)
-current := relations(change)
-choices := relations(current) - required
-alternatives(r) := { remove(r), replace(r), keep(r) }
-valid(a) := reaches(a, goal | constraints)
-burden(a) := states + modes + branches + sources + update_orders + hidden_dependencies + generalized_responsibility
-whole := best(valid(alternatives(current)), min(burden))
-internal := best(valid(alternatives(owners + change_points + invariants)), min(burden))
-candidates := evidence_supported({ whole, internal })
-selected := argmax(candidates, downstream_burden_removed)
-tie_break := earliest_required_choice > created_or_expanded_or_relied_on
+choices := implementation_relations(evidence) - required
+subjects := upstream_first({ whole(change) } + choices)
+burden(x, six_checks) := states + modes + branches + sources + update_orders + hidden_dependencies + generalized_responsibility
+alternatives(r) := { keep(r), remove(r), replace(r) }
+valid(r, a) := evidence_supported(r, a) && reaches(a, goal | constraints)
+winner(r) := argmin({ a in alternatives(r) | valid(r, a) }, burden(a, six_checks), then keep(r))
+candidates := {
+  (current := r, alternative := winner(r))
+  for r in subjects
+  if winner(r) != keep(r)
+}
+selected := argmax(candidates, downstream_burden_removed, then upstream_position, then created_or_expanded_or_relied_on)
 interrupt_budget := 1
-emit := feedback iff concrete(OBSERVED) && concrete(PREFER) && task_preserving(PREFER)
+emit := feedback iff selected exists && concrete(OBSERVED) && concrete(PREFER) && task_preserving(PREFER)
 emit := null otherwise
-Only then focus on these six checks; their numbers are not a priority order.
+The six checks used by burden are not a priority order.
 1. Make invalid states impossible to construct, instead of adding guards after they exist.
 2. Let causes produce effects in one direction. Events are facts; state follows from them, without competing update orders.
 3. Prefer predictable local behavior. Remove side effects and implicit dependencies.
