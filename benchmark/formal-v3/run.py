@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+from contextlib import closing
 from pathlib import Path
 import re
 import shutil
@@ -509,6 +510,19 @@ def attempts(data: Path) -> list[dict]:
     return result
 
 
+def skipped_new_test_patches(data: Path) -> int:
+    database = data / "feedback.sqlite3"
+    if not database.is_file():
+        return 0
+    with closing(sqlite3.connect(database)) as connection:
+        columns = {row[1] for row in connection.execute("PRAGMA table_info(rounds)")}
+        if "skipped_new_test_patches" not in columns:
+            return 0
+        return connection.execute(
+            "SELECT COALESCE(SUM(skipped_new_test_patches),0) FROM rounds"
+        ).fetchone()[0]
+
+
 def unresolved_batches(data: Path) -> list[str]:
     database = data / "feedback.sqlite3"
     if not database.is_file():
@@ -592,6 +606,7 @@ def execute(case_id: str, repeat: int, arm: str) -> dict:
     verification = verify(case_id, workspace, artifact)
     extra_ok, missing = contract_extras(case_id, workspace)
     provider_records = attempts(data)
+    skipped_tests = skipped_new_test_patches(data)
     unresolved = unresolved_batches(data)
     changes = file_change_events(events)
     if process.returncode and not fault:
@@ -600,7 +615,7 @@ def execute(case_id: str, repeat: int, arm: str) -> dict:
         fault = "Provider interruption"
     if any(record.get("outcome") not in ("feedback", "silence") for record in provider_records) and not fault:
         fault = "Provider fault"
-    if enabled and changes and not provider_records and not fault:
+    if enabled and changes and not provider_records and not skipped_tests and not fault:
         fault = "PostToolUse produced no Provider judgment after a file change"
     tests_unchanged = run(
         ["git", "diff", "--quiet", "HEAD", "--", *manifest[case_id]["test_paths"]],
@@ -611,6 +626,7 @@ def execute(case_id: str, repeat: int, arm: str) -> dict:
         "elapsed_seconds": round(elapsed, 3), "actor_exit_code": process.returncode,
         "actor_usage": event_usage(events), "provider_usage": provider_usage(provider_records),
         "provider_attempts": provider_records, "provider_unresolved_batches": unresolved,
+        "skipped_new_test_patches": skipped_tests,
         "file_change_events": changes, "tests_unchanged": tests_unchanged,
         "verification_exits": [item["exit_code"] for item in verification],
         "required_paths_present": extra_ok, "missing_required_paths": missing,

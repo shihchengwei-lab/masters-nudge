@@ -2,7 +2,7 @@
 from dataclasses import asdict
 import time
 from . import providers
-from .contracts import MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault
+from .contracts import MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault, patch_operations
 from .evidence import build_packet
 from .prompting import load_system_prompt
 from .provider_contract import parse_feedback
@@ -23,7 +23,18 @@ class NudgeCore:
     def process_event(self, session: SessionRef, event: ToolCompleted):
         events = (event,)
         payload = [asdict(event)]
-        reserved = self.journal.begin(session, payload)
+        response = event.tool_response
+        succeeded = (isinstance(response, str) and
+                     (response.startswith("Success") or
+                      response.startswith("Exit code: 0") and
+                      any(line.startswith("Success.") for line in response.splitlines()))
+                     or isinstance(response, dict) and
+                     (response.get("success") is True
+                      or type(response.get("exit_code")) is int and response["exit_code"] == 0
+                      or isinstance(response.get("output"), str)
+                      and response["output"].startswith("Success")))
+        operations = patch_operations(event.modification, session.cwd) if succeeded else None
+        reserved = self.journal.begin(session, payload, operations)
         if reserved is None:
             return None
         attempt, task = reserved

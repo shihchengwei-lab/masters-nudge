@@ -66,7 +66,9 @@ class TransportTests(unittest.TestCase):
         line = {"source": "current_structure", "path": "src/狀態.py", "line": 2,
                 "text": '狀態 = "完成"'}
         cases = (
-            (json_text({"lines": [line], "truncated": False}), "", None, (MaterialLine(**line),)),
+            (json_text({"segments": [{"path": "src/狀態.py", "start": 2,
+                                       "lines": ['狀態 = "完成"']}], "truncated": False}),
+             "", None, (MaterialLine(**line),)),
             (json_text({"error": "read denied"}), "read denied", None, ()),
             ("x" * 1501, "", "mcp_budget", ()),
         )

@@ -1,11 +1,23 @@
 import os
+from contextlib import closing
 from pathlib import Path
+import sqlite3
+import tempfile
 import unittest
 
 import run
 
 
 class BenchmarkContractTests(unittest.TestCase):
+    def test_intentional_new_test_skip_counts_as_hook_handling(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            with closing(sqlite3.connect(data / "feedback.sqlite3")) as db:
+                db.execute("CREATE TABLE rounds(skipped_new_test_patches INTEGER NOT NULL)")
+                db.execute("INSERT INTO rounds VALUES(2)")
+                db.commit()
+            self.assertEqual(run.skipped_new_test_patches(data), 2)
+
     def test_fixed_six_cases(self):
         self.assertEqual(
             [

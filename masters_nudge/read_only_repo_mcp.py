@@ -13,13 +13,13 @@ if __package__ in (None, ""):
 from masters_nudge.contracts import MaterialLine, ToolFault, find_git_root, json_text
 
 TOOLS = [
-    {"name": "search_repo", "description": "Search literal text in the Git workspace; return exact file/line/text. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
+    {"name": "search_repo", "description": "Search literal text in the Git workspace. Each current_structure segment has a path, start line, and consecutive text lines. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string", "minLength": 1},
          "path": {"type": "string"},
          "max_results": {"type": "integer", "minimum": 1, "maximum": 50}},
          "required": ["query"], "additionalProperties": False}},
-    {"name": "read_file", "description": "Read a file range in the Git workspace; return exact file/line/text. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
+    {"name": "read_file", "description": "Read a file range in the Git workspace. Each current_structure segment has a path, start line, and consecutive text lines. exhausted=true means the shared evidence budget is finished and no later repository call can return more evidence.",
      "inputSchema": {"type": "object", "properties": {
          "path": {"type": "string", "minLength": 1},
          "start_line": {"type": "integer", "minimum": 1},
@@ -35,6 +35,17 @@ def read_audit(path: Path) -> list[dict]:
         return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     except (OSError, ValueError) as exc:
         raise ToolFault("mcp_audit", "材料讀取紀錄損壞") from exc
+
+
+def compact_lines(lines: list[MaterialLine]) -> list[dict]:
+    segments: list[dict] = []
+    for line in lines:
+        if (segments and segments[-1]["path"] == line.path
+                and line.line == segments[-1]["start"] + len(segments[-1]["lines"])):
+            segments[-1]["lines"].append(line.text)
+        else:
+            segments.append({"path": line.path, "start": line.line, "lines": [line.text]})
+    return segments
 
 
 class RepositoryTools:
@@ -142,12 +153,14 @@ class RepositoryTools:
             else:
                 iterator = self._search(args) if name == "search_repo" else self._read(args)
                 for line in iterator:
-                    candidate = json_text({"lines": [*lines, asdict(line)], "truncated": False})
+                    candidate = json_text({"segments": compact_lines([*lines, line]),
+                                           "truncated": False, "exhausted": False})
                     if len(candidate) > remaining:
                         truncated = exhausted = True
                         break
-                    lines.append(asdict(line))
-                text = json_text({"lines": lines, "truncated": truncated})
+                    lines.append(line)
+                text = json_text({"segments": compact_lines(lines),
+                                  "truncated": truncated, "exhausted": exhausted})
                 if len(text) > remaining:
                     text = ""
                     exhausted = True
@@ -157,10 +170,11 @@ class RepositoryTools:
             if len(text) > remaining:
                 text = ""
         record = {"name": name, "arguments": args, "text": text, "fault": fault,
-                  "exhausted": exhausted, "lines": lines}
+                  "exhausted": exhausted, "lines": [asdict(line) for line in lines]}
         with self.audit.open("a", encoding="utf-8") as stream:
             stream.write(json_text(record) + "\n")
-        response = {"lines": lines, "truncated": truncated, "exhausted": exhausted}
+        response = {"segments": compact_lines(lines), "truncated": truncated,
+                    "exhausted": exhausted}
         if fault:
             response["error"] = fault
         return {"content": [{"type": "text", "text": json_text(response)}],

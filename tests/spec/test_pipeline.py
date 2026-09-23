@@ -213,6 +213,80 @@ class PipelineTests(unittest.TestCase):
         packet = json.loads(self.calls[-1]["nudge_input"])
         self.assertIn("現在改成只保留一份狀態", str(packet["task_contract"]))
 
+    def test_new_test_file_patches_leave_silence_budget_for_source_changes(self):
+        self.prompt()
+        added = "*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch"
+        updated = "*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch"
+        self.assertIsNone(self.batch(added, call="test-add"))
+        self.assertIsNone(self.batch(updated, call="test-update"))
+        self.assertEqual(len(self.calls), 0)
+        with self.adapter.core.journal.connect() as db:
+            row = db.execute("SELECT skipped_new_test_patches FROM rounds").fetchone()
+        self.assertEqual(row["skipped_new_test_patches"], 2)
+        for i in range(3):
+            self.batch(call=f"source-{i}")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_existing_test_and_mixed_patch_still_call_provider(self):
+        self.prompt()
+        existing = "*** Begin Patch\n*** Update File: tests/existing.spec.ts\n@@\n+x\n*** End Patch"
+        mixed = ("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n"
+                 "*** Update File: job.py\n@@\n+x\n*** End Patch")
+        self.batch(existing, call="existing")
+        self.batch(mixed, call="mixed")
+        self.assertEqual(len(self.calls), 2)
+        packet = json.loads(self.calls[-1]["nudge_input"])
+        self.assertEqual(packet["new_test_paths"], ["tests/new.spec.ts"])
+        self.assertIn("*** Update File: job.py", str(packet["batch_change"]))
+        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch",
+                   call="new-update")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_mixed_followup_identifies_new_test_without_hiding_source_change(self):
+        self.prompt("Checked-in tests are immutable")
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch", call="add-test")
+        mixed = ("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+y\n"
+                 "*** Update File: job.py\n@@\n+value = 1\n*** End Patch")
+        self.batch(mixed, call="mixed")
+        self.assertEqual(len(self.calls), 1)
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(packet["new_test_paths"], ["tests/new.spec.ts"])
+        self.assertIn("*** Update File: tests/new.spec.ts", str(packet["batch_change"]))
+        self.assertIn("*** Update File: job.py", str(packet["batch_change"]))
+
+    def test_new_round_forgets_new_test_file(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch")
+        self.prompt("另一輪", turn="turn-2")
+        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch",
+                   turn="turn-2")
+        self.assertEqual(len(self.calls), 1)
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(packet["new_test_paths"], [])
+
+    def test_uncertain_patch_and_non_test_file_keep_provider_review(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Add File: tests/README.md\n+notes\n*** End Patch",
+                   call="readme")
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test\n"
+                   "*** Move to: tests/moved.spec.ts\n*** End Patch", call="move")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_failed_add_does_not_make_later_update_skippable(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test\n*** End Patch",
+                   output="Failed to write file", call="failed-add")
+        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+test\n*** End Patch",
+                   call="later-update")
+        self.assertEqual(len(self.calls), 2)
+
+    def test_native_exit_code_zero_add_skips_provider(self):
+        self.prompt()
+        output = "Exit code: 0\nWall time: 0 seconds\nOutput:\nSuccess. Updated the following files:\nA test/cacheKey.js"
+        self.batch("*** Begin Patch\n*** Add File: test/cacheKey.js\n+test\n*** End Patch",
+                   output=output)
+        self.assertEqual(self.calls, [])
+
     def test_three_identical_feedbacks_count_without_cooldown(self):
         self.prompt()
         self.feedback()

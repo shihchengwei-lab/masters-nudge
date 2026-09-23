@@ -1,6 +1,6 @@
 """Fixed instructions and the only Actor-facing feedback rendering."""
 from pathlib import Path
-from .contracts import Feedback, ToolFault, FEEDBACK_MAX_CHARS
+from .contracts import Feedback, ToolFault, EVIDENCE_EXCERPT_MAX_CHARS
 
 
 def delivery_text(feedback: Feedback) -> str:
@@ -18,4 +18,4 @@ def load_system_prompt(*, prompt_file: Path) -> str:
         raise ToolFault("configuration", f"無法讀取 Provider 提示：{exc}") from exc
     if not text:
         raise ToolFault("configuration", "Provider 提示是空的")
-    return text.replace("$FEEDBACK_MAX_CHARS", str(FEEDBACK_MAX_CHARS))
+    return text.replace("$EVIDENCE_EXCERPT_MAX_CHARS", str(EVIDENCE_EXCERPT_MAX_CHARS))

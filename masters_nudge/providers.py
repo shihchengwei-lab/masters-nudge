@@ -220,7 +220,11 @@ def _call_codex_in_directory(
     materials = []
     for entry in trace:
         if entry["text"]:
-            materials.extend(MaterialLine(**line) for line in json.loads(entry["text"]).get("lines", []))
+            for segment in json.loads(entry["text"]).get("segments", []):
+                materials.extend(
+                    MaterialLine("current_structure", segment["path"], segment["start"] + offset, line)
+                    for offset, line in enumerate(segment["lines"])
+                )
     try:
         raw = output.read_text(encoding="utf-8")
     except OSError as exc:

@@ -1,5 +1,6 @@
 """Pack known facts; the Provider chooses relevant repository structure."""
 from dataclasses import replace
+import json
 from .contracts import (
     MATERIAL_MAX_CHARS, MaterialPacket, SessionRef, ToolCompleted,
     find_git_root, json_text, material_lines,
@@ -31,7 +32,10 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
         if event.modification is None:
             lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/input", event.tool_input))
         lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/output", event.tool_response))
-    packet = MaterialPacket(tuple(lines), find_git_root(session.cwd), session.transcript_path)
+    packet = MaterialPacket(
+        tuple(lines), find_git_root(session.cwd), session.transcript_path,
+        tuple(path.replace("\\", "/") for path in json.loads(task.get("new_test_paths", "[]"))),
+    )
     packet = fit_packet(packet)
     if packet.material_chars <= MATERIAL_MAX_CHARS:
         return packet

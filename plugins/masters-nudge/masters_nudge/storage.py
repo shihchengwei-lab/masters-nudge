@@ -26,7 +26,8 @@ class Journal:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS rounds(
                     session TEXT PRIMARY KEY, turn TEXT NOT NULL, goal TEXT NOT NULL, request TEXT NOT NULL,
-                    round_id TEXT NOT NULL);
+                    round_id TEXT NOT NULL, new_test_paths TEXT NOT NULL DEFAULT '[]',
+                    skipped_new_test_patches INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS attempts(
                     id TEXT PRIMARY KEY, session TEXT NOT NULL, turn TEXT NOT NULL,
                     started REAL NOT NULL, finished REAL, outcome TEXT, delivered INTEGER NOT NULL DEFAULT 0,
@@ -50,6 +51,11 @@ class Journal:
                 columns = {row["name"] for row in db.execute(f"PRAGMA table_info({table})")}
                 if "round_id" not in columns:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
+                if table == "rounds":
+                    if "new_test_paths" not in columns:
+                        db.execute("ALTER TABLE rounds ADD COLUMN new_test_paths TEXT NOT NULL DEFAULT '[]'")
+                    if "skipped_new_test_patches" not in columns:
+                        db.execute("ALTER TABLE rounds ADD COLUMN skipped_new_test_patches INTEGER NOT NULL DEFAULT 0")
             attempt_columns = {row["name"] for row in db.execute("PRAGMA table_info(attempts)")}
             if "batch_id" not in attempt_columns:
                 db.execute("ALTER TABLE attempts ADD COLUMN batch_id TEXT")
@@ -184,7 +190,8 @@ class Journal:
         return ToolFault(fault.get("kind", "interrupted"),
                          fault.get("detail", "前一個 Provider 判斷失敗"))
 
-    def begin(self, session: SessionRef, payload: object) -> tuple[str, dict] | None:
+    def begin(self, session: SessionRef, payload: object,
+              operations: tuple[tuple[str, str, bool], ...] | None = None) -> tuple[str, dict] | None:
         """Queue one patch and claim it only after every earlier judgment is terminal."""
         wait_started = time.monotonic()
         with self.connect() as db:
@@ -197,6 +204,21 @@ class Journal:
             fault = self._fault(self._round_events(db, row["round_id"]))
             if fault is not None:
                 raise self._tool_fault(fault)
+            if operations:
+                known = set(json.loads(row["new_test_paths"]))
+                eligible = all(is_test and (kind == "Add File" or path in known)
+                               and kind != "Delete File" for kind, path, is_test in operations)
+                for kind, path, is_test in operations:
+                    if kind == "Add File" and is_test:
+                        known.add(path)
+                    elif kind == "Delete File":
+                        known.discard(path)
+                db.execute("UPDATE rounds SET new_test_paths=? WHERE session=?",
+                           (json_text(sorted(known)), session.session_id))
+                if eligible:
+                    db.execute("UPDATE rounds SET skipped_new_test_patches=skipped_new_test_patches+1 "
+                               "WHERE session=?", (session.session_id,))
+                    return None
             counts = {item["outcome"]: item["n"] for item in db.execute(
                 "SELECT outcome, COUNT(*) n FROM attempts WHERE round_id=? GROUP BY outcome",
                 (row["round_id"],),

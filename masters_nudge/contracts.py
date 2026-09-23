@@ -1,13 +1,16 @@
 """Shared event, material and judgment data; SPEC is the behavioral authority."""
 from __future__ import annotations
 import json
+import os
 import subprocess
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result")
 MATERIAL_MAX_CHARS = 20_000
-FEEDBACK_MAX_CHARS = 120
+FEEDBACK_MAX_CHARS = 145
+EVIDENCE_EXCERPT_MAX_CHARS = 120
+PREFER_MAX_CHARS = 50
 FEEDBACK_LIMIT = 3
 SILENCE_LIMIT = 2
 
@@ -76,11 +79,45 @@ class ToolCompleted:
         return None
 
 
+def patch_operations(patch: str | None, cwd: str) -> tuple[tuple[str, str, bool], ...] | None:
+    """Recognize complete apply_patch file operations; unknown syntax stays Provider-eligible."""
+    if not isinstance(patch, str):
+        return None
+    lines = patch.splitlines()
+    if len(lines) < 3 or lines[0] != "*** Begin Patch" or lines[-1] != "*** End Patch":
+        return None
+    root = Path(cwd).resolve()
+    operations = []
+    for line in lines[1:-1]:
+        if line == "*** End of File":
+            continue
+        if not line.startswith("*** "):
+            continue
+        operation, separator, name = line[4:].partition(": ")
+        if not separator or operation not in ("Add File", "Update File", "Delete File") or not name:
+            return None
+        path = (root / name).resolve()
+        if not path.is_relative_to(root):
+            return None
+        relative = path.relative_to(root)
+        normalized = os.path.normcase(str(relative))
+        filename = relative.name.lower()
+        test_directory = any(part.lower() in ("test", "tests", "__tests__")
+                             for part in relative.parts[:-1])
+        is_test = (filename.startswith("test_") or filename in ("test.py", "tests.py")
+                   or ".test." in filename or ".spec." in filename
+                   or (test_directory and relative.suffix.lower() in
+                       (".py", ".js", ".jsx", ".ts", ".tsx", ".rs", ".go", ".java", ".cs", ".rb", ".php")))
+        operations.append((operation, normalized, is_test))
+    return tuple(operations) if operations else None
+
+
 @dataclass(frozen=True)
 class MaterialPacket:
     lines: tuple[MaterialLine, ...]
     workspace: str
     transcript_path: str = ""
+    new_test_paths: tuple[str, ...] = ()
 
     def categories(self) -> dict:
         categories = {}
@@ -102,7 +139,9 @@ class MaterialPacket:
         return len(json_text(self.categories()))
 
     def render(self) -> str:
-        return json_text({**self.categories(), "workspace": self.workspace, "transcript_path": self.transcript_path})
+        return json_text({**self.categories(), "workspace": self.workspace,
+                          "transcript_path": self.transcript_path,
+                          "new_test_paths": self.new_test_paths})
 
 
 @dataclass(frozen=True)

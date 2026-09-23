@@ -31,13 +31,16 @@ class ContractTests(unittest.TestCase):
         self.assertIsNotNone(parse_feedback(json.dumps(valid)))
         invalid = []
         for key, value in (("criterion", True), ("criterion", 7), ("evidence", []),
-                           ("observed", "x" * 31), ("violates", ""), ("prefer", "x" * 31)):
+                           ("observed", "x" * 31), ("violates", ""), ("prefer", "x" * 51)):
             item = copy.deepcopy(valid)
             item["feedback"][key] = value
             invalid.append(item)
         item = copy.deepcopy(valid)
         item["feedback"]["evidence"][0]["excerpt"] = "x" * 121
         invalid.append(item)
+        item = copy.deepcopy(valid)
+        item["feedback"]["prefer"] = "x" * 50
+        self.assertIsNotNone(parse_feedback(json.dumps(item)))
         for item in invalid:
             with self.subTest(item=item), self.assertRaises(ToolFault):
                 parse_feedback(json.dumps(item))
@@ -47,7 +50,8 @@ class ContractTests(unittest.TestCase):
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
         limits = [feedback[name]["maxLength"] for name in ("observed", "violates", "prefer")]
         labels = len("OBSERVED: \nVIOLATES: \nPREFER: ")
-        self.assertLessEqual(sum(limits) + labels, 120)
+        self.assertEqual(limits, [30, 30, 50])
+        self.assertLessEqual(sum(limits) + labels, 145)
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
@@ -85,6 +89,7 @@ class ContractTests(unittest.TestCase):
         data = json.loads(packet.render())
         data.pop("workspace")
         data.pop("transcript_path")
+        data.pop("new_test_paths")
         from masters_nudge.contracts import json_text
         self.assertEqual(packet.material_chars, len(json_text(data)))
 
@@ -151,8 +156,21 @@ class RepositoryTests(unittest.TestCase):
     def test_read_returns_exact_file_line_and_original_text(self):
         result = self.tools.call("read_file", {"path": "job.py", "start_line": 2, "end_line": 2})
         payload = json.loads(result["content"][0]["text"])
-        self.assertEqual(payload["lines"], [{"source": "current_structure", "path": "job.py", "line": 2,
-                                           "text": "retry_state = status"}])
+        self.assertEqual(payload["segments"], [{"path": "job.py", "start": 2,
+                                                 "lines": ["retry_state = status"]}])
+
+    def test_compact_read_preserves_room_for_followup_search(self):
+        from masters_nudge.read_only_repo_mcp import RepositoryTools
+        source = "".join(f"value_{i} = {i}\n" for i in range(100))
+        (self.repo / "long.py").write_text(source, encoding="utf-8")
+        tools = RepositoryTools(self.repo, 4000, self.root / "compact-reads.jsonl")
+        first = json.loads(tools.call("read_file", {"path": "long.py"})["content"][0]["text"])
+        self.assertFalse(first["truncated"])
+        self.assertEqual(first["segments"], [{"path": "long.py", "start": 1,
+                                               "lines": source.splitlines()}])
+        second = json.loads(tools.call("search_repo", {"query": "value_99"})["content"][0]["text"])
+        self.assertEqual(second["segments"], [{"path": "long.py", "start": 100,
+                                                "lines": ["value_99 = 99"]}])
 
     def test_bad_line_types_report_and_record_fault_instead_of_crashing(self):
         for value in (None, "1", [], {}):
