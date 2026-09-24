@@ -10,7 +10,7 @@ Masters’ Nudge 在寫程式的模型（Actor）修改程式後，讓另一個�
 
 ## 案例：自訂快取鍵不應讀到繼承屬性
 
-最近一次評估要求 Express 在渲染畫面時支援自訂 `cacheKey`。B 臂初稿已讓快取讀寫使用新鍵，但快取仍是一般物件。Provider 回傳：
+最近一次評估要求 Express 在渲染畫面時支援自訂 `cacheKey`。A 臂沒有 Provider，B 臂收到 Masters’ Nudge 回饋。B 臂初稿已讓快取讀寫使用新鍵，但快取仍是一般物件。Provider 回傳：
 
 ```text
 OBSERVED: cache['toString'] -> Function

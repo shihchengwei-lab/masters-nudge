@@ -10,7 +10,7 @@ Masters’ Nudge gives the coding agent (Actor) one small structural suggestion 
 
 ## Example: a cache key without inherited entries
 
-In a recent evaluation, the task was to let Express render a view with a custom `cacheKey`. The first B-arm edit used the key for cache reads and writes, while the cache itself was still initialized as an ordinary object. The Provider returned:
+In a recent evaluation, the task was to let Express render a view with a custom `cacheKey`. A ran without the Provider; B received Masters’ Nudge feedback. The first B-arm edit used the key for cache reads and writes, while the cache itself was still initialized as an ordinary object. The Provider returned:
 
 ```text
 OBSERVED: cache['toString'] -> Function
