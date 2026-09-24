@@ -1,5 +1,7 @@
 # Interrupted synchronous `PostToolUse` emits `hook/started` without `hook/completed`
 
+Historical reproduction from September 2026. It describes the verified versions below; behavior in later Codex versions requires a new check.
+
 After the interrupted turn has ended, app-server consumers still see the hook run as started, with
 no terminal state distinguishing cancellation from continued execution.
 
@@ -9,7 +11,7 @@ no terminal state distinguishing cancellation from continued execution.
 - Originally observed: `codex-cli 0.155.0-alpha.9.2`
 - Reproduced with an isolated fixture: `codex-cli 0.155.1`
 
-The current official documentation says synchronous command hooks are awaited before Codex
+The official documentation at the time said synchronous command hooks were awaited before Codex
 continues:
 [Codex hooks documentation](https://developers.openai.com/zh-Hant/docs/hooks).
 

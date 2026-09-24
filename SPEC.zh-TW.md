@@ -1,6 +1,6 @@
 # Masters’ Nudge 工具規格
 
-狀態：現行規格，適用插件版本 `0.6.0+codex.20260922164420`。本檔只收錄已確認的規則；效果與執行環境的驗證結果另行留存，不反向改寫規格。目前效果證據與測試條件見[第六輪 Benchmark](benchmark/formal-v6/RESULTS.zh-TW.md)。
+狀態：已發布的 0.6.0 規格，插件版本 `0.6.0+codex.20260922164420`。本檔定義 `main` 的工具規則；效果與執行環境的驗證另行記錄。[第六輪 Benchmark](benchmark/formal-v6/RESULTS.zh-TW.md)是此版的歷史結果；[第八輪 Benchmark](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)測試未發布的候選分支，不能直接代表此版效果。
 
 ## 1. `PostToolUse` 的用途
 

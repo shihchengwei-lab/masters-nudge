@@ -63,4 +63,4 @@
 
 ## 原始證據
 
-原始資料保存在本機測試包 `D:\masters-nudge-benchmark\round-8-hidden-calibration\formal-artifacts-b-only-buddy-domain-v1`，包括 `plan.json`、`actor-summary.json`、`judge-summary.json`；clap 事後校準另存於同層的 `clap-contract-calibration\CALIBRATION.zh-TW.md`。本次 Git 提交僅收錄這份正式報告。
+報告依封存的 `plan.json`、`actor-summary.json`、`judge-summary.json` 與 clap 事後校準資料編寫。原始資料保存在本機，未隨 Git 報告公開；只靠此 repository 無法獨立重算逐筆分數。
