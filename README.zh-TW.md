@@ -6,11 +6,13 @@
 >
 > 綠燈代表現在能過。六個月後呢？
 
-Masters’ Nudge 在寫程式的模型（Actor）修改程式後，呼叫另一個模型（Provider）讀取任務、修改與相關程式碼。Provider 回傳一則結構建議或不回饋；有建議時，工具會把它附在工具結果後，於 Actor 下一步前送進脈絡。這些 token 會成為後續輸出的條件，影響輸出機率分布；工具目標是提高 Actor 選到高品味程式結構的機率。Actor 決定怎麼實作。工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
+Masters’ Nudge 在模型修改程式後，請另一個模型指出一個具體的結構問題，讓建議進入下一步的寫碼脈絡。
 
-## 案例：自訂快取鍵不應讀到繼承屬性
+## 看一個實際案例
 
-最近一次評估要求 Express 在渲染畫面時支援自訂 `cacheKey`。A 臂沒有 Provider，B 臂收到 Masters’ Nudge 回饋。B 臂初稿已讓快取讀寫使用新鍵，但快取仍是一般物件。Provider 回傳：
+Express 要支援自訂快取鍵 `cacheKey`。模型已把新鍵接上快取讀寫，但快取仍用一般物件 `{}`。這會讓 `toString` 這類物件繼承的名稱看起來像「已有快取」，即使程式從未存入該項目。
+
+Masters’ Nudge 給出的回饋是：
 
 ```text
 OBSERVED: cache['toString'] -> Function
@@ -18,39 +20,25 @@ VIOLATES: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-B 臂 Actor 收到回饋後，把快取初始化改成 `Object.create(null)`；A 臂保留 `{}`。因此在 B 臂中，`toString` 之類的鍵只會對應實際存入的快取項目。兩臂都通過任務驗收，兩位盲評者都認為 B 的結構較好。
+模型接著把快取改成沒有繼承屬性的 `Object.create(null)`。同題另一份沒有收到回饋的實作保留 `{}`。兩份實作都通過任務驗收；兩位不知道哪份使用工具的評審，都認為改後的結構較好。[第八輪 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了測試條件與其他案例。
 
-## 目前證據
+## 工具怎麼介入
 
-最新正式評估中，兩臂任務驗收各通過 9/12，其中一題的文字與驗收標準有歧義。可盲評的八組中，B 勝四組、平手四組；B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。[正式 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了方法、兩次 Vue CSS 建議的時序依賴問題及其他限制。這份結果測的是 `codex/structural-event-contract-v0.5.0` 候選分支尚未發布的提示詞，不能當成已安裝版本的發行驗證。
+1. 寫程式的模型（Actor）用 `apply_patch` 修改程式。
+2. 另一個模型（Provider）讀取當前任務、修改內容與需要的程式關係；必要時可唯讀搜尋工作區。
+3. Provider 最多回傳一則 `OBSERVED`／`VIOLATES`／`PREFER` 結構回饋，放進 Actor 下一步會看到的工具結果。Actor 自行判斷、實作與驗證。
 
-每次 `apply_patch` 成功後，原生 PostToolUse 會同步呼叫常駐的 Codex 接入 MCP 工具
-`review_patch`，由核心把任務、這次修改、成功結果及修改後工作區組成一次判斷。OpenAI／Codex Provider
-依六條結構準則查看材料；現有事實不足時，Provider 可透過另一個唯讀 repository MCP 搜尋或讀取相關檔案。
-有反饋時，工具保留原本的成功工具結果，再把 `OBSERVED`、`VIOLATES`、`PREFER` 三欄附在同一則結果後面，並要求執行者先判斷目前做法是否為任務必要。執行者仍決定是否採納建議，並負責實作及驗證。
+回饋進入 Actor 的脈絡，會影響後續輸出的機率；工具的目標是提高高品味程式結構出現的機率。若程式已經有品味，Provider 可以沉默。每輪最多三次回饋或兩次沉默，工具故障會另行顯示。[完整行為規格](SPEC.zh-TW.md)說明判斷準則與資料流。
 
-每輪最多三次反饋或兩次沉默；任一上限到達便停止。使用者新訊息重置額度，衝突要求以最新的為準。
-正常但沒有具體疑點時沉默。工具錯誤另外顯示「本輪反饋未執行」，不冒充沉默，不計入額度。
+## 目前測到什麼
 
-## 支援範圍
+第八輪用六題、每題兩次比較：A 臂收到「請高品味的完成任務。」但沒有 Provider；B 臂啟用 Masters’ Nudge。兩臂各有 **9/12** 完成正式驗收。能比較設計的八組中，**B 勝四組、平手四組**；B 的總執行時間多約 **50%**，非快取輸入 Token 多約 **77%**。
 
-- Python 3.10+、Git 工作區、已登入的 Codex Provider。
-- Actor 需使用能提供 UserPromptSubmit、PostToolUse 與 turn_id 的 Codex。
-- Provider 僅 OpenAI／Codex，沒有其他供應商的替代路徑。
-- Codex 接入 MCP 只公開 `review_patch`；Provider 唯讀 MCP 只允許工作區文字搜尋與範圍讀檔，本批材料與後續讀取共用容量限制。
-- 工具輸入必須有完整修改文字、差異或路徑與寫入內容。看不出修改內容的命令列寫檔不在支援範圍。
+其中 clap 題目的文字與驗收格式有歧義；兩次 Vue CSS 回饋的方向也有時序問題。這些結果顯示值得追查的結構改善，同時還不足以判定額外成本是否值得。詳見[正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。本輪測的是候選分支尚未發布的提示詞，不代表已安裝的 `0.6.0` 版本。
 
-## 已知限制
+## 使用與限制
 
-Windows 上的 Codex 若在同步 `PostToolUse` 執行期間中斷該輪，可能已送出 `hook/started`，卻沒有同一執行序號的
-`hook/completed`。Masters’ Nudge 因而無法只靠事件判斷該次 Hook 已取消或仍在執行；這不是 Provider 沉默。
-最小重現、事件順序與期望行為已提交至 [openai/codex#46765](https://github.com/openai/codex/issues/46765)，目前仍待 Codex 執行層修復。
-本地重現紀錄見 [Codex PostToolUse 生命週期規格](experiments/champion-vs-preserved-result-20260920/CODEX-POSTTOOLUSE-LIFECYCLE-SPEC.md)。
-
-目前原始碼與產生的插件副本一致。實際安裝狀態、不同 Codex 版本的事件行為，以及更新已安裝插件後的新任務完整流程，
-仍須在目標環境另外確認，不能由單元測試代替。
-
-## 設定與紀錄
+需要 Python 3.10+、Git 工作區、已登入的 Codex Provider，以及支援 `UserPromptSubmit`、`PostToolUse` 和 `turn_id` 的 Actor。Provider 目前只支援 OpenAI／Codex；工具必須能讀到實際修改內容，無法辨識內容的命令列寫檔不在支援範圍。
 
 ```powershell
 python masters_nudge_cli.py provider get
@@ -59,18 +47,15 @@ python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
 
-紀錄預設保存在使用者目錄下的 .masters-nudge/data/feedback.sqlite3，設定另存在 .masters-nudge/config.json。
-紀錄包含材料、判斷、錯誤與有提供時的用量；送出反饋不代表執行者採納。
-插件清單版本為 `0.6.0+codex.20260922164420`；`main` 保留已發布的提示詞。程式碼在未儲存模型選擇時仍以 `gpt-5.6-sol`、medium reasoning 為預設；儲存設定後會覆蓋這個值。上方評估使用候選提示詞與 `gpt-6-sol`、medium reasoning，實際設定以 `provider get` 查詢結果為準。
+程式碼未設定 Provider 模型時預設為 `gpt-5.6-sol`、medium reasoning；已儲存的設定會覆蓋預設。第八輪使用 `gpt-6-sol`、medium reasoning。插件清單版本為 `0.6.0+codex.20260922164420`。
 
-## 隱私
+任務、修改、工具結果及 Provider 選讀的程式碼會傳給 OpenAI。Provider 只能唯讀工作區中未被忽略的檔案；工具不修改 Actor 的檔案。紀錄存於使用者目錄的 `.masters-nudge/data/feedback.sqlite3`，設定存於 `.masters-nudge/config.json`。
 
-任務、修改、工具結果及 Provider 自行選讀的檔案內容會傳給 OpenAI。
-Provider 唯讀 MCP 禁止讀取工作區外、Git 內部及被忽略的檔案。工具不修改執行者的檔案。
+Windows Codex 在同步 `PostToolUse` 期間若中斷該輪，可能缺少對應的 `hook/completed` 事件，讓工具無法判定 Hook 是否結束。重現與追蹤見 [openai/codex#46765](https://github.com/openai/codex/issues/46765)。
 
 ## 開發
 
-原始碼是唯一實作來源，插件副本由既有建置指令產生。
+原始碼是唯一實作來源，插件副本由建置指令產生：
 
 ```powershell
 python tools/build_plugin.py --write

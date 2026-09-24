@@ -6,11 +6,13 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-Masters’ Nudge calls a separate model (Provider) after the coding agent (Actor) edits code. The Provider reads the task, the edit, and relevant repository code, then returns one structural suggestion or no feedback. A returned suggestion is appended to the tool result in the Actor's context before its next step. Those tokens condition the Actor's subsequent output probabilities; the tool's goal is to make stronger code structures more likely. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
+After a coding agent edits code, Masters’ Nudge asks a second model to point out one concrete structural problem before the agent’s next step.
 
-## Example: a cache key without inherited entries
+## A real example
 
-In a recent evaluation, the task was to let Express render a view with a custom `cacheKey`. A ran without the Provider; B received Masters’ Nudge feedback. The first B-arm edit used the key for cache reads and writes, while the cache itself was still initialized as an ordinary object. The Provider returned:
+Express needed to support a custom view cache key, `cacheKey`. The coding agent wired the new key into cache reads and writes, but kept the cache as an ordinary object, `{}`. A name such as `toString` could then look like an existing cache entry because it is inherited from the object, even when nothing was stored under that key.
+
+Masters’ Nudge returned:
 
 ```text
 OBSERVED: cache['toString'] -> Function
@@ -18,55 +20,44 @@ VIOLATES: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-After receiving that feedback, the B-arm Actor changed the cache initialization to `Object.create(null)`; the A arm retained `{}`. A key such as `toString` can therefore only refer to an entry actually stored in B's cache. Both arms passed the task contract, and two blind judges preferred B's structure.
+The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 
-## Current evidence
+## How it works
 
-In the latest formal evaluation, both arms passed 9/12 contract checks; one task had ambiguous acceptance criteria. Among eight pairs eligible for blind code-taste review, B won four and four tied. B used about 50% more total execution time and 77% more non-cached input tokens. The [formal benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) records the method, two Vue CSS suggestions with problematic timing dependencies, and other limitations. These results assess an unreleased prompt on `codex/structural-event-contract-v0.5.0`, not the installed release.
+1. The coding agent (Actor) edits code with `apply_patch`.
+2. A second model (Provider) reads the current task, the edit, and the relevant code. It can search the workspace read-only when needed.
+3. The Provider may return one `OBSERVED` / `VIOLATES` / `PREFER` structural suggestion in the tool result the Actor sees next. The Actor decides what to do, implements it, and verifies the result.
 
-UserPromptSubmit records the task without calling a Provider. Each successful `apply_patch` triggers native
-PostToolUse, which synchronously calls the persistent Codex-facing MCP tool `review_patch`. The core combines the
-task, completed patch, successful tool result, and updated workspace into one judgment. The OpenAI/Codex Provider
-uses six structural checks. When the supplied facts are insufficient, the Provider may use a separate read-only repository MCP to search or read related files. The Actor owns implementation and
-verification.
-When feedback exists, the adapter preserves the successful tool result and appends the `OBSERVED`, `VIOLATES`, and
-`PREFER` fields to that same result. A fixed follow-up asks the Actor to decide whether the observed relation is
-required by the task before continuing; implementation authority remains with the Actor.
+Feedback in the Actor’s context changes the probabilities of its next output. The tool aims to make stronger code structures more likely. The Provider may stay silent when the code is already sound. A turn stops after three suggestions or two silences; failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for the criteria and data flow.
 
-Each user-message round stops at three feedbacks or two silences. New requests reset the allowance; latest conflicting
-requirements win. Failures are visible and never counted as silence.
+## What the benchmark found
 
-## Known limitation
+Round 8 compared six tasks twice each. Arm A received “請高品味的完成任務。” (“Complete the task with good engineering taste”) but no Provider; arm B used Masters’ Nudge. Both arms passed **9/12** formal task checks. Of eight pairs eligible for design review, **B won four and four tied**. B took about **50%** more total execution time and **77%** more non-cached input tokens.
 
-On Windows, interrupting a turn while synchronous `PostToolUse` is running can emit `hook/started` without a matching
-`hook/completed` for the same run ID. Masters’ Nudge then cannot determine from lifecycle events alone whether that Hook
-was cancelled or is still running; this state is not Provider silence. The isolated reproduction, event sequence, and
-requested behavior are tracked in [openai/codex#46765](https://github.com/openai/codex/issues/46765), which remains open.
-See the local [Codex PostToolUse lifecycle specification](experiments/champion-vs-preserved-result-20260920/CODEX-POSTTOOLUSE-LIFECYCLE-SPEC.md).
+One clap task had a mismatch between its wording and acceptance format, and two Vue CSS suggestions had timing problems. The results show structural improvements worth investigating, but do not yet establish whether the extra cost is worthwhile. See the [full report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md). This round tested an unreleased prompt from a candidate branch, not the installed `0.6.0` release.
 
-Requires Python 3.10+, Git, a logged-in Codex Provider, and an Actor runtime exposing UserPromptSubmit/PostToolUse
-with turn_id. Opaque shell mutations are unsupported. Only the OpenAI/Codex Provider is supported.
-The source runtime and generated plugin copy are synchronized. Installation state, Codex-version-specific lifecycle
-behavior, and a complete task after updating an installed copy still require checks in that target environment.
+## Use and limits
 
-The five optional material categories and all read-only repository MCP reads share one budget. Evidence names the
-source and location received during that judgment; the core checks JSON shape and limits but does not independently verify the quoted text. Only `OBSERVED`, `VIOLATES`, `PREFER`, and the fixed resolution
-sentence reach the Actor.
-
-## Privacy
-
-Task, change, tool-result and selected repository materials are sent to OpenAI. The read-only repository MCP cannot write files or read
-outside the repository, Git internals, or ignored files. Attempt records are stored under .masters-nudge/data in the
-user directory. A recorded delivery is not evidence of Actor adoption.
-
-## Configuration and development
-
-The plugin manifest version is `0.6.0+codex.20260922164420`; `main` contains the released prompt. The code fallback model is `gpt-5.6-sol` at medium reasoning; a saved Provider selection overrides it. The evaluation above used a candidate prompt and `gpt-6-sol` at medium reasoning. Check the active selection with `provider get`.
+Requires Python 3.10+, a Git workspace, a signed-in Codex Provider, and an Actor runtime with `UserPromptSubmit`, `PostToolUse`, and `turn_id`. The Provider currently supports OpenAI/Codex only. The tool needs the actual edit content; opaque shell writes are unsupported.
 
 ```powershell
 python masters_nudge_cli.py provider get
+python masters_nudge_cli.py provider set openai --model gpt-6-sol
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
+```
+
+Without a saved Provider selection, the code defaults to `gpt-5.6-sol` at medium reasoning. A saved selection overrides it. Round 8 used `gpt-6-sol` at medium reasoning. The plugin manifest version is `0.6.0+codex.20260922164420`.
+
+Task text, edits, tool results, and repository code selected by the Provider are sent to OpenAI. The Provider can only read non-ignored workspace files; the tool does not edit the Actor’s files. Records are stored at `.masters-nudge/data/feedback.sqlite3` and settings at `.masters-nudge/config.json` under the user directory.
+
+On Windows, interrupting a turn during synchronous `PostToolUse` can leave no matching `hook/completed` event, so the tool cannot tell whether that Hook finished. See [openai/codex#46765](https://github.com/openai/codex/issues/46765) for the reproduction and tracking.
+
+## Development
+
+Source files are the single implementation source; build commands generate the plugin copy:
+
+```powershell
 python tools/build_plugin.py --write
 python tools/build_plugin.py --check
 python -m unittest discover -s tests -v
