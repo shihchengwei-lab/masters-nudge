@@ -2,6 +2,10 @@
 
 English | [繁體中文](README.zh-TW.md)
 
+> **Passing tests settles behavior, not design.**
+>
+> Green light means it passes now. What about six months later?
+
 Masters’ Nudge calls a separate model (Provider) after the coding agent (Actor) edits code. The Provider reads the task, the edit, and relevant repository code, then returns one structural suggestion or no feedback. A returned suggestion is appended to the tool result in the Actor's context before its next step. Those tokens condition the Actor's subsequent output probabilities; the tool's goal is to make stronger code structures more likely. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
 
 ## Example: a cache key without inherited entries
