@@ -2,11 +2,7 @@
 
 English | [繁體中文](README.zh-TW.md)
 
-> **Passing tests settles behavior, not design.**
->
-> Green light means it passes now. What about six months later?
-
-Masters’ Nudge gives the coding agent (Actor) one small structural suggestion after a code edit. A separate model (Provider) reads the task, the edit, and relevant repository code. The suggestion enters the Actor's context before its next decision and is intended to shift subsequent code generation toward a stronger structure. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
+Masters’ Nudge calls a separate model (Provider) after the coding agent (Actor) edits code. The Provider reads the task, the edit, and relevant repository code, then returns one structural suggestion or no feedback. A returned suggestion is appended to the tool result in the Actor's context before its next step. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
 
 ## Example: a cache key without inherited entries
 
@@ -22,7 +18,7 @@ After receiving that feedback, the B-arm Actor changed the cache initialization 
 
 ## Current evidence
 
-In the latest formal evaluation, both arms passed 9/12 contract checks; one task had ambiguous acceptance criteria. Among eight pairs eligible for blind code-taste review, B won four and four tied. B used about 50% more total execution time and 77% more non-cached input tokens. This shows a positive taste signal, while the value of the extra cost remains unproven. Two Vue CSS suggestions also pointed in the wrong direction. The [formal benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) contains the method and limitations. These results assess an unreleased prompt on this branch, not an installed release.
+In the latest formal evaluation, both arms passed 9/12 contract checks; one task had ambiguous acceptance criteria. Among eight pairs eligible for blind code-taste review, B won four and four tied. B used about 50% more total execution time and 77% more non-cached input tokens. The [formal benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) records the method, two Vue CSS suggestions with problematic timing dependencies, and other limitations. These results assess an unreleased prompt on this branch, not an installed release.
 
 UserPromptSubmit records the task without calling a Provider. Each successful `apply_patch` triggers native
 PostToolUse, which synchronously calls the persistent Codex-facing MCP tool `review_patch`. The core combines the

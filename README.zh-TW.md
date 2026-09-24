@@ -2,11 +2,7 @@
 
 繁體中文 | [English](README.md)
 
-> **測試通過，只證明行為；不能證明設計。**
->
-> 綠燈代表現在能過。六個月後呢？
-
-Masters’ Nudge 在寫程式的模型（Actor）修改程式後，讓另一個模型（Provider）依任務、修改與相關程式碼提出一則具體的結構建議。建議在 Actor 下一次決策前進入 context window，目的是提高後續生成較佳結構的機率；Actor 決定怎麼實作。工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
+Masters’ Nudge 在寫程式的模型（Actor）修改程式後，呼叫另一個模型（Provider）讀取任務、修改與相關程式碼。Provider 回傳一則結構建議或不回饋；有建議時，工具會把它附在工具結果後，於 Actor 下一步前送進脈絡。Actor 決定怎麼實作。工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
 
 ## 案例：自訂快取鍵不應讀到繼承屬性
 
@@ -22,7 +18,7 @@ B 臂 Actor 收到回饋後，把快取初始化改成 `Object.create(null)`；A
 
 ## 目前證據
 
-最新正式評估中，兩臂任務驗收各通過 9/12，其中一題的文字與驗收標準有歧義。可盲評的八組中，B 勝四組、平手四組；B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。品味有正向訊號，額外成本是否值得仍未證明；兩次 Vue CSS 建議的方向也有問題。方法與限制見[正式 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。這份結果測的是目前分支尚未發布的提示詞，不能當成已安裝版本的發行驗證。
+最新正式評估中，兩臂任務驗收各通過 9/12，其中一題的文字與驗收標準有歧義。可盲評的八組中，B 勝四組、平手四組；B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。[正式 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了方法、兩次 Vue CSS 建議的時序依賴問題及其他限制。這份結果測的是目前分支尚未發布的提示詞，不能當成已安裝版本的發行驗證。
 
 每次 `apply_patch` 成功後，原生 PostToolUse 會同步呼叫常駐的 Codex 接入 MCP 工具
 `review_patch`，由核心把任務、這次修改、成功結果及修改後工作區組成一次判斷。OpenAI／Codex Provider
