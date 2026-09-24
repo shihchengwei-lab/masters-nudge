@@ -6,7 +6,16 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-After a coding agent edits code, Masters’ Nudge asks a second model to point out one concrete structural problem before the agent’s next step.
+## How it works
+
+```mermaid
+flowchart LR
+    A["Coding agent (Actor) edits code"] --> B["Feedback model (Provider) reads the task, edit, and relevant code"]
+    B -->|Concrete issue| C["One structural suggestion enters Actor context"]
+    B -->|No concrete issue| D["Silence"]
+    C --> E["Actor decides how to continue"]
+    D --> E
+```
 
 ## A real example
 
@@ -22,13 +31,7 @@ PREFER: cache := Object.create(null)
 
 The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 
-## How it works
-
-1. The coding agent (Actor) edits code with `apply_patch`.
-2. A second model (Provider) reads the current task, the edit, and the relevant code. It can search the workspace read-only when needed.
-3. The Provider may return one `OBSERVED` / `VIOLATES` / `PREFER` structural suggestion in the tool result the Actor sees next. The Actor decides what to do, implements it, and verifies the result.
-
-Feedback in the Actor’s context changes the probabilities of its next output. The tool aims to make stronger code structures more likely. The Provider may stay silent when the code is already sound. A turn stops after three suggestions or two silences; failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for the criteria and data flow.
+Feedback changes the probabilities of the Actor’s next output; the tool aims to make stronger code structures more likely. The Actor decides whether to use a suggestion and owns implementation and verification. A turn stops after three suggestions or two silences; failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for the criteria and data flow.
 
 ## What the benchmark found
 
