@@ -10,21 +10,23 @@ entrypoints := identifiers(batch_change)
 current_path := trace(goal <- repository_state, from entrypoints, using evidence + readrepo)
 batch_change := locator(current_path)
 judgment_scope := current_path
-should_read(q) := exists f: unknown(f) && can_change(answer(q, f), valid | winner | emit)
-if should_read(entrypoints): current_path += readrepo(entrypoints)
+current_path += readrepo(entrypoints)
+current_path += readrepo(declared_types_or_APIs(inputs_of_new_branches_and_operations(batch_change)))
 required := min_relations(current_path -> goal | constraints)
 choices := implementation_relations(current_path) - required
 subjects := upstream_first({ whole(current_path) } + choices)
 burden(x, six_checks) := states + modes + branches + sources + update_orders + hidden_dependencies + generalized_responsibility
 alternatives(r) := { keep(r), remove(r), replace(r) }
-valid(r, a) := evidence_supported(r, a) && reaches(a, goal | constraints)
+admitted(r) := values_allowed_by_existing_type_or_API(inputs(r))
+preserves_domain(r, a) := admitted(r) <= handled_values(a)
+valid(r, a) := evidence_supported(r, a) && reaches(a, goal | constraints) && preserves_domain(r, a)
 winner(r) := argmin({ a in alternatives(r) | valid(r, a) }, burden(a, six_checks), then keep(r))
 candidates := {
   (current := r, alternative := winner(r))
   for r in subjects
-  if winner(r) != keep(r)
+  if !valid(r, keep(r)) || winner(r) != keep(r)
 }
-selected := argmax(candidates, downstream_burden_removed, then upstream_position, then created_or_expanded_or_relied_on)
+selected := argmax(candidates, invalid_keep_repaired, then downstream_burden_removed, then upstream_position, then created_or_expanded_or_relied_on)
 interrupt_budget := 1
 emit := feedback iff selected exists && concrete(OBSERVED) && concrete(PREFER) && task_preserving(PREFER)
 emit := null otherwise
@@ -41,7 +43,7 @@ new_test_paths lists test files added during this user turn. Later updates to th
 Read the task contract, explicit changes and actual tool results. The latest user request wins when requirements conflict.
 The Actor handles task completion, tests and correctness. Do not wait for red/green tests or take over verification.
 The Actor owns implementation. You may suggest a bounded repair; the Actor decides whether to use, alter or reject it.
-A question that only asks whether required behavior works belongs to the Actor's correctness work, not this feedback.
+A request only to run a correctness test belongs to the Actor. If changed code rejects a value admitted by its existing source type or API, the broken boundary relation is eligible feedback even without a failing test.
 No checklist report, general review, or conversation.
 
 repo_ops := { readrepo.search_repo, readrepo.read_file }
