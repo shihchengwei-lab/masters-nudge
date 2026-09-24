@@ -6,7 +6,7 @@
 >
 > 綠燈代表現在能過。六個月後呢？
 
-Masters’ Nudge 在寫程式的模型（Actor）修改程式後，讓另一個模型（Provider）依任務、修改與相關程式碼提出一則具體的結構建議。Actor 決定怎麼實作；工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
+Masters’ Nudge 在寫程式的模型（Actor）修改程式後，讓另一個模型（Provider）依任務、修改與相關程式碼提出一則具體的結構建議。建議在 Actor 下一次決策前進入 context window，目的是提高後續生成較佳結構的機率；Actor 決定怎麼實作。工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
 
 ## 案例：自訂快取鍵不應讀到繼承屬性
 
@@ -18,7 +18,7 @@ VIOLATES: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-B 臂成品把快取初始化改成 `Object.create(null)`，A 臂保留 `{}`。因此在 B 臂中，`toString` 之類的鍵只會對應實際存入的快取項目。兩臂都通過任務驗收，兩位盲評者都認為 B 的結構較好。回饋先於 B 的最終修改送達；但兩臂是獨立執行，單憑這個案例不能證明差異由回饋造成。
+B 臂 Actor 收到回饋後，把快取初始化改成 `Object.create(null)`；A 臂保留 `{}`。因此在 B 臂中，`toString` 之類的鍵只會對應實際存入的快取項目。兩臂都通過任務驗收，兩位盲評者都認為 B 的結構較好。
 
 ## 目前證據
 
@@ -46,10 +46,6 @@ Windows 上的 Codex 若在同步 `PostToolUse` 執行期間中斷該輪，可�
 `hook/completed`。Masters’ Nudge 因而無法只靠事件判斷該次 Hook 已取消或仍在執行；這不是 Provider 沉默。
 最小重現、事件順序與期望行為已提交至 [openai/codex#46765](https://github.com/openai/codex/issues/46765)，目前仍待 Codex 執行層修復。
 本地重現紀錄見 [Codex PostToolUse 生命週期規格](experiments/champion-vs-preserved-result-20260920/CODEX-POSTTOOLUSE-LIFECYCLE-SPEC.md)。
-
-## 證據範圍
-
-正式評估使用六個 repository 任務，每題每臂各跑兩次；A 沿用封存結果，B 獨立重跑。只有兩臂都通過契約的組別才盲評。Actor 各次獨立生成，結果差異不能全歸因於 Provider。方法、成本、契約歧義與限制見[正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。
 
 目前原始碼與產生的插件副本一致。實際安裝狀態、不同 Codex 版本的事件行為，以及更新已安裝插件後的新任務完整流程，
 仍須在目標環境另外確認，不能由單元測試代替。

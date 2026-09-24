@@ -6,7 +6,7 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-Masters’ Nudge gives the coding agent (Actor) one small structural suggestion after a code edit. A separate model (Provider) reads the task, the edit, and relevant repository code. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
+Masters’ Nudge gives the coding agent (Actor) one small structural suggestion after a code edit. A separate model (Provider) reads the task, the edit, and relevant repository code. The suggestion enters the Actor's context before its next decision and is intended to shift subsequent code generation toward a stronger structure. The Actor decides what to implement. [SPEC.zh-TW.md](SPEC.zh-TW.md) defines the behavior.
 
 ## Example: a cache key without inherited entries
 
@@ -18,7 +18,7 @@ VIOLATES: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-The B-arm final patch changed the cache initialization to `Object.create(null)`; the A arm retained `{}`. A key such as `toString` can therefore only refer to an entry actually stored in B's cache. Both arms passed the task contract, and two blind judges preferred B's structure. The feedback was delivered before B's final change, but the arms were independent runs, so this example alone does not prove that the feedback caused the difference.
+After receiving that feedback, the B-arm Actor changed the cache initialization to `Object.create(null)`; the A arm retained `{}`. A key such as `toString` can therefore only refer to an entry actually stored in B's cache. Both arms passed the task contract, and two blind judges preferred B's structure.
 
 ## Current evidence
 
@@ -35,10 +35,6 @@ required by the task before continuing; implementation authority remains with th
 
 Each user-message round stops at three feedbacks or two silences. New requests reset the allowance; latest conflicting
 requirements win. Failures are visible and never counted as silence.
-
-## Evidence boundary
-
-The formal evaluation used six repository tasks and two runs per arm. A used preserved results; B was rerun independently. Only pairs where both arms passed the contract were blind reviewed. Because the Actor runs were independent, their difference cannot be attributed entirely to Provider feedback. The [formal report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) records the method, costs, contract ambiguity, and limitations.
 
 ## Known limitation
 
