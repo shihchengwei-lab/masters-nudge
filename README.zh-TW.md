@@ -6,48 +6,23 @@
 >
 > 綠燈代表現在能過。六個月後呢？
 
-## 最新 Benchmark
+Masters’ Nudge 在寫程式的模型（Actor）修改程式後，讓另一個模型（Provider）依任務、修改與相關程式碼提出一則具體的結構建議。建議在 Actor 下一次決策前進入 context window，目的是提高後續生成較佳結構的機率；Actor 決定怎麼實作。工具規則見 [SPEC.zh-TW.md](SPEC.zh-TW.md)。
 
-[第八輪正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)以 GPT-6 Sol medium 作為 Actor 與 Provider，評估 `codex/structural-event-contract-v0.5.0` 分支尚未發布的 Buddy prompt。正式契約分數為 A、B 各 9/12；clap 題目的文字與驗收方式存在歧義。兩臂都通過契約、可盲評的八組中，B 勝四組、平手四組。B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。這是品味的正向訊號，但尚未證明額外成本值得，也不能把勝場都歸因於個別 Nudge；其中兩次 Vue CSS 的 Nudge 方向還有問題。
+## 案例：自訂快取鍵不應讀到繼承屬性
 
-插件清單版本仍為 `0.6.0+codex.20260922164420`。第八輪測的是候選分支上的修改，不能當成已安裝插件的發行驗證。下方第六輪使用不同模型與題目，保留作為較早版本的案例。
+最近一次評估要求 Express 在渲染畫面時支援自訂 `cacheKey`。B 臂初稿已讓快取讀寫使用新鍵，但快取仍是一般物件。Provider 回傳：
 
-## 較早案例：Vue compiler 泛型解析
-
-任務要求 Vue compiler 支援交集型別中的泛型參數。兩臂都通過同一份契約，但結構不同。
-
-**A｜只有「請高品味的完成任務」：直接改寫共享 AST 節點**
-
-```ts
-;(type as ScopeTypeNode)._ownerScope = scope
-genericScope.types[param.name] = type as ScopeTypeNode
+```text
+OBSERVED: cache['toString'] -> Function
+VIOLATES: inherited key -> false hit
+PREFER: cache := Object.create(null)
 ```
 
-**B｜Masters’ Nudge：為本次泛型實例建立自己的節點**
+B 臂 Actor 收到回饋後，把快取初始化改成 `Object.create(null)`；A 臂保留 `{}`。因此在 B 臂中，`toString` 之類的鍵只會對應實際存入的快取項目。兩臂都通過任務驗收，兩位盲評者都認為 B 的結構較好。
 
-```ts
-genericScope.types[param.name] = {
-  ...type,
-  _ownerScope: typeArgumentScope
-} as ScopeTypeNode
-```
+## 目前證據
 
-B 的初稿也曾直接改寫共享節點。Provider 指出 `createTypeScope` 把呼叫端的所有權寫進共享 AST；Actor 收到反饋後，最終改成複製節點再附加作用域。另一次泛型解析因此無法再透過同一個 type argument 節點覆寫本次綁定的 `_ownerScope`。
-
-> **盲評 1：**「B 將泛型引數複製後附加 `_ownerScope`；A 直接改寫原始 AST 引數節點，使共用節點的作用域受解析過程影響，增加隱藏副作用與更新順序依賴。」
->
-> **盲評 2：**「B 將此次綁定的修改限制在新節點上，較符合局部可預測性與單向資料流。」
-
-這組完整判讀與其他十一組評語都保留在[第六輪 Benchmark 報告](benchmark/formal-v6/RESULTS.zh-TW.md#各組盲評)。
-
-下面是六題、十二組配對的完整結果。
-
-![第六輪 Benchmark：Masters’ Nudge 品味勝出 7 組，抽象要求勝出 2 組，3 組平手；兩臂契約皆為 12/12，B 臂耗時增加 44.8%，非快取輸入增加 94.5%。](docs/assets/benchmark-v6.svg)
-
-同一批六個 repository 任務、同一個模型、同一份契約。A 臂只多一句「請高品味的完成任務」；B 臂不說這句，改由 Masters’ Nudge 在修改後提供具體的結構反饋。**B 以 7：2 勝出，3 組平手，兩臂契約皆為 12/12。**B 多花 44.8% 時間與 94.5% 非快取輸入 Token。
-
-Masters’ Nudge 在執行者修改程式之後提供一則小幅反饋，讓執行者重新判斷資料關係，而不接管實作。
-工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；[第六輪 Benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) 保留較早版本的歷史結果。
+最新正式評估中，兩臂任務驗收各通過 9/12，其中一題的文字與驗收標準有歧義。可盲評的八組中，B 勝四組、平手四組；B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。品味有正向訊號，額外成本是否值得仍未證明；兩次 Vue CSS 建議的方向也有問題。方法與限制見[正式 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。這份結果測的是 `codex/structural-event-contract-v0.5.0` 候選分支尚未發布的提示詞，不能當成已安裝版本的發行驗證。
 
 每次 `apply_patch` 成功後，原生 PostToolUse 會同步呼叫常駐的 Codex 接入 MCP 工具
 `review_patch`，由核心把任務、這次修改、成功結果及修改後工作區組成一次判斷。OpenAI／Codex Provider
@@ -72,10 +47,6 @@ Windows 上的 Codex 若在同步 `PostToolUse` 執行期間中斷該輪，可�
 最小重現、事件順序與期望行為已提交至 [openai/codex#46765](https://github.com/openai/codex/issues/46765)，目前仍待 Codex 執行層修復。
 本地重現紀錄見 [Codex PostToolUse 生命週期規格](experiments/champion-vs-preserved-result-20260920/CODEX-POSTTOOLUSE-LIFECYCLE-SPEC.md)。
 
-## 證據範圍
-
-第八輪使用六個 repository 任務，每題每臂各跑兩次；A 沿用封存結果，B 獨立重跑。只有兩臂都通過契約的組別才盲評。Actor 各次獨立生成，結果差異不能全歸因於 Provider。方法、成本、契約歧義與限制見[第八輪正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。[第六輪報告](benchmark/formal-v6/RESULTS.zh-TW.md)的條件不同，不能直接當成同條件的成效趨勢。
-
 目前原始碼與產生的插件副本一致。實際安裝狀態、不同 Codex 版本的事件行為，以及更新已安裝插件後的新任務完整流程，
 仍須在目標環境另外確認，不能由單元測試代替。
 
@@ -90,7 +61,7 @@ python masters_nudge_cli.py recent-nudges --limit 10
 
 紀錄預設保存在使用者目錄下的 .masters-nudge/data/feedback.sqlite3，設定另存在 .masters-nudge/config.json。
 紀錄包含材料、判斷、錯誤與有提供時的用量；送出反饋不代表執行者採納。
-程式碼在未儲存模型選擇時仍以 `gpt-5.6-sol`、medium reasoning 為預設；儲存設定後會覆蓋這個值。第八輪使用 `gpt-6-sol`、medium reasoning，實際設定以 `provider get` 查詢結果為準。
+插件清單版本為 `0.6.0+codex.20260922164420`；`main` 保留已發布的提示詞。程式碼在未儲存模型選擇時仍以 `gpt-5.6-sol`、medium reasoning 為預設；儲存設定後會覆蓋這個值。上方評估使用候選提示詞與 `gpt-6-sol`、medium reasoning，實際設定以 `provider get` 查詢結果為準。
 
 ## 隱私
 
