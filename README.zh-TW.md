@@ -6,7 +6,13 @@
 >
 > 綠燈代表現在能過。六個月後呢？
 
-### 一次真實勝場：Vue compiler 泛型解析
+## 最新 Benchmark
+
+[第八輪正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)以 GPT-6 Sol medium 作為 Actor 與 Provider，評估目前工作分支的 Buddy prompt。正式契約分數為 A、B 各 9/12；clap 題目的文字與驗收方式存在歧義。兩臂都通過契約、可盲評的八組中，B 勝四組、平手四組。B 的總執行時間多約 50%，非快取輸入 Token 多約 77%。這是品味的正向訊號，但尚未證明額外成本值得，也不能把勝場都歸因於個別 Nudge；其中兩次 Vue CSS 的 Nudge 方向還有問題。
+
+插件清單版本仍為 `0.6.0+codex.20260922164420`。第八輪測的是目前分支上的修改，不能當成已安裝插件的發行驗證。下方第六輪使用不同模型與題目，保留作為較早版本的案例。
+
+## 較早案例：Vue compiler 泛型解析
 
 任務要求 Vue compiler 支援交集型別中的泛型參數。兩臂都通過同一份契約，但結構不同。
 
@@ -41,12 +47,11 @@ B 的初稿也曾直接改寫共享節點。Provider 指出 `createTypeScope` �
 同一批六個 repository 任務、同一個模型、同一份契約。A 臂只多一句「請高品味的完成任務」；B 臂不說這句，改由 Masters’ Nudge 在修改後提供具體的結構反饋。**B 以 7：2 勝出，3 組平手，兩臂契約皆為 12/12。**B 多花 44.8% 時間與 94.5% 非快取輸入 Token。
 
 Masters’ Nudge 在執行者修改程式之後提供一則小幅反饋，讓執行者重新判斷資料關係，而不接管實作。
-目前插件版本是 `0.6.0+codex.20260922164420`，工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；
-[第六輪 Benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) 是目前的效果證據。
+工具規格以 [SPEC.zh-TW.md](SPEC.zh-TW.md) 為準；[第六輪 Benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) 保留較早版本的歷史結果。
 
 每次 `apply_patch` 成功後，原生 PostToolUse 會同步呼叫常駐的 Codex 接入 MCP 工具
 `review_patch`，由核心把任務、這次修改、成功結果及修改後工作區組成一次判斷。OpenAI／Codex Provider
-依六條結構準則查看材料；現有事實不足時，Provider 才透過另一個唯讀 repository MCP 自行搜尋或讀檔。
+依六條結構準則查看材料；提示詞要求沿程式路徑追查相關程式碼，以及新增分支或操作的輸入型別與 API，並可透過另一個唯讀 repository MCP 搜尋或讀檔。
 有反饋時，工具保留原本的成功工具結果，再把 `OBSERVED`、`VIOLATES`、`PREFER` 三欄附在同一則結果後面，並要求執行者先判斷目前做法是否為任務必要。執行者仍決定是否採納建議，並負責實作及驗證。
 
 每輪最多三次反饋或兩次沉默；任一上限到達便停止。使用者新訊息重置額度，衝突要求以最新的為準。
@@ -69,7 +74,7 @@ Windows 上的 Codex 若在同步 `PostToolUse` 執行期間中斷該輪，可�
 
 ## 證據範圍
 
-Benchmark 使用六個 repository 任務，每題每臂各跑兩次。兩位冷啟動評審先取得相同的六條品味定義，再交換候選順序盲評；意見相左才啟用第三位。這份結果支持「Masters’ Nudge 讓同一模型更常選到較好的結構」；單一 Nudge 的效果不在這份結果的證明範圍內。完整方法、十二組解盲評語、成本及限制見[第六輪 Benchmark 報告](benchmark/formal-v6/RESULTS.zh-TW.md)。
+第八輪使用六個 repository 任務，每題每臂各跑兩次；A 沿用封存結果，B 獨立重跑。只有兩臂都通過契約的組別才盲評。Actor 各次獨立生成，結果差異不能全歸因於 Provider。方法、成本、契約歧義與限制見[第八輪正式報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)。[第六輪報告](benchmark/formal-v6/RESULTS.zh-TW.md)的條件不同，不能直接當成同條件的成效趨勢。
 
 目前原始碼與產生的插件副本一致。實際安裝狀態、不同 Codex 版本的事件行為，以及更新已安裝插件後的新任務完整流程，
 仍須在目標環境另外確認，不能由單元測試代替。
@@ -78,13 +83,14 @@ Benchmark 使用六個 repository 任務，每題每臂各跑兩次。兩位冷�
 
 ```powershell
 python masters_nudge_cli.py provider get
-python masters_nudge_cli.py provider set openai --model gpt-5.6-sol
+python masters_nudge_cli.py provider set openai --model gpt-6-sol
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
 
 紀錄預設保存在使用者目錄下的 .masters-nudge/data/feedback.sqlite3，設定另存在 .masters-nudge/config.json。
 紀錄包含材料、判斷、錯誤與有提供時的用量；送出反饋不代表執行者採納。
+程式碼在未儲存模型選擇時仍以 `gpt-5.6-sol`、medium reasoning 為預設；儲存設定後會覆蓋這個值。第八輪使用 `gpt-6-sol`、medium reasoning，實際設定以 `provider get` 查詢結果為準。
 
 ## 隱私
 

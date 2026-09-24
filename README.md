@@ -6,7 +6,13 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-### One real win: generic type resolution in the Vue compiler
+## Latest benchmark
+
+The [eighth benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) evaluates the current Buddy prompt on this branch with GPT-6 Sol medium for both Actor and Provider. The formal contract scores were A 9/12 and B 9/12, with an ambiguity in the clap task's acceptance criteria. Of the eight pairs eligible for blind code-taste review, B won four and four tied. B used about 50% more total execution time and 77% more non-cached input tokens. This is a positive taste signal, but it does not establish that the added cost is worthwhile or that the individual nudges caused the wins. The report also identifies two Vue CSS nudges whose proposed direction was unsound.
+
+The plugin manifest remains at `0.6.0+codex.20260922164420`. Round eight evaluated changes on this branch; its result is not a release validation of an installed plugin. The sixth benchmark below documents an earlier version and a different model and task set.
+
+## Earlier example: generic type resolution in the Vue compiler
 
 The task was to support generic parameters inside intersection types. Both arms passed the same contract, but their structures differed.
 
@@ -40,15 +46,12 @@ Below is the complete result across six tasks and twelve paired comparisons.
 
 Same six repository tasks, same model, same contract. A added one sentence: “Please complete it with good taste.” B omitted that sentence and used Masters’ Nudge after code changes. **B won 7–2, with 3 ties; both arms completed 12/12 contracts.** B used 44.8% more time and 94.5% more non-cached input tokens.
 
-Masters’ Nudge provides small engineering feedback after the Actor changes code, without taking over implementation. [SPEC.zh-TW.md](SPEC.zh-TW.md) is the authority.
-The current plugin manifest version is `0.6.0+codex.20260922164420`. The
-[sixth benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) is the current effect evidence.
+Masters’ Nudge provides small engineering feedback after the Actor changes code, without taking over implementation. [SPEC.zh-TW.md](SPEC.zh-TW.md) is the authority. The [sixth benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) remains a historical result for the earlier version.
 
 UserPromptSubmit records the task without calling a Provider. Each successful `apply_patch` triggers native
 PostToolUse, which synchronously calls the persistent Codex-facing MCP tool `review_patch`. The core combines the
 task, completed patch, successful tool result, and updated workspace into one judgment. The OpenAI/Codex Provider
-uses six structural checks. When the supplied facts are insufficient, the Provider may
-use a separate read-only repository MCP to search or read related files. The Actor owns implementation and
+uses six structural checks. Its prompt directs it to trace related code and declared types or APIs, using a separate read-only repository MCP to search or read files. The Actor owns implementation and
 verification.
 When feedback exists, the adapter preserves the successful tool result and appends the `OBSERVED`, `VIOLATES`, and
 `PREFER` fields to that same result. A fixed follow-up asks the Actor to decide whether the observed relation is
@@ -59,7 +62,7 @@ requirements win. Failures are visible and never counted as silence.
 
 ## Evidence boundary
 
-The benchmark used six repository tasks and two independent runs per arm. Two cold-start judges received the same six taste definitions and reviewed each pair with reversed candidate order; a third judge was used only on disagreement. The result supports “Masters’ Nudge helps the same model choose better structures more often”; the effect of any single Nudge is outside its evidentiary scope. See the [full method, twelve unblinded reviews, costs, and limitations](benchmark/formal-v6/RESULTS.zh-TW.md).
+Round eight used six repository tasks and two runs per arm. A used preserved results; B was rerun independently. Only pairs where both arms passed the contract were blind reviewed. Because the Actor runs were independent, their difference cannot be attributed entirely to Provider feedback. The [round-eight report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) records the method, costs, contract ambiguity, and limitations. The [sixth benchmark](benchmark/formal-v6/RESULTS.zh-TW.md) used an earlier setup and is not a like-for-like trend comparison.
 
 ## Known limitation
 
@@ -74,13 +77,19 @@ with turn_id. Opaque shell mutations are unsupported. Only the OpenAI/Codex Prov
 The source runtime and generated plugin copy are synchronized. Installation state, Codex-version-specific lifecycle
 behavior, and a complete task after updating an installed copy still require checks in that target environment.
 
-The five optional material categories and all read-only repository MCP reads share one budget. Evidence is verified against the exact
-source and location received during that judgment. Only `OBSERVED`, `VIOLATES`, `PREFER`, and the fixed resolution
+The five optional material categories and all read-only repository MCP reads share one budget. Evidence names the
+source and location received during that judgment; the core checks JSON shape and limits but does not independently verify the quoted text. Only `OBSERVED`, `VIOLATES`, `PREFER`, and the fixed resolution
 sentence reach the Actor.
+
+## Privacy
 
 Task, change, tool-result and selected repository materials are sent to OpenAI. The read-only repository MCP cannot write files or read
 outside the repository, Git internals, or ignored files. Attempt records are stored under .masters-nudge/data in the
 user directory. A recorded delivery is not evidence of Actor adoption.
+
+## Configuration and development
+
+The code fallback model is `gpt-5.6-sol` at medium reasoning; a saved Provider selection overrides it. Round eight used `gpt-6-sol` at medium reasoning. Check the active selection with `provider get`.
 
 ```powershell
 python masters_nudge_cli.py provider get
