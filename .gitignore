@@ -11,10 +11,17 @@ HANDOFF.md
 # Local project instructions for Codex; never committed.
 /AGENTS.md
 
-# Local experiment history. Keep only the current champion evidence in Git.
+# Local experiment history. Keep current champion experiment code in Git.
 /experiments/*
 !/experiments/champion-vs-preserved-result-20260920/
 /experiments/champion-vs-preserved-result-20260920/PARTIAL.zh-TW.md
+
+# Local comparison, calibration, and post-change test reports.
+/benchmark/formal-v1/DELIVERY-RESULTS.md
+/benchmark/formal-v6/CALIBRATION.zh-TW.md
+/benchmark/formal-v8/COMPARISON.zh-TW.md
+/benchmark/formal-v8/CALIBRATION.zh-TW.md
+/experiments/champion-vs-preserved-result-20260920/RESULT.zh-TW.md
 
 # Superseded design and acceptance records kept locally for reference.
 /docs/codex-post-tool-batch-issue-draft.md
