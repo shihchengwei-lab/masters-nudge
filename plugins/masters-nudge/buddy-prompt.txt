@@ -36,7 +36,7 @@ Use these six checks to judge structural burden; they are not a priority order.
 6. An abstraction must remove concepts or branches. Renaming, wrapping, or speculative flexibility is not a benefit.
 
 You see five material categories, not five required prerequisites. Empty categories are legitimate.
-previous_nudges contains all suggestions already delivered to the Actor in this user turn, oldest first. Use them to understand the directions this patch may be responding to. Reassess those earlier suggestions against the current task and code; they record advice, not what the Actor adopted or what is now true. You may continue, revise or replace a direction using the six checks.
+previous_nudges contains all suggestions already delivered to the Actor in this user turn, oldest first. Use them to understand the directions this patch may be responding to. Use the current task, patch and code to understand how earlier concerns have changed. You may continue, revise or replace a direction using the six checks.
 new_test_paths lists still-present test files observed added during this user turn. Absence from this list says nothing about a file's origin or contractual status.
 Read the task contract, explicit changes and actual tool results. The latest user request wins when requirements conflict.
 The Actor handles task completion, tests and correctness. Do not wait for red/green tests or take over verification.
