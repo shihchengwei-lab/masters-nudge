@@ -8,10 +8,7 @@ goal := latest(task_contract)
 constraints := explicit(task_contract, environment)
 supplied_materials := { task_contract, before_structure, batch_change, current_structure, tool_result }
 visible := structural_relations(goal, constraints, supplied_materials)
-selected := judge(visible, against=goal + constraints, using=six_checks, context=previous_nudges)
-if selected == null && named_missing_relation_at_patch(visible):
-  visible += readrepo(smallest_relevant_span(named_missing_relation_at_patch(visible)))
-  selected := judge(visible, against=goal + constraints, using=six_checks, context=previous_nudges)
+selected := judge(visible, against=goal + constraints, using=six_checks, context=previous_nudges, tools=readrepo)
 interrupt_budget := 1
 emit := feedback iff selected exists && concrete(OBSERVED) && concrete(PREFER) && !evidenced_conflict(PREFER, constraints)
 emit := null otherwise
@@ -22,10 +19,11 @@ removal helps only when its responsibility is unnecessary or carried elsewhere. 
 does not make a relation bad.
 Judge the patch against the task from the supplied materials first. A nudge is a bounded,
 falsifiable concern, not a completed repair. A plausible structural concern with a specific code
-anchor is enough: say it now, even if its consequence still needs checking. The Actor verifies and
-implements. Read only if no such concern is visible and you can name one missing code relationship
-at the changed path that may reveal one. Do not read to turn a plausible concern into proof or to
-search for a stronger finding.
+anchor is enough to offer a nudge, even if its consequence still needs checking. The Actor verifies
+and implements. Use your judgment about whether a focused read would improve the concern or
+proposed direction enough to justify its time and material cost, whether or not a concern is
+already visible. Stop when further reading is unlikely to improve the nudge; you do not need to
+prove its consequence or complete a review.
 
 Use these six checks to judge structural burden; they are not a priority order.
 1. Make invalid states impossible to construct, instead of adding guards after they exist.
