@@ -31,7 +31,7 @@ PREFER: cache := Object.create(null)
 
 The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 
-Feedback changes the probabilities of the Actor’s next output; the tool aims to make stronger code structures more likely. The Actor decides whether to use a suggestion and owns implementation and verification. A turn stops after three suggestions or two silences on product structure. Test changes are eligible only when they remove testing required by the task contract; silence on that question does not consume the structure judgment budget. Failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for responsibilities and data flow.
+Feedback changes the probabilities of the Actor’s next output; the tool aims to make stronger code structures more likely. The Actor decides whether to use a suggestion and owns implementation and verification. A turn stops after three suggestions or two silences on product structure. Recognized test-only changes are skipped without calling the Provider or consuming either allowance. The tool does not monitor removal of tests required by the task. Failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for responsibilities and data flow.
 
 ## What the benchmark found
 

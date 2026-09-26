@@ -106,3 +106,16 @@ class JournalTests(unittest.TestCase):
             row = db.execute("SELECT skipped_test_patches,request FROM rounds").fetchone()
         self.assertEqual(row["skipped_test_patches"], 7)
         self.assertEqual(row["request"], "first")
+
+    def test_legacy_test_silences_leave_product_quota_unchanged(self):
+        journal = Journal(self.root)
+        journal.start_round(self.session, "first")
+        for i in range(2):
+            attempt, task = journal.begin(self.session, [{"tool_use_id": f"legacy-test-{i}"}])
+            journal.finish(self.session, attempt, task, "silence", {"judgment_scope": "task_contract"})
+        upgraded = Journal(self.root)
+        for i in range(2):
+            attempt, task = upgraded.begin(self.session, [{"tool_use_id": f"product-{i}"}])
+            upgraded.finish(self.session, attempt, task, "silence", {})
+        self.assertIsNone(upgraded.begin(self.session, [{"tool_use_id": "limited"}]))
+        self.assertEqual(len(upgraded.recent()), 4)

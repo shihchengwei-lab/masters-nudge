@@ -26,7 +26,7 @@ class Journal:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS rounds(
                     session TEXT PRIMARY KEY, turn TEXT NOT NULL, goal TEXT NOT NULL, request TEXT NOT NULL,
-                    round_id TEXT NOT NULL, new_test_paths TEXT NOT NULL DEFAULT '[]',
+                    round_id TEXT NOT NULL,
                     skipped_test_patches INTEGER NOT NULL DEFAULT 0);
                 CREATE TABLE IF NOT EXISTS attempts(
                     id TEXT PRIMARY KEY, session TEXT NOT NULL, turn TEXT NOT NULL,
@@ -52,8 +52,6 @@ class Journal:
                 if "round_id" not in columns:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
                 if table == "rounds":
-                    if "new_test_paths" not in columns:
-                        db.execute("ALTER TABLE rounds ADD COLUMN new_test_paths TEXT NOT NULL DEFAULT '[]'")
                     if "skipped_test_patches" not in columns:
                         if "skipped_new_test_patches" in columns:
                             db.execute("ALTER TABLE rounds RENAME COLUMN skipped_new_test_patches TO skipped_test_patches")
@@ -195,6 +193,7 @@ class Journal:
 
     @staticmethod
     def _budget_exhausted(db, round_id: str) -> bool:
+        # Preserve the accounting of test-only silences recorded by older versions.
         counts = {item["outcome"]: item["n"] for item in db.execute(
             "SELECT outcome, COUNT(*) n FROM attempts WHERE round_id=? "
             "AND (outcome='feedback' OR (outcome='silence' "
@@ -203,9 +202,8 @@ class Journal:
         )}
         return counts.get("feedback", 0) >= FEEDBACK_LIMIT or counts.get("silence", 0) >= SILENCE_LIMIT
 
-    def begin(self, session: SessionRef, payload: object,
-              operations: tuple[tuple[str, str, bool], ...] | None = None, *,
-              judgment_scope: str | None = "implementation") -> tuple[str, dict] | None:
+    def begin(self, session: SessionRef, payload: object, *,
+              skip_provider: bool = False) -> tuple[str, dict] | None:
         """Queue one patch and claim it only after every earlier judgment is terminal."""
         wait_started = time.monotonic()
         with self.connect() as db:
@@ -218,16 +216,7 @@ class Journal:
             fault = self._fault(self._round_events(db, row["round_id"]))
             if fault is not None:
                 raise self._tool_fault(fault)
-            if operations:
-                known = set(json.loads(row["new_test_paths"]))
-                for kind, path, is_test in operations:
-                    if kind == "Add File" and is_test:
-                        known.add(path)
-                    elif kind == "Delete File":
-                        known.discard(path)
-                db.execute("UPDATE rounds SET new_test_paths=? WHERE session=?",
-                           (json_text(sorted(known)), session.session_id))
-            if judgment_scope is not None and self._budget_exhausted(db, row["round_id"]):
+            if not skip_provider and self._budget_exhausted(db, row["round_id"]):
                 return None
             batch_id = uuid.uuid4().hex
             attempt = uuid.uuid4().hex
@@ -236,7 +225,7 @@ class Journal:
                 "INSERT INTO batches(id,session,turn,received,payload,round_id) VALUES(?,?,?,?,?,?)",
                 (batch_id, session.session_id, session.turn_id, started, json_text(payload), row["round_id"]),
             )
-            if judgment_scope is None:
+            if skip_provider:
                 db.execute("UPDATE rounds SET skipped_test_patches=skipped_test_patches+1 "
                            "WHERE session=?", (session.session_id,))
                 self._append_event(
@@ -303,13 +292,6 @@ class Journal:
                                     round_id=own["round_id"], kind="started", attempt=attempt,
                                     batch_id=batch_id, happened=claim_time,
                                 )
-                                prior_events = []
-                                if any(is_test for _, _, is_test in operations or ()):
-                                    prior_events = [event for batch in db.execute(
-                                        "SELECT payload FROM batches WHERE round_id=? "
-                                        "AND rowid<(SELECT rowid FROM batches WHERE id=?) ORDER BY rowid",
-                                        (current["round_id"], batch_id),
-                                    ) for event in json.loads(batch["payload"])]
                                 previous_nudges = [json.loads(row["raw_output"])["feedback"]
                                     for row in db.execute(
                                         "SELECT json_extract(detail,'$.raw_output') AS raw_output "
@@ -317,8 +299,6 @@ class Journal:
                                         "ORDER BY started,id", (current["round_id"],),
                                     )]
                                 return attempt, {**dict(current), "batch_id": batch_id,
-                                                 "judgment_scope": judgment_scope,
-                                                 "prior_events": prior_events,
                                                  "previous_nudges": previous_nudges,
                                                  "started": claim_time,
                                                  "provider_timeout_sec": min(self.provider_timeout_sec, remaining)}

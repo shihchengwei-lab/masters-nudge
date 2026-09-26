@@ -213,167 +213,95 @@ class PipelineTests(unittest.TestCase):
         packet = json.loads(self.calls[-1]["nudge_input"])
         self.assertIn("現在改成只保留一份狀態", str(packet["task_contract"]))
 
-    def test_new_test_file_patches_leave_silence_budget_for_source_changes(self):
-        self.prompt()
-        added = "*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch"
-        updated = "*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch"
-        self.assertIsNone(self.batch(added, call="test-add"))
-        self.assertIsNone(self.batch(updated, call="test-update"))
-        self.assertEqual(len(self.calls), 0)
+    def test_all_test_file_operations_skip_provider_and_leave_feedback_budget(self):
+        self.prompt("必須保留 tests/required.spec.ts；Actor 負責測試")
+        self.feedback()
+        changes = [
+            "*** Add File: tests/new.spec.ts\n+test()",
+            "*** Update File: tests/new.spec.ts\n@@\n-test()\n+revised_test()",
+            "*** Update File: tests/existing.py\n@@\n-assert old\n+assert new",
+            "*** Delete File: tests/required.spec.ts",
+            "*** Delete File: tests/__snapshots__/result.snap",
+            "*** Update File: tests/old.rs\n*** Move to: tests/renamed.rs\n@@\n-old\n+new",
+            "*** Add File: internal/cache/context_test.go\n+package cache",
+            "*** Update File: internal/cache/context_test.go\n@@\n-old\n+new",
+            "*** Delete File: internal/storage/cache/no_store_test.go",
+            "*** Update File: internal/old_test.go\n*** Move to: internal/new_test.go\n@@\n-old\n+new",
+        ]
+        for i, change in enumerate(changes):
+            with self.subTest(change=change):
+                self.assertIsNone(self.batch(f"*** Begin Patch\n{change}\n*** End Patch", call=f"test-{i}"))
+        self.assertEqual(self.calls, [])
+        self.assertEqual(self.adapter.core.journal.recent(), [])
+        self.assertEqual(self.adapter.core.journal.unresolved(), [])
         with self.adapter.core.journal.connect() as db:
             row = db.execute("SELECT skipped_test_patches FROM rounds").fetchone()
-        self.assertEqual(row["skipped_test_patches"], 2)
-        for i in range(3):
-            self.batch(call=f"source-{i}")
-        self.assertEqual(len(self.calls), 2)
-
-    def test_addition_to_existing_test_skips_but_mixed_patch_calls_provider(self):
-        self.prompt()
-        existing = "*** Begin Patch\n*** Update File: tests/existing.spec.ts\n@@\n+x\n*** End Patch"
-        mixed = ("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n"
-                 "*** Update File: job.py\n@@\n+x\n*** End Patch")
-        self.batch(existing, call="existing")
-        self.batch(mixed, call="mixed")
-        self.assertEqual(len(self.calls), 1)
-        packet = json.loads(self.calls[-1]["nudge_input"])
-        self.assertEqual(packet["judgment_scope"], "implementation")
-        self.assertEqual(packet["new_test_paths"], ["tests/new.spec.ts"])
-        self.assertIn("*** Update File: job.py", str(packet["batch_change"]))
-        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch",
-                   call="new-update")
-        self.assertEqual(len(self.calls), 1)
-
-    def test_test_removal_silences_do_not_exhaust_implementation_budget(self):
-        self.prompt("保留既有產品行為，Actor 自行決定驗證方式")
-        removal = ("*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n"
-                   "-assert_eq!(run(), expected);\n+assert_eq!(run(), updated);\n*** End Patch")
-        for i in range(3):
-            self.assertIsNone(self.batch(removal, call=f"test-{i}"))
-        self.assertEqual(len(self.calls), 3)
-        for call in self.calls:
-            self.assertEqual(json.loads(call["nudge_input"])["judgment_scope"], "task_contract")
-        self.assertEqual([item["outcome"] for item in self.adapter.core.journal.recent()],
-                         ["silence"] * 3)
-        self.assertTrue(all(item["detail"]["judgment_scope"] == "task_contract"
-                            for item in self.adapter.core.journal.recent()))
-        self.feedback()
-        self.assertIsNotNone(self.batch(call="product-change"))
-        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["judgment_scope"], "implementation")
-        self.reply = {"feedback": None}
-        for i in range(3):
-            self.batch(call=f"product-silence-{i}")
-        self.assertEqual(len(self.calls), 6)
-
-    def test_contract_feedback_is_delivered_and_counts_towards_feedback_limit(self):
-        self.prompt("必須保留 tests/required.spec.ts 的拒絕非法狀態測試")
-        self.batch("*** Begin Patch\n*** Add File: tests/required.spec.ts\n+assert rejected\n*** End Patch",
-                   call="add-required")
-        removal = "*** Begin Patch\n*** Delete File: tests/required.spec.ts\n*** End Patch"
-        self.reply = {"feedback": {"criterion": 1,
-            "evidence": [{"source": "batch_change", "location": "tool/delete/input:2",
-                          "excerpt": "*** Delete File: tests/required.spec.ts"}],
-            "observed": "required.spec.ts 被刪除", "violates": "契約要求的驗證消失",
-            "prefer": "保留契約要求的非法狀態測試"}}
-        self.assertIsNotNone(self.batch(removal, call="delete"))
-        self.assertEqual(json.loads(self.calls[0]["nudge_input"])["judgment_scope"], "task_contract")
-        self.assertIn("add-required", str(json.loads(self.calls[0]["nudge_input"])["before_structure"]))
-        self.feedback()
-        for i in range(3):
+            self.assertEqual(row["skipped_test_patches"], len(changes))
+            self.assertEqual(db.execute("SELECT COUNT(*) FROM batches").fetchone()[0], len(changes))
+        for i in range(4):
             self.batch(call=f"product-{i}")
         self.assertEqual(len(self.calls), 3)
+        self.assertEqual([r["outcome"] for r in self.adapter.core.journal.recent()], ["feedback"] * 3)
 
-    def test_snapshot_deletion_asks_about_contract_without_inferring_file_origin(self):
+    def test_test_only_changes_leave_silence_budget_for_product(self):
         self.prompt()
-        self.batch("*** Begin Patch\n*** Delete File: tests/__snapshots__/result.snap\n*** End Patch")
-        self.assertEqual(len(self.calls), 1)
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertEqual(packet["judgment_scope"], "task_contract")
-        self.assertEqual(packet["new_test_paths"], [])
-
-    def test_mixed_patch_with_test_removal_keeps_implementation_scope(self):
-        self.prompt()
-        self.batch("*** Begin Patch\n*** Delete File: tests/old.spec.ts\n"
-                   "*** Update File: job.py\n@@\n+retry_state = job.status\n*** End Patch")
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertEqual(packet["judgment_scope"], "implementation")
-        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
-
-    def test_test_blank_line_cleanup_skips_provider(self):
-        self.prompt()
-        self.batch("*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n-});\n-\n-  \n+});\n*** End Patch")
+        removal = "*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n-assert old\n+assert new\n*** End Patch"
+        for i in range(3):
+            self.assertIsNone(self.batch(removal, call=f"test-{i}"))
         self.assertEqual(self.calls, [])
+        for i in range(3):
+            self.batch(call=f"product-{i}")
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual([r["outcome"] for r in self.adapter.core.journal.recent()], ["silence"] * 2)
 
-    def test_identical_text_added_elsewhere_does_not_hide_test_removal(self):
-        self.prompt()
-        self.batch("*** Begin Patch\n*** Update File: tests/required.py\n@@\n-assert rejected\n"
-                   "*** Update File: tests/other.py\n@@\n+assert rejected\n*** End Patch")
-        self.assertEqual(len(self.calls), 1)
-        self.assertEqual(json.loads(self.calls[0]["nudge_input"])["judgment_scope"], "task_contract")
-
-    def test_skipped_test_addition_is_available_when_actor_removes_its_own_case(self):
+    def test_mixed_patch_keeps_product_feedback_without_test_history(self):
         self.prompt("Existing tests are immutable")
-        addition = "*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n+fn actor_case() {}\n*** End Patch"
-        self.batch(addition, call="actor-added-case")
-        self.batch("*** Begin Patch\n*** Add File: tests/unrelated.rs\n+fn other() {}\n*** End Patch",
-                   call="unrelated")
-        self.assertEqual(self.calls, [])
-        removal = "*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n-fn actor_case() {}\n*** End Patch"
-        self.batch(removal, call="actor-removed-case")
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertEqual(packet["before_structure"], [
-            {"path": "prior_tool/actor-added-case/input", "start": 1, "lines": addition.splitlines()},
-            {"path": "prior_tool/actor-added-case/output", "start": 1, "lines": ["Success"]},
-        ])
-        self.assertEqual(self.adapter.core.journal.unresolved(), [])
-        self.prompt("新的要求", turn="turn-2")
-        self.batch(removal, turn="turn-2", call="new-round-removal")
-        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["before_structure"], [])
-
-    def test_mixed_followup_identifies_new_test_without_hiding_source_change(self):
-        self.prompt("Checked-in tests are immutable")
-        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch", call="add-test")
-        mixed = ("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+y\n"
-                 "*** Update File: job.py\n@@\n+value = 1\n*** End Patch")
-        self.batch(mixed, call="mixed")
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test()\n*** End Patch", call="add-test")
+        mixed = ("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-test()\n+revised_test()\n"
+                 "*** Delete File: tests/old.spec.ts\n"
+                 "*** Update File: internal/cache/context_test.go\n@@\n-old\n+new\n"
+                 "*** Update File: job.py\n@@\n+retry_state = job.status\n*** End Patch")
+        self.feedback()
+        self.assertIsNotNone(self.batch(mixed, call="mixed"))
         self.assertEqual(len(self.calls), 1)
         packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertEqual(packet["new_test_paths"], ["tests/new.spec.ts"])
-        self.assertIn("*** Update File: tests/new.spec.ts", str(packet["batch_change"]))
-        self.assertIn("*** Update File: job.py", str(packet["batch_change"]))
+        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
+        self.assertEqual(packet["before_structure"], [])
+        self.assertNotIn("new_test_paths", packet)
+        self.assertNotIn("judgment_scope", packet)
 
-    def test_new_round_forgets_new_test_file(self):
-        self.prompt()
-        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch")
-        self.prompt("另一輪", turn="turn-2")
-        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-x\n+y\n*** End Patch",
-                   turn="turn-2")
-        self.assertEqual(len(self.calls), 1)
-        packet = json.loads(self.calls[0]["nudge_input"])
-        self.assertEqual(packet["new_test_paths"], [])
+    def test_move_between_test_and_product_paths_keeps_provider(self):
+        for i, (source, destination) in enumerate([
+            ("tests/helper.py", "helper.py"),
+            ("helper.py", "tests/helper.py"),
+            ("internal/cache_test.go", "internal/cache.go"),
+        ]):
+            with self.subTest(source=source, destination=destination):
+                turn = f"turn-{i}"
+                self.prompt(turn=turn)
+                change = f"*** Begin Patch\n*** Update File: {source}\n*** Move to: {destination}\n@@\n-old\n+new\n*** End Patch"
+                self.batch(change, turn=turn, call=f"move-{i}")
+        self.assertEqual(len(self.calls), 3)
 
     def test_uncertain_patch_and_non_test_file_keep_provider_review(self):
         self.prompt()
-        self.batch("*** Begin Patch\n*** Add File: tests/README.md\n+notes\n*** End Patch",
-                   call="readme")
+        self.batch("*** Begin Patch\n*** Add File: tests/README.md\n+notes\n*** End Patch", call="readme")
         self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test\n"
-                   "*** Move to: tests/moved.spec.ts\n*** End Patch", call="move")
+                   "*** Move to: tests/moved.spec.ts\n*** End Patch", call="invalid-move")
         self.assertEqual(len(self.calls), 2)
 
-    def test_failed_add_does_not_establish_new_test_provenance(self):
+    def test_failed_test_patch_is_not_recorded_as_successfully_skipped(self):
         self.prompt()
         self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test\n*** End Patch",
                    output="Failed to write file", call="failed-add")
-        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-test\n+replacement\n*** End Patch",
-                   call="later-update")
-        self.assertEqual(len(self.calls), 2)
-        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["new_test_paths"], [])
-        self.assertIn("Failed to write file", str(json.loads(self.calls[-1]["nudge_input"])["before_structure"]))
+        self.assertEqual(len(self.calls), 1)
+        with self.adapter.core.journal.connect() as db:
+            self.assertEqual(db.execute("SELECT skipped_test_patches FROM rounds").fetchone()[0], 0)
 
     def test_native_exit_code_zero_add_skips_provider(self):
         self.prompt()
         output = "Exit code: 0\nWall time: 0 seconds\nOutput:\nSuccess. Updated the following files:\nA test/cacheKey.js"
-        self.batch("*** Begin Patch\n*** Add File: test/cacheKey.js\n+test\n*** End Patch",
-                   output=output)
+        self.batch("*** Begin Patch\n*** Add File: test/cacheKey.js\n+test\n*** End Patch", output=output)
         self.assertEqual(self.calls, [])
 
     def test_three_identical_feedbacks_count_without_cooldown(self):

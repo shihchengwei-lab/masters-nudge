@@ -1,6 +1,5 @@
 """Pack known facts; the Provider chooses relevant repository structure."""
 from dataclasses import replace
-import json
 from pathlib import Path
 import subprocess
 from .contracts import (
@@ -14,7 +13,7 @@ def changed_file_material(patch: str, cwd: str, workspace: str):
     operations = patch_operations(patch, cwd) or ()
     root = Path(workspace).resolve()
     for operation, name, _ in operations:
-        if operation != "Update File":
+        if operation not in ("Update File", "Move to"):
             continue
         path = (Path(cwd) / name).resolve()
         if not path.is_relative_to(root) or ".git" in path.relative_to(root).parts or not path.is_file():
@@ -57,15 +56,6 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
     if task["goal"] != task["request"]:
         lines.extend(material_lines("task_contract", "task/original", task["goal"]))
     lines.extend(material_lines("task_contract", "task/latest", task["request"]))
-    test_paths = {path for event in events
-                  for _, path, is_test in patch_operations(event.modification, session.cwd) or () if is_test}
-    for raw in task.get("prior_events", ()):
-        prior = ToolCompleted(**raw)
-        paths = {path for _, path, _ in patch_operations(prior.modification, session.cwd) or ()}
-        if test_paths & paths:
-            prefix = f"prior_tool/{prior.tool_use_id}"
-            lines.extend(material_lines("before_structure", f"{prefix}/input", prior.modification))
-            lines.extend(value_lines("before_structure", f"{prefix}/output", prior.tool_response))
     for event in events:
         if event.modification is not None:
             lines.extend(material_lines("batch_change", f"tool/{event.tool_use_id}/input", event.modification))
@@ -75,9 +65,7 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
         lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/output", event.tool_response))
     packet = MaterialPacket(
         tuple(lines), find_git_root(session.cwd), session.transcript_path,
-        tuple(path.replace("\\", "/") for path in json.loads(task.get("new_test_paths", "[]"))),
-        task.get("judgment_scope", "implementation"),
-        tuple(task.get("previous_nudges", ())),
+        previous_nudges=tuple(task.get("previous_nudges", ())),
     )
     if packet.material_chars < MATERIAL_MAX_CHARS:
         for event in events:

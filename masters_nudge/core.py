@@ -3,7 +3,7 @@ from dataclasses import asdict
 import time
 from . import providers
 from .contracts import (
-    MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault, patch_judgment_scope, patch_operations,
+    MATERIAL_MAX_CHARS, SessionRef, ToolCompleted, ToolFault, patch_operations,
 )
 from .evidence import build_packet
 from .prompting import load_system_prompt
@@ -36,12 +36,12 @@ class NudgeCore:
                       or isinstance(response.get("output"), str)
                       and response["output"].startswith("Success")))
         operations = patch_operations(event.modification, session.cwd) if succeeded else None
-        scope = patch_judgment_scope(event.modification, operations)
-        reserved = self.journal.begin(session, payload, operations, judgment_scope=scope)
+        test_only = bool(operations) and all(is_test for _, _, is_test in operations)
+        reserved = self.journal.begin(session, payload, skip_provider=test_only)
         if reserved is None:
             return None
         attempt, task = reserved
-        detail = {"judgment_scope": task["judgment_scope"]}
+        detail = {}
         try:
             if self.settings.configuration_error or self.settings.provider not in ("openai", "codex"):
                 raise ToolFault("configuration", self.settings.configuration_error or "僅支援 OpenAI／Codex")

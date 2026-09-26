@@ -1,10 +1,9 @@
 """Shared event, material and judgment data; SPEC is the behavioral authority."""
 from __future__ import annotations
-from collections import Counter
 import json
 import os
 import subprocess
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 
 SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result")
@@ -95,7 +94,9 @@ def patch_operations(patch: str | None, cwd: str) -> tuple[tuple[str, str, bool]
         if not line.startswith("*** "):
             continue
         operation, separator, name = line[4:].partition(": ")
-        if not separator or operation not in ("Add File", "Update File", "Delete File") or not name:
+        if not separator or operation not in ("Add File", "Update File", "Delete File", "Move to") or not name:
+            return None
+        if operation == "Move to" and (not operations or operations[-1][0] != "Update File"):
             return None
         path = (root / name).resolve()
         if not path.is_relative_to(root):
@@ -106,6 +107,7 @@ def patch_operations(patch: str | None, cwd: str) -> tuple[tuple[str, str, bool]
         test_directory = any(part.lower() in ("test", "tests", "__tests__")
                              for part in relative.parts[:-1])
         is_test = (filename.startswith("test_") or filename in ("test.py", "tests.py")
+                   or filename.endswith("_test.go")
                    or ".test." in filename or ".spec." in filename
                    or (test_directory and relative.suffix.lower() in
                        (".py", ".js", ".jsx", ".ts", ".tsx", ".rs", ".go", ".java", ".cs", ".rb", ".php", ".snap")))
@@ -113,34 +115,11 @@ def patch_operations(patch: str | None, cwd: str) -> tuple[tuple[str, str, bool]
     return tuple(operations) if operations else None
 
 
-def patch_judgment_scope(patch: str | None,
-                         operations: tuple[tuple[str, str, bool], ...] | None) -> str | None:
-    """Route by patch facts; the Provider judges whether removed testing is required."""
-    if not operations or not all(is_test for _, _, is_test in operations):
-        return "implementation"
-    if any(kind == "Delete File" for kind, _, _ in operations):
-        return "task_contract"
-    removed, added = Counter(), Counter()
-    for line in (patch or "").splitlines():
-        if line.startswith("*** "):
-            if removed - added:
-                return "task_contract"
-            removed.clear()
-            added.clear()
-        elif line.startswith("-") and line[1:].strip():
-            removed[line[1:]] += 1
-        elif line.startswith("+") and line[1:].strip():
-            added[line[1:]] += 1
-    return None
-
-
 @dataclass(frozen=True)
 class MaterialPacket:
     lines: tuple[MaterialLine, ...]
     workspace: str
     transcript_path: str = ""
-    new_test_paths: tuple[str, ...] = ()
-    judgment_scope: str = "implementation"
     previous_nudges: tuple[dict, ...] = ()
 
     def categories(self) -> dict:
@@ -165,8 +144,6 @@ class MaterialPacket:
     def render(self) -> str:
         return json_text({**self.categories(), "workspace": self.workspace,
                           "transcript_path": self.transcript_path,
-                          "new_test_paths": self.new_test_paths,
-                          "judgment_scope": self.judgment_scope,
                           "previous_nudges": self.previous_nudges})
 
 

@@ -131,8 +131,6 @@ class ContractTests(unittest.TestCase):
         data = json.loads(packet.render())
         data.pop("workspace")
         data.pop("transcript_path")
-        data.pop("new_test_paths")
-        data.pop("judgment_scope")
         from masters_nudge.contracts import json_text
         self.assertEqual(packet.material_chars, len(json_text(data)))
 
