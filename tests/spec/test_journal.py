@@ -94,3 +94,15 @@ class JournalTests(unittest.TestCase):
         attempt, task = journal.begin(self.session, [{"tool_use_id": "new"}])
         self.assertTrue(journal.finish(self.session, attempt, task, "silence", {}))
         self.assertEqual(len(Journal(self.root).recent()), 3)
+
+    def test_upgrade_preserves_skipped_test_count(self):
+        journal = Journal(self.root)
+        journal.start_round(self.session, "first")
+        with journal.connect() as db:
+            db.execute("UPDATE rounds SET skipped_test_patches=7")
+            db.execute("ALTER TABLE rounds RENAME COLUMN skipped_test_patches TO skipped_new_test_patches")
+        upgraded = Journal(self.root)
+        with upgraded.connect() as db:
+            row = db.execute("SELECT skipped_test_patches,request FROM rounds").fetchone()
+        self.assertEqual(row["skipped_test_patches"], 7)
+        self.assertEqual(row["request"], "first")

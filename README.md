@@ -31,7 +31,7 @@ PREFER: cache := Object.create(null)
 
 The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 
-Feedback changes the probabilities of the Actor’s next output; the tool aims to make stronger code structures more likely. The Actor decides whether to use a suggestion and owns implementation and verification. A turn stops after three suggestions or two silences; failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for the criteria and data flow.
+Feedback changes the probabilities of the Actor’s next output; the tool aims to make stronger code structures more likely. The Actor decides whether to use a suggestion and owns implementation and verification. A turn stops after three suggestions or two silences on product structure. Test changes are eligible only when they remove testing required by the task contract; silence on that question does not consume the structure judgment budget. Failures are shown separately. See the [behavior specification](SPEC.zh-TW.md) for responsibilities and data flow.
 
 ## What the benchmark found
 
@@ -50,9 +50,9 @@ python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
 
-Without a saved Provider selection, the code defaults to `gpt-5.6-sol` at medium reasoning. A saved selection overrides it. Round 8 used `gpt-6-sol` at medium reasoning. The plugin manifest version is `0.6.0+codex.20260922164420`.
+Without a saved Provider selection, the code defaults to `gpt-5.6-sol` at medium reasoning. A saved selection overrides it. Round 8 used `gpt-6-sol` at medium reasoning. The plugin manifest version is `0.6.0+codex.20260925224104`.
 
-Task text, edits, tool results, and repository code selected by the Provider are sent to OpenAI. The Provider can only read non-ignored workspace files; the tool does not edit the Actor’s files. Records are stored at `.masters-nudge/data/feedback.sqlite3` and settings at `.masters-nudge/config.json` under the user directory.
+Task text, edits, tool results, and complete changed files that fit the shared material limit are sent to OpenAI. The Provider may also read non-ignored workspace files. The tool does not edit the Actor’s files. Records are stored at `.masters-nudge/data/feedback.sqlite3` and settings at `.masters-nudge/config.json` under the user directory.
 
 On Windows, interrupting a turn during synchronous `PostToolUse` can leave no matching `hook/completed` event, so the tool cannot tell whether that Hook finished. See [openai/codex#46765](https://github.com/openai/codex/issues/46765) for the reproduction and tracking.
 

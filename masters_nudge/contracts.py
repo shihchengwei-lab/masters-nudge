@@ -1,5 +1,6 @@
 """Shared event, material and judgment data; SPEC is the behavioral authority."""
 from __future__ import annotations
+from collections import Counter
 import json
 import os
 import subprocess
@@ -107,9 +108,30 @@ def patch_operations(patch: str | None, cwd: str) -> tuple[tuple[str, str, bool]
         is_test = (filename.startswith("test_") or filename in ("test.py", "tests.py")
                    or ".test." in filename or ".spec." in filename
                    or (test_directory and relative.suffix.lower() in
-                       (".py", ".js", ".jsx", ".ts", ".tsx", ".rs", ".go", ".java", ".cs", ".rb", ".php")))
+                       (".py", ".js", ".jsx", ".ts", ".tsx", ".rs", ".go", ".java", ".cs", ".rb", ".php", ".snap")))
         operations.append((operation, normalized, is_test))
     return tuple(operations) if operations else None
+
+
+def patch_judgment_scope(patch: str | None,
+                         operations: tuple[tuple[str, str, bool], ...] | None) -> str | None:
+    """Route by patch facts; the Provider judges whether removed testing is required."""
+    if not operations or not all(is_test for _, _, is_test in operations):
+        return "implementation"
+    if any(kind == "Delete File" for kind, _, _ in operations):
+        return "task_contract"
+    removed, added = Counter(), Counter()
+    for line in (patch or "").splitlines():
+        if line.startswith("*** "):
+            if removed - added:
+                return "task_contract"
+            removed.clear()
+            added.clear()
+        elif line.startswith("-") and line[1:].strip():
+            removed[line[1:]] += 1
+        elif line.startswith("+") and line[1:].strip():
+            added[line[1:]] += 1
+    return None
 
 
 @dataclass(frozen=True)
@@ -118,6 +140,8 @@ class MaterialPacket:
     workspace: str
     transcript_path: str = ""
     new_test_paths: tuple[str, ...] = ()
+    judgment_scope: str = "implementation"
+    previous_nudges: tuple[dict, ...] = ()
 
     def categories(self) -> dict:
         categories = {}
@@ -136,12 +160,14 @@ class MaterialPacket:
 
     @property
     def material_chars(self) -> int:
-        return len(json_text(self.categories()))
+        return len(json_text({**self.categories(), "previous_nudges": self.previous_nudges}))
 
     def render(self) -> str:
         return json_text({**self.categories(), "workspace": self.workspace,
                           "transcript_path": self.transcript_path,
-                          "new_test_paths": self.new_test_paths})
+                          "new_test_paths": self.new_test_paths,
+                          "judgment_scope": self.judgment_scope,
+                          "previous_nudges": self.previous_nudges})
 
 
 @dataclass(frozen=True)

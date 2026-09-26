@@ -221,26 +221,113 @@ class PipelineTests(unittest.TestCase):
         self.assertIsNone(self.batch(updated, call="test-update"))
         self.assertEqual(len(self.calls), 0)
         with self.adapter.core.journal.connect() as db:
-            row = db.execute("SELECT skipped_new_test_patches FROM rounds").fetchone()
-        self.assertEqual(row["skipped_new_test_patches"], 2)
+            row = db.execute("SELECT skipped_test_patches FROM rounds").fetchone()
+        self.assertEqual(row["skipped_test_patches"], 2)
         for i in range(3):
             self.batch(call=f"source-{i}")
         self.assertEqual(len(self.calls), 2)
 
-    def test_existing_test_and_mixed_patch_still_call_provider(self):
+    def test_addition_to_existing_test_skips_but_mixed_patch_calls_provider(self):
         self.prompt()
         existing = "*** Begin Patch\n*** Update File: tests/existing.spec.ts\n@@\n+x\n*** End Patch"
         mixed = ("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n"
                  "*** Update File: job.py\n@@\n+x\n*** End Patch")
         self.batch(existing, call="existing")
         self.batch(mixed, call="mixed")
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(self.calls), 1)
         packet = json.loads(self.calls[-1]["nudge_input"])
+        self.assertEqual(packet["judgment_scope"], "implementation")
         self.assertEqual(packet["new_test_paths"], ["tests/new.spec.ts"])
         self.assertIn("*** Update File: job.py", str(packet["batch_change"]))
         self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch",
                    call="new-update")
-        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(self.calls), 1)
+
+    def test_test_removal_silences_do_not_exhaust_implementation_budget(self):
+        self.prompt("保留既有產品行為，Actor 自行決定驗證方式")
+        removal = ("*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n"
+                   "-assert_eq!(run(), expected);\n+assert_eq!(run(), updated);\n*** End Patch")
+        for i in range(3):
+            self.assertIsNone(self.batch(removal, call=f"test-{i}"))
+        self.assertEqual(len(self.calls), 3)
+        for call in self.calls:
+            self.assertEqual(json.loads(call["nudge_input"])["judgment_scope"], "task_contract")
+        self.assertEqual([item["outcome"] for item in self.adapter.core.journal.recent()],
+                         ["silence"] * 3)
+        self.assertTrue(all(item["detail"]["judgment_scope"] == "task_contract"
+                            for item in self.adapter.core.journal.recent()))
+        self.feedback()
+        self.assertIsNotNone(self.batch(call="product-change"))
+        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["judgment_scope"], "implementation")
+        self.reply = {"feedback": None}
+        for i in range(3):
+            self.batch(call=f"product-silence-{i}")
+        self.assertEqual(len(self.calls), 6)
+
+    def test_contract_feedback_is_delivered_and_counts_towards_feedback_limit(self):
+        self.prompt("必須保留 tests/required.spec.ts 的拒絕非法狀態測試")
+        self.batch("*** Begin Patch\n*** Add File: tests/required.spec.ts\n+assert rejected\n*** End Patch",
+                   call="add-required")
+        removal = "*** Begin Patch\n*** Delete File: tests/required.spec.ts\n*** End Patch"
+        self.reply = {"feedback": {"criterion": 1,
+            "evidence": [{"source": "batch_change", "location": "tool/delete/input:2",
+                          "excerpt": "*** Delete File: tests/required.spec.ts"}],
+            "observed": "required.spec.ts 被刪除", "violates": "契約要求的驗證消失",
+            "prefer": "保留契約要求的非法狀態測試"}}
+        self.assertIsNotNone(self.batch(removal, call="delete"))
+        self.assertEqual(json.loads(self.calls[0]["nudge_input"])["judgment_scope"], "task_contract")
+        self.assertIn("add-required", str(json.loads(self.calls[0]["nudge_input"])["before_structure"]))
+        self.feedback()
+        for i in range(3):
+            self.batch(call=f"product-{i}")
+        self.assertEqual(len(self.calls), 3)
+
+    def test_snapshot_deletion_asks_about_contract_without_inferring_file_origin(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Delete File: tests/__snapshots__/result.snap\n*** End Patch")
+        self.assertEqual(len(self.calls), 1)
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(packet["judgment_scope"], "task_contract")
+        self.assertEqual(packet["new_test_paths"], [])
+
+    def test_mixed_patch_with_test_removal_keeps_implementation_scope(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Delete File: tests/old.spec.ts\n"
+                   "*** Update File: job.py\n@@\n+retry_state = job.status\n*** End Patch")
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(packet["judgment_scope"], "implementation")
+        self.assertIn("retry_state = job.status", str(packet["batch_change"]))
+
+    def test_test_blank_line_cleanup_skips_provider(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n-});\n-\n-  \n+});\n*** End Patch")
+        self.assertEqual(self.calls, [])
+
+    def test_identical_text_added_elsewhere_does_not_hide_test_removal(self):
+        self.prompt()
+        self.batch("*** Begin Patch\n*** Update File: tests/required.py\n@@\n-assert rejected\n"
+                   "*** Update File: tests/other.py\n@@\n+assert rejected\n*** End Patch")
+        self.assertEqual(len(self.calls), 1)
+        self.assertEqual(json.loads(self.calls[0]["nudge_input"])["judgment_scope"], "task_contract")
+
+    def test_skipped_test_addition_is_available_when_actor_removes_its_own_case(self):
+        self.prompt("Existing tests are immutable")
+        addition = "*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n+fn actor_case() {}\n*** End Patch"
+        self.batch(addition, call="actor-added-case")
+        self.batch("*** Begin Patch\n*** Add File: tests/unrelated.rs\n+fn other() {}\n*** End Patch",
+                   call="unrelated")
+        self.assertEqual(self.calls, [])
+        removal = "*** Begin Patch\n*** Update File: tests/feature.rs\n@@\n-fn actor_case() {}\n*** End Patch"
+        self.batch(removal, call="actor-removed-case")
+        packet = json.loads(self.calls[0]["nudge_input"])
+        self.assertEqual(packet["before_structure"], [
+            {"path": "prior_tool/actor-added-case/input", "start": 1, "lines": addition.splitlines()},
+            {"path": "prior_tool/actor-added-case/output", "start": 1, "lines": ["Success"]},
+        ])
+        self.assertEqual(self.adapter.core.journal.unresolved(), [])
+        self.prompt("新的要求", turn="turn-2")
+        self.batch(removal, turn="turn-2", call="new-round-removal")
+        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["before_structure"], [])
 
     def test_mixed_followup_identifies_new_test_without_hiding_source_change(self):
         self.prompt("Checked-in tests are immutable")
@@ -258,7 +345,7 @@ class PipelineTests(unittest.TestCase):
         self.prompt()
         self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+x\n*** End Patch")
         self.prompt("另一輪", turn="turn-2")
-        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+x\n*** End Patch",
+        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-x\n+y\n*** End Patch",
                    turn="turn-2")
         self.assertEqual(len(self.calls), 1)
         packet = json.loads(self.calls[0]["nudge_input"])
@@ -272,13 +359,15 @@ class PipelineTests(unittest.TestCase):
                    "*** Move to: tests/moved.spec.ts\n*** End Patch", call="move")
         self.assertEqual(len(self.calls), 2)
 
-    def test_failed_add_does_not_make_later_update_skippable(self):
+    def test_failed_add_does_not_establish_new_test_provenance(self):
         self.prompt()
         self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test\n*** End Patch",
                    output="Failed to write file", call="failed-add")
-        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n+test\n*** End Patch",
+        self.batch("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-test\n+replacement\n*** End Patch",
                    call="later-update")
         self.assertEqual(len(self.calls), 2)
+        self.assertEqual(json.loads(self.calls[-1]["nudge_input"])["new_test_paths"], [])
+        self.assertIn("Failed to write file", str(json.loads(self.calls[-1]["nudge_input"])["before_structure"]))
 
     def test_native_exit_code_zero_add_skips_provider(self):
         self.prompt()
@@ -291,8 +380,41 @@ class PipelineTests(unittest.TestCase):
         self.prompt()
         self.feedback()
         for _ in range(5):
-            self.batch()
+            result = self.batch()
+            if result:
+                self.adapter.core.journal.delivered(result["_masters_nudge"])
         self.assertEqual(len(self.calls), 3)
+        history = json.loads(self.calls[-1]["nudge_input"])["previous_nudges"]
+        self.assertEqual(history, [self.reply["feedback"], self.reply["feedback"]])
+
+    def test_all_delivered_nudges_are_sent_in_order_across_silence(self):
+        self.prompt()
+        self.feedback()
+        first = json.loads(json.dumps(self.reply["feedback"]))
+        result = self.batch(call="first-feedback")
+        self.adapter.core.journal.delivered(result["_masters_nudge"])
+        self.reply = {"feedback": None}
+        self.batch(call="silence")
+        self.feedback()
+        self.reply["feedback"]["prefer"] = "render <- job.status"
+        second = json.loads(json.dumps(self.reply["feedback"]))
+        result = self.batch(call="second-feedback")
+        self.adapter.core.journal.delivered(result["_masters_nudge"])
+        self.batch(call="third-feedback")
+        self.batch(call="over-limit")
+        history = [json.loads(call["nudge_input"])["previous_nudges"] for call in self.calls]
+        self.assertEqual(history, [[], [first], [first], [first, second]])
+
+    def test_undelivered_and_previous_round_feedback_are_not_sent(self):
+        self.prompt()
+        self.feedback()
+        self.batch(call="not-delivered")
+        result = self.batch(call="delivered")
+        self.adapter.core.journal.delivered(result["_masters_nudge"])
+        self.prompt("新一輪要求")
+        self.batch(call="new-round")
+        self.assertEqual([json.loads(call["nudge_input"])["previous_nudges"] for call in self.calls],
+                         [[], [], []])
 
     def test_new_user_message_resets_even_when_codex_reuses_turn_id(self):
         self.prompt()

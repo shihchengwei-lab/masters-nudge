@@ -6,8 +6,8 @@ from .contracts import Feedback, ToolFault, EVIDENCE_EXCERPT_MAX_CHARS
 def delivery_text(feedback: Feedback) -> str:
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
-        "Before continuing, decide whether OBSERVED is required by the task. "
-        "If not, consider PREFER. Implementation remains yours."
+        "Consider OBSERVED and PREFER against the task and current code. "
+        "Decide whether to adopt, adapt, or reject the suggestion."
     )
 
 

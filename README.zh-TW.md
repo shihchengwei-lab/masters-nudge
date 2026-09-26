@@ -31,7 +31,7 @@ PREFER: cache := Object.create(null)
 
 模型接著把快取改成沒有繼承屬性的 `Object.create(null)`。同題另一份沒有收到回饋的實作保留 `{}`。兩份實作都通過任務驗收；兩位不知道哪份使用工具的評審，都認為改後的結構較好。[第八輪 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了測試條件與其他案例。
 
-回饋會影響 Actor 後續輸出的機率；工具的目標是提高高品味程式結構出現的機率。Actor 決定是否採納，也負責實作與驗證。每輪最多三次回饋或兩次沉默，故障會另行顯示。[完整行為規格](SPEC.zh-TW.md)說明判斷準則與資料流。
+回饋會影響 Actor 後續輸出的機率；工具的目標是提高高品味程式結構出現的機率。Actor 決定是否採納，也負責實作與驗證。每輪最多三次回饋或兩次產品結構判斷的沉默；測試只在移除契約要求時提出疑點，這類檢查的沉默不消耗結構判斷額度。故障會另行顯示。[完整行為規格](SPEC.zh-TW.md)說明責任邊界與資料流。
 
 ## 目前測到什麼
 
@@ -50,9 +50,9 @@ python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
 
-程式碼未設定 Provider 模型時預設為 `gpt-5.6-sol`、medium reasoning；已儲存的設定會覆蓋預設。第八輪使用 `gpt-6-sol`、medium reasoning。插件清單版本為 `0.6.0+codex.20260922164420`。
+程式碼未設定 Provider 模型時預設為 `gpt-5.6-sol`、medium reasoning；已儲存的設定會覆蓋預設。第八輪使用 `gpt-6-sol`、medium reasoning。插件清單版本為 `0.6.0+codex.20260925224104`。
 
-任務、修改、工具結果及 Provider 選讀的程式碼會傳給 OpenAI。Provider 只能唯讀工作區中未被忽略的檔案；工具不修改 Actor 的檔案。紀錄存於使用者目錄的 `.masters-nudge/data/feedback.sqlite3`，設定存於 `.masters-nudge/config.json`。
+任務、修改、工具結果，以及可完整放進共同材料上限的已修改檔案會傳給 OpenAI。Provider 也可唯讀工作區中未被忽略的檔案；工具不修改 Actor 的檔案。紀錄存於使用者目錄的 `.masters-nudge/data/feedback.sqlite3`，設定存於 `.masters-nudge/config.json`。
 
 Windows Codex 在同步 `PostToolUse` 期間若中斷該輪，可能缺少對應的 `hook/completed` 事件，讓工具無法判定 Hook 是否結束。重現與追蹤見 [openai/codex#46765](https://github.com/openai/codex/issues/46765)。
 

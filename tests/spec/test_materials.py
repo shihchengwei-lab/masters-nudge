@@ -19,10 +19,8 @@ class ContractTests(unittest.TestCase):
     def test_actor_delivery_uses_fixed_formal_fields(self):
         feedback = parse_feedback(json.dumps(self.feedback()))
         self.assertEqual(
-            delivery_text(feedback),
-            "Masters’ Nudge\nOBSERVED: x := y\nVIOLATES: sources(y) = 2\nPREFER: consumer <- y\n"
-            "Before continuing, decide whether OBSERVED is required by the task. "
-            "If not, consider PREFER. Implementation remains yours.",
+            delivery_text(feedback).splitlines()[:4],
+            ["Masters’ Nudge", "OBSERVED: x := y", "VIOLATES: sources(y) = 2", "PREFER: consumer <- y"],
         )
 
     def test_output_limits_and_partial_feedback(self):
@@ -82,16 +80,68 @@ class ContractTests(unittest.TestCase):
         contracts = [line for line in packet.lines if line.source == "task_contract"]
         self.assertEqual([(line.path, line.text) for line in contracts], [("task/latest", task)])
 
-    def test_shared_budget_counts_five_categories_not_transport_metadata(self):
+    def test_small_changed_file_is_carried_as_current_structure(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            (Path(raw) / "job.py").write_text("source = job.status\nretry_state = source\n", encoding="utf-8")
+            patch = f"*** Begin Patch\n*** Update File: {Path(raw) / 'job.py'}\n@@\n+retry_state = source\n*** End Patch"
+            event = ToolCompleted("edit-1", "apply_patch", {"command": patch}, "Success")
+            packet = build_packet(SessionRef("s", "t", raw),
+                                  {"goal": "keep one source", "request": "keep one source"}, (event,))
+            self.assertEqual(packet.categories()["current_structure"], [{
+                "path": "job.py", "start": 1,
+                "lines": ["source = job.status", "retry_state = source"],
+            }])
+
+    def test_ignored_file_is_not_carried_as_current_structure(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            (Path(raw) / ".gitignore").write_text("secret.py\n", encoding="utf-8")
+            (Path(raw) / "secret.py").write_text("secret = True\n", encoding="utf-8")
+            patch = "*** Begin Patch\n*** Update File: secret.py\n@@\n+secret = True\n*** End Patch"
+            event = ToolCompleted("edit-1", "apply_patch", {"command": patch}, "Success")
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": "g", "request": "r"}, (event,))
+            self.assertEqual(packet.categories()["current_structure"], [])
+
+    def test_changed_file_is_not_added_when_it_exceeds_shared_budget(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            (Path(raw) / "job.py").write_text("x" * 19000 + "\n", encoding="utf-8")
+            patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+x\n*** End Patch"
+            event = ToolCompleted("edit-1", "apply_patch", {"command": patch}, "Success")
+            task = "t" * 1200
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": task, "request": task}, (event,))
+            self.assertEqual(packet.categories()["current_structure"], [])
+            self.assertLessEqual(packet.material_chars, 20000)
+
+    def test_shared_budget_counts_materials_and_nudges_not_transport_metadata(self):
         packet = MaterialPacket(material_lines("task_contract", "task/latest", "保留 A"),
-                                "repo", "metadata/" * 3000)
+                                "repo", "metadata/" * 3000,
+                                previous_nudges=({"observed": "x := y", "prefer": "view <- y"},))
         self.assertIs(fit_packet(packet), packet)
         data = json.loads(packet.render())
         data.pop("workspace")
         data.pop("transcript_path")
         data.pop("new_test_paths")
+        data.pop("judgment_scope")
         from masters_nudge.contracts import json_text
         self.assertEqual(packet.material_chars, len(json_text(data)))
+
+    def test_previous_nudges_remain_when_optional_before_structure_is_dropped(self):
+        history = ({"observed": "copy := source", "prefer": "view <- source"},)
+        before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
+        packet = fit_packet(MaterialPacket((before,), "repo", previous_nudges=history))
+        self.assertEqual(packet.lines, ())
+        self.assertEqual(json.loads(packet.render())["previous_nudges"], list(history))
 
     def test_packet_groups_one_path_instead_of_repeating_it_for_every_line(self):
         packet = MaterialPacket(material_lines("batch_change", "tool/edit/input", "a\nb\nc"), "repo")
