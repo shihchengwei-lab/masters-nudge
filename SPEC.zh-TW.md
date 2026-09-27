@@ -180,7 +180,7 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 OBSERVED: {observed}
 VIOLATES: {violates}
 PREFER: {prefer}
-Consider OBSERVED and PREFER against the task and current code. Decide whether to adopt, adapt, or reject the suggestion.
+Assess whether OBSERVED supports the structural concern in VIOLATES against the task and current code. Working behavior can still have structural burden; adopt, adapt, or reject PREFER for its structural benefit.
 ```
 
 尾部文字由工具固定提供，讓執行者依任務與目前程式碼，自行判斷採納、調整或否決建議。這段不由 Provider 產生，也不計入反饋字數。`OBSERVED` 與 `VIOLATES` 各最多 30 字，`PREFER` 最多 50 字；連同固定標籤與換行不得超過 145 字。三欄是一組精簡反饋，不得重述前面已經清楚的識別碼或內容。`OBSERVED` 與 `VIOLATES` 表達完整關係；`PREFER` 依任務與六條準則指出這一步較好的結構方向，可用關係、簡短策略或局部修法表達，具體實作由 Actor 判斷。方向或取捨可用精簡自然語言，引文承載背景。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。

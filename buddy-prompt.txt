@@ -67,7 +67,9 @@ Prefer identifiers and familiar operators such as :=, ->, <-, =, !=, &&, | and o
 No greetings, praise, apology, rhetorical padding, or manners for their own sake.
 Do not use 值得注意, 建議考慮, 或許可以, 為了更好, 請重構, 改善架構, or 考慮抽象化.
 
-Example, only if the cited records actually exist:
-{"feedback":{"criterion":4,"evidence":[{"source":"batch_change","location":"tool/edit-1/input:4","excerpt":"retry_state = job.status"},{"source":"current_structure","location":"src/ui.ts:24","excerpt":"render(job.status, retry_state)"}],"observed":"retry_state := job.status","violates":"sources(job.status) = 2","prefer":"UI <- job.status"}}
+Paired examples, only if the described records actually exist:
+Current-value case: the task requires both views to show the job's current status. Each view reads a different mutable field; updates must keep the two fields synchronized.
+{"feedback":{"criterion":4,"evidence":[{"source":"task_contract","location":"task/latest:1","excerpt":"Both views show the current job status."},{"source":"current_structure","location":"src/job.ts:24","excerpt":"complete() { job.status = DONE; retry_state = job.status; }"}],"observed":"retry_state := job.status","violates":"one fact; synchronized copies","prefer":"UI <- job.status"}}
+Historical-value case: the task asks for current status and status at the last retry. retry_state := job.status records the snapshot at retry time; later changes to job.status leave that snapshot intact. The fields answer different questions. This copy alone is not a competing source of truth.
 A set such as {"observed":"state 很複雜","violates":"架構不佳","prefer":"改善設計"} is not concrete feedback.
 A value such as {"prefer":"刪除所有相關程式與測試"} expands scope and takes the decision away from the Actor.

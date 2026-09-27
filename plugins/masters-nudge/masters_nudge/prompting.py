@@ -6,8 +6,9 @@ from .contracts import Feedback, ToolFault, EVIDENCE_EXCERPT_MAX_CHARS
 def delivery_text(feedback: Feedback) -> str:
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
-        "Consider OBSERVED and PREFER against the task and current code. "
-        "Decide whether to adopt, adapt, or reject the suggestion."
+        "Assess whether OBSERVED supports the structural concern in VIOLATES "
+        "against the task and current code. Working behavior can still have structural burden; "
+        "adopt, adapt, or reject PREFER for its structural benefit."
     )
 
 
