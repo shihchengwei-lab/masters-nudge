@@ -6,7 +6,7 @@ from .contracts import Feedback, ToolFault, EVIDENCE_EXCERPT_MAX_CHARS
 def delivery_text(feedback: Feedback) -> str:
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
-        "Assess whether OBSERVED supports the structural concern in VIOLATES "
+        "Re-examine the assumptions behind your current approach that this concern challenges, "
         "against the task and current code. Working behavior can still have structural burden; "
         "adopt, adapt, or reject PREFER for its structural benefit."
     )
