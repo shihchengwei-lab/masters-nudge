@@ -1,0 +1,224 @@
+{
+  "case": "fb-metaflow-stubs",
+  "requirements": [
+    {
+      "id": "fb-metaflow-stubs/C01",
+      "source_lines": [
+        122,
+        123,
+        124,
+        126,
+        127,
+        128,
+        129,
+        131,
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        147,
+        148,
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157
+      ],
+      "source_text": "    def _exploit_annotation(self, annotation: Any, starting: str = ': ') -> str:\n        \"\"\"\n        Generate a type annotation string from a given annotation object.\n        This method converts various types of annotation objects (type hints, generic types, \n        forward references, etc.) into their string representations suitable for stub files.\n        It handles the conversion of complex type annotations including generics, unions,\n        callables, and forward references while managing necessary imports.\n        Parameters\n        ----------\n        annotation : Any\n            The annotation object to convert. Can be a type, string, TypeVar, generic alias,\n            forward reference, or any other annotation type.\n        starting : str, optional\n            The prefix string to prepend to the annotation (default is \": \"). Typically\n            used for parameter annotations (\": \") or return annotations (\" -> \").\n        Returns\n        -------\n        str\n            The string representation of the annotation. Returns empty string if annotation\n            is None or inspect.Parameter.empty, otherwise returns the starting prefix\n            followed by the properly formatted type annotation string.\n        Important notes or exceptions\n        -----------------------------\n        - Required regular and typing imports are recorded for the generated stub\n        - Handles self-referential annotations by wrapping them in quotes\n        - Special handling for built-in types, typing module generics, and forward references\n        - For string annotations, attempts to evaluate them in the current module context\n        - TypeVar and NewType definitions are retained for the generated stub\n        - Generic types are recursively processed to handle nested type arguments\n        - Failures while evaluating a string annotation are caught; the string is then\n          retained as a quoted forward reference\n        \"\"\"",
+      "acceptance": "annotation 型別、泛型、Union／Callable、TypeVar／NewType、prefix／imports、自我／字串引用；None／empty 回空字串。",
+      "checks": [
+        "reserved",
+        "metaflow_members_input.py",
+        "annotation-api"
+      ]
+    },
+    {
+      "id": "fb-metaflow-stubs/C02",
+      "source_lines": [
+        160,
+        161,
+        162,
+        164,
+        166,
+        167,
+        168,
+        169,
+        170,
+        171,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        179,
+        180,
+        181,
+        183,
+        184,
+        185,
+        186,
+        187,
+        188,
+        189
+      ],
+      "source_text": "    def _generate_class_stub(self, name: str, clazz: type) -> str:\n        \"\"\"\n        Generate a stub definition for a Python class.\n        This method creates a complete stub representation of a given class, including its inheritance hierarchy, methods, properties, and special handling for various class types like TypedDict, NamedTuple, and Metaflow-specific classes.\n        Parameters\n        ----------\n        name : str\n            The name of the class for which to generate the stub\n        clazz : type\n            The class object to analyze and generate a stub for\n        Returns\n        -------\n        str\n            A string containing the complete stub definition for the class, including:\n            - Class declaration with inheritance and metaclass\n            - Class docstring if available\n            - Method stubs for all public methods\n            - Property stubs for class properties\n            - Special handling for __init__ methods and annotations\n        Important notes or exceptions\n        -----------------------------\n        - Runtime-visible TypedDict, NamedTuple, annotated and Metaflow-injected\n          members are represented according to the generator's stub rules\n        - Static methods, class methods, properties and setters retain the\n          appropriate declarations\n        \"\"\"",
+      "acceptance": "class 繼承／metaclass、方法／屬性／setter／init／runtime 欄位及 imports。",
+      "checks": [
+        "reserved",
+        "metaflow_members_input.py",
+        "metaflow_typed_dict_keys_input.py",
+        "class-api"
+      ]
+    },
+    {
+      "id": "fb-metaflow-stubs/C03",
+      "source_lines": [
+        192,
+        193,
+        194,
+        196,
+        197,
+        198,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        206,
+        207,
+        208,
+        209,
+        210,
+        211,
+        212,
+        213,
+        214,
+        216,
+        217,
+        218,
+        219,
+        220,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        233,
+        234,
+        235,
+        236,
+        237,
+        238
+      ],
+      "source_text": "    def _generate_function_stub(self, name: str, func: Optional[Union[Callable, classmethod]] = None, sign: Optional[List[inspect.Signature]] = None, indentation: Optional[str] = None, doc: Optional[str] = None, deco: Optional[str] = None) -> str:\n        \"\"\"\n        Generate a stub definition for a Python function with proper type annotations and documentation.\n        This method creates a stub representation of a function that can be used in .pyi files\n        for type checking and IDE support. It handles function signatures, parameter defaults,\n        type annotations, overloads, and documentation strings.\n        Parameters\n        ----------\n        name : str\n            The name of the function for which to generate the stub\n        func : Optional[Union[Callable, classmethod]], optional\n            The actual function object to analyze. If None, the 'sign' parameter must be provided\n        sign : Optional[List[inspect.Signature]], optional  \n            List of function signatures to use instead of inspecting 'func'. Multiple signatures\n            create overloaded function definitions\n        indentation : Optional[str], optional\n            String to use for indenting the generated code (e.g., \"    \" for class methods)\n        doc : Optional[str], optional\n            Custom documentation string to use. If None, uses func.__doc__\n        deco : Optional[str], optional\n            Decorator string to apply to the function (e.g., \"@property\", \"@staticmethod\")\n        Returns\n        -------\n        str\n            The complete stub definition as a string, including function signature(s),\n            type annotations, documentation, and implementation placeholder\n        Important Notes\n        ---------------\n        - Either `func` or `sign` must be provided; when `func` is omitted, `doc`\n          must also be supplied\n        - Multiple signatures in 'sign' will generate @typing.overload decorations\n        - Default parameter values are converted to appropriate stub representations\n        - Complex default values that cannot be represented are replaced with \"...\"\n        - Functions with STUBGEN_IGNORE docstring are ignored and return empty string\n        - The method handles various parameter kinds including *args, **kwargs, and keyword-only parameters\n        - If a function's signature cannot be inspected, the method returns an empty string\n        Exceptions\n        ----------\n        RuntimeError\n            Raised when neither 'func' nor 'sign' parameters are provided\n        \"\"\"\n        # <your code>",
+      "acceptance": "函式簽章、各 parameter kind、defaults、decorators、overload、docstring、ignore 與指定錯誤行為。",
+      "checks": [
+        "reserved",
+        "function-api",
+        "metaflow_docquotes_input.py"
+      ]
+    },
+    {
+      "id": "fb-metaflow-stubs/C04",
+      "source_lines": [
+        240,
+        241,
+        242,
+        244,
+        245,
+        246,
+        248,
+        249,
+        251,
+        252,
+        253,
+        254,
+        255
+      ],
+      "source_text": "    def _reset(self):\n        \"\"\"\n        Reset the internal state of the StubGenerator for processing a new module.\n        This method clears all temporary state variables that are used during the processing\n        of a single module, preparing the generator for analyzing the next module in the queue.\n        It is called internally before processing each new module to ensure clean state.\n        The reset clears accumulated imports and type definitions, current object and\n        reference tracking, generated content, and the current parent-module context.\n        Notes\n        -----\n        This is an internal method that should not be called directly by users. It is\n        automatically invoked by the stub generation process when moving between modules\n        to ensure proper isolation of module-specific state.",
+      "acceptance": "reset 清除每份模組的累積資料與追蹤；模組互不污染。",
+      "checks": [
+        "reserved",
+        "reset-api"
+      ]
+    },
+    {
+      "id": "fb-metaflow-stubs/C05",
+      "source_lines": [
+        4,
+        5,
+        6,
+        7,
+        117,
+        118
+      ],
+      "source_text": "Implement the selected ``StubGenerator`` methods for formatting annotations,\ngenerating class and function stubs, and resetting per-module state. The generated\ntext must preserve relevant signatures, annotations, overloads, decorators,\ndocumentation, runtime-defined members, imports, and forward references.\n        The only items analyzes are those that belong to the library (ie: anything in\n        the library or below it but not any external imports)",
+      "acceptance": "有效型別宣告與模組邊界；保留資料成員／引用，不把外部 import 冒充本模組定義。",
+      "checks": [
+        "reserved",
+        "metaflow_review_members_input.py",
+        "class-api"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "annotation-api",
+      "kind": "contract_check"
+    },
+    {
+      "id": "class-api",
+      "kind": "contract_check"
+    },
+    {
+      "id": "function-api",
+      "kind": "contract_check"
+    },
+    {
+      "id": "metaflow_docquotes_input.py",
+      "kind": "contract_check"
+    },
+    {
+      "id": "metaflow_members_input.py",
+      "kind": "contract_check"
+    },
+    {
+      "id": "metaflow_review_members_input.py",
+      "kind": "contract_check"
+    },
+    {
+      "id": "metaflow_typed_dict_keys_input.py",
+      "kind": "contract_check"
+    },
+    {
+      "id": "reserved",
+      "kind": "reserved_suite",
+      "evidence": "native_checks.py fixed suite commands; test.patch"
+    },
+    {
+      "id": "reset-api",
+      "kind": "contract_check"
+    }
+  ],
+  "unresolved": []
+}

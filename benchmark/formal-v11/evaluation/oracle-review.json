@@ -1,0 +1,73 @@
+{
+  "authority": "Each case task.md; reference patches are calibration inputs, not additional requirements",
+  "rulings": [
+    {
+      "case": "clap-2297",
+      "change": "Collect each yielded group through IntoIterator before comparing values",
+      "basis": "Task specifies iterable groups of UTF-8 values; it does not require an inner Vec or its PartialEq implementation",
+      "assertions_preserved": true
+    },
+    {
+      "case": "tracing-1523",
+      "change": "Remove two dbg!(subscriber) wrappers from reserved tests",
+      "basis": "Debug formatting is not part of the public filtering contract",
+      "assertions_preserved": true
+    },
+    {
+      "case": "tracing-1523",
+      "change": "Exercise boxed reload with a concrete existing filtered layer instead of requiring previously unsupported Box<dyn Layer> plus addition of a first filter during reload",
+      "basis": "The task preserves existing boxed and reload behavior; it does not mandate a new erased-box API"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "change": "Compare decoded forward-reference strings, accepting either quote style",
+      "basis": "The task requires quoted forward references, not double-quote characters",
+      "assertions_normalized": 4
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "change": "Accept annotated fields, properties, and functional NamedTuple/TypedDict forms; load imports recorded by the generator before checking TypedDict semantics",
+      "basis": "Runtime fields and type information are required; a particular AST layout is not"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "change": "Reset checks cover the documented accumulated state and parent-module context, not a new requirement to clear current module/name fields",
+      "basis": "Published reset docstring explicitly names what must be cleared"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "change": "Require source-before-target deletion when following a redirect; allow a target already processed as an earlier independent batch input",
+      "basis": "The task gives a causal ordering for redirect handling, not a global sort of the batch delete list"
+    },
+    {
+      "case": "regexp-404",
+      "change": "Exclude the demand that every diagnostic for /a|[ab]/ can be applied simultaneously",
+      "basis": "The task requires correct diagnostics, not joint application of every suggestion"
+    },
+    {
+      "case": "flipt-segments",
+      "change": "Check filesystem snapshots and accept the legacy single SegmentKey or equivalent one-element SegmentKeys representation",
+      "basis": "The task requires stored segment semantics, not one protobuf field choice for a single key"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "change": "Replace the variable-binding-shape probe with a real server interceptor-chain cache test",
+      "basis": "Evaluation responses must be cached in the configured server; no assignment count or local variable spelling is prescribed"
+    },
+    {
+      "case": "element-sessions",
+      "change": "Remove two obsolete snapshot files after the fixed test patch replaces their three snapshot assertions with behavioral assertions",
+      "basis": "Unused snapshot fixtures are an evaluator artifact; the task specifies selection and sign-out behavior"
+    },
+    {
+      "case": "all",
+      "change": "Require actual selected test execution, all parsed failures, and process exit status; do not rely solely on reward.txt",
+      "basis": "A subset of passing test names is insufficient when the selected suite also fails"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "change": "Resolve timing with official timer -> retry state -> operation-gated React effect flow; retain original acceptance and replace the direct-thunk/same-dispatch supplemental probe with mounted mailbox tests.",
+      "basis": "Official commit e65cc5f and its three unchanged UI tests; details in cases/proton-mailbox-retry/contract-resolution.json."
+    }
+  ]
+}

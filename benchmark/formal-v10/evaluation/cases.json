@@ -1,0 +1,160 @@
+[
+  {
+    "id": "nodebb-images",
+    "title": "刪除封面、頭像與帳號時清理檔案",
+    "repository": "NodeBB/NodeBB",
+    "source": "https://github.com/NodeBB/NodeBB/commit/8168c6c4",
+    "base_commit": "ab5e2a416324ec56cea44b79067ba798f8394de1",
+    "task_sha256": "be2bdc67429744c3fc0d65332c3b334419908d82d463614e79b4df96b59dacf2",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:267632c93bae96eb120292b36e68227a41f2b6edd8e8ff5d7a3bdd7ef4af3b6b"
+    }
+  },
+  {
+    "id": "ansible-type-tags",
+    "title": "設定型別轉換保留來源標記",
+    "repository": "ansible/ansible",
+    "source": "https://github.com/ansible/ansible/commit/d33bedc4",
+    "base_commit": "dcc5dac1846be3bf6e948a2950b93477b9193076",
+    "task_sha256": "4ff4ff2177c0cf040171c83a6c10392cfdd4eb28bf634ab9d762f0b94fa854e9",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:4cf51f69dad7c8cb966fa2af791058ba72e3b4124461d7418239bda01b5a6a9f"
+    }
+  },
+  {
+    "id": "element-sessions",
+    "title": "多裝置選取與批次登出",
+    "repository": "element-hq/element-web",
+    "source": "https://github.com/element-hq/element-web/commit/772df302",
+    "base_commit": "7a33818bd7ec89c21054691afcb6db2fb2631e14",
+    "task_sha256": "62400375e074f051501c0608aed510c2ceff2f3f428ba1aa544d0a4943621960",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:807fb8ab2e02372cc9b597e5b7432f35afcca267fc267a1fec95f16eaabaa5b2"
+    }
+  },
+  {
+    "id": "flipt-segments",
+    "title": "單一／多重分群的匯入、匯出與保存",
+    "repository": "flipt-io/flipt",
+    "source": "https://github.com/flipt-io/flipt/commit/524f2773",
+    "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+    "task_sha256": "a3cec9366cef19371ff820b40e47ebb9640b6c24b93a2f9e29635d0b8fe9b9d1",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be"
+    }
+  },
+  {
+    "id": "openlibrary-index-state",
+    "title": "依記錄類型產生與彙整搜尋索引更新",
+    "repository": "internetarchive/openlibrary",
+    "source": "https://github.com/internetarchive/openlibrary/commit/322d7a46cdc965bfabbf9500e98fde098c9d95b2",
+    "base_commit": "0d5acead6fdfb5e41a1d29a076a6e89ad1a39027",
+    "task_sha256": "928856e278fd2db168d6aa3b2a0336c7dc5db5e81f0813dbda4ebffe0eed1a75",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:bc38d36c23ecc5f3a2d6db194dabcc1fb67146105629d0385ed1a9a3d67e6939"
+    }
+  },
+  {
+    "id": "proton-mailbox-retry",
+    "title": "郵件清單操作重疊與延遲重試",
+    "repository": "protonmail/webclients",
+    "source": "https://github.com/protonmail/webclients/commit/e65cc5f33719e02e1c378146fb981d27bc24bdf4",
+    "base_commit": "bd293dcc05b75ecca4a648edd7ae237ec48c1454",
+    "task_sha256": "c538199ba6308555674a560479016bebe383432401c1cdea0e845502815b4fdc",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:61c22479df649f471ab2ed603deffaf7c290c96ff0b1fe725a62f588d7f4dc9d"
+    },
+    "task_revision": "official-timing-v1",
+    "source_task_sha256": "333e20acc12d7605227478e70b3e07870b0ae439950f8c72191bbb4594f2c9c1"
+  },
+  {
+    "id": "flipt-storage-cache",
+    "title": "跨層旗標快取與請求儲存政策",
+    "repository": "flipt-io/flipt",
+    "source": "https://github.com/flipt-io/flipt/commit/e2bd19dafa7166c96b082fb2a59eb54b4be0d778",
+    "base_commit": "0eaf98f050d86247bfe9bd7e41178865cb585060",
+    "task_sha256": "8185c94aebd010a45fd02177be92a180a5544077c2ffcca16b58a44876669969",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:0d69bb686032bf1a248e5e4ccafb53e905bb6424bd38a7c1a0c6d37bb261b404"
+    }
+  },
+  {
+    "id": "fb-metaflow-stubs",
+    "title": "由執行期物件產生 Python 型別宣告",
+    "repository": "Netflix/metaflow",
+    "source": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+    "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+    "task_sha256": "f26975997bb1f8a52bb39633def9f22b54b551e54a9800ad2a911288ef6f058a",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": false,
+      "image_id": null
+    }
+  },
+  {
+    "id": "tracing-1523",
+    "title": "多層追蹤過濾的獨立視圖與組合",
+    "repository": "tokio-rs/tracing",
+    "source": "https://github.com/tokio-rs/tracing/pull/1523",
+    "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+    "task_sha256": "ac7574e8adf4a093e17c87654b34aaedd51f16cd97e2d45251f18e9489b59adf",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": false,
+      "image_id": null
+    }
+  },
+  {
+    "id": "proton-untrusted-keys",
+    "title": "未釘選金鑰的加密偏好",
+    "repository": "protonmail/webclients",
+    "source": "https://github.com/protonmail/webclients/commit/715dbd4e6999499cd2a576a532d8214f75189116",
+    "base_commit": "aba05b2f451b2f8765207846b11dc67190cb9930",
+    "task_sha256": "c7abb9e735101879a3cb5209ba401077a0a431873904aa4fcfbc842e5a97000b",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": true,
+      "image_id": "sha256:48c8f7c7552cbd2ab7d734d7ab8e4961ba105db00e4cc0de51a2a04c783f08d0"
+    }
+  },
+  {
+    "id": "regexp-404",
+    "title": "正規表示式中的巢狀冗餘分支",
+    "repository": "ota-meshi/eslint-plugin-regexp",
+    "source": "https://github.com/ota-meshi/eslint-plugin-regexp/pull/404",
+    "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+    "task_sha256": "d46f0b6e938ebddfef3678bf51c2e0ace9a4ffd04b802400692583da0403c906",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": false,
+      "image_id": null
+    }
+  },
+  {
+    "id": "clap-2297",
+    "title": "重複選項的分組與覆寫",
+    "repository": "clap-rs/clap",
+    "source": "https://github.com/clap-rs/clap/pull/2297",
+    "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+    "task_sha256": "70bcee17f36c541b78c7ce6517288bb274e9bf0e8dce4e63ea45924ab104d1f8",
+    "suite_state": "reviewed",
+    "environment": {
+      "container": false,
+      "image_id": null
+    }
+  }
+]

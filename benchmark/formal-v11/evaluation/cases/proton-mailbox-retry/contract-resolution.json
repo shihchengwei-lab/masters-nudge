@@ -1,0 +1,42 @@
+{
+  "version": "official-timing-v1",
+  "basis": "User requested resolution from original acceptance tests or official reference implementation before fixing the evaluator.",
+  "official_commit": "https://github.com/ProtonMail/WebClients/commit/e65cc5f33719e02e1c378146fb981d27bc24bdf4",
+  "dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+  "source_task": {
+    "file": "source-task.md",
+    "sha256": "333e20acc12d7605227478e70b3e07870b0ae439950f8c72191bbb4594f2c9c1"
+  },
+  "reference": {
+    "file": "reference.patch",
+    "sha256": "160c7d05b1c7e05df763d8ca1c0a897ee0fe20ce8a6a7a1c282a31e32b385f2e"
+  },
+  "original_acceptance": {
+    "file": "test.patch",
+    "sha256": "aed33267a1d2fa1a5a984b7b51094676e83032bffd5c248093def6691b4bb244",
+    "assertions_changed": false
+  },
+  "decisions": [
+    {
+      "topic": "Retry timing and operations",
+      "evidence": "elementsActions.ts schedules retry/retryStale actions at 2000/1000 ms; useElements.ts sends requests only when pendingActions === 0.",
+      "decision": "Delay expiry makes a retry eligible. An active modifying operation continues to hold it."
+    },
+    {
+      "topic": "End-of-operation scheduling",
+      "evidence": "backendActionFinished only decrements the counter. useElements performs the request from useEffect; the upstream test observes it after await act(...).",
+      "decision": "Remove the requirement to issue a request inside the same dispatch. Accept the normal React update/effect cycle."
+    },
+    {
+      "topic": "In-flight state",
+      "evidence": "The stale load rejects without clearing pendingRequest; its timer dispatches retryStale later, and that reducer clears pendingRequest.",
+      "decision": "These are different times, not contradictory requirements. Clarify the timing and test observable loading/request behavior."
+    },
+    {
+      "topic": "Supplemental test boundary",
+      "evidence": "The official operation gate is at the mounted useElements hook; directly calling load bypasses that caller.",
+      "decision": "Replace the direct-thunk/same-dispatch probe with mounted mailbox behavior tests using the documented actions."
+    }
+  ],
+  "historical_results": "Original task and historical results remain unchanged. Any reevaluation under this clarified task is labeled as reevaluation, not a newly performed Actor run."
+}

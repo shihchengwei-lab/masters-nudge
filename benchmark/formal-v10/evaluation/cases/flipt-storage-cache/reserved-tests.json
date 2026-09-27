@@ -1,0 +1,12 @@
+[
+  "TestCacheControlUnaryInterceptor",
+  "TestCacheControlHeaderKey",
+  "TestEvaluationCacheUnaryInterceptor_Evaluate",
+  "TestEvaluationCacheUnaryInterceptor_Evaluation_Boolean",
+  "TestEvaluationCacheUnaryInterceptor_Evaluation_Variant",
+  "TestGetFlagCached",
+  "TestGetJSONHandleGetError",
+  "TestGetJSONHandleUnmarshalError",
+  "TestSetJSONHandleMarshalError",
+  "TestSetSkipsWhenDoNotStore"
+]
