@@ -14,13 +14,15 @@ from masters_nudge.provider_contract import parse_feedback
 class ContractTests(unittest.TestCase):
     def feedback(self):
         return {"feedback": {"criterion": 4, "evidence": [{"source": "batch_change", "location": "x:1", "excerpt": "x"}],
-                             "observed": "x := y", "violates": "sources(y) = 2", "prefer": "consumer <- y"}}
+                             "observed": "x := y", "violates": "sources(y) = 2", "prefer": "consumer <- y",
+                             "do_not_break": "保留現有查詢結果"}}
 
     def test_actor_delivery_uses_fixed_formal_fields(self):
         feedback = parse_feedback(json.dumps(self.feedback()))
         self.assertEqual(
-            delivery_text(feedback).splitlines()[:4],
-            ["Masters’ Nudge", "OBSERVED: x := y", "VIOLATES: sources(y) = 2", "PREFER: consumer <- y"],
+            delivery_text(feedback).splitlines()[:5],
+            ["Masters’ Nudge", "OBSERVED: x := y", "VIOLATES: sources(y) = 2",
+             "PREFER: consumer <- y", "DO_NOT_BREAK: 保留現有查詢結果"],
         )
 
     def test_output_limits_and_partial_feedback(self):
@@ -29,7 +31,8 @@ class ContractTests(unittest.TestCase):
         self.assertIsNotNone(parse_feedback(json.dumps(valid)))
         invalid = []
         for key, value in (("criterion", True), ("criterion", 7), ("evidence", []),
-                           ("observed", "x" * 31), ("violates", ""), ("prefer", "x" * 51)):
+                           ("observed", "x" * 31), ("violates", ""), ("prefer", "x" * 51),
+                           ("do_not_break", ""), ("do_not_break", "x" * 21)):
             item = copy.deepcopy(valid)
             item["feedback"][key] = value
             invalid.append(item)
@@ -38,6 +41,7 @@ class ContractTests(unittest.TestCase):
         invalid.append(item)
         item = copy.deepcopy(valid)
         item["feedback"]["prefer"] = "x" * 50
+        item["feedback"]["do_not_break"] = "x" * 20
         self.assertIsNotNone(parse_feedback(json.dumps(item)))
         for item in invalid:
             with self.subTest(item=item), self.assertRaises(ToolFault):
@@ -46,10 +50,10 @@ class ContractTests(unittest.TestCase):
     def test_schema_field_limits_make_the_combined_limit_unrepresentable(self):
         schema = json.loads((Path(__file__).resolve().parents[2] / "nudge-schema.json").read_text(encoding="utf-8"))
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
-        limits = [feedback[name]["maxLength"] for name in ("observed", "violates", "prefer")]
-        labels = len("OBSERVED: \nVIOLATES: \nPREFER: ")
-        self.assertEqual(limits, [30, 30, 50])
-        self.assertLessEqual(sum(limits) + labels, 145)
+        limits = [feedback[name]["maxLength"] for name in ("observed", "violates", "prefer", "do_not_break")]
+        labels = len("OBSERVED: \nVIOLATES: \nPREFER: \nDO_NOT_BREAK: ")
+        self.assertEqual(limits, [30, 30, 50, 20])
+        self.assertLessEqual(sum(limits) + labels, 180)
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)

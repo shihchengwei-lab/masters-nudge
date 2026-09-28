@@ -57,7 +57,7 @@ class PipelineTests(unittest.TestCase):
             "evidence": [{"source": "batch_change", "location": "tool/call-1/input:4",
                           "excerpt": "retry_state = job.status"}],
             "observed": "retry_state := job.status", "violates": "sources(job.status) = 2",
-            "prefer": "UI <- job.status"}}
+            "prefer": "UI <- job.status", "do_not_break": "保留目前狀態顯示"}}
 
     def test_prompt_and_reads_do_not_call_provider(self):
         self.assertIsNone(self.prompt())
@@ -199,6 +199,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("OBSERVED: retry_state := job.status", text)
         self.assertIn("VIOLATES: sources(job.status) = 2", text)
         self.assertIn("PREFER: UI <- job.status", text)
+        self.assertIn("DO_NOT_BREAK: 保留目前狀態顯示", text)
         self.assertNotIn("tool/call-1", text)
         self.assertNotIn("criterion", text)
 

@@ -8,9 +8,10 @@ from pathlib import Path
 
 SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result")
 MATERIAL_MAX_CHARS = 20_000
-FEEDBACK_MAX_CHARS = 145
+FEEDBACK_MAX_CHARS = 180
 EVIDENCE_EXCERPT_MAX_CHARS = 120
 PREFER_MAX_CHARS = 50
+DO_NOT_BREAK_MAX_CHARS = 20
 FEEDBACK_LIMIT = 3
 SILENCE_LIMIT = 2
 
@@ -161,10 +162,12 @@ class Feedback:
     observed: str
     violates: str
     prefer: str
+    do_not_break: str
 
     @property
     def message(self) -> str:
-        return f"OBSERVED: {self.observed}\nVIOLATES: {self.violates}\nPREFER: {self.prefer}"
+        return (f"OBSERVED: {self.observed}\nVIOLATES: {self.violates}\n"
+                f"PREFER: {self.prefer}\nDO_NOT_BREAK: {self.do_not_break}")
 
 
 @dataclass(frozen=True)

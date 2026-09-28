@@ -18,7 +18,8 @@
             "evidence",
             "observed",
             "violates",
-            "prefer"
+            "prefer",
+            "do_not_break"
           ],
           "properties": {
             "criterion": {
@@ -75,6 +76,11 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 50
+            },
+            "do_not_break": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20
             }
           }
         }

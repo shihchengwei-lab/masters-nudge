@@ -158,7 +158,8 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
     ],
     "observed": "retry_state := job.status",
     "violates": "sources(job.status) = 2",
-    "prefer": "UI <- job.status"
+    "prefer": "UI <- job.status",
+    "do_not_break": "兩個視圖仍顯示目前狀態"
   }
 }
 ```
@@ -171,8 +172,9 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 - `location` 指出材料所在的檔案、行號、命令或段落。
 - `excerpt` 每筆最多 120 字。
 - `observed` 用常見程式、型別、斷言或資料流記法，寫出材料能直接核對的關係。
-- `violates` 寫出該關係破壞的不變條件，或增加的具體結構負擔；不得只寫原則名稱。
+- `violates` 寫出已見關係造成的具體結構負擔或有風險的不變條件；不得把未見的後果寫成事實，也不得只寫原則名稱。
 - `prefer` 寫出修改後應成立的具體不變條件、擁有關係或資料流，不寫成修改步驟，也不得擴大任務範圍。
+- `do_not_break` 只從最新任務契約指出採用 `prefer` 時須守住的要求或限制；目前程式的既有行為本身不構成要求。不宣稱目前已破壞，也不新增需求。
 
 `criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。Codex 接入層透過 `PostToolUse` 的 `hookSpecificOutput.additionalContext` 將以下內容加入執行者脈絡，並保留原工具結果：
 
@@ -180,10 +182,11 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 OBSERVED: {observed}
 VIOLATES: {violates}
 PREFER: {prefer}
-Assess whether OBSERVED supports the structural concern in VIOLATES against the task and current code. Working behavior can still have structural burden; adopt, adapt, or reject PREFER for its structural benefit.
+DO_NOT_BREAK: {do_not_break}
+Re-examine the assumptions behind your current approach that this concern challenges, against the task and current code. Working behavior can still have structural burden; adopt, adapt, or reject PREFER for its structural benefit.
 ```
 
-尾部文字由工具固定提供，讓執行者依任務與目前程式碼，自行判斷採納、調整或否決建議。這段不由 Provider 產生，也不計入反饋字數。`OBSERVED` 與 `VIOLATES` 各最多 30 字，`PREFER` 最多 50 字；連同固定標籤與換行不得超過 145 字。三欄是一組精簡反饋，不得重述前面已經清楚的識別碼或內容。`OBSERVED` 與 `VIOLATES` 表達完整關係；`PREFER` 依任務與六條準則指出這一步較好的結構方向，可用關係、簡短策略或局部修法表達，具體實作由 Actor 判斷。方向或取捨可用精簡自然語言，引文承載背景。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。
+尾部文字由工具固定提供，讓執行者依任務與目前程式碼，自行判斷採納、調整或否決建議。這段不由 Provider 產生，也不計入反饋字數。`OBSERVED` 與 `VIOLATES` 各最多 30 字，`PREFER` 最多 50 字，`DO_NOT_BREAK` 最多 20 字；連同固定標籤與換行不得超過 180 字。四欄是一組精簡反饋，不得重述前面已經清楚的識別碼或內容。`DO_NOT_BREAK` 只保護與 `PREFER` 相關的任務契約要求，不是額外的出聲條件。`OBSERVED` 與 `VIOLATES` 表達完整關係；`PREFER` 依任務與六條準則指出這一步較好的結構方向，可用關係、簡短策略或局部修法表達，具體實作由 Actor 判斷。方向或取捨可用精簡自然語言，引文承載背景。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。
 
 反饋直接寫程式識別碼與關係。禁止問候、鋪陳、稱讚、道歉、語氣緩衝及空泛原則名稱；也禁止「值得注意」「建議考慮」「或許可以」「為了更好」「請重構」「改善架構」及「考慮抽象化」等無法縮小問題的詞句。
 
