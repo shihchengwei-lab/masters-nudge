@@ -25,11 +25,11 @@ Masters’ Nudge returned:
 
 ```text
 OBSERVED: cache['toString'] -> Function
-VIOLATES: inherited key -> false hit
+WHY: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-Current feedback also includes `DO_NOT_BREAK` (up to 20 characters) to name a task-contract requirement the suggested change must preserve.
+Current feedback also includes `DO_NOT_BREAK` (up to 20 characters) to name a task-contract requirement the suggested change must preserve. `OBSERVED` includes a short location or identifier with the visible code relation.
 
 The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 

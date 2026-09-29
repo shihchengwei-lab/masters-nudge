@@ -25,11 +25,11 @@ Masters’ Nudge 給出的回饋是：
 
 ```text
 OBSERVED: cache['toString'] -> Function
-VIOLATES: inherited key -> false hit
+WHY: inherited key -> false hit
 PREFER: cache := Object.create(null)
 ```
 
-目前的回饋另有 `DO_NOT_BREAK`（最多 20 字），點出建議修法須守住的任務契約要求。
+目前的回饋另有 `DO_NOT_BREAK`（最多 20 字），點出建議修法須守住的任務契約要求。`OBSERVED` 用簡短位置或識別字指出看見的程式關係。
 
 模型接著把快取改成沒有繼承屬性的 `Object.create(null)`。同題另一份沒有收到回饋的實作保留 `{}`。兩份實作都通過任務驗收；兩位不知道哪份使用工具的評審，都認為改後的結構較好。[第八輪 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了測試條件與其他案例。
 

@@ -14,60 +14,18 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "criterion",
-            "evidence",
             "observed",
-            "violates",
+            "why",
             "prefer",
             "do_not_break"
           ],
           "properties": {
-            "criterion": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 6
-            },
-            "evidence": {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 2,
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "source",
-                  "location",
-                  "excerpt"
-                ],
-                "properties": {
-                  "source": {
-                    "type": "string",
-                    "enum": [
-                      "task_contract",
-                      "before_structure",
-                      "batch_change",
-                      "current_structure",
-                      "tool_result"
-                    ]
-                  },
-                  "location": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "excerpt": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 120
-                  }
-                }
-              }
-            },
             "observed": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 30
+              "maxLength": 50
             },
-            "violates": {
+            "why": {
               "type": "string",
               "minLength": 1,
               "maxLength": 30

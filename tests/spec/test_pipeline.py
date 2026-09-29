@@ -53,10 +53,8 @@ class PipelineTests(unittest.TestCase):
                           output=output, call=call)
 
     def feedback(self):
-        self.reply = {"feedback": {"criterion": 4,
-            "evidence": [{"source": "batch_change", "location": "tool/call-1/input:4",
-                          "excerpt": "retry_state = job.status"}],
-            "observed": "retry_state := job.status", "violates": "sources(job.status) = 2",
+        self.reply = {"feedback": {
+            "observed": "tool/call-1/input:4 retry_state := job.status", "why": "sources(job.status) = 2",
             "prefer": "UI <- job.status", "do_not_break": "保留目前狀態顯示"}}
 
     def test_prompt_and_reads_do_not_call_provider(self):
@@ -196,12 +194,13 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(specific["hookEventName"], "PostToolUse")
         text = specific["additionalContext"]
         self.assertTrue(text.startswith("Masters’ Nudge\n"))
-        self.assertIn("OBSERVED: retry_state := job.status", text)
-        self.assertIn("VIOLATES: sources(job.status) = 2", text)
+        self.assertIn("OBSERVED: tool/call-1/input:4 retry_state := job.status", text)
+        self.assertIn("WHY: sources(job.status) = 2", text)
         self.assertIn("PREFER: UI <- job.status", text)
         self.assertIn("DO_NOT_BREAK: 保留目前狀態顯示", text)
-        self.assertNotIn("tool/call-1", text)
+        self.assertIn("tool/call-1/input:4", text)
         self.assertNotIn("criterion", text)
+        self.assertNotIn("evidence", text)
 
     def test_two_silences_stop_and_user_message_resets(self):
         self.prompt()
@@ -367,10 +366,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.adapter.core.journal.recent()[0]["outcome"], "feedback")
         self.assertEqual(self.adapter.core.journal.recent()[0]["delivered"], 0)
 
-    def test_evidence_line_offset_is_not_a_literal_runtime_gate(self):
+    def test_observed_location_is_not_a_literal_runtime_gate(self):
         self.prompt()
         self.feedback()
-        self.reply["feedback"]["evidence"][0]["location"] = "tool/call-1/input:5"
+        self.reply["feedback"]["observed"] = "tool/call-1/input:5 retry_state := job.status"
         result = self.batch()
         self.assertIn(
             self.reply["feedback"]["prefer"],

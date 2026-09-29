@@ -27,7 +27,7 @@ class HostMcpTests(unittest.TestCase):
         adapter.process.return_value = {
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": "OBSERVED: x\nVIOLATES: y\nPREFER: z",
+                "additionalContext": "OBSERVED: x\nWHY: y\nPREFER: z",
             },
             "_masters_nudge": "attempt-1",
         }
