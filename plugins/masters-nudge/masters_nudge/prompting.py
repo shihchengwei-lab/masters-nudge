@@ -6,9 +6,8 @@ from .contracts import Feedback, ToolFault
 def delivery_text(feedback: Feedback) -> str:
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
-        "Re-examine the assumptions behind your current approach that this concern challenges, "
-        "against the task and current code. Working behavior can still have structural burden; "
-        "adopt, adapt, or reject PREFER for its structural benefit."
+        "Consider whether this suggests a better way to complete the task. "
+        "If it does, revise your implementation."
     )
 
 
