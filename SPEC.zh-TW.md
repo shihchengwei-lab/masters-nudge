@@ -42,7 +42,7 @@ Provider 可以提出修法建議，但不能把建議寫成命令，也不能�
 - **沉默**：Provider 正常完成一次判斷，並回傳 `{"feedback":null}`。
 - **工具故障**：沒有取得符合第五節輸出契約的有效結果，包含路由、設定、輸入、Provider、MCP、格式或超時錯誤。工具故障不是沉默。
 
-一次 Provider 呼叫只會得到反饋、沉默或工具故障其中一種結果。第三節是高品味判準的唯一來源；第四節是輸入資料種類與容量的唯一來源；第五節是輸出形狀的唯一來源；第十節是明確修改的唯一來源。
+一次 Provider 判斷使用一次呼叫，只會得到反饋、沉默或工具故障其中一種結果；故障不當作沉默。第三節是高品味判準的唯一來源；第四節是輸入資料種類與容量的唯一來源；第五節是輸出形狀的唯一來源；第十節是明確修改的唯一來源。
 
 ### 高品味與任務契約
 
@@ -69,9 +69,9 @@ Masters’ Nudge 不接管任務，也不負責補上一般的漏測、漏做或
 Provider 不從六個條目逐項往下找問題，而是先按以下順序建立判斷範圍：
 
 1. 從任務要求的結果與不可改變的任務或環境限制開始。
-2. 先看任務契約、本批修改與已提供的結構。修改是判斷入口；若已看見具體且可反證的結構疑點，就直接提出。只有看不出疑點、但能指出修改處一條可能改變判斷的缺失關係時，才用唯讀 MCP 查找。
-3. 把任務必要行為與以下六個條目一起判斷：這次修改的具體關係是否合適，另一種關係能否讓執行者更有品味地完成同一任務。保留、新增、移除或替換都可能合理。Provider 提出可反證的方向，不必先完成替代實作的證明；執行者負責核對與實作。
-4. 有多個疑點時，選當下最承重的一則，不依上游位置、下游影響範圍或消除的概念數量固定排序。條目編號也不是優先順序。
+2. 同一次呼叫內，以任務完整交付後應成立的結果為起點，回推這些結果需要哪些條件成立，判斷哪些可能被漏掉。選出其中最影響交付完整的項目，寫成可檢查的正面結果填入 required。這是提示中的判斷順序，完整資料包在同一次呼叫中提供。
+3. 第二步換個角度，對照 task_diff，先從要求的結果回推必須接上的責任。再沿著實際使用流程追查相關資料與規則如何產生要求的結果，哪些關係仍靠同步、先後順序或特例維持正確。用五條準則比較另一種數據結構與責任安排，選出最能支持完整交付的可檢查替代關係填入structure，填其餘三欄；未讀到某責任不表示它不存在。
+4. 挑能更好實現所選結果、當下最承重的一則結構方向，不固定按條目編號、上游位置或概念數量排序。沒有具體方向時仍可沉默；Provider 提出可反證的方向，執行者負責核對與實作。
 
 六個條目是：
 
@@ -84,23 +84,24 @@ Provider 不從六個條目逐項往下找問題，而是先按以下順序建�
 
 六個條目不是六次回覆，也不各自產生一份意見。Provider 最多只挑一個具有當下具體證據的關係。多個疑點同時成立時，使用以下場景選擇：
 
-> 想像 Linus 只能打斷執行者一次。對這次修改已看得見的關係，挑一個最值得提醒的結構疑點；說明可核對的現況，以及如何以更合適的關係完成同一任務。這是可反證的途中提醒，不是完成整份程式審查。執行者保留採用、改寫或否決的權力。
+> 想像 Linus 只能打斷執行者一次。對完成本次任務所需、已有具體材料的關係，挑一個最值得提醒的結構疑點，包含修改外的必要責任；說明可核對的現況，以及如何以更合適的關係完成同一任務。執行者保留採用、改寫或否決的權力。
 
 沒有任何具體疑點時便回傳沉默。
 
 ## 4. 提供給 Provider 的資料
 
-每次判斷都使用同一個資料結構，包含以下五種欄位。五種欄位是資料的分類，不是五項都必須存在的前置條件；當下沒有可用內容時，欄位可為空，Codex 接入層與 Nudge 核心不得為了填滿欄位而猜測。
+每次判斷都使用同一個資料結構，包含以下六種欄位。六種欄位是資料的分類，不是六項都必須存在的前置條件；當下沒有可用內容時，欄位可為空，Codex 接入層與 Nudge 核心不得為了填滿欄位而猜測。
 
 1. 任務契約：第二節定義的任務目標與本輪要求原文，用來避免把需求誤判成壞設計。
 2. 修改前的相關結構：看出原本由誰擁有資料、責任與因果起點。當下沒有獨立的修改前材料時可為空；不為了判斷測試來源而回送歷史補丁。
 3. 本批明確修改：第十節定義的修改資料，用來顯示執行者選了哪條路，是否出現第三節描述的關係。
 4. 修改後的目前結構：小型已修改檔案若能完整放進共同材料上限，由 Nudge 核心逐字附上；較大檔案仍由 Provider 視需要透過唯讀 MCP 查找。這是傳遞原文，不替 Provider 判斷相關性或品味。
 5. 本批工具結果：本批工具的實際回傳內容，用來確認工具做了什麼。測試輸出只有在本批剛好執行測試時才會出現；Provider 不負責追蹤紅燈、要求綠燈或接管執行者的驗證流程。
+6. 檔案來源事實（`file_origin`）：只列出本批可辨識修改路徑在任務起點是否已存在（`existed_at_task_start`），以及該起點的 `baseline_turn_id`。任務目標首次記錄時保存 Git 工作區內當時存在的檔案清單，包含未被忽略、尚未提交的檔案；同一目標的後續要求不重設起點，明示不同目標才建立新起點。完整清單僅保存在本機，送出時只附本批路徑的事實。既有紀錄沒有起始快照、快照取得失敗或工作區不同時，存在與否保持 `null`，不以目前檔案、Git 暫存狀態或 patch 操作猜測。這些是來源資料，不是測試違約、採納或完成契約的判定。
 
-資料包有效，表示五個欄位的結構正確、已放入當下確定取得的內容，空欄位也如實保持為空；不表示五個欄位都有內容，也不表示 Provider 一定能找到問題。
+資料包有效，表示六個欄位的結構正確、已放入當下確定取得的內容，空欄位也如實保持為空；不表示六個欄位都有內容，也不表示 Provider 一定能找到問題。
 
-資料包不再附加測試來源或測試契約判斷範圍。機械層在呼叫前略過可辨識的純測試變更；送出的判斷均針對產品結構。
+資料包不附加測試契約判斷範圍。`file_origin` 對產品與混合補丁中的測試路徑使用相同存在事實，不判斷測試是否合理或是否違約。機械層在呼叫前略過可辨識的純測試變更；送出的判斷均針對產品結構。
 
 `previous_nudges` 按時間順序附上本輪所有已交給 Actor 的完整反饋，包含原本的準則、位置、引文與三欄內容。三次反饋上限使每次判斷前最多只有兩則；沉默不清除它們，新一輪使用者要求則重新開始。這是先前的建議脈絡，Provider 對照目前契約、補丁與程式碼，理解先前疑點如何隨修改改變，再依六條準則延續、修正或替換方向。
 
@@ -120,7 +121,7 @@ Provider 不從六個條目逐項往下找問題，而是先按以下順序建�
 
 以上字數是第一版規格，實際效果仍須測試。
 
-本節的字數計入第四節五個欄位、`previous_nudges` 與 MCP 後續回傳材料的完整文字，包含欄位名稱與必要的結構文字；固定提示與本次 Provider 輸出不計入，也不以 token 計算。必要原文已達或超過 20,000 字時仍完整送出，MCP 本輪不再回傳補充材料。
+本節的字數計入第四節六個欄位、`previous_nudges` 與 MCP 回傳材料的完整文字，包含欄位名稱與必要的結構文字；固定提示與本次 Provider 輸出不計入，也不以 token 計算。保留原有時限與補讀額度，沒有額外責任描述或交接預留。必要原文已達或超過20,000字時仍完整送出，MCP 本輪不再回傳補充材料。
 
 ### 超量時的取捨
 
@@ -130,7 +131,7 @@ Provider 不從六個條目逐項往下找問題，而是先按以下順序建�
 
 ## 5. Provider 的輸出契約
 
-Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
+Provider 只能回傳以下兩種 JSON，不得增加其他欄位。有反饋時先輸出 required，再輸出 observed、why、structure；解析仍依欄位名稱，交給 Actor 時維持原顯示順序。
 
 沒有反饋時：
 
@@ -143,50 +144,32 @@ Provider 只能回傳以下兩種 JSON，不得增加其他欄位。
 ```json
 {
   "feedback": {
-    "criterion": 4,
-    "evidence": [
-      {
-        "source": "batch_change",
-        "location": "src/job.ts:81",
-        "excerpt": "retry_state = job.status"
-      },
-      {
-        "source": "current_structure",
-        "location": "src/ui.ts:24",
-        "excerpt": "render(job.status, retry_state)"
-      }
-    ],
+    "required": "兩個視圖仍顯示目前狀態",
     "observed": "retry_state := job.status",
-    "violates": "sources(job.status) = 2",
-    "prefer": "UI <- job.status",
-    "do_not_break": "兩個視圖仍顯示目前狀態"
+    "why": "sources(job.status) = 2",
+    "structure": "UI <- job.status"
   }
 }
 ```
 
 ### 欄位責任
 
-- `criterion` 只能是 1～6，對應本規格第三節的六個條目。
-- `evidence` 只能有 1～2 筆，用來指出 Provider 判斷時採用的材料，不得補造未取得的內容。
-- `source` 只能是 `task_contract`、`before_structure`、`batch_change`、`current_structure` 或 `tool_result`。
-- `location` 指出材料所在的檔案、行號、命令或段落。
-- `excerpt` 每筆最多 120 字。
 - `observed` 用常見程式、型別、斷言或資料流記法，寫出材料能直接核對的關係。
-- `violates` 寫出已見關係造成的具體結構負擔或有風險的不變條件；不得把未見的後果寫成事實，也不得只寫原則名稱。
-- `prefer` 寫出修改後應成立的具體不變條件、擁有關係或資料流，不寫成修改步驟，也不得擴大任務範圍。
-- `do_not_break` 只從最新任務契約指出採用 `prefer` 時須守住的要求或限制；目前程式的既有行為本身不構成要求。不宣稱目前已破壞，也不新增需求。
+- `why` 寫出已見關係對任務目標的可能成本；不得把未見的後果寫成事實，也不得只寫原則名稱。
+- `structure` 寫出能支持完整交付的具體資料與責任關係。
+- `required` 寫出從最新任務契約取出的可檢查結果，由第一步選出。
 
-`criterion` 與 `evidence` 用來約束 Provider 的思考形狀及留下紀錄，不送給執行者。Nudge 核心只檢查 JSON 欄位、型別、數量與字數，不逐字比對引文。Codex 接入層透過 `PostToolUse` 的 `hookSpecificOutput.additionalContext` 將以下內容加入執行者脈絡，並保留原工具結果：
+Nudge 核心只檢查 JSON 欄位、型別與字數，不評判語意。Codex 接入層透過 `PostToolUse` 的 `hookSpecificOutput.additionalContext` 將以下內容加入執行者脈絡，並保留原工具結果：
 
 ```text
 OBSERVED: {observed}
-VIOLATES: {violates}
-PREFER: {prefer}
-DO_NOT_BREAK: {do_not_break}
-Re-examine the assumptions behind your current approach that this concern challenges, against the task and current code. Working behavior can still have structural burden; adopt, adapt, or reject PREFER for its structural benefit.
+WHY: {why}
+STRUCTURE: {structure}
+REQUIRED: {required}
+First check REQUIRED against the latest task contract and use it to determine the delivered behavior. When adopting STRUCTURE, implement the stated data and responsibility relation and address its affected uses; verify that the actual results satisfy the task requirements.
 ```
 
-尾部文字由工具固定提供，讓執行者依任務與目前程式碼，自行判斷採納、調整或否決建議。這段不由 Provider 產生，也不計入反饋字數。`OBSERVED` 與 `VIOLATES` 各最多 30 字，`PREFER` 最多 50 字，`DO_NOT_BREAK` 最多 20 字；連同固定標籤與換行不得超過 180 字。四欄是一組精簡反饋，不得重述前面已經清楚的識別碼或內容。`DO_NOT_BREAK` 只保護與 `PREFER` 相關的任務契約要求，不是額外的出聲條件。`OBSERVED` 與 `VIOLATES` 表達完整關係；`PREFER` 依任務與六條準則指出這一步較好的結構方向，可用關係、簡短策略或局部修法表達，具體實作由 Actor 判斷。方向或取捨可用精簡自然語言，引文承載背景。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。
+尾部文字由工具固定提供，讓執行者依任務與目前程式碼，自行判斷採納、調整或否決建議。這段不由 Provider 產生，也不計入反饋字數。`OBSERVED` 最多 40 字，`WHY` 最多 30 字，`STRUCTURE` 最多 55 字，`REQUIRED` 最多 35 字；連同固定標籤與換行不得超過 200 字。四欄是一組精簡反饋，不得重述前面已經清楚的識別碼或內容。`REQUIRED` 獨立指出目前方案或替代安排最可能遺漏或失去的契約結果，由要求推導相關入口與輸出；不是額外的出聲條件。`OBSERVED` 與 `WHY` 表達完整關係；`STRUCTURE` 依任務與六條準則指出這一步較好的結構方向，可用關係、簡短策略或局部修法表達，具體實作由 Actor 判斷。方向或取捨可用精簡自然語言，引文承載背景。優先使用模型已熟悉的 `:=`、`->`、`<-`、`=`、`!=`、`&&`、`|` 與函式式不變條件；不自創符號，也不為了形式化犧牲具體語意。
 
 反饋直接寫程式識別碼與關係。禁止問候、鋪陳、稱讚、道歉、語氣緩衝及空泛原則名稱；也禁止「值得注意」「建議考慮」「或許可以」「為了更好」「請重構」「改善架構」及「考慮抽象化」等無法縮小問題的詞句。
 
@@ -203,7 +186,7 @@ Re-examine the assumptions behind your current approach that this concern challe
     "evidence": [],
     "observed": "state 很複雜",
     "violates": "架構不佳",
-    "prefer": "改善設計"
+    "structure": "改善設計"
   }
 }
 ```
@@ -225,7 +208,7 @@ Re-examine the assumptions behind your current approach that this concern challe
     ],
     "observed": "retry_state := job.status",
     "violates": "sources(job.status) = 2",
-    "prefer": "刪除所有相關程式與測試"
+    "structure": "刪除所有相關程式與測試"
   }
 }
 ```

@@ -88,10 +88,13 @@ class JournalTests(unittest.TestCase):
                            (str(n), "s", "host-turn", n, n+0.1, "silence", 0, json.dumps({"original": n})))
         db.close()
         journal = Journal(self.root)
+        with journal.connect() as db:
+            self.assertEqual(db.execute("SELECT file_baseline FROM rounds").fetchone()[0], "{}")
         self.assertIsNone(journal.begin(self.session, [{"tool_use_id": "limited"}]))
         self.assertEqual({row["detail"]["original"] for row in journal.recent()}, {0, 1})
         journal.start_round(self.session, "new request")
         attempt, task = journal.begin(self.session, [{"tool_use_id": "new"}])
+        self.assertEqual(task["file_baseline"], "{}")
         self.assertTrue(journal.finish(self.session, attempt, task, "silence", {}))
         self.assertEqual(len(Journal(self.root).recent()), 3)
 

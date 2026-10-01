@@ -13,15 +13,15 @@ from masters_nudge.provider_contract import parse_feedback
 
 class ContractTests(unittest.TestCase):
     def feedback(self):
-        return {"feedback": {"observed": "x:1 x := y", "why": "sources(y) = 2", "prefer": "consumer <- y",
-                             "do_not_break": "保留現有查詢結果"}}
+        return {"feedback": {"observed": "x:1 x := y", "why": "sources(y) = 2", "structure": "consumer <- y",
+                             "required": "保留現有查詢結果"}}
 
     def test_actor_delivery_uses_fixed_formal_fields(self):
         feedback = parse_feedback(json.dumps(self.feedback()))
         self.assertEqual(
             delivery_text(feedback).splitlines()[:5],
             ["Masters’ Nudge", "OBSERVED: x:1 x := y", "WHY: sources(y) = 2",
-             "PREFER: consumer <- y", "DO_NOT_BREAK: 保留現有查詢結果"],
+             "STRUCTURE: consumer <- y", "REQUIRED: 保留現有查詢結果"],
         )
 
     def test_output_limits_and_partial_feedback(self):
@@ -29,18 +29,18 @@ class ContractTests(unittest.TestCase):
         valid = self.feedback()
         self.assertIsNotNone(parse_feedback(json.dumps(valid)))
         invalid = []
-        for key, value in (("observed", "x" * 51), ("why", ""), ("why", "x" * 31),
-                           ("prefer", "x" * 51), ("do_not_break", ""), ("do_not_break", "x" * 21)):
+        for key, value in (("observed", "x" * 41), ("why", ""), ("why", "x" * 31),
+                           ("structure", "x" * 56), ("required", ""), ("required", "x" * 36)):
             item = copy.deepcopy(valid)
             item["feedback"][key] = value
             invalid.append(item)
-        for obsolete, value in (("criterion", 4), ("evidence", []), ("violates", "legacy")):
+        for obsolete, value in (("criterion", 4), ("evidence", []), ("violates", "legacy"), ("do_not_break", "legacy")):
             item = copy.deepcopy(valid)
             item["feedback"][obsolete] = value
             invalid.append(item)
         item = copy.deepcopy(valid)
-        item["feedback"].update(observed="x" * 50, why="x" * 30,
-                                prefer="x" * 50, do_not_break="x" * 20)
+        item["feedback"].update(observed="x" * 40, why="x" * 30,
+                                structure="x" * 55, required="x" * 35)
         self.assertIsNotNone(parse_feedback(json.dumps(item)))
         for item in invalid:
             with self.subTest(item=item), self.assertRaises(ToolFault):
@@ -49,9 +49,9 @@ class ContractTests(unittest.TestCase):
     def test_schema_field_limits_make_the_combined_limit_unrepresentable(self):
         schema = json.loads((Path(__file__).resolve().parents[2] / "nudge-schema.json").read_text(encoding="utf-8"))
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
-        limits = [feedback[name]["maxLength"] for name in ("observed", "why", "prefer", "do_not_break")]
-        labels = len("OBSERVED: \nWHY: \nPREFER: \nDO_NOT_BREAK: ")
-        self.assertEqual(limits, [50, 30, 50, 20])
+        limits = [feedback[name]["maxLength"] for name in ("observed", "why", "structure", "required")]
+        labels = len("OBSERVED: \nWHY: \nSTRUCTURE: \nREQUIRED: ")
+        self.assertEqual(limits, [40, 30, 55, 35])
         self.assertLessEqual(sum(limits) + labels, 200)
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
@@ -82,6 +82,19 @@ class ContractTests(unittest.TestCase):
             packet = build_packet(SessionRef("s", "t", raw), {"goal": task, "request": task}, ())
         contracts = [line for line in packet.lines if line.source == "task_contract"]
         self.assertEqual([(line.path, line.text) for line in contracts], [("task/latest", task)])
+
+    def test_missing_file_baseline_is_unknown_not_inferred_from_patch_or_current_file(self):
+        from masters_nudge.contracts import SessionRef, ToolCompleted
+        from masters_nudge.evidence import build_packet
+        with tempfile.TemporaryDirectory() as raw:
+            subprocess.run(["git", "init", "-q", raw], check=True)
+            (Path(raw) / "test_new.py").write_text("test()", encoding="utf-8")
+            patch = "*** Begin Patch\n*** Add File: test_new.py\n+test()\n*** End Patch"
+            packet = build_packet(SessionRef("s", "t", raw), {"goal": "g", "request": "r"},
+                                  (ToolCompleted("edit", "apply_patch", patch, "Success"),))
+        self.assertEqual(json.loads(packet.categories()["file_origin"][0]["lines"][0]), {
+            "existed_at_task_start": None, "baseline_turn_id": None,
+        })
 
     def test_small_changed_file_is_carried_as_current_structure(self):
         from masters_nudge.contracts import SessionRef, ToolCompleted
@@ -129,7 +142,7 @@ class ContractTests(unittest.TestCase):
     def test_shared_budget_counts_materials_and_nudges_not_transport_metadata(self):
         packet = MaterialPacket(material_lines("task_contract", "task/latest", "保留 A"),
                                 "repo", "metadata/" * 3000,
-                                previous_nudges=({"observed": "x := y", "prefer": "view <- y"},))
+                                previous_nudges=({"observed": "x := y", "structure": "view <- y"},))
         self.assertIs(fit_packet(packet), packet)
         data = json.loads(packet.render())
         data.pop("workspace")
@@ -138,7 +151,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(packet.material_chars, len(json_text(data)))
 
     def test_previous_nudges_remain_when_optional_before_structure_is_dropped(self):
-        history = ({"observed": "copy := source", "prefer": "view <- source"},)
+        history = ({"observed": "copy := source", "structure": "view <- source"},)
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)
         packet = fit_packet(MaterialPacket((before,), "repo", previous_nudges=history))
         self.assertEqual(packet.lines, ())

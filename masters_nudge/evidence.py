@@ -1,11 +1,59 @@
 """Pack known facts; the Provider chooses relevant repository structure."""
 from dataclasses import replace
+import json
+import os
 from pathlib import Path
 import subprocess
 from .contracts import (
-    MATERIAL_MAX_CHARS, MaterialPacket, SessionRef, ToolCompleted,
+    MATERIAL_MAX_CHARS, MaterialPacket, SessionRef, ToolCompleted, ToolFault,
     find_git_root, json_text, material_lines, patch_operations,
 )
+
+
+def capture_file_baseline(session: SessionRef) -> dict:
+    """Record file existence before Actor edits, including nonignored untracked files."""
+    root = Path(session.cwd).resolve()
+    baseline = {"workspace": str(root), "turn_id": session.turn_id, "files": None}
+    try:
+        root = Path(find_git_root(session.cwd)).resolve()
+        baseline["workspace"] = str(root)
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            capture_output=True, timeout=15,
+        )
+        if result.returncode == 0:
+            baseline["files"] = sorted({
+                os.path.normcase(name).replace("\\", "/")
+                for name in result.stdout.decode("utf-8").split("\0")
+                if name and (root / name).is_file()
+            })
+    except (ToolFault, OSError, UnicodeError, subprocess.SubprocessError):
+        pass
+    return baseline
+
+
+def file_origin_material(session: SessionRef, task: dict, events: tuple[ToolCompleted, ...], workspace: str):
+    """Attach existence facts only for patch paths; absence of a snapshot stays unknown."""
+    baseline = json.loads(task.get("file_baseline", "{}"))
+    root = Path(workspace).resolve()
+    known = (isinstance(baseline.get("files"), list)
+             and Path(baseline["workspace"]).resolve() == root)
+    files = set(baseline["files"]) if known else set()
+    seen = set()
+    for event in events:
+        for _, name, _ in patch_operations(event.modification, session.cwd) or ():
+            path = (Path(session.cwd) / name).resolve()
+            if not path.is_relative_to(root):
+                continue
+            relative = path.relative_to(root).as_posix()
+            normalized = os.path.normcase(relative).replace("\\", "/")
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            yield material_lines("file_origin", relative, json_text({
+                "existed_at_task_start": normalized in files if known else None,
+                "baseline_turn_id": baseline.get("turn_id") if known else None,
+            }))
 
 
 def changed_file_material(patch: str, cwd: str, workspace: str):
@@ -53,6 +101,7 @@ def value_lines(source: str, path: str, value: object):
 
 def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, ...]) -> MaterialPacket:
     lines = []
+    workspace = find_git_root(session.cwd)
     if task["goal"] != task["request"]:
         lines.extend(material_lines("task_contract", "task/original", task["goal"]))
     lines.extend(material_lines("task_contract", "task/latest", task["request"]))
@@ -63,8 +112,10 @@ def build_packet(session: SessionRef, task: dict, events: tuple[ToolCompleted, .
         if event.modification is None:
             lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/input", event.tool_input))
         lines.extend(value_lines("tool_result", f"tool/{event.tool_use_id}/output", event.tool_response))
+    for material in file_origin_material(session, task, events, workspace):
+        lines.extend(material)
     packet = MaterialPacket(
-        tuple(lines), find_git_root(session.cwd), session.transcript_path,
+        tuple(lines), workspace, session.transcript_path,
         previous_nudges=tuple(task.get("previous_nudges", ())),
     )
     if packet.material_chars < MATERIAL_MAX_CHARS:

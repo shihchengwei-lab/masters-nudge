@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from .contracts import FEEDBACK_LIMIT, SILENCE_LIMIT, SessionRef, ToolFault, json_text
+from .evidence import capture_file_baseline
 from .runtime import HOOK_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC
 
 FINALIZATION_RESERVE_SEC = 20
@@ -52,6 +53,8 @@ class Journal:
                 if "round_id" not in columns:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
                 if table == "rounds":
+                    if "file_baseline" not in columns:
+                        db.execute("ALTER TABLE rounds ADD COLUMN file_baseline TEXT NOT NULL DEFAULT '{}'")
                     if "skipped_test_patches" not in columns:
                         if "skipped_new_test_patches" in columns:
                             db.execute("ALTER TABLE rounds RENAME COLUMN skipped_new_test_patches TO skipped_test_patches")
@@ -96,9 +99,11 @@ class Journal:
             db.execute("BEGIN IMMEDIATE")
             old = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
             original = goal or (old["goal"] if old else request)
+            baseline = (old["file_baseline"] if old and old["goal"] == original
+                        else json_text(capture_file_baseline(session)))
             db.execute(
-                "INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id) VALUES(?,?,?,?,?)",
-                (session.session_id, session.turn_id, original, request, uuid.uuid4().hex),
+                "INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id,file_baseline) VALUES(?,?,?,?,?,?)",
+                (session.session_id, session.turn_id, original, request, uuid.uuid4().hex, baseline),
             )
 
     @staticmethod

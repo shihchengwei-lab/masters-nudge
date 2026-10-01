@@ -27,7 +27,7 @@ class HostMcpTests(unittest.TestCase):
         adapter.process.return_value = {
             "hookSpecificOutput": {
                 "hookEventName": "PostToolUse",
-                "additionalContext": "OBSERVED: x\nWHY: y\nPREFER: z",
+                "additionalContext": "OBSERVED: x\nWHY: y\nSTRUCTURE: z",
             },
             "_masters_nudge": "attempt-1",
         }
@@ -61,7 +61,7 @@ class HostMcpTests(unittest.TestCase):
         reply = json.loads(output.getvalue())
         hook_output = json.loads(reply["result"]["content"][0]["text"])
         self.assertEqual(hook_output["hookSpecificOutput"]["hookEventName"], "PostToolUse")
-        self.assertIn("PREFER: z", hook_output["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("STRUCTURE: z", hook_output["hookSpecificOutput"]["additionalContext"])
         journal.delivered.assert_called_once_with("attempt-1")
         adapter.process.assert_called_once_with(request["params"]["arguments"])
 

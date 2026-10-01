@@ -14,31 +14,31 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "required",
             "observed",
             "why",
-            "prefer",
-            "do_not_break"
+            "structure"
           ],
           "properties": {
+            "required": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 35
+            },
             "observed": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 50
+              "maxLength": 40
             },
             "why": {
               "type": "string",
               "minLength": 1,
               "maxLength": 30
             },
-            "prefer": {
+            "structure": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 50
-            },
-            "do_not_break": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 20
+              "maxLength": 55
             }
           }
         }

@@ -10,7 +10,7 @@
 
 ```mermaid
 flowchart LR
-    A["寫程式的模型（Actor）修改程式"] --> B["回饋模型（Provider）讀任務、修改與相關程式"]
+    A["寫程式的模型（Actor）修改程式"] --> B["Provider 提醒易漏的交付條件與結構方向"]
     B -->|有具體問題| C["一則結構建議進入 Actor 脈絡"]
     B -->|沒有具體問題| D["沉默"]
     C --> E["Actor 自行判斷並繼續實作"]
@@ -26,10 +26,10 @@ Masters’ Nudge 給出的回饋是：
 ```text
 OBSERVED: cache['toString'] -> Function
 WHY: inherited key -> false hit
-PREFER: cache := Object.create(null)
+STRUCTURE: cache := Object.create(null)
 ```
 
-目前的回饋另有 `DO_NOT_BREAK`（最多 20 字），點出建議修法須守住的任務契約要求。`OBSERVED` 用簡短位置或識別字指出看見的程式關係。
+目前的回饋另有 `REQUIRED`（最多35字）。一次呼叫內，Provider 以任務完整交付後應成立的結果為起點，回推這些結果需要哪些條件成立，判斷哪些可能被漏掉。選出其中最影響交付完整的項目，寫成可檢查的正面結果填入 `required`。第二步換個角度，對照 task_diff，先從要求的結果回推必須接上的責任。再沿著實際使用流程追查相關資料與規則如何產生要求的結果，哪些關係仍靠同步、先後順序或特例維持正確。用五條準則比較另一種數據結構與責任安排，選出最能支持完整交付的可檢查替代關係填入structure。輸出格式將 `required` 排在最前；交給 Actor 時維持原四欄顯示順序。`OBSERVED` 用簡短位置或識別字指出看見的程式關係。
 
 模型接著把快取改成沒有繼承屬性的 `Object.create(null)`。同題另一份沒有收到回饋的實作保留 `{}`。兩份實作都通過任務驗收；兩位不知道哪份使用工具的評審，都認為改後的結構較好。[第八輪 Benchmark 報告](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md)記錄了測試條件與其他案例。
 

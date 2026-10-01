@@ -54,8 +54,8 @@ class PipelineTests(unittest.TestCase):
 
     def feedback(self):
         self.reply = {"feedback": {
-            "observed": "tool/call-1/input:4 retry_state := job.status", "why": "sources(job.status) = 2",
-            "prefer": "UI <- job.status", "do_not_break": "保留目前狀態顯示"}}
+            "observed": "tool/call-1/input:4 state := job.status", "why": "sources(job.status) = 2",
+            "structure": "UI <- job.status", "required": "保留目前狀態顯示"}}
 
     def test_prompt_and_reads_do_not_call_provider(self):
         self.assertIsNone(self.prompt())
@@ -194,10 +194,10 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(specific["hookEventName"], "PostToolUse")
         text = specific["additionalContext"]
         self.assertTrue(text.startswith("Masters’ Nudge\n"))
-        self.assertIn("OBSERVED: tool/call-1/input:4 retry_state := job.status", text)
+        self.assertIn("OBSERVED: tool/call-1/input:4 state := job.status", text)
         self.assertIn("WHY: sources(job.status) = 2", text)
-        self.assertIn("PREFER: UI <- job.status", text)
-        self.assertIn("DO_NOT_BREAK: 保留目前狀態顯示", text)
+        self.assertIn("STRUCTURE: UI <- job.status", text)
+        self.assertIn("REQUIRED: 保留目前狀態顯示", text)
         self.assertIn("tool/call-1/input:4", text)
         self.assertNotIn("criterion", text)
         self.assertNotIn("evidence", text)
@@ -270,6 +270,47 @@ class PipelineTests(unittest.TestCase):
         self.assertNotIn("new_test_paths", packet)
         self.assertNotIn("judgment_scope", packet)
 
+    def test_file_origin_distinguishes_existing_untracked_and_later_staged_tests(self):
+        tests = self.repo / "tests"
+        tests.mkdir()
+        (tests / "existing.spec.ts").write_text("original()", encoding="utf-8")
+        self.prompt("Existing tests are immutable; new tests may be added")
+        (tests / "new.spec.ts").write_text("test()", encoding="utf-8")
+        self.batch("*** Begin Patch\n*** Add File: tests/new.spec.ts\n+test()\n*** End Patch", call="new-test")
+        subprocess.run(["git", "-C", str(self.repo), "add", "tests/new.spec.ts"], check=True)
+        # A new core/process and a follow-up request must not redefine a new test as existing.
+        self.adapter = CodexAdapter(NudgeCore(self.settings, dispatch=self.dispatch))
+        self.prompt("Continue the same task", turn="turn-2")
+        patch = ("*** Begin Patch\n*** Update File: tests/new.spec.ts\n@@\n-test()\n+fixed_test()\n"
+                 "*** Delete File: tests/existing.spec.ts\n"
+                 "*** Update File: job.py\n@@\n+value = 1\n*** End Patch")
+        self.batch(patch, turn="turn-2", call="mixed")
+        packet = json.loads(self.calls[-1]["nudge_input"])
+        origins = {row["path"]: json.loads(row["lines"][0]) for row in packet["file_origin"]}
+        self.assertEqual(origins["tests/new.spec.ts"], {
+            "existed_at_task_start": False, "baseline_turn_id": "turn-1",
+        })
+        self.assertEqual(origins["tests/existing.spec.ts"], {
+            "existed_at_task_start": True, "baseline_turn_id": "turn-1",
+        })
+        self.assertEqual(len(self.calls), 1)  # Pure test patches still do not call Provider.
+        self.assertNotIn("judgment_scope", packet)
+
+    def test_explicit_new_goal_starts_a_new_file_baseline(self):
+        self.adapter.core.start_round(self._session("turn-1"), "first", "goal one")
+        (self.repo / "later.py").write_text("value = 1", encoding="utf-8")
+        self.adapter.core.start_round(self._session("turn-2"), "second", "goal two")
+        self.batch("*** Begin Patch\n*** Update File: later.py\n@@\n+value = 2\n*** End Patch",
+                   turn="turn-2")
+        origins = json.loads(self.calls[-1]["nudge_input"])["file_origin"]
+        self.assertEqual(json.loads(origins[0]["lines"][0]), {
+            "existed_at_task_start": True, "baseline_turn_id": "turn-2",
+        })
+
+    def _session(self, turn):
+        from masters_nudge.contracts import SessionRef
+        return SessionRef("session-1", turn, str(self.repo))
+
     def test_move_between_test_and_product_paths_keeps_provider(self):
         for i, (source, destination) in enumerate([
             ("tests/helper.py", "helper.py"),
@@ -324,7 +365,7 @@ class PipelineTests(unittest.TestCase):
         self.reply = {"feedback": None}
         self.batch(call="silence")
         self.feedback()
-        self.reply["feedback"]["prefer"] = "render <- job.status"
+        self.reply["feedback"]["structure"] = "render <- job.status"
         second = json.loads(json.dumps(self.reply["feedback"]))
         result = self.batch(call="second-feedback")
         self.adapter.core.journal.delivered(result["_masters_nudge"])
@@ -369,10 +410,10 @@ class PipelineTests(unittest.TestCase):
     def test_observed_location_is_not_a_literal_runtime_gate(self):
         self.prompt()
         self.feedback()
-        self.reply["feedback"]["observed"] = "tool/call-1/input:5 retry_state := job.status"
+        self.reply["feedback"]["observed"] = "tool/call-1/input:5 state := job.status"
         result = self.batch()
         self.assertIn(
-            self.reply["feedback"]["prefer"],
+            self.reply["feedback"]["structure"],
             result["hookSpecificOutput"]["additionalContext"],
         )
 

@@ -6,8 +6,7 @@ from .contracts import Feedback, ToolFault
 def delivery_text(feedback: Feedback) -> str:
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
-        "Consider whether this suggests a better way to complete the task. "
-        "If it does, revise your implementation."
+        "First check REQUIRED against the latest task contract and use it to determine the delivered behavior. When adopting STRUCTURE, implement the stated data and responsibility relation and address its affected uses; verify that the actual results satisfy the task requirements."
     )
 
 

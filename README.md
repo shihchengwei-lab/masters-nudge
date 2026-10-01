@@ -10,7 +10,7 @@ English | [繁體中文](README.zh-TW.md)
 
 ```mermaid
 flowchart LR
-    A["Coding agent (Actor) edits code"] --> B["Feedback model (Provider) reads the task, edit, and relevant code"]
+    A["Coding agent (Actor) edits code"] --> B["Provider highlights an overlooked delivery condition and a structural direction"]
     B -->|Concrete issue| C["One structural suggestion enters Actor context"]
     B -->|No concrete issue| D["Silence"]
     C --> E["Actor decides how to continue"]
@@ -26,10 +26,10 @@ Masters’ Nudge returned:
 ```text
 OBSERVED: cache['toString'] -> Function
 WHY: inherited key -> false hit
-PREFER: cache := Object.create(null)
+STRUCTURE: cache := Object.create(null)
 ```
 
-Current feedback also includes `DO_NOT_BREAK` (up to 20 characters) to name a task-contract requirement the suggested change must preserve. `OBSERVED` includes a short location or identifier with the visible code relation.
+Current feedback also includes `REQUIRED` (up to 35 characters). In one call, the Provider starts from the results that should hold after complete task delivery, works backward to infer the conditions those results require, and judges which might be overlooked. It states the item with the greatest impact on delivery completeness as a checkable positive result in `required`. Take another angle; compare task_diff (changes to task requirements). First, work backward from the required results to infer the responsibilities that must connect. Then trace the actual usage flow to see how the relevant data and rules produce the required results, and which relations still rely on sync, sequencing, or special-case handling to maintain correctness. Use the five criteria to compare another data structure and responsibility arrangement. Put the checkable alternative relation that best supports complete delivery in structure. The output schema places `required` first; Actor-facing feedback keeps its usual four-field display. `OBSERVED` includes a short location or identifier with the visible code relation.
 
 The agent changed the cache to `Object.create(null)`, which has no inherited entries. A separate implementation of the same task, without this feedback, kept `{}`. Both passed the task checks. Two judges who did not know which implementation used the tool preferred the changed structure. The [Round 8 benchmark report](benchmark/formal-v8/ROUND-8-REPORT.zh-TW.md) gives the conditions and the other cases.
 

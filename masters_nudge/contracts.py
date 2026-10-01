@@ -6,10 +6,10 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result")
+SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result", "file_origin")
 MATERIAL_MAX_CHARS = 20_000
 FEEDBACK_MAX_CHARS = 200
-FEEDBACK_FIELD_LIMITS = {"observed": 50, "why": 30, "prefer": 50, "do_not_break": 20}
+FEEDBACK_FIELD_LIMITS = {"observed": 40, "why": 30, "structure": 55, "required": 35}
 FEEDBACK_LIMIT = 3
 SILENCE_LIMIT = 2
 
@@ -150,13 +150,13 @@ class MaterialPacket:
 class Feedback:
     observed: str
     why: str
-    prefer: str
-    do_not_break: str
+    structure: str
+    required: str
 
     @property
     def message(self) -> str:
         return (f"OBSERVED: {self.observed}\nWHY: {self.why}\n"
-                f"PREFER: {self.prefer}\nDO_NOT_BREAK: {self.do_not_break}")
+                f"STRUCTURE: {self.structure}\nREQUIRED: {self.required}")
 
 
 @dataclass(frozen=True)
