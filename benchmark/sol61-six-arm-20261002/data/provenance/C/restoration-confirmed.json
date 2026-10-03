@@ -1,0 +1,18 @@
+{
+  "case_states_match": true,
+  "archived_A_unchanged": true,
+  "restored_cases": [
+    "nodebb-images",
+    "ansible-type-tags",
+    "element-sessions",
+    "flipt-segments",
+    "openlibrary-index-state",
+    "proton-mailbox-retry",
+    "flipt-storage-cache",
+    "fb-metaflow-stubs",
+    "tracing-1523",
+    "proton-untrusted-keys",
+    "regexp-404",
+    "clap-2297"
+  ]
+}

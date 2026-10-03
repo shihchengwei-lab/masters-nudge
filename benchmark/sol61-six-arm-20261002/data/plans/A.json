@@ -1,0 +1,444 @@
+{
+  "name": "Fresh 12-case paired A/B, approved structural-responsibility-backward tool",
+  "status": "sealed",
+  "created_utc": "2026-09-30T12:11:09.773343+00:00",
+  "cases": {
+    "nodebb-images": {
+      "base_commit": "ab5e2a416324ec56cea44b79067ba798f8394de1",
+      "container": true,
+      "image_id": "sha256:267632c93bae96eb120292b36e68227a41f2b6edd8e8ff5d7a3bdd7ef4af3b6b",
+      "A1_result_sha256": "5cc440dc0a16362ab4d92c3208e3b1808c50c9f3f2403f85b954f35994ffae84",
+      "task_sha256": "be2bdc67429744c3fc0d65332c3b334419908d82d463614e79b4df96b59dacf2",
+      "A_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "B_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "C_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\nodebb-images",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\nodebb-images\\actor.json",
+          "result_sha256": "5cc440dc0a16362ab4d92c3208e3b1808c50c9f3f2403f85b954f35994ffae84",
+          "patch_sha256": "6f3695e2001aa71e83cbe8ff338237315c8b5cbef7d397ebf8f3a7796090355d",
+          "prompt_sha256": "bd50f475f94a4d61ba135c8fe09ab187a15670fa2b20243495f77a3bb1439932"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\nodebb-images\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\nodebb-images\\A2\\result.json",
+          "result_sha256": "7c2ae3c1f8cff84f6088ccb4780576c9c0a2879a50dd05797145a00267bd93ff",
+          "patch_sha256": "9513fc2a83e5698ff5041d3434df70eafe065c8237d336534877a49611cafad0",
+          "prompt_sha256": "eae2bb0fe87d05b3fc8d6d77b1e34f0c9bb6f37046952d1c83acc2406e9b52ca"
+        }
+      }
+    },
+    "ansible-type-tags": {
+      "base_commit": "dcc5dac1846be3bf6e948a2950b93477b9193076",
+      "container": true,
+      "image_id": "sha256:4cf51f69dad7c8cb966fa2af791058ba72e3b4124461d7418239bda01b5a6a9f",
+      "A1_result_sha256": "e568170d86daeace6a82316ed8ddfb0ea9f2b67a7b9990021c688c7cec74065a",
+      "task_sha256": "4ff4ff2177c0cf040171c83a6c10392cfdd4eb28bf634ab9d762f0b94fa854e9",
+      "A_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "B_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "C_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\ansible-type-tags",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\ansible-type-tags\\actor.json",
+          "result_sha256": "e568170d86daeace6a82316ed8ddfb0ea9f2b67a7b9990021c688c7cec74065a",
+          "patch_sha256": "b3c121b92c3979e479b7134244a58b5e1b4ac62844c3a9d503ad4838dfc56844",
+          "prompt_sha256": "4a827e5feb4fe8fe3c788e7205b7528434a248a3c225565e680b8450024d0218"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\ansible-type-tags\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\ansible-type-tags\\A2\\result.json",
+          "result_sha256": "1cd2c953624216fe18ecc8daf48cb024ea477f75be01978a68029f8e19aacdde",
+          "patch_sha256": "c5eab86d0ca096bfd7482f4c910b5e8bd6f9c2a1534666043617e4e059cf9106",
+          "prompt_sha256": "efee71dee70aa9657edd66cb66e5d99d9ad11e3c08e832191c41a7fa251cf8f1"
+        }
+      }
+    },
+    "element-sessions": {
+      "base_commit": "7a33818bd7ec89c21054691afcb6db2fb2631e14",
+      "container": true,
+      "image_id": "sha256:807fb8ab2e02372cc9b597e5b7432f35afcca267fc267a1fec95f16eaabaa5b2",
+      "A1_result_sha256": "3a98615fa95dee0ae156ecaf92ad6a5f530b0a166ee288ee1d884ec9c0bcc02d",
+      "task_sha256": "62400375e074f051501c0608aed510c2ceff2f3f428ba1aa544d0a4943621960",
+      "A_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "B_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "C_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\element-sessions",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\element-sessions\\actor.json",
+          "result_sha256": "3a98615fa95dee0ae156ecaf92ad6a5f530b0a166ee288ee1d884ec9c0bcc02d",
+          "patch_sha256": "f647eabca2f74327aecf65606b7b80c7ba5960bce5af1d86aa148d3a83262de0",
+          "prompt_sha256": "422fddc8b58db2206b6db980cff280c2e2a9ea920cf83b76215927cc82d70a94"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\element-sessions\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\element-sessions\\A2\\result.json",
+          "result_sha256": "090df7003a79f293673f37337f8979c934e213a0da17a0c61c8b24557e8a80e8",
+          "patch_sha256": "80768c55ba45cb0e7e81ed794d98b79c32871e7e1ac48bc634e3cf416a1abc08",
+          "prompt_sha256": "c57ceb9fb20dec7f506e3bd9d94c4c278853690e6719c04a3e58e0a49cab7ae0"
+        }
+      }
+    },
+    "flipt-segments": {
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "container": true,
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "A1_result_sha256": "25d480a6eec13102f333da25c905ee38b1c09d127245e6cbb5cba59935900a13",
+      "task_sha256": "a3cec9366cef19371ff820b40e47ebb9640b6c24b93a2f9e29635d0b8fe9b9d1",
+      "A_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "B_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "C_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\flipt-segments",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-segments\\actor.json",
+          "result_sha256": "25d480a6eec13102f333da25c905ee38b1c09d127245e6cbb5cba59935900a13",
+          "patch_sha256": "1031c6b5f18a48826bbe97ff3d8f4838b73ea5c4c7e110d8970f51328843f11f",
+          "prompt_sha256": "e43c438f522eb3fbb9800a7f9f83e8082ceb14aa38a34577389da4e0346e5998"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-segments\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-segments\\A2\\result.json",
+          "result_sha256": "e1a8e1730eec2bbbd6a6f38f3bf155880e6029fd9e73c1b37f5b21a14c400f44",
+          "patch_sha256": "c43666ded14a7fd04cf7582ceb94fc16adf1417df486036165b8cdc8feb3fc44",
+          "prompt_sha256": "8183d139a72d192711e3f718cde3c8297778804cd1de79be747380e7ecdc05c0"
+        }
+      }
+    },
+    "openlibrary-index-state": {
+      "base_commit": "0d5acead6fdfb5e41a1d29a076a6e89ad1a39027",
+      "container": true,
+      "image_id": "sha256:bc38d36c23ecc5f3a2d6db194dabcc1fb67146105629d0385ed1a9a3d67e6939",
+      "A1_result_sha256": "733715499155cfe35701c7cee3a4824d66a932c74b8ea62c5fe4b75c06bb537d",
+      "task_sha256": "928856e278fd2db168d6aa3b2a0336c7dc5db5e81f0813dbda4ebffe0eed1a75",
+      "A_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "B_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "C_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\openlibrary-index-state",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\openlibrary-index-state\\actor.json",
+          "result_sha256": "733715499155cfe35701c7cee3a4824d66a932c74b8ea62c5fe4b75c06bb537d",
+          "patch_sha256": "dbaa11e2171179e9939b0d48c3d400b46dbcf0b834ae76f924e1aa9c6250367c",
+          "prompt_sha256": "ed0b7d5e5d476f929e8cc16dcaeabbc5bbd38e222356f0adc71c9ba616ba0057"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\openlibrary-index-state\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\openlibrary-index-state\\A2\\result.json",
+          "result_sha256": "cae3aaf1906bfcfdda0d79b6a87eb7c2f65b97fce86fa53a9c5d6167363f2eef",
+          "patch_sha256": "5fe5f94410e41a279152fa26ce0f277bf7d3c43bbf584b94d93e92d65153fe26",
+          "prompt_sha256": "21410d21dba80146353fcdce7793f3275558146eb9302972ef9c0598677583ea"
+        }
+      }
+    },
+    "proton-mailbox-retry": {
+      "base_commit": "bd293dcc05b75ecca4a648edd7ae237ec48c1454",
+      "container": true,
+      "image_id": "sha256:61c22479df649f471ab2ed603deffaf7c290c96ff0b1fe725a62f588d7f4dc9d",
+      "A1_result_sha256": "5cca7f6125df595edc11128ec12e1b8bedeed6ebb25a42dc9597ba39a1e6bd21",
+      "task_sha256": "c538199ba6308555674a560479016bebe383432401c1cdea0e845502815b4fdc",
+      "A_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "B_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "C_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {}
+    },
+    "flipt-storage-cache": {
+      "base_commit": "0eaf98f050d86247bfe9bd7e41178865cb585060",
+      "container": true,
+      "image_id": "sha256:0d69bb686032bf1a248e5e4ccafb53e905bb6424bd38a7c1a0c6d37bb261b404",
+      "A1_result_sha256": "d81afc019b91018495400a238776a99c6d1221ac13b86b93f1ef929cafe885f6",
+      "task_sha256": "8185c94aebd010a45fd02177be92a180a5544077c2ffcca16b58a44876669969",
+      "A_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "B_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "C_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\flipt-storage-cache",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-storage-cache\\actor.json",
+          "result_sha256": "d81afc019b91018495400a238776a99c6d1221ac13b86b93f1ef929cafe885f6",
+          "patch_sha256": "2a1c513e82863579470355cc74cf70512a5eb9bfd78241905fc15d2380dee6c4",
+          "prompt_sha256": "104f43acf39961c395de47fa53e51ff8ecf1c33a92580fe1bc7d4a8b8e325093"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-storage-cache\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-storage-cache\\A2\\result.json",
+          "result_sha256": "e6de445bb1e2413228b32f7fb62cbaf51fba0626bf10ceefca972354655a1961",
+          "patch_sha256": "10ed415af10f9dd8c247813a8b963684f7888ce3bbd43092ce81a0cb868c7cba",
+          "prompt_sha256": "106c7987d6e3a4bff650864cbe346f4b33b64907079255659aef3e894b0f2703"
+        }
+      }
+    },
+    "fb-metaflow-stubs": {
+      "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "ae242a1871aa057d5bd26e8892c9ff352477cb22af7c1c78d9a38a4ba52c6be5",
+      "task_sha256": "f26975997bb1f8a52bb39633def9f22b54b551e54a9800ad2a911288ef6f058a",
+      "A_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "B_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "C_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\fb-metaflow-stubs",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\fb-metaflow-stubs\\actor.json",
+          "result_sha256": "ae242a1871aa057d5bd26e8892c9ff352477cb22af7c1c78d9a38a4ba52c6be5",
+          "patch_sha256": "acfe4de1a5b6153b1a0a44a835dfe1cfca5152faf3911d65e581ce57fa637dfd",
+          "prompt_sha256": "3bda1970dc75281c4c1e5ba49c41b5f43d2cdbe1683d5369b53f2ba9a3f0b7cf"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\fb-metaflow-stubs\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\fb-metaflow-stubs\\A2\\result.json",
+          "result_sha256": "e5c73e88aa44eaac8750bbf0b068eb75d9a02f8c2a9f6abadae30886d5d2ad54",
+          "patch_sha256": "b90b66169f039b2bde988a8dc33f4d557ada29000b3783a04a304f684ab84dc0",
+          "prompt_sha256": "dc6884d850a9804713dbb2dfd199740d179c67a52e6c93b87b345b0d2790a176"
+        }
+      }
+    },
+    "tracing-1523": {
+      "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "e86096776f1ceecee58f0e2ffc8f6515f1e5d16df1f3a61d4c0e1b922d8c778b",
+      "task_sha256": "ac7574e8adf4a093e17c87654b34aaedd51f16cd97e2d45251f18e9489b59adf",
+      "A_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "B_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "C_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\tracing-1523",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\tracing-1523\\actor.json",
+          "result_sha256": "e86096776f1ceecee58f0e2ffc8f6515f1e5d16df1f3a61d4c0e1b922d8c778b",
+          "patch_sha256": "b8f1baa9ed9fa7963a8e26007eb1aef15c6490e1c57ae71ca06cac8cf99e2b04",
+          "prompt_sha256": "04d39b2c9674cc64d538f9312aac1d3a4b1986ed3992a52d3ac8c9615eda9a10"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\tracing-1523\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\tracing-1523\\A2\\result.json",
+          "result_sha256": "21e0253c220862e5ec08732648aba3853ed7e0e521a5b4e3d1fe1c240b2f34b9",
+          "patch_sha256": "6839caec9f121bfea72769b078d09f49911db99288e966af938ef9131a1d53d4",
+          "prompt_sha256": "0ecadfe560316e709b846d10f762c368003366c42fe4617bff1f73a5c7610988"
+        }
+      }
+    },
+    "proton-untrusted-keys": {
+      "base_commit": "aba05b2f451b2f8765207846b11dc67190cb9930",
+      "container": true,
+      "image_id": "sha256:48c8f7c7552cbd2ab7d734d7ab8e4961ba105db00e4cc0de51a2a04c783f08d0",
+      "A1_result_sha256": "2b653d4fef5d2504a00b8030a6c808ae980a3b37889087f4b77aad49dcf47adb",
+      "task_sha256": "c7abb9e735101879a3cb5209ba401077a0a431873904aa4fcfbc842e5a97000b",
+      "A_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "B_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "C_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\proton-untrusted-keys",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-untrusted-keys\\actor.json",
+          "result_sha256": "2b653d4fef5d2504a00b8030a6c808ae980a3b37889087f4b77aad49dcf47adb",
+          "patch_sha256": "bfefe905e22bd4067aaa6a616430cd4258a05e21de43976a1f6b330f1fadae06",
+          "prompt_sha256": "58c16311cccaf4ad9633222d4a005c05e2590833fcaf7626a1714e8b9e3174eb"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\proton-untrusted-keys\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\proton-untrusted-keys\\A2\\result.json",
+          "result_sha256": "08f753c7d59deb87fdee86443c9f445d59f220fcec96f227aa83a2e7d12428ab",
+          "patch_sha256": "9c70059e5a7c86a10398b7e87078c184f16b3a9afb4815d5e8509821e047e1bd",
+          "prompt_sha256": "033611133e3d44cc97ed2548f821da4d8df2d2f4cf5fce250e3df110b4a57977"
+        }
+      }
+    },
+    "regexp-404": {
+      "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "fe028aba83077d2b24f789e3c2f0a618d63b75258d58169fb3a893c710a19a32",
+      "task_sha256": "d46f0b6e938ebddfef3678bf51c2e0ace9a4ffd04b802400692583da0403c906",
+      "A_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "B_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "C_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "new_order": [
+        "A1",
+        "B1",
+        "B2",
+        "A2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\regexp-404",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\regexp-404\\actor.json",
+          "result_sha256": "fe028aba83077d2b24f789e3c2f0a618d63b75258d58169fb3a893c710a19a32",
+          "patch_sha256": "eb541678e9bb76caff5a2186b14b3690760b5e427246e4646417330897618b43",
+          "prompt_sha256": "7120d8e0dc2edd049b4ad9727248ee466250a77578de4cd9c0123af5e1846638"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\regexp-404\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\regexp-404\\A2\\result.json",
+          "result_sha256": "3f5e550272f166b83089d3dbcfeb7312f166da5faaedc8ee266a4bab171f2634",
+          "patch_sha256": "5bf8ca2fdc8550bc173d4c0e6047a2a68c406dc6e5d7ae9108dad8bfaf62c4e0",
+          "prompt_sha256": "e621dabfe39fbcfe03cb5c4089d5e4d72945a93b9eadf75c833479bb0a058a0e"
+        }
+      }
+    },
+    "clap-2297": {
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "f97bbca5ae39ceab40b7fcd0e7fbde6fce8d24ddd7a1289eb20c0e268c95153d",
+      "task_sha256": "70bcee17f36c541b78c7ce6517288bb274e9bf0e8dce4e63ea45924ab104d1f8",
+      "A_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "B_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "C_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "new_order": [
+        "B1",
+        "A1",
+        "A2",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\clap-2297",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\clap-2297\\actor.json",
+          "result_sha256": "f97bbca5ae39ceab40b7fcd0e7fbde6fce8d24ddd7a1289eb20c0e268c95153d",
+          "patch_sha256": "e47f054ab21c20f72905090a86d334f08c564640896679f01a9433f0ff1b3b79",
+          "prompt_sha256": "90d56d58a902d65ae542ee24c0107acc6f0a14edbab92198979c1c92d9404b8d"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\clap-2297\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\clap-2297\\A2\\result.json",
+          "result_sha256": "3fd6b06221d5ac1a6acef2d507b4983d91be824aa454b5f419cf44eb4b0d05a0",
+          "patch_sha256": "75a708d967312b5a83bff7d29629b155c88ac9eaa504e3fe21cf8ffdb3f81e50",
+          "prompt_sha256": "405957842371865625f923374f55597836d67d6e9dc7dd28bf89f5ba85f3eb38"
+        }
+      }
+    }
+  },
+  "actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "medium",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "medium",
+  "judge_model": "gpt-6-astra",
+  "judge_reasoning": "medium",
+  "feedback_limit": 3,
+  "new_arms": [
+    "A1",
+    "A2",
+    "B1",
+    "B2"
+  ],
+  "trials_per_case": 2,
+  "expected_deliveries": 48,
+  "workers": 2,
+  "actor_wall_timeout_seconds": 1800,
+  "pairwise_comparisons": [
+    "A-B"
+  ],
+  "A": "Neutral task; hooks and plugins disabled. Fresh trials.",
+  "B": "Same neutral task; frozen current Masters Nudge enabled, maximum three delivered nudges. Fresh trials.",
+  "product_commit": "8f6db77147bf3e0b1855bddd82dcc422be086a37",
+  "product_working_changes": true,
+  "prompt_semantic_sha256": "62b3dfeb9421f4b384886e5f019e23879e99784f41237961d3ecd4032b19c2cb",
+  "package_hashes": {
+    ".mcp.json": "181e3ee48aed1b9bc3c8e372cdf1fd7ad27802c29e4121effeba0db14acbbd3d",
+    "buddy-prompt.txt": "d20a8af0f91c478fdea023d3ae4a9786c6318a45af902d1a1b8c02a0076fc7a6",
+    "hook_entry.py": "8ba6735af4d3004fbdd5cf009646d040b47fd94adcadf1d56716d5c1cebb1ee3",
+    "LICENSE": "e47f465cb04d113ef607aa7653f27d435eedd541b5f0bdfe9d8e7bd9ec967c61",
+    "masters_nudge_cli.py": "64bd8ed0d7e16be5e70f8b1ace583751c2044bb95c756c0f801457c6c4261e69",
+    "mcp_entry.py": "13ad60127dc1646ebc66328784980ddb96ed027c4d34777cf97a3cf02b540535",
+    "nudge-schema.json": "a7d1004976ea0941373ba886264433d555df22e91f10f8d8025d9f7c447a8005",
+    ".codex-plugin/plugin.json": "4f8e18fdd624f5834a01a52e252cc816674b712c3c22e1b262a4df80ba9afd28",
+    "hooks/hooks.json": "667a252f2d31c4f196cc28cae683b4ca0fcfa7d3cebefa3b99e79f2b228bf5a7",
+    "hooks/run_python.cmd": "8c90bca172a2e23451479b7e189f131d491d46ad601c97c4d0f3230365d2639d",
+    "hooks/run_python.sh": "5778abc2114d2ee6df940c0dd3e6fd55b0746bdceee9dd737190f1f4a558d42f",
+    "masters_nudge/codex_adapter.py": "3afbba0417c4366233d9c64f728691f86a28f0a9c9feb0b5c0e50d20bcdecd08",
+    "masters_nudge/contracts.py": "94a82336abf6217b6c51f7c4dd0d23258df3b404ac195744f22f7ff4dcc58fcb",
+    "masters_nudge/core.py": "6d7e33e9085f821f8d99d4249c67be340b072cf247ad6e67758f0fac5dc47614",
+    "masters_nudge/evidence.py": "0f2e358184c5c91b7c08444ae6d0d197430848e89d7c3297eebc67fe46d5d74d",
+    "masters_nudge/management.py": "5c327153e6774f67745392ff8c4a1268143b4a6ddbeaa84ca8f88f8ddc3bad19",
+    "masters_nudge/plugin_inventory.py": "e1d74529ff50123342d1fea57b1dd681fc11cbd929786cd5613c5caca7aa1c59",
+    "masters_nudge/prompting.py": "b0e8a77475ca5ae7774c2b1e620c2a028eafa3f6cf164d02b8440c9c69c9d22b",
+    "masters_nudge/providers.py": "4757c46ecf1b26478543556c30fb79df492aae8afa5a303ca86fb96b1b0d0f5c",
+    "masters_nudge/provider_contract.py": "ee797b2cce604adaae1855b4890ac36cc10a45a1adafc20e8033031a19a9e12e",
+    "masters_nudge/read_only_repo_mcp.py": "88871cb3c35493cbac20628ba16683033646c38300ab009178c4db76b7113be6",
+    "masters_nudge/runtime.py": "b5a082ab75c734a8cda302cbbaf7c3dab5ea3934d12dee32df77ac8f185ef4cd",
+    "masters_nudge/settings.py": "b4904c5eab5d4a5e7d9e3bfa4a3992af675635fbdf4932e49861d07774481729",
+    "masters_nudge/storage.py": "c003a575f11264946b5edea3dfde567fb190b33107293d012e794306ca951cc5",
+    "masters_nudge/__init__.py": "0baf124d1551a8c96c40950d10f06beeeb07d56b77097d65377d14570eccf413",
+    "skills/doctor/SKILL.md": "f41b63bf57ca38e64c5ca7b7239431dae7976c40fca3942c37c6f08251fd51f7",
+    "skills/recent-nudges/SKILL.md": "3f968bb5cca49257c5fc6477c4ec4a345bd9ff4cef26be0c7fccc5ed82221a5d",
+    "skills/select-provider/SKILL.md": "1843464ef6aadc934d747be8b7f3503567bc7b1d2852506d1eb3b45cfdfdac9c"
+  },
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "harness_sha256": "f54e13ab8ae9c4a8ad00bdee8603949283f7a9127d829c7525b949790ad48f10",
+  "adapter_sha256": "56e3ae225630814f0f695d4d8c1d8b93d56abfa11b38d0ad07669b879ccbfe6c",
+  "experiment_script_sha256": "4d610f569d26cce14148b9d9c50c94f7a15c0acf3a0e7e6eb2180de0d9d8fc36",
+  "codex_binary": "C:\\Users\\kk789\\AppData\\Local\\OpenAI\\Codex\\bin\\ca9abb0b4d8ac692\\codex.exe",
+  "codex_binary_sha256": "86e8ef1013f98df51fdeea446597f7e3ca32e454d1d4d8c0402a68b03c311d70",
+  "codex_cli_version": "codex-cli 0.159.0",
+  "contract": "Frozen evaluation-v3 checks plus semantic execution-contract review; no extra requirements.",
+  "taste": "Existing fixed rubric, anonymous full source, two independent reversed-order Astra medium judges; third for disagreement. Primary taste comparison only jointly completed pairs.",
+  "cost": "Actor wall time includes Provider wait; Actor and Provider tokens summed once. Cached input and output shown separately; evaluation/judge costs reported separately.",
+  "retry_policy": "No outcome-based reruns or repair. Preserve timed-out trials and product faults. Stop scheduling on genuine execution/evaluation infrastructure failure.",
+  "restore": "Snapshot source, untracked additions, and original Git index before resets; restore case state after scheduled trials.",
+  "output_location": "E drive; preserve existing studies and calibration environments."
+}

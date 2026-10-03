@@ -1,0 +1,182 @@
+{
+  "task_clause": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+  "scope": "Diagnostic of an existing task clause raised by blind review; frozen scoring and Actors are untouched.",
+  "rows": [
+    {
+      "arm": "A1",
+      "patch_sha256": "180944f19f0fd0f1c7d0426f9b1b6a3a08c343c56a2df645f562febfc1a42bf5",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.980545337,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "A2",
+      "patch_sha256": "6a4f0e24c51c6d07762ea0d60dca5dac756d182af09a2830c6de96577aa6d612",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.570850955,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "B1",
+      "patch_sha256": "ab1e2cab94ca90ab0fb98cf0f4c571a50d3da249dbe3c3e9e97aaab0ada9a18a",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.275004487000004,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "B2",
+      "patch_sha256": "9508c85f27119f416c1b6106f62325102b956b332013f556296805c5fd1f788a",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 33.55094500599999,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "D1",
+      "patch_sha256": "585ead2ca4cc0ba9632c9a0c238877acb80624be03dab4d3abf6367d84df5622",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 33.87144898599999,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "D2",
+      "patch_sha256": "82f03754c101d8ced6641793ea9fd3802726dc4daf678b28e8724e1ce06d5f07",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.412177783999994,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "original_actor_and_scores_unchanged": true
+    }
+  ]
+}

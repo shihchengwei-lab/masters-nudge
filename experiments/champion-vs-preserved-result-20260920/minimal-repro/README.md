@@ -1,5 +1,7 @@
 # Independent reproduction
 
+Historical Windows reproduction from September 2026. See the [recorded lifecycle behavior](../CODEX-POSTTOOLUSE-LIFECYCLE-SPEC.md) for versions and results; this is outside the current plugin runtime.
+
 Requirements: Windows, Python 3, and an authenticated `codex` CLI on `PATH`.
 
 Run:

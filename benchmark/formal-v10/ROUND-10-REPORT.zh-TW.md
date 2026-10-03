@@ -1,5 +1,9 @@
 # 第十輪 Benchmark 正式報告
 
+> 歷史研究：本頁保留當時的模型、提示、驗收與數值，不代表目前工具版本。最新保留的六臂比較與版本定位見[測試索引](../README.zh-TW.md)。
+
+> 發布狀態：暫停發布。以下保留既有評分；尚未取得[固定評測規格](evaluation/README.zh-TW.md)下的完整 A/B 重評結果。
+
 日期：2026-09-26；版本：`8fc2fb9`；Actor／Provider：GPT-6 Sol medium
 
 ## 結果

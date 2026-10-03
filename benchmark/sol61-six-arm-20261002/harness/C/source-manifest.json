@@ -1,0 +1,131 @@
+[
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\run.py",
+    "snapshot": "harness-sources/study/run.py",
+    "sha256": "da94097d42e98e42e81e11bbe5a05f3dbaa519c6292f6f65a5cd0a8586814190"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\actor_runner.py",
+    "snapshot": "harness-sources/study/actor_runner.py",
+    "sha256": "ee973bb0e1d464fb8f6b7778061e1061fd62549206800fd17ecfdb3de9e837fb"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\finish.py",
+    "snapshot": "harness-sources/study/finish.py",
+    "sha256": "fd1ae2cd22467278dce6e58e28ff290bf41d5825f1e81f45e58668acff330dce"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\review.py",
+    "snapshot": "harness-sources/study/review.py",
+    "sha256": "72ec05b2bd05142650657b9a4fbf2ccb834e565fa6f5ae7d95656801c00b077b"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\blind.py",
+    "snapshot": "harness-sources/study/blind.py",
+    "sha256": "36b998c3094180dabf1658ab1250a007a3034f49dad685f3252fa76b0910100e"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\preflight.py",
+    "snapshot": "harness-sources/study/preflight.py",
+    "sha256": "b3736a755445124e4e77ee62cfcb2facb69706b0dce6a7da6eb451380205f758"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\pipeline.py",
+    "snapshot": "harness-sources/study/pipeline.py",
+    "sha256": "8dbb40044279f7fae77caff5cc469c8777732613cb4f5c22da81b46b8fdb2b38"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\verify_final.py",
+    "snapshot": "harness-sources/study/verify_final.py",
+    "sha256": "0bcbbd6212226eaec78ea092081affdd2206ee310461ee786db39dae534026d2"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\snapshot_harness.py",
+    "snapshot": "harness-sources/study/snapshot_harness.py",
+    "sha256": "ec1af88aaf6cc8cb2adc8f8dfdbfb338190ac438d2fdc67ec40245616e2da164"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\setup-c-xhigh-20261001.py",
+    "snapshot": "harness-sources/study/setup-c-xhigh.py",
+    "sha256": "f15c42df3e087536ce974ec99b4277c4fd48c7134f61ee2544f63e4aa2da4405"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-b-quota2-20260927\\run.py",
+    "snapshot": "harness-sources/dependencies/original-actor-runner.py",
+    "sha256": "f54e13ab8ae9c4a8ad00bdee8603949283f7a9127d829c7525b949790ad48f10",
+    "plan_hash_key": "source_harness_sha256"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\round-11-b-8f6db77-20260929\\rerun.py",
+    "snapshot": "harness-sources/dependencies/adapter.py",
+    "sha256": "56e3ae225630814f0f695d4d8c1d8b93d56abfa11b38d0ad07669b879ccbfe6c",
+    "plan_hash_key": "adapter_sha256"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\runner.py",
+    "snapshot": "harness-sources/dependencies/calibration-runner.py",
+    "sha256": "847068ba0857b87635056def27a97fd8045980b8f26c5e0a798f299c0c9b7913"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\container_check.py",
+    "snapshot": "harness-sources/public-tools/container_check.py",
+    "sha256": "9b616d74596614ea67e6852f53173e11f2f8e15e0090bc41ed8bc38a66da959a"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\cpp_check.py",
+    "snapshot": "harness-sources/public-tools/cpp_check.py",
+    "sha256": "4831e8873fe2aa4e9907d718a57b00356ac5297b2483f17400337bc33055474d"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\feature_python_check.py",
+    "snapshot": "harness-sources/public-tools/feature_python_check.py",
+    "sha256": "433c1c8153304d87eb2d091b94d064a2ffff241d9cbd376393be82f643c10ff0"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\rust_check.py",
+    "snapshot": "harness-sources/public-tools/rust_check.py",
+    "sha256": "5d5a196cce1b0a5c6fad459d51602ddd1497858064247ce52199492be4e9f8dd"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\seeded_pytest.py",
+    "snapshot": "harness-sources/public-tools/seeded_pytest.py",
+    "sha256": "b4c6eaeae2db46aa152bcac9a371abc19f5a140f9f6f2cf789c2b1b812851c85"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\sympy_legacy_check.py",
+    "snapshot": "harness-sources/public-tools/sympy_legacy_check.py",
+    "sha256": "b508aefff591351eba309959862308e134805a7cf6d15fc2c83f62d3817416d2"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\public-tools\\test_noise_integrals.py",
+    "snapshot": "harness-sources/public-tools/test_noise_integrals.py",
+    "sha256": "d7bcabe61b73001fb0a76f57b696466ed3a3638820a9907a833505113cb54a45"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\selection\\round-10\\candidate-manifest.json",
+    "snapshot": "harness-sources/dependencies/candidate-manifest.json",
+    "sha256": "2dde927347b4724f9760ec0615356977b926b5393926e8643c75e1d1939328cf"
+  },
+  {
+    "source": "D:\\masters-nudge-benchmark\\round-10-calibration\\supplements\\tracing-1523-public-layer-tests.rs",
+    "snapshot": "harness-sources/dependencies/tracing-1523-public-layer-tests.rs",
+    "sha256": "0bc5a995505099b7755769fe4bf7bb30c45a5bb69ea6d193241eca9586c65a15"
+  },
+  {
+    "source": "C:\\Users\\kk789\\Desktop\\GH_repos\\masters-nudge\\benchmark\\formal-v11\\evaluation-v3\\evaluate.py",
+    "snapshot": "harness-sources/dependencies/evaluate.py",
+    "sha256": "6f669d8d26bc28bc86b1a57b1f8daf9faade935afb9b0b880fe2401dd039631f"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\transcript_reader.py",
+    "snapshot": "harness-sources/infrastructure-recovery/transcript_reader.py",
+    "sha256": "4c04c7a52fdf344d8d27263dc80b97b670f28a8f66bd6dc7e9d92891fc67677e",
+    "stage": "post-actor unresolved review infrastructure recovery"
+  },
+  {
+    "source": "E:\\masters-nudge-benchmark\\sol61-c-xhigh-direct-12case-20261001\\recover_execution.py",
+    "snapshot": "harness-sources/infrastructure-recovery/recover_execution.py",
+    "sha256": "a741b141a6e32f6eb667aa8de06b3df7a09bb2efd644ca6575c14b5e8fcae986",
+    "stage": "post-actor unresolved review infrastructure recovery"
+  }
+]

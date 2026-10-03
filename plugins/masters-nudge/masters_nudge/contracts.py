@@ -9,7 +9,7 @@ from pathlib import Path
 SOURCES = ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result", "file_origin")
 MATERIAL_MAX_CHARS = 20_000
 FEEDBACK_MAX_CHARS = 200
-FEEDBACK_FIELD_LIMITS = {"observed": 40, "why": 30, "structure": 55, "required": 35}
+FEEDBACK_FIELD_LIMITS = {"observed": 40, "why": 25, "structure": 61, "required": 35}
 FEEDBACK_LIMIT = 3
 SILENCE_LIMIT = 2
 

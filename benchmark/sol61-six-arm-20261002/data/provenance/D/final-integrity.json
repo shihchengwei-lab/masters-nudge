@@ -1,0 +1,46 @@
+{
+  "new_D_deliveries": 24,
+  "archived_A_unchanged": true,
+  "sealed_B_unchanged": true,
+  "frozen_inputs_unchanged": true,
+  "case_states_match": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "index_entries_match": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "D_execution_status": {
+    "pass": 24
+  },
+  "actual_model": "gpt-6.1-sol",
+  "actual_reasoning": "medium",
+  "hooks": true,
+  "provider_model": "gpt-6-astra",
+  "provider_reasoning": "medium",
+  "provider_feedback": 33,
+  "provider_faults": 0,
+  "summary_sha256": "c96bc95633a8a72953d2a325ece1004a2fface8e3af9996e19a791c85705907f",
+  "report_sha256": "9eccb79a6d0644cc94ef9cdca25dec777f7858bb6fd1ec941b72e09fd9b7b87e"
+}

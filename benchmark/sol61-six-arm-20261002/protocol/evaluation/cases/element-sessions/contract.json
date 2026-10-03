@@ -1,0 +1,97 @@
+{
+  "case": "element-sessions",
+  "requirements": [
+    {
+      "id": "element-sessions/C01",
+      "source_lines": [
+        10,
+        12,
+        24
+      ],
+      "source_text": "- Users must be able to select and deselect individual devices from the device list.\n- When one or more devices are selected, the device list header must display the number of currently selected sessions using the wording `%(selectedDeviceCount)s sessions selected`.\n- A selectable device's checkbox `checked` state must reflect whether the device is selected.",
+      "acceptance": "逐裝置選取／取消、checked 與計數一致。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C02",
+      "source_lines": [
+        14,
+        32
+      ],
+      "source_text": "- When one or more devices are selected, the device list header must show a bulk sign-out action that signs out all currently selected device IDs in a single request.\n- After a successful device sign-out, the device list must refresh.",
+      "acceptance": "單次請求包含目前選取 ID；成功後更新列表。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C03",
+      "source_lines": [
+        16,
+        18,
+        20,
+        22
+      ],
+      "source_text": "- When one or more devices are selected, the device list header must show a cancel action that clears all selected devices.\n- The bulk sign-out action must use `data-testid=\"sign-out-selection-cta\"`.\n- The cancel action must use `data-testid=\"cancel-selection-cta\"`.\n- Each selectable device checkbox must use `data-testid=\"device-tile-checkbox-${device.device_id}\"`.",
+      "acceptance": "取消清空選取；三個明訂 testid。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C04",
+      "source_lines": [
+        26,
+        28
+      ],
+      "source_text": "- Clicking the selectable checkbox or the device tile information area must toggle that device selection.\n- Clicking actions inside a device tile must not toggle device selection.",
+      "acceptance": "點 checkbox／資訊切換選取；點動作按鈕不切換。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C05",
+      "source_lines": [
+        30
+      ],
+      "source_text": "- When the active device filter changes, all selected devices must be cleared.",
+      "acceptance": "切換篩選清空選取。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C06",
+      "source_lines": [
+        34
+      ],
+      "source_text": "- If interactive authentication for device sign-out is cancelled, the sign-out loading state must be cleared.",
+      "acceptance": "互動驗證取消後清除 loading。",
+      "checks": [
+        "reserved"
+      ]
+    },
+    {
+      "id": "element-sessions/C07",
+      "source_lines": [
+        42
+      ],
+      "source_text": "Use the existing SelectableDeviceTile and FilteredDeviceList component APIs in the checkout. Where FilteredDeviceList needs selection passed from its caller, expose `selectedDeviceIds` and `setSelectedDeviceIds` props. The test IDs and wording listed above are acceptance interfaces, not hidden styling preferences. Keep existing pusher/notification props compatible.",
+      "acceptance": "保持既有對外元件 props。",
+      "checks": [
+        "reserved"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "id": "reserved",
+      "kind": "reserved_suite",
+      "evidence": "reserved-tests.json and verifier/test.sh"
+    }
+  ],
+  "unresolved": []
+}

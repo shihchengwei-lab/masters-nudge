@@ -1,0 +1,20 @@
+{
+  "deliveries": 144,
+  "source_files_verified": 6338,
+  "common_usage_slots": 19,
+  "taste_direct_comparisons": 8,
+  "new_actors": 0,
+  "new_judges": 0,
+  "evidence_zip_sha256": "9b6384a7549f6a7a372bbb6069ec9f11fa371ed5c8e5b4b0f262e6dbe81fc8f1",
+  "outputs": {
+    "results-summary.json": "e08783e5f40e923a2cd2bafc17a4fca26897cbceddbeaf9fdab67850241dfccb",
+    "REPORT.zh-TW.md": "374e1a1a90bf9a10062a4a1b318fb7264f20c4de7eece2640d387ac0f3ad64ea",
+    "deliveries.csv": "ac4fcd4a3847de412ab2099501502d4305c6f73063a97357bafb34f3e2753367"
+  },
+  "aggregate_source_sha256": "20956a035a3970f25eb2f416527f7d864b92247892953bd84e84a00b2dde2ba5",
+  "report_template_sha256": "bd0c396e71608b47735b9f8642b2f8b07f0a727b3be17490196c320363c361c8",
+  "source_index_sha256": "d79a491ce97dfc528ca120db02069a46a2a1c969c1baae9cfe48fae959430d76",
+  "collection_sha256": "7d26e10415240074862c3f89e4db45351b6530f0459e41c0228bc0f009ef082b",
+  "collect_source_sha256": "80bf25772211143992a57448cfa43f476420a271733871f522500d7bf9954024",
+  "harness_document_sha256": "513720e25c86c99e1f994fe5df7e8bc9864caa084dab4f43bc3459d18a57c96f"
+}

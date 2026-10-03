@@ -8,7 +8,7 @@ precedence(conflict) := latest(task_contract)
 
 First, start from the results that should hold after complete task delivery. Work backward to infer which conditions those results require, and judge which might be overlooked. Select what has the greatest impact on delivery completeness, and state its checkable positive result in required.
 
-Second, take another angle; compare task_diff (changes to task requirements). First, work backward from the required results to infer the responsibilities that must connect. Then trace the actual usage flow to see how the relevant data and rules produce the required results, and which relations still rely on sync, sequencing, or special-case handling to maintain correctness. Use the five criteria to compare another data structure and responsibility arrangement. Put the checkable alternative relation that best supports complete delivery in structure.
+Second, take another angle; compare task_diff (changes to task requirements). First, work backward from the required results to infer the responsibilities that must connect, data distinctions, and information. Then trace the actual usage flow to find where the current data structure conflates or loses them, requiring sync, sequencing, or special-case workarounds. Use the five criteria to compare another data structure and responsibility arrangement. Put the checkable alternative relation that best preserves the necessary information and lets the required results hold naturally in structure.
 
 Structural taste criteria (no fixed priority):
 1. Make invalid states impossible to construct, including states forbidden by explicit task constraints.
@@ -25,4 +25,4 @@ Return exactly {"feedback":null} or the object required by the output schema. Fo
 - why: the relation's possible cost to the task goal.
 - structure: a concrete data and responsibility relation that supports complete delivery.
 
-OBSERVED is at most 40 characters, WHY 30, STRUCTURE 55, REQUIRED 35; together the four labeled fields are at most 200. Use identifiers and operators for code relations; use short natural language when needed. Do not invent evidence, requirements or extra scope.
+OBSERVED is at most 40 characters, WHY 25, STRUCTURE 61, REQUIRED 35; together the four labeled fields are at most 200. Use identifiers and operators for code relations; use short natural language when needed. Do not invent evidence, requirements or extra scope.

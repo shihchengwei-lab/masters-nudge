@@ -1,0 +1,21 @@
+{
+  "case": "nodebb-images",
+  "arm": "B1",
+  "kind": "first fixed verification after external quarantine",
+  "checks": {
+    "reserved": "pass",
+    "nodebb_group_variants.js": "pass",
+    "nodebb_images.js": "pass",
+    "nodebb_images_files.js": "pass"
+  },
+  "evidence_sha256": "688e371c073db99cea78636dd58ea270374b5f479079410cdc338e0e037ca903",
+  "patch_sha256": "6ba595d7e46b4bc9f82a3f0045b765b918bee34802b6cdd66347e6acaaf3561c",
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "elapsed_seconds": 33.713,
+  "actor_artifacts_unchanged": true,
+  "grading_helper_restart": {
+    "previous_pid": 32788,
+    "reason": "Provide independently confirmed external quarantine context to execution review before judges run.",
+    "finish_sha256": "4e64a7c26d8f2591895a7113aae72005d79f8fc713fab9cd0246f6e01eb2434a"
+  }
+}

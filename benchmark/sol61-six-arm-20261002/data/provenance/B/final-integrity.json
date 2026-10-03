@@ -1,0 +1,56 @@
+{
+  "fresh_B_deliveries": 24,
+  "archived_A_deliveries": 24,
+  "archived_A_unchanged": true,
+  "frozen_inputs_unchanged": true,
+  "case_states_match_live": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "index_entries_match": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "index_bytes_match": {
+    "nodebb-images": false,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": false,
+    "openlibrary-index-state": false,
+    "proton-mailbox-retry": false,
+    "flipt-storage-cache": false,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": false,
+    "proton-untrusted-keys": true,
+    "regexp-404": false,
+    "clap-2297": false
+  },
+  "B_execution_review_statuses": {
+    "pass": 23,
+    "fail": 1
+  },
+  "jointly_completed_taste_pairs": 6,
+  "matched_usage_pairs": 22,
+  "report_sha256": "b14f77db055e55cf1d62cc95da7d51b485f969dc0f2b754e7d98b6d458f5137b",
+  "summary_sha256": "649ca90074555d02f525de7905e8e044f3eb4d38345d583d8861c34824df324f"
+}

@@ -1,0 +1,130 @@
+{
+  "task_clause": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+  "scope": "Diagnostic of an existing task clause raised by blind review; frozen scoring and Actors are untouched.",
+  "rows": [
+    {
+      "arm": "D1",
+      "patch_sha256": "585ead2ca4cc0ba9632c9a0c238877acb80624be03dab4d3abf6367d84df5622",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 35.610123043,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "contract_passed": false,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "D2",
+      "patch_sha256": "82f03754c101d8ced6641793ea9fd3802726dc4daf678b28e8724e1ce06d5f07",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.936581101,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "E1",
+      "patch_sha256": "fa5620df13c408853fcf11f84f378d60b77ad9062108d648370c5d78a5f3734d",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.43935540700001,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "E2",
+      "patch_sha256": "25fe36f9a654a65bfca138ad702abdf73bbc4f4a262271b4d4651b9156167730",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 34.790639655999996,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "contract_passed": false,
+      "original_actor_and_scores_unchanged": true
+    }
+  ]
+}

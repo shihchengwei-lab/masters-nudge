@@ -1,0 +1,274 @@
+{
+  "task_clause": "Preserve existing argument validation, required/conflict rules, occurrences, defaults, and non-overriding parsing behavior.",
+  "baseline_occurrences": {
+    "non_overriding_control": 2,
+    "self_override_single_value": 2,
+    "self_override_multi_values": 2
+  },
+  "rows": [
+    {
+      "arm": "BASE",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": null,
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.421999999991385,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    },
+    {
+      "arm": "A1",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "8a9cf1d13d67e3c900e143b64e272c6733e23796e954000cec34af3dd74ac34a",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.328999999997905,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    },
+    {
+      "arm": "A2",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "13dc77f138dfc5949805bdac19d2433ced0eee23889930c49eff7584bfe7194a",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.344000000011874,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    },
+    {
+      "arm": "B1",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "f7a30e740620e5b98b9b32967881e074e45ab1ba50d0a2b3d1c8cb0881da026b",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.23399999999674,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 1,
+          "values": [
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 1,
+          "values": [
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": false
+    },
+    {
+      "arm": "B2",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "1e7bc98d260083327a41d95c6bfcbe332ebe1d47921c1027e00d64c370727fe8",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.76500000001397,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    },
+    {
+      "arm": "D1",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "6f4770ddf635d2d2da3dd8b04df2db3a9479fbaa110a229497544fb5c3dba9d2",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.46899999998277,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    },
+    {
+      "arm": "D2",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "patch_sha256": "25d9bf00ba5fa4c441471f095c1b31a7c80415b75977c04ec440d953397a0f63",
+      "fixture_sha256": "896290bc8d936448f0f4107c299c10e1b8eba447b72bf5c651e4a8c3e60bfe44",
+      "exit_code": 0,
+      "seconds": 17.687999999994645,
+      "probes": [
+        {
+          "case": "non_overriding_control",
+          "occurrences": 2,
+          "values": [
+            "a",
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_single_value",
+          "occurrences": 2,
+          "values": [
+            "c"
+          ]
+        },
+        {
+          "case": "self_override_multi_values",
+          "occurrences": 2,
+          "values": [
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "offline_locked": true,
+      "original_actor_scores_unchanged": true,
+      "occurrences_preserved": true
+    }
+  ]
+}

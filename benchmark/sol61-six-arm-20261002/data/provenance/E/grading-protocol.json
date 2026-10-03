@@ -1,0 +1,138 @@
+{
+  "execution_model": "gpt-6-astra",
+  "reasoning": "medium",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "pass",
+          "fail",
+          "environment_error"
+        ]
+      },
+      "reason": {
+        "type": "string"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "rule": {
+              "type": "string"
+            },
+            "event_lines": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "observation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "rule",
+            "event_lines",
+            "observation"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "status",
+      "reason",
+      "evidence"
+    ],
+    "additionalProperties": false
+  },
+  "taste_model": "gpt-6-astra",
+  "taste_rubric_sha256": "2bddbc3707f82a9f2f7b7ee00708511a58992575b6626c821c184d2f588fc478",
+  "taste_schema": {
+    "type": "object",
+    "properties": {
+      "winner": {
+        "type": "string",
+        "enum": [
+          "X",
+          "Y",
+          "tie"
+        ]
+      },
+      "reason": {
+        "type": "string"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "criterion": {
+              "type": "string"
+            },
+            "x_location": {
+              "type": "string"
+            },
+            "y_location": {
+              "type": "string"
+            },
+            "observation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "criterion",
+            "x_location",
+            "y_location",
+            "observation"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "contract_concerns": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "candidate": {
+              "type": "string",
+              "enum": [
+                "X",
+                "Y"
+              ]
+            },
+            "exact_clause": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "observation": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "candidate",
+            "exact_clause",
+            "location",
+            "observation"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "winner",
+      "reason",
+      "evidence",
+      "contract_concerns"
+    ],
+    "additionalProperties": false
+  },
+  "taste_rule": "Two reversed independent orders; third for disagreement; majority or tie. D-E only; completed D reference remains unchanged.",
+  "criteria_and_fixed_checks": "Same frozen evaluation-v3; no new contractual requirements.",
+  "cost_rule": "Grading separate from Actor and Provider."
+}

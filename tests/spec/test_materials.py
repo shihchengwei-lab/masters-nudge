@@ -29,8 +29,8 @@ class ContractTests(unittest.TestCase):
         valid = self.feedback()
         self.assertIsNotNone(parse_feedback(json.dumps(valid)))
         invalid = []
-        for key, value in (("observed", "x" * 41), ("why", ""), ("why", "x" * 31),
-                           ("structure", "x" * 56), ("required", ""), ("required", "x" * 36)):
+        for key, value in (("observed", "x" * 41), ("why", ""), ("why", "x" * 26),
+                           ("structure", "x" * 62), ("required", ""), ("required", "x" * 36)):
             item = copy.deepcopy(valid)
             item["feedback"][key] = value
             invalid.append(item)
@@ -39,9 +39,9 @@ class ContractTests(unittest.TestCase):
             item["feedback"][obsolete] = value
             invalid.append(item)
         item = copy.deepcopy(valid)
-        item["feedback"].update(observed="x" * 40, why="x" * 30,
-                                structure="x" * 55, required="x" * 35)
-        self.assertIsNotNone(parse_feedback(json.dumps(item)))
+        item["feedback"].update(observed="x" * 40, why="x" * 25,
+                                structure="x" * 61, required="x" * 35)
+        self.assertEqual(len(parse_feedback(json.dumps(item)).message), 200)
         for item in invalid:
             with self.subTest(item=item), self.assertRaises(ToolFault):
                 parse_feedback(json.dumps(item))
@@ -51,8 +51,8 @@ class ContractTests(unittest.TestCase):
         feedback = schema["properties"]["feedback"]["anyOf"][1]["properties"]
         limits = [feedback[name]["maxLength"] for name in ("observed", "why", "structure", "required")]
         labels = len("OBSERVED: \nWHY: \nSTRUCTURE: \nREQUIRED: ")
-        self.assertEqual(limits, [40, 30, 55, 35])
-        self.assertLessEqual(sum(limits) + labels, 200)
+        self.assertEqual(limits, [40, 25, 61, 35])
+        self.assertEqual(sum(limits) + labels, 200)
 
     def test_before_structure_is_dropped_before_task_or_current_code(self):
         before = MaterialLine("before_structure", "old.py", 1, "x" * 21000)

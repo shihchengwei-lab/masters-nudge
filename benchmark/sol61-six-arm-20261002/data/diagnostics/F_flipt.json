@@ -1,0 +1,190 @@
+{
+  "task_clause": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+  "scope": "Diagnostic of an existing task clause raised by blind review; frozen scoring and Actors are untouched.",
+  "rows": [
+    {
+      "arm": "C1",
+      "patch_sha256": "7a38169d39e24fbabb3620a72dc95fc755bd85468f26cd77360b513dd6faa6ef",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 35.478841394,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "C2",
+      "patch_sha256": "4ebdb8f7b390af43bc3a6f2b7e057f759b316931cdb0d0ef0928430da570ea31",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.931415673000004,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "E1",
+      "patch_sha256": "fa5620df13c408853fcf11f84f378d60b77ad9062108d648370c5d78a5f3734d",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.625997483000006,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "E2",
+      "patch_sha256": "25fe36f9a654a65bfca138ad702abdf73bbc4f4a262271b4d4651b9156167730",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 34.794727984999994,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "contract_passed": false,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "F1",
+      "patch_sha256": "38a726e2de39bf81a75a072a43d321c243c7d0b23920d2d3b625f74fb340ea91",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.206647376999996,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "F2",
+      "patch_sha256": "748bbf3c92716a4f07b53461cb89b2e484c1e6637094ac0ac15ab463ee4f880a",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 34.872202958,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "contract_passed": false,
+      "original_actor_and_scores_unchanged": true
+    }
+  ]
+}

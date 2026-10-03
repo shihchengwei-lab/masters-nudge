@@ -1,0 +1,40 @@
+{
+  "name": "masters-nudge",
+  "version": "0.6.0+codex.20260925224104",
+  "description": "Evidence-bounded engineering nudges before the next agent decision.",
+  "author": {
+    "name": "shihchengwei-lab",
+    "url": "https://github.com/shihchengwei-lab"
+  },
+  "homepage": "https://github.com/shihchengwei-lab/masters-nudge#readme",
+  "repository": "https://github.com/shihchengwei-lab/masters-nudge",
+  "license": "MIT",
+  "keywords": [
+    "engineering-taste",
+    "second-opinion",
+    "coding-agent",
+    "hooks",
+    "long-running-agents"
+  ],
+  "mcpServers": "./.mcp.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Masters\u2019 Nudge",
+    "shortDescription": "Quiet workflow nudges",
+    "longDescription": "Adds one read-only, workspace-grounded structural intervention before the next agent decision.",
+    "developerName": "shihchengwei-lab",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/shihchengwei-lab/masters-nudge",
+    "privacyPolicyURL": "https://github.com/shihchengwei-lab/masters-nudge#privacy",
+    "defaultPrompt": [
+      "Check whether Masters\u2019 Nudge is ready.",
+      "Let me choose a Masters\u2019 Nudge provider.",
+      "Show my recent Masters\u2019 Nudge findings."
+    ],
+    "brandColor": "#665B8E"
+  }
+}

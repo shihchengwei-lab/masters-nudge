@@ -1,5 +1,7 @@
 # Benchmark 評測規格
 
+> 封存評測文件：以下保留本版研究條件；現行工具見[SPEC](../../../SPEC.zh-TW.md)，最新保留研究與版本差異見[測試索引](../../README.zh-TW.md)。不要將當時模型、題目或提示改寫為現行預設。
+
 這份評測包把任務、驗收、品味判斷與判分程式放在一起。**先固定規格，再執行 A/B；所有交付使用同一版本。**
 
 封存版本與檔案指紋見 `manifest.json`，使用前由 `evaluate.py verify` 核對。信箱題已依官方修法與原驗收釐清重試時序，決定與來源見[契約釐清紀錄](cases/proton-mailbox-retry/contract-resolution.json)。下一輪 Actor 測試尚未開始。

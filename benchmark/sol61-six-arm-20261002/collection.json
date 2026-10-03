@@ -1,0 +1,18 @@
+{
+  "studies": {
+    "A": "sol61-ab-12case-20260930",
+    "B": "sol61-b-finalized-12case-20261001",
+    "C": "sol61-c-xhigh-direct-12case-20261001",
+    "D": "sol61-astra-provider-12case-20261001-desktop",
+    "E": "sol61-xhigh-astra-provider-12case-20261002",
+    "F": "sol61-f-xhigh-sol-provider-12case-20261002"
+  },
+  "records": 144,
+  "case_count": 12,
+  "new_actors": 0,
+  "new_judges": 0,
+  "original_sources_unchanged": 6338,
+  "evidence_zip_sha256": "9b6384a7549f6a7a372bbb6069ec9f11fa371ed5c8e5b4b0f262e6dbe81fc8f1",
+  "evidence_zip_bytes": 27367583,
+  "note": "A available harness source collected at closure; B-F sources verified against existing study snapshots."
+}

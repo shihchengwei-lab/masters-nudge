@@ -1,0 +1,19 @@
+{
+  "cases": [
+    "ansible-type-tags",
+    "clap-2297",
+    "element-sessions",
+    "fb-metaflow-stubs",
+    "flipt-segments",
+    "flipt-storage-cache",
+    "nodebb-images",
+    "openlibrary-index-state",
+    "proton-mailbox-retry",
+    "proton-untrusted-keys",
+    "regexp-404",
+    "tracing-1523"
+  ],
+  "matching_cases": 12,
+  "execution_completed": 48,
+  "actor_process_exit": 0
+}

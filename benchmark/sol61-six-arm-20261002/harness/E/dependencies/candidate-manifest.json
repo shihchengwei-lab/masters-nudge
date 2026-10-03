@@ -1,0 +1,2195 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-26T04:17:34.368777+00:00",
+  "product_commit": "8fc2fb9",
+  "selection_status": "selected_12_calibrated",
+  "primary_count": 12,
+  "reserve_count": 2,
+  "prior_task_ids_checked": [
+    "BurntSushi__ripgrep-1367",
+    "BurntSushi__ripgrep-1642",
+    "BurntSushi__ripgrep-2209",
+    "BurntSushi__ripgrep-2295",
+    "BurntSushi__ripgrep-2488",
+    "BurntSushi__ripgrep-454",
+    "anuraghazra__github-readme-stats-105",
+    "clap-rs__clap-4151",
+    "clap-rs__clap-4909",
+    "clap-rs__clap-5298",
+    "darkreader__darkreader-6747",
+    "darkreader__darkreader-7241",
+    "django__django-11815",
+    "django__django-11885",
+    "django__django-12262",
+    "django__django-12273",
+    "django__django-12774",
+    "expressjs__express-3495",
+    "expressjs__express-3870",
+    "iamkun__dayjs-556",
+    "iamkun__dayjs-569",
+    "iamkun__dayjs-589",
+    "iamkun__dayjs-668",
+    "iamkun__dayjs-873",
+    "iamkun__dayjs-973",
+    "sharkdp__bat-1276",
+    "sphinx-doc__sphinx-10673",
+    "sphinx-doc__sphinx-7748",
+    "sphinx-doc__sphinx-8548",
+    "tokio-rs__bytes-643",
+    "tokio-rs__bytes-732",
+    "tokio-rs__tokio-4789",
+    "tokio-rs__tokio-6252",
+    "tokio-rs__tokio-6742",
+    "tokio-rs__tracing-2008",
+    "tokio-rs__tracing-2883",
+    "vuejs__core-10027",
+    "vuejs__core-10218",
+    "vuejs__core-10250",
+    "vuejs__core-10325",
+    "vuejs__core-10874",
+    "vuejs__core-11515",
+    "vuejs__core-11694",
+    "vuejs__core-11761",
+    "vuejs__core-11813",
+    "vuejs__core-8381",
+    "vuejs__core-8511",
+    "vuejs__core-9213"
+  ],
+  "cases": [
+    {
+      "case_id": "clap-3420",
+      "role": "replaced_after_calibration",
+      "instance_id": "clap-rs__clap-3420",
+      "title": "預設值與明確輸入的規則判定",
+      "repo": "clap-rs/clap",
+      "language": "Rust",
+      "domain": "命令列解析",
+      "base_commit": "135b15467eda2394b017f2a7d25cda1417c0feec",
+      "source_url": "https://github.com/clap-rs/clap/pull/3420",
+      "source_family": "Multi-SWE-Bench local snapshot",
+      "source_dataset_revision": null,
+      "actor_task": "cases/clap-3420/task.md",
+      "reference_files": [
+        "src/build/app/mod.rs",
+        "src/build/arg/mod.rs",
+        "src/build/arg_group.rs",
+        "src/output/usage.rs",
+        "src/parse/arg_matcher.rs",
+        "src/parse/matches/matched_arg.rs",
+        "src/parse/validator.rs"
+      ],
+      "test_files": [
+        "tests/builder/conflicts.rs",
+        "tests/builder/require.rs"
+      ],
+      "structural_comparison": "同一個值的來源，能否一致地決定 requires、conflicts 與群組規則。",
+      "acceptance_test_mapping": "tests/builder/require.rs 的七種 default_value 規則，以及 conflicts.rs 的三種群組衝突；原有 require/conflict 行為作為回歸。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\clap-3420\\preflight.json",
+        "result_sha256": "12684630951a24782107f153a20529a42981336fa833b4104ae6abc5096155e4"
+      },
+      "calibration_reason": "優先校準；涉及多條驗證路徑，有比較資料來源與分支設計的空間。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_ceiling_risk",
+      "artifact_sha256": {
+        "task.md": "825ca9db17c51f53cced446c401adccdab5c91aed53a3ebebc3e15dde3a1b442",
+        "source.json": "628bb014911245533cadfddb8c3fee64aee3bdf160c22ad65ac6acd5c3ca20a8",
+        "test.patch": "370360108f9469035856231378f84f0b794a382ae94ae144e2e156e3f37be513",
+        "reference.patch": "159400cc81603b3e88f4e7011dbd6bbba52a972bb8dd697856c67ef87702f70e",
+        "oracle.json": "0536a804cd43ebdbf3f782b884a6a088ac43d09a6083d347742a84b878d5e155"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Cargo 可用；需固定舊版工具鏈與 feature，實跑 base／reference。"
+    },
+    {
+      "case_id": "bytes-547",
+      "role": "replaced_after_calibration",
+      "instance_id": "tokio-rs__bytes-547",
+      "title": "Bytes 轉 Vec 的所有權與切片",
+      "repo": "tokio-rs/bytes",
+      "language": "Rust",
+      "domain": "記憶體所有權",
+      "base_commit": "068ed41bc02c21fe0a0a4d8e95af8a4668276f5d",
+      "source_url": "https://github.com/tokio-rs/bytes/pull/547",
+      "source_family": "Multi-SWE-Bench local snapshot",
+      "source_dataset_revision": null,
+      "actor_task": "cases/bytes-547/task.md",
+      "reference_files": [
+        "src/bytes.rs",
+        "src/bytes_mut.rs"
+      ],
+      "test_files": [
+        "tests/test_bytes.rs",
+        "tests/test_bytes_odd_alloc.rs",
+        "tests/test_bytes_vec_alloc.rs"
+      ],
+      "structural_comparison": "靜態、共享、唯一持有和偏移切片，能否在轉移所有權時維持同一套正確關係。",
+      "acceptance_test_mapping": "test_bytes.rs、test_bytes_odd_alloc.rs、test_bytes_vec_alloc.rs 的 into_vec 測試涵蓋內容與偏移；原測試沒有直接斷言所有唯一持有路徑都避免重新配置。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\bytes-547\\preflight.json",
+        "result_sha256": "848c3e4c55b64542dca65929566c3e23e337d7be3dce64e783d2fdb2315f5d36"
+      },
+      "calibration_reason": "優先校準；內容相同仍可能掩蓋多餘配置或錯誤的所有權設計。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_taste_5",
+      "artifact_sha256": {
+        "task.md": "8ae9c492126519cbb22e7624f237ff73656b11d6b3312cb518c228d726db00d5",
+        "source.json": "4ab8ccd0c65bc37c9c97537ec50a7fbd0c69f5029674f3e169980ff2fbf2ecde",
+        "test.patch": "6cba2d78082ad8a09e015b976fbbb34e6737ea01591cdc2490af825312111d16",
+        "reference.patch": "535ce24c9b36875431609aa9f2cab88a24671573fa193f9ba1f5c5f2c9f3d250",
+        "oracle.json": "1d0ea1b9324f0ae06f36f7382f63d67714e8b57780800cff5a7eed6b5637871a"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Cargo 可用；原資料的 test-only 結果是 0 個測試，需確認是缺少新 API 的編譯失敗。校準前加入公開的唯一 Vec 配置轉移驗收，並以 reference 實跑確認。"
+    },
+    {
+      "case_id": "tracing-1983",
+      "role": "replaced_after_calibration",
+      "instance_id": "tokio-rs__tracing-1983",
+      "title": "EnvFilter 支援各 Layer 獨立過濾",
+      "repo": "tokio-rs/tracing",
+      "language": "Rust",
+      "domain": "追蹤與動態狀態",
+      "base_commit": "df9666bdeb8da3e120af15e3c86f4655cb6b29de",
+      "source_url": "https://github.com/tokio-rs/tracing/pull/1983",
+      "source_family": "Multi-SWE-Bench local snapshot",
+      "source_dataset_revision": null,
+      "actor_task": "cases/tracing-1983/task.md",
+      "reference_files": [
+        "tracing-subscriber/Cargo.toml",
+        "tracing-subscriber/src/filter/env/mod.rs"
+      ],
+      "test_files": [
+        "tracing-subscriber/tests/env_filter/main.rs",
+        "tracing-subscriber/tests/env_filter/per_layer.rs",
+        "tracing-subscriber/tests/filter.rs",
+        "tracing/tests/support/span.rs"
+      ],
+      "structural_comparison": "動態 span 狀態是否屬於對應 layer，能否避免全域過濾與局部過濾互相污染。",
+      "acceptance_test_mapping": "tracing-subscriber/tests/env_filter/per_layer.rs 的 8 項測試：level、target、span、field、directive 順序與多 filter 隔離；同目錄 main.rs 保留全域回歸。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\tracing-1983\\preflight.json",
+        "result_sha256": "ec401eb2dbf5dfcea71d453eb6608bdcf7eec927811204cfda0158160f3db375"
+      },
+      "calibration_reason": "優先校準；可比較共享語意與狀態生命週期。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_ceiling_risk",
+      "artifact_sha256": {
+        "task.md": "61ac9eade770f6a78bf6ce5f3b5d8b93ce304197cdcb0a19ffa315122f24f9b7",
+        "source.json": "19c6cc1dadbbc0ed416cfcfb28e75d7b3f7e2d149ff0cd346c738f6064c5d940",
+        "test.patch": "0a26c5a24b81702014243e5320718db70088e390d09910844885233559df8733",
+        "reference.patch": "07fdd880ca2bb41d2578d6db03dd29907d74422181ac903b66319c16a83668fc",
+        "oracle.json": "d97b5326f2cdffaf07eabffba7e4d3341356df54c9b73a6f98462631b0d91fc5"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Cargo 可用；原資料 test-only 為 0 個測試，須確認缺少 trait 實作的編譯診斷，再確認 reference 真正執行新測試。"
+    },
+    {
+      "case_id": "tokio-6618",
+      "role": "replaced_after_calibration",
+      "instance_id": "tokio-rs__tokio-6618",
+      "title": "Future 完成與取消的生命週期",
+      "repo": "tokio-rs/tokio",
+      "language": "Rust",
+      "domain": "非同步取消",
+      "base_commit": "8e15c234c60cf8132c490ccf03dd31738cfeaca8",
+      "source_url": "https://github.com/tokio-rs/tokio/pull/6618",
+      "source_family": "Multi-SWE-Bench local snapshot",
+      "source_dataset_revision": null,
+      "actor_task": "cases/tokio-6618/task.md",
+      "reference_files": [
+        "tokio-util/src/sync/cancellation_token.rs"
+      ],
+      "test_files": [
+        "tokio-util/tests/sync_cancellation_token.rs"
+      ],
+      "structural_comparison": "用完成／取消的結果表達生命週期，避免多個旗標與平行清理流程。",
+      "acceptance_test_mapping": "tokio-util/tests/sync_cancellation_token.rs::run_until_cancelled_test 測取消得 None，以及 oneshot 完成得 Some(42)。原新增測試未直接計數 drop。",
+      "preflight": "Cargo 可用；確認 rt／macros 等 feature。校準前用公開 drop 檢查對照契約；同時 ready 的勝負未指定，不能另設隱藏規則。",
+      "calibration_reason": "中等難度校準點；如果 A 能穩定完成且結構已清楚，優先以備選替換。",
+      "contract_review": "task-and-test-text-reviewed; explicit clarifications saved in actor task",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_ceiling_risk",
+      "artifact_sha256": {
+        "task.md": "0a0157a15935118fd943309c42d03a59f6df70bc3f01de572b838b679e2cba41",
+        "source.json": "03b2c6727cd8be30abc62a1ecd36bd21a45a0df65cb782128a06f06558ad6b26",
+        "test.patch": "1a16051438a18e1a75cc932295adf749b70453aa0fb77c81d3e05f082887a559",
+        "reference.patch": "6d8ba5bbc127a2beb8a113053c79e2985d168df54ac082a5166b5e3f13f8d724",
+        "oracle.json": "9fb41808c42bc81ca88071cbc11727f7f279aa5455327ca073af7e0f4333243e"
+      },
+      "initial_role": "primary",
+      "selected": false
+    },
+    {
+      "case_id": "nodebb-images",
+      "role": "primary",
+      "instance_id": "instance_NodeBB__NodeBB-8168c6c40707478f71b8af60300830fe554c778c-vf2cf3cbd463b7ad942381f1c6d077626485a1e9e",
+      "title": "刪除封面、頭像與帳號時清理檔案",
+      "repo": "NodeBB/NodeBB",
+      "language": "JavaScript",
+      "domain": "檔案與資料庫生命週期",
+      "base_commit": "ab5e2a416324ec56cea44b79067ba798f8394de1",
+      "source_url": "https://github.com/NodeBB/NodeBB/commit/8168c6c4",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/nodebb-images/task.md",
+      "reference_files": [
+        "src/groups/cover.js",
+        "src/socket.io/user/picture.js",
+        "src/socket.io/user/profile.js",
+        "src/user/delete.js",
+        "src/user/picture.js"
+      ],
+      "test_files": [
+        "test/groups.js",
+        "test/user.js"
+      ],
+      "structural_comparison": "圖片所屬權、檔案刪除與資料欄位清除，能否由一致的責任邊界處理。",
+      "acceptance_test_mapping": "test/groups.js 檢查 cover 與縮圖檔；test/user.js 檢查 cover、avatar 欄位／檔案及刪帳後歷史圖片清空。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\nodebb-images\\preflight.json",
+        "result_sha256": "56c918d7bdc1dd9192bb07230f3453cd3523aa27ac56ed35edba900274112e63"
+      },
+      "calibration_reason": "優先校準；有跨入口、檔案和資料庫的一致性設計。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "be2bdc67429744c3fc0d65332c3b334419908d82d463614e79b4df96b59dacf2",
+        "source.json": "6c5153db9dd459222361d9cd80433a79ceac3eb2461506d47d60c39d8cebf695",
+        "test.patch": "e06925e85187c01f93ad6a0aee28df14ce851775fe98c9e3c60645eb844cb409",
+        "reference.patch": "1d9a76681d156a24320aa8ae6b6287e48dbd8c28affadf343e9808b6efbfa28f",
+        "oracle.json": "a2110039ccf32b4865f762b28d89b312e0db782f2ac66dc3af01758de4459af7"
+      },
+      "initial_role": "primary",
+      "selected": true,
+      "initial_preflight_notes": "需要 NodeBB 測試資料庫、圖像套件和隔離上傳目錄；使用資料集對應 Linux 測試環境預檢。"
+    },
+    {
+      "case_id": "ansible-type-tags",
+      "role": "primary",
+      "instance_id": "instance_ansible__ansible-d33bedc48fdd933b5abd65a77c081876298e2f07-v0f01c69f1e2528b935359cfe578530722bca2c59",
+      "title": "設定型別轉換保留來源標記",
+      "repo": "ansible/ansible",
+      "language": "Python",
+      "domain": "型別與中繼資料",
+      "base_commit": "dcc5dac1846be3bf6e948a2950b93477b9193076",
+      "source_url": "https://github.com/ansible/ansible/commit/d33bedc4",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/ansible-type-tags/task.md",
+      "reference_files": [
+        "changelogs/fragments/ensure_type.yml",
+        "lib/ansible/config/base.yml",
+        "lib/ansible/config/manager.py",
+        "lib/ansible/constants.py",
+        "lib/ansible/module_utils/parsing/convert_bool.py",
+        "lib/ansible/plugins/loader.py",
+        "lib/ansible/utils/display.py"
+      ],
+      "test_files": [
+        "test/units/config/test_manager.py"
+      ],
+      "structural_comparison": "值轉換、驗證與標記傳遞，能否有單一可靠的資料流。",
+      "acceptance_test_mapping": "test/units/config/test_manager.py 的型別成功／失敗參數表、INI unquoting、Origin 標記、相同物件、tmp 不傳標記及目錄建立。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\ansible-type-tags\\preflight.json",
+        "result_sha256": "db68c6719e947cc4a18f606a980861b4ac96d6b90e0a35aa701a39d81efa4606"
+      },
+      "calibration_reason": "優先校準；跨型別處理容易長出重複分支，但題目未指定私有架構。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "4ff4ff2177c0cf040171c83a6c10392cfdd4eb28bf634ab9d762f0b94fa854e9",
+        "source.json": "d712c23d743e61db8b83533a7c1e2089be73babd5bd0ebb0eb4807fa90037da7",
+        "test.patch": "137e9111031d731aab6a98cfbeace83ba6115d9beb87a5362bb7ec96b76b63d1",
+        "reference.patch": "198766fd4c40348b31f1c75464be9780ff6d5fe0e2c248e7c30aad58de7490c6",
+        "oracle.json": "90d4a2d8fdc68613d830afc5589b53ff31cdbf9aca5e1274a4fa74e545127f1e"
+      },
+      "initial_role": "primary",
+      "selected": true,
+      "initial_preflight_notes": "需要對應 Ansible／Python 版本；路徑測試含 POSIX 語意，預檢使用來源環境。"
+    },
+    {
+      "case_id": "proton-link-cache",
+      "role": "replaced_after_calibration",
+      "instance_id": "instance_protonmail__webclients-c5a2089ca2bfe9aa1d85a664b8ad87ef843a1c9c",
+      "title": "失敗連結請求的暫存與重試",
+      "repo": "protonmail/webclients",
+      "language": "TypeScript",
+      "domain": "快取與錯誤狀態",
+      "base_commit": "83c2b47478a5224db61c6557ad326c2bbda18645",
+      "source_url": "https://github.com/protonmail/webclients/commit/c5a2089c",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/proton-link-cache/task.md",
+      "reference_files": [
+        "applications/drive/src/app/store/_links/useLink.ts"
+      ],
+      "test_files": [
+        "applications/drive/src/app/store/_links/useLink.test.ts"
+      ],
+      "structural_comparison": "成功快取、暫存失敗和重新嘗試，能否以同一個識別鍵和清楚生命週期表達。",
+      "acceptance_test_mapping": "useLink.test.ts 新測試檢查同 link 的 NOT_FOUND 只請求一次、不同 link 不受阻。原測試未完整覆蓋非快取錯誤、不同 share 與到期重試。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-link-cache\\preflight.json",
+        "result_sha256": "0296a1415dc86a790fef4caac8eb18af257c66b9b2ddef3b14704c4f0ccb36d8"
+      },
+      "calibration_reason": "優先校準；小 patch 可觀察狀態與識別鍵設計，不能只用新增的單一測試判完整契約。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_taste_5",
+      "artifact_sha256": {
+        "task.md": "b5f131985fc6a5d4fc5b1e833cf13372d8e3730d2b17ff55f3fa423bd25c1056",
+        "source.json": "2d00f7bbaf3b540b21796774098d5a2d32e2338d93c4ee7829082305211eaedb",
+        "test.patch": "e85bef3c8e097152cc52e4bbf4634ddd89546f85f91b9e9db31d8a6f64c89b56",
+        "reference.patch": "bc9ecabcb986f6652c87eecce7a554bee51fbf013672fa6ab24b956f57680a9a",
+        "oracle.json": "c0edef149b44dc65b343a0f8f447612006f6570c13da5c362cbb4368fec1bf70"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Jest／React hooks 環境。校準前補公開的錯誤分類、share 隔離和 fake-timer 到期測試；契約不新增固定秒數。"
+    },
+    {
+      "case_id": "openlibrary-language",
+      "role": "excluded_material",
+      "instance_id": "instance_internetarchive__openlibrary-6e889f4a733c9f8ce9a9bd2ec6a934413adcedb9-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
+      "title": "語言名稱解析與匯入邊界",
+      "repo": "internetarchive/openlibrary",
+      "language": "Python",
+      "domain": "國際化與資料匯入",
+      "base_commit": "9a9204b43f9ab94601e8664340eb1dd0fca33517",
+      "source_url": "https://github.com/internetarchive/openlibrary/commit/6e889f4a",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/openlibrary-language/task.md",
+      "reference_files": [
+        "openlibrary/plugins/importapi/code.py",
+        "openlibrary/plugins/upstream/utils.py"
+      ],
+      "test_files": [
+        "openlibrary/catalog/add_book/tests/conftest.py",
+        "openlibrary/plugins/importapi/tests/test_code.py",
+        "openlibrary/plugins/upstream/tests/test_utils.py"
+      ],
+      "structural_comparison": "名稱／翻譯／代碼是否共用一致判定，模糊匹配能否保持明確狀態。",
+      "acceptance_test_mapping": "upstream/tests/test_utils.py 檢查大小寫、重音、翻譯、無匹配和多匹配；importapi/tests/test_code.py 檢查警告、省略欄位、完整 record 與短書頁數。",
+      "preflight": "使用 mock_site 的 Python 測試；固定 web.py／infogami 及來源 fixture。",
+      "calibration_reason": "優先校準；可比較邊界解析、去重與匯入的責任分配。",
+      "contract_review": "task-and-test-text-reviewed; explicit clarifications saved in actor task",
+      "execution_status": "A1_complete",
+      "calibration_status": "excluded_public_contract_conflict",
+      "artifact_sha256": {
+        "task.md": "b7e5de84eac071b55186a46adc5bf6c29e97a86a1b6dcbbef789f585a0070dc4",
+        "source.json": "b75415b3977dfd1279080f55af224bc14b16605d04d3f42e95e773155bdd8c50",
+        "test.patch": "a25c39cb12a4b0929f04e50bdc3a01a74aefd1d5ec14c26676f9ad19e1066ae6",
+        "reference.patch": "5815fd420d190e889db9325646e307b005419326aa82b593d72fbaecd3979a0e",
+        "oracle.json": "31e999a8220da79ff2e3d2b4c17516f97c96df5e3ef5d4bbb417b4e814bb8b6e"
+      },
+      "initial_role": "primary",
+      "selected": false
+    },
+    {
+      "case_id": "element-sessions",
+      "role": "primary",
+      "instance_id": "instance_element-hq__element-web-772df3021201d9c73835a626df8dcb6334ad9a3e-vnan",
+      "title": "多裝置選取與批次登出",
+      "repo": "element-hq/element-web",
+      "language": "TypeScript",
+      "domain": "互動狀態與批次操作",
+      "base_commit": "7a33818bd7ec89c21054691afcb6db2fb2631e14",
+      "source_url": "https://github.com/element-hq/element-web/commit/772df302",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/element-sessions/task.md",
+      "reference_files": [
+        "res/css/components/views/settings/devices/_FilteredDeviceList.pcss",
+        "res/css/components/views/settings/devices/_FilteredDeviceListHeader.pcss",
+        "res/css/views/elements/_AccessibleButton.pcss",
+        "src/components/views/elements/AccessibleButton.tsx",
+        "src/components/views/settings/devices/DeviceTile.tsx",
+        "src/components/views/settings/devices/FilteredDeviceList.tsx",
+        "src/components/views/settings/devices/SelectableDeviceTile.tsx",
+        "src/components/views/settings/tabs/user/SessionManagerTab.tsx",
+        "src/i18n/strings/en_EN.json"
+      ],
+      "test_files": [
+        "test/components/views/settings/DevicesPanel-test.tsx",
+        "test/components/views/settings/devices/FilteredDeviceList-test.tsx",
+        "test/components/views/settings/devices/SelectableDeviceTile-test.tsx",
+        "test/components/views/settings/tabs/user/SessionManagerTab-test.tsx"
+      ],
+      "structural_comparison": "選取、篩選、操作中與認證取消，能否有單一狀態來源。",
+      "acceptance_test_mapping": "DevicesPanel、FilteredDeviceList、SelectableDeviceTile、SessionManagerTab 測試；新測試檢查 checkbox、數量文字、批次 IDs、取消與篩選清空。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\element-sessions\\preflight.json",
+        "result_sha256": "dc03b18e2cc757c83fdebf1db35d045bc584faa9df92877e424aeac8e85a33a2"
+      },
+      "calibration_reason": "優先校準；多入口與非同步流程能區分局部修補與狀態設計。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "62400375e074f051501c0608aed510c2ceff2f3f428ba1aa544d0a4943621960",
+        "source.json": "404d0ed8a7f18fb59c97d4bd844c3f4cf18448a9ec13bd076057d55974f80534",
+        "test.patch": "747b8b0d93d92233f065a45223c669813f95ece58840f62cbe8b3fdcc46ac3eb",
+        "reference.patch": "a77a630d18ea52c3275dfc7eea0ef19923f21300b9f907a24ea45c96ec9c0df1",
+        "oracle.json": "2c02fae7c0b3d8dc2714569813255491669e7d43bd4f137972bad0c27cf8afaa"
+      },
+      "initial_role": "primary",
+      "selected": true,
+      "initial_preflight_notes": "需要指定 Element／Jest 版本與 Matrix mocks；測試 ID 和文字已在任務完整揭露。"
+    },
+    {
+      "case_id": "proton-totp",
+      "role": "replaced_after_calibration",
+      "instance_id": "instance_protonmail__webclients-08bb09914d0d37b0cd6376d4cab5b77728a43e7b",
+      "title": "驗證碼輸入、貼上與焦點狀態",
+      "repo": "protonmail/webclients",
+      "language": "TypeScript",
+      "domain": "受控輸入與事件",
+      "base_commit": "cc7976723b05683d80720fc9a352445e5dbb4c85",
+      "source_url": "https://github.com/protonmail/webclients/commit/08bb0991",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/proton-totp/task.md",
+      "reference_files": [
+        "applications/storybook/src/stories/components/TotpInput.mdx",
+        "applications/storybook/src/stories/components/TotpInput.stories.tsx",
+        "packages/components/components/v2/input/TotpInput.tsx",
+        "packages/components/containers/account/totp/TotpInputs.tsx"
+      ],
+      "test_files": [
+        "packages/components/components/v2/input/TotpInput.test.tsx"
+      ],
+      "structural_comparison": "字串位置與欄位位置是否一一對應，事件是否只沿一條路徑更新。",
+      "acceptance_test_mapping": "TotpInput.test.tsx 12 個 it 案例，覆蓋 display、invalid、change、input、paste、backspace、selection 與 focus；所有特殊事件行為已在 requirements 明列。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-totp\\preflight.json",
+        "result_sha256": "98d586e9e5deed53aa3908efa2d07283b947aee2085e6f025c5306a966de83e5"
+      },
+      "calibration_reason": "優先校準；有資料表示與多種事件一致性的結構空間。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_taste_5",
+      "artifact_sha256": {
+        "task.md": "66568668b08802413464602fa8a6525c5905194a67c9ade8f2897a04195a5d74",
+        "source.json": "f9999b1ac8ecf06404180b550ca6502602c4c8f87e50a3d7b754b0cb8e3c093e",
+        "test.patch": "d8a660eb0192c8d927ed86541aeb3a85ba986a89c0c34f6a3444995bcb68c293",
+        "reference.patch": "80d1cc7198eb3c399fa00ca40c08e9ea1ee038aa5528a32951a5573c4231e328",
+        "oracle.json": "860b282b1514b2dd98e6980cc473b527361948e3da6eb11782fe2c8931ddcb3c"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Jest／jsdom；公開 existing TotpInput 路徑與 props，保留一個字串位置對應一個欄位的要求。"
+    },
+    {
+      "case_id": "flipt-segments",
+      "role": "primary",
+      "instance_id": "instance_flipt-io__flipt-524f277313606f8cd29b299617d6565c01642e15",
+      "title": "單一／多重分群的匯入、匯出與保存",
+      "repo": "flipt-io/flipt",
+      "language": "Go",
+      "domain": "序列化與儲存邊界",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "source_url": "https://github.com/flipt-io/flipt/commit/524f2773",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/flipt-segments/task.md",
+      "reference_files": [
+        "build/internal/cmd/generate/main.go",
+        "internal/ext/common.go",
+        "internal/ext/exporter.go",
+        "internal/ext/importer.go",
+        "internal/storage/fs/snapshot.go",
+        "internal/storage/sql/common/rollout.go",
+        "internal/storage/sql/common/rule.go"
+      ],
+      "test_files": [
+        "internal/ext/exporter_test.go",
+        "internal/ext/importer_test.go",
+        "internal/storage/sql/rollout_test.go",
+        "internal/storage/sql/rule_test.go",
+        "build/testing/integration/readonly/testdata/default.yaml",
+        "build/testing/integration/readonly/testdata/production.yaml",
+        "internal/ext/testdata/export.yml",
+        "internal/ext/testdata/import_rule_multiple_segments.yml"
+      ],
+      "structural_comparison": "字串與複合結構能否在邊界正規化，避免每個讀寫入口重複判斷。",
+      "acceptance_test_mapping": "internal/ext 的 import/export fixture，以及 storage/sql 的 rule／rollout operator 測試。單 key 一律 OR、多 key 保留 AND/OR，rollout YAML 維持原形。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-segments\\preflight.json",
+        "result_sha256": "48347df5498d86c860b5d90e600db689929ac75cfd5b2215014c2f5fea7d31b3"
+      },
+      "calibration_reason": "優先校準；跨匯入、匯出、持久化，有明確外部行為而不限定私有型別。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "a3cec9366cef19371ff820b40e47ebb9640b6c24b93a2f9e29635d0b8fe9b9d1",
+        "source.json": "2e11d30682343a99f458862153358482c404f434eaaf1b3abc0aec7d49d599a8",
+        "test.patch": "d0eb516405300e254616724a29745e850b17d89281bd4317ba434c9f2108b9a9",
+        "reference.patch": "446191e2babd0e7e8a3d77bec2d18fc96a83a9c07f0c71563a955859835b8d33",
+        "oracle.json": "80014d73a97291a4d3b074fff460de4f3e24646c574b43fb6ea34586101bdabd"
+      },
+      "initial_role": "primary",
+      "selected": true,
+      "initial_preflight_notes": "本機 PATH 尚未找到 Go；來源有容器設定。正式執行前確認 Go／SQL 測試環境與 readonly snapshot 測試。"
+    },
+    {
+      "case_id": "openlibrary-search",
+      "role": "replaced_after_calibration",
+      "instance_id": "instance_internetarchive__openlibrary-a48fd6ba9482c527602bc081491d9e8ae6e8226c-vfa6ff903cb27f336e17654595dd900fa943dcd91",
+      "title": "搜尋結果直接解析與穩定返回格式",
+      "repo": "internetarchive/openlibrary",
+      "language": "Python",
+      "domain": "外部資料與消費端介面",
+      "base_commit": "5e9872c8e19487fbeac11873549275184ce9b817",
+      "source_url": "https://github.com/internetarchive/openlibrary/commit/a48fd6ba",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/openlibrary-search/task.md",
+      "reference_files": [
+        "openlibrary/plugins/worksearch/code.py"
+      ],
+      "test_files": [
+        "openlibrary/plugins/worksearch/tests/test_worksearch.py"
+      ],
+      "structural_comparison": "搜尋服務資料到 UI 結果是否直接轉換，缺值是否有一致表示。",
+      "acceptance_test_mapping": "worksearch/tests/test_worksearch.py::test_process_facet、test_get_doc；後者比較完整 mapping，因此完整 key 清單已加入 Actor 題目。",
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\openlibrary-search\\preflight.json",
+        "result_sha256": "69172b366b2cc864abf26e1677fae1d5e1ba715bfa0ce3703176eef94e3fbf52"
+      },
+      "calibration_reason": "中等至高難度待校準；可比較是否保留多餘的 XML／中間轉換與空值分支。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_ceiling_risk",
+      "artifact_sha256": {
+        "task.md": "f0c22dcf83d060f7eb6a3c7a6568124591ed417a1dc144312a2abc7cd9482d1f",
+        "source.json": "3877ea1411db702d4cbefc5fae626065449d3e034a3102370b8134f8e9055766",
+        "test.patch": "22476bc9f072120f054f672934d8b5b5377209fb6364a4f2e85e3c83206155e9",
+        "reference.patch": "e2ddecdfe32fca37903e1226f8b88a5b1fcc4ff03b944e78d4a47d23808d7caf",
+        "oracle.json": "346356cc84432796248a300045f73fc81d073dcd511b6c5a793f2434557b5aff"
+      },
+      "initial_role": "primary",
+      "selected": false,
+      "initial_preflight_notes": "Python／web.py／infogami；必須跑原 worksearch 回歸與完整返回格式。"
+    },
+    {
+      "case_id": "clap-4523",
+      "role": "reserve",
+      "instance_id": "clap-rs__clap-4523",
+      "title": "requires 不被 conflicts 旁路",
+      "repo": "clap-rs/clap",
+      "language": "Rust",
+      "domain": "規則組合",
+      "base_commit": "ad4726378b2ee0320bbab5569acd8869a402e9fd",
+      "source_url": "https://github.com/clap-rs/clap/pull/4523",
+      "source_family": "Multi-SWE-Bench local snapshot",
+      "source_dataset_revision": null,
+      "actor_task": "cases/clap-4523/task.md",
+      "reference_files": [
+        "src/parser/validator.rs"
+      ],
+      "test_files": [
+        "tests/builder/require.rs"
+      ],
+      "structural_comparison": "必要條件和衝突的關係，能否一致判斷而不在呼叫端補一條衝突。",
+      "acceptance_test_mapping": "tests/builder/require.rs::option_required_and_conflicts_with_other_option，含明確的 MissingRequiredArgument 類型。",
+      "preflight": "Cargo 可用；固定版本後跑 base／reference。",
+      "calibration_reason": "同語言備選；修法可能偏小，須由 A 判斷是否天花板。",
+      "contract_review": "task-and-test-text-reviewed; explicit clarifications saved in actor task",
+      "execution_status": "not_run",
+      "calibration_status": "not_run",
+      "artifact_sha256": {
+        "task.md": "d46f59e0cb606ff43b765b852ad7ec84b53cac5775b2c4fb0bd4e1fd7cdbc4cc",
+        "source.json": "fbc81ecafc4b9eac852ebc800fcaec7484e114bf24d361153708254e3e3c5596",
+        "test.patch": "517f8b65afedb0d163cdd4a67524fc02cd873da1a8b4ae5373034c40e4db2e67",
+        "reference.patch": "b4a5699c64ab5c67c4d6e9e30d436c4a44b3c4f4fc8bdcebadbe7a3c4710574f",
+        "oracle.json": "d3e0ee7bbc5f6881bc5571c7ecd718c3425c540a1018ee14f82b95f13748f343"
+      },
+      "initial_role": "reserve",
+      "selected": false
+    },
+    {
+      "case_id": "qutebrowser-process",
+      "role": "reserve",
+      "instance_id": "instance_qutebrowser__qutebrowser-c09e1439f145c66ee3af574386e277dd2388d094-v2ef375ac784985212b1805e1d0431dc8f1b3c171",
+      "title": "程序結束後的保留與資源清理",
+      "repo": "qutebrowser/qutebrowser",
+      "language": "Python",
+      "domain": "程序生命週期",
+      "base_commit": "ea60bcfc2ae1e018559031a4c8a26b29caec1c59",
+      "source_url": "https://github.com/qutebrowser/qutebrowser/commit/c09e1439",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/qutebrowser-process/task.md",
+      "reference_files": [
+        "doc/help/commands.asciidoc",
+        "qutebrowser/browser/qutescheme.py",
+        "qutebrowser/completion/models/miscmodels.py",
+        "qutebrowser/misc/guiprocess.py"
+      ],
+      "test_files": [
+        "tests/unit/completion/test_models.py",
+        "tests/unit/misc/test_guiprocess.py"
+      ],
+      "structural_comparison": "已清理、未知和執行中狀態的區別，以及顯示與資源所有權。",
+      "acceptance_test_mapping": "completion/test_models.py 過濾 None；misc/test_guiprocess.py 測成功／失敗 timer、清理、命令與頁面錯誤。",
+      "preflight": "需要 PyQt5 與可工作的 Qt 測試環境；來源明定 registry 和 timer，因此結構自由度較少，列備選。",
+      "calibration_reason": "環境成本較高的備選；不得把 GUI 初始化失敗算 Actor 未完成。",
+      "contract_review": "task-and-test-text-reviewed; explicit clarifications saved in actor task",
+      "execution_status": "not_run",
+      "calibration_status": "not_run",
+      "artifact_sha256": {
+        "task.md": "fcad07842d5e18b0527f64e495c47ae989f28f2f7a6a2e9bee24d6f65adaff5d",
+        "source.json": "2376aaecda1b8f809fad517ed3e7012b70c1024e5fd0048209aa60f9077689db",
+        "test.patch": "fb22c8030c340594f9b3554af4f64ab438dd7cdcc57534222d8e97c18a7745d8",
+        "reference.patch": "9a5adbba1dddb3cf7ea7349714d30cf2814c1ffb1757f27b88385489e1af47dd",
+        "oracle.json": "b1005dc0dedc099296605a1e5678c01db760e35dab28bb86869fa472de080012"
+      },
+      "initial_role": "reserve",
+      "selected": false
+    },
+    {
+      "case_id": "vuls-kernel-scope",
+      "role": "excluded_material",
+      "instance_id": "instance_future-architect__vuls-e1fab805afcfc92a2a615371d0ec1e667503c254-v264a82e2f4818e30f5a25e4da53b27ba119f62b5",
+      "title": "依執行中核心保留套件群組",
+      "repo": "future-architect/vuls",
+      "language": "Go",
+      "domain": "套件群組與漏洞資料流",
+      "base_commit": "5af1a227339e46c7abf3f2815e4c636a0c01098e",
+      "source_url": "https://github.com/future-architect/vuls/commit/e1fab805afcfc92a2a615371d0ec1e667503c254",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/vuls-kernel-scope/task.md",
+      "reference_files": [
+        "gost/debian.go",
+        "gost/ubuntu.go",
+        "gost/util.go",
+        "models/packages.go",
+        "scanner/debian.go"
+      ],
+      "test_files": [
+        "gost/debian_test.go",
+        "gost/ubuntu_test.go",
+        "models/packages_test.go",
+        "scanner/debian_test.go"
+      ],
+      "structural_comparison": "來源名稱與版本如何界定同一群組；在解析邊界保留正確資料，再由下游統一產生狀態。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "preflight_only",
+      "calibration_status": "excluded_public_contract_conflict",
+      "artifact_sha256": {
+        "task.md": "1032fc90fdf3db3d7793c3e065451a8ffe03ad5e0f52d09b493d8be1f3ba1007",
+        "source.json": "2f9c3d0ea460713abe0539072ea2a02125eb0fae02282f83cfb0e2b15c3abfc8",
+        "reference.patch": "1befa6077926e1e2c0350ac698b0d90d6ced0ef1101005ab232676877f26a347",
+        "test.patch": "f5ef64b7377e38e69f7b24aa018ef9a153cd13ff29c0a73224b15bc64a6d2a23",
+        "oracle.json": "8391f9c59acf863dc566a2e40a2234c1c6a48065cc3fcf710449ed4abef69ec5"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "openlibrary-index-state",
+      "role": "primary",
+      "instance_id": "instance_internetarchive__openlibrary-322d7a46cdc965bfabbf9500e98fde098c9d95b2-v13642507b4fc1f8d234172bf8129942da2c2ca26",
+      "title": "依記錄類型產生與彙整搜尋索引更新",
+      "repo": "internetarchive/openlibrary",
+      "language": "Python",
+      "domain": "非同步索引與更新狀態",
+      "base_commit": "0d5acead6fdfb5e41a1d29a076a6e89ad1a39027",
+      "source_url": "https://github.com/internetarchive/openlibrary/commit/322d7a46cdc965bfabbf9500e98fde098c9d95b2",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/openlibrary-index-state/task.md",
+      "reference_files": [
+        "openlibrary/solr/update_work.py",
+        "scripts/solr_updater.py"
+      ],
+      "test_files": [
+        "openlibrary/tests/solr/test_update_work.py"
+      ],
+      "structural_comparison": "記錄解析、刪除與重新導向，如何匯入同一份可合併更新狀態，避免不同類型各自維護流程。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "928856e278fd2db168d6aa3b2a0336c7dc5db5e81f0813dbda4ebffe0eed1a75",
+        "source.json": "ba3bc8ca9531dcf37d1608a7ca3e04566912027c45a6f237644b178678293efb",
+        "reference.patch": "8f6eb8347a292a92947954b385b66e1922fab0dda9763d2f600dea6e138becdd",
+        "test.patch": "dadd0c7e6e11e5994b49112f5aabbd35ac0b2bc9ad446cd09e87e036df610cd5",
+        "oracle.json": "2131ff3f221110efd7264540d90412fc991156819f16733927ca745ddb371cd2"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\openlibrary-index-state\\preflight.json",
+        "result_sha256": "a55d91ed7bbaf1e11ac25151ba769c52dbefa07a8d90d88248e28db5a13ad624"
+      }
+    },
+    {
+      "case_id": "ansible-nxos-defaults",
+      "role": "reviewed_not_selected",
+      "instance_id": "instance_ansible__ansible-d72025be751c894673ba85caa063d835a0ad3a8c-v390e508d27db7a51eece36bb6d9698b63a5b638a",
+      "title": "介面模式與管理狀態的預設值及冪等性",
+      "repo": "ansible/ansible",
+      "language": "Python",
+      "domain": "裝置預設與狀態轉移",
+      "base_commit": "ea164fdde79a3e624c28f90c74f57f06360d2333",
+      "source_url": "https://github.com/ansible/ansible/commit/d72025be751c894673ba85caa063d835a0ad3a8c",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/ansible-nxos-defaults/task.md",
+      "reference_files": [
+        "lib/ansible/module_utils/network/nxos/argspec/interfaces/interfaces.py",
+        "lib/ansible/module_utils/network/nxos/config/interfaces/interfaces.py",
+        "lib/ansible/module_utils/network/nxos/facts/interfaces/interfaces.py",
+        "lib/ansible/module_utils/network/nxos/nxos.py",
+        "lib/ansible/modules/network/nxos/nxos_interfaces.py"
+      ],
+      "test_files": [
+        "test/integration/targets/nxos_interfaces/tasks/main.yaml",
+        "test/integration/targets/nxos_interfaces/tests/cli/deleted.yaml",
+        "test/integration/targets/nxos_interfaces/tests/cli/merged.yaml",
+        "test/integration/targets/nxos_interfaces/tests/cli/overridden.yaml",
+        "test/integration/targets/nxos_interfaces/tests/cli/replaced.yaml",
+        "test/units/modules/network/nxos/test_nxos_interfaces.py"
+      ],
+      "structural_comparison": "裝置預設、明確設定與變更後模式如何共同決定命令，避免不同操作各自重算同一政策。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "not_run",
+      "calibration_status": "not_executed",
+      "artifact_sha256": {
+        "task.md": "8fbc9f1b7a6ba855e92fe087ba73908fb8601ee0faa79312c1733775e0782fb5",
+        "source.json": "145551d8b8de5e49d87bc7311684273a712dcc0e0f2d147b07fef9a41e3e5ade",
+        "reference.patch": "5f4dbba6306dc6ce56ec5c1ab1b4d9ccf1379aa760436ce6d56ff04e7a842bf5",
+        "test.patch": "eccae77eedb07ddeb163672c2d687275588d9847b4031f67b23661b65dd434b3",
+        "oracle.json": "9f1a569407841e61bf86127ac43121bee4c15b745dbf621e3d7b790a9314887e"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "tutanota-session-keys",
+      "role": "replaced_after_calibration",
+      "instance_id": "instance_tutao__tutanota-f373ac3808deefce8183dad8d16729839cc330c1-v2939aa9f4356f0dc9f523ee5ce19d09e08ab979b",
+      "title": "郵件明細載入時的金鑰傳遞與隔離",
+      "repo": "tutao/tutanota",
+      "language": "TypeScript",
+      "domain": "跨層資料傳遞與實體隔離",
+      "base_commit": "a834bd49d148888778075a3a48d3b92d832c4eed",
+      "source_url": "https://github.com/tutao/tutanota/commit/f373ac3808deefce8183dad8d16729839cc330c1",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/tutanota-session-keys/task.md",
+      "reference_files": [
+        "doc/HACKING.md",
+        "src/api/common/EntityClient.ts",
+        "src/api/worker/crypto/CryptoFacade.ts",
+        "src/api/worker/facades/lazy/MailFacade.ts",
+        "src/api/worker/rest/DefaultEntityRestCache.ts",
+        "src/api/worker/rest/EntityRestClient.ts",
+        "src/api/worker/search/MailIndexer.ts",
+        "src/mail/model/InboxRuleHandler.ts",
+        "src/mail/model/MailUtils.ts"
+      ],
+      "test_files": [
+        "packages/otest/lib/otest.ts",
+        "test/tests/api/worker/crypto/CryptoFacadeTest.ts",
+        "test/tests/api/worker/facades/MailFacadeTest.ts",
+        "test/tests/api/worker/rest/EntityRestCacheTest.ts",
+        "test/tests/api/worker/rest/EntityRestClientTest.ts",
+        "test/tests/api/worker/search/MailIndexerTest.ts",
+        "test/tests/mail/InboxRuleHandlerTest.ts"
+      ],
+      "structural_comparison": "單筆與批次載入如何攜帶各實體自己的金鑰，讓解密不依賴先前處理過的其他實體。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_replaced_for_taste_5",
+      "artifact_sha256": {
+        "task.md": "1b3e9308616c44e1a675159cc32ca8f7fe437d53692461d8d50d73d62be653e5",
+        "source.json": "b3cb00ec5c106803463a5dec903041a6a0e788b0f02268157642da29daa9ed60",
+        "reference.patch": "64a3615492ef1e0e808572cb4bc82e577bbd0eef2067beabf67b1d1d70dea444",
+        "test.patch": "0cd372e3f0b75f0308b92b3b3822c56e1ad9f4196d868dec53b3d093d0da7133",
+        "oracle.json": "ec26163373b60ece656855032e1e71760d05288c81afa7b91e23db6ae6163e9c"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\tutanota-session-keys\\preflight.json",
+        "result_sha256": "81d9ab3a1fb300a03cecde4837e9b7e207fa8e26d904f29fcf90afa4d0e4892d"
+      }
+    },
+    {
+      "case_id": "teleport-event-dates",
+      "role": "calibrated_not_selected",
+      "instance_id": "instance_gravitational__teleport-1316e6728a3ee2fc124e2ea0cc6a02044c87a144-v626ec2a48416b10a88641359a169d99e935ff037",
+      "title": "稽核事件日期索引與歷史資料遷移",
+      "repo": "gravitational/teleport",
+      "language": "Go",
+      "domain": "事件儲存、索引與遷移",
+      "base_commit": "2f51af0e04d6022b1d6475c5637980f64b113658",
+      "source_url": "https://github.com/gravitational/teleport/commit/1316e6728a3ee2fc124e2ea0cc6a02044c87a144",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/teleport-event-dates/task.md",
+      "reference_files": [
+        "CHANGELOG.md",
+        "lib/events/dynamoevents/dynamoevents.go",
+        "rfd/0024-dynamo-event-overflow.md"
+      ],
+      "test_files": [
+        "lib/events/dynamoevents/dynamoevents_test.go"
+      ],
+      "structural_comparison": "新增事件與歷史事件如何共用日期事實，讓查詢與索引遷移維持一致。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "task.md": "3625ed1f363141fe68a4022624c2ab6fd3109661f2ae4c2e801bc4a4270b22d5",
+        "source.json": "31e0970b0a48e3eabe39ac18ad156516aacae46d1fe2788f7b74f13dc7562c11",
+        "reference.patch": "1afac7497e46ffe86733e14c8c801c807f39516e2c606da2caceb06486b64244",
+        "test.patch": "c93c43838f955801e29f7c0be1903bcd1c764d8887f0fb6eac9e78892b60942b",
+        "oracle.json": "09048205df8ed0b0f16a8cb0ac97821c1d5ee2b12cdc0af65ba550afb05c6aac"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "teleport-token-count",
+      "role": "calibrated_not_selected",
+      "instance_id": "instance_gravitational__teleport-2b15263e49da5625922581569834eec4838a9257-vee9b09fb20c43af7e520f57e9239bbcf46b7113d",
+      "title": "跨模型呼叫與串流的用量彙整",
+      "repo": "gravitational/teleport",
+      "language": "Go",
+      "domain": "串流生命週期與資料彙整",
+      "base_commit": "189d41a956ebf5b90b6cf5829d60be46c1df992e",
+      "source_url": "https://github.com/gravitational/teleport/commit/2b15263e49da5625922581569834eec4838a9257",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/teleport-token-count/task.md",
+      "reference_files": [
+        "lib/ai/chat.go",
+        "lib/ai/model/agent.go",
+        "lib/ai/model/messages.go",
+        "lib/ai/model/tokencount.go",
+        "lib/ai/model/tool.go",
+        "lib/assist/assist.go",
+        "lib/web/assistant.go"
+      ],
+      "test_files": [
+        "lib/ai/chat_test.go",
+        "lib/ai/model/tokencount_test.go"
+      ],
+      "structural_comparison": "各次模型呼叫的提示與輸出用量如何單向彙整，避免短路與串流路徑遺漏。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "task.md": "c3dd8a9625becf569aab7e419687d26903adfd66fc411a0c817872ae26649fcc",
+        "source.json": "38c0b1bb5960ee10f456a636b27490f7094f57c9a16f0cc31897af42749ab08f",
+        "reference.patch": "c39b52432677dccb027dca4e548d4ef51d1c25a25425f1e92f3c60580f0d6947",
+        "test.patch": "0b40b83b97f8bebf7598b87d253e3901aa112a9ebf2b501b2ca11bc8e2db3df9",
+        "oracle.json": "d8adcaf6b26cf0297e3ec40444b84548403ccb0e0db003fe9aab2a169872ff73"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "proton-untrusted-keys",
+      "role": "primary",
+      "instance_id": "instance_protonmail__webclients-715dbd4e6999499cd2a576a532d8214f75189116",
+      "title": "未釘選金鑰的加密偏好",
+      "repo": "protonmail/webclients",
+      "language": "TypeScript",
+      "domain": "偏好模型、序列化與介面狀態",
+      "base_commit": "aba05b2f451b2f8765207846b11dc67190cb9930",
+      "source_url": "https://github.com/protonmail/webclients/commit/715dbd4e6999499cd2a576a532d8214f75189116",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/proton-untrusted-keys/task.md",
+      "reference_files": [
+        "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx",
+        "packages/components/containers/contacts/email/ContactPGPSettings.tsx",
+        "packages/shared/lib/contacts/constants.ts",
+        "packages/shared/lib/contacts/keyProperties.ts",
+        "packages/shared/lib/contacts/vcard.ts",
+        "packages/shared/lib/interfaces/EncryptionPreferences.ts",
+        "packages/shared/lib/interfaces/contacts/VCard.ts",
+        "packages/shared/lib/keys/publicKeys.ts",
+        "packages/shared/lib/mail/encryptionPreferences.ts"
+      ],
+      "test_files": [
+        "packages/components/containers/contacts/email/ContactEmailSettingsModal.test.tsx",
+        "packages/shared/test/keys/publicKeys.spec.ts",
+        "packages/shared/test/mail/encryptionPreferences.spec.ts"
+      ],
+      "structural_comparison": "金鑰來源如何決定加密偏好，讓顯示、儲存和郵件送出使用相同事實。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "c7abb9e735101879a3cb5209ba401077a0a431873904aa4fcfbc842e5a97000b",
+        "source.json": "0bbc9d8613ebb0769c760abdfd1225ca27062a02efa4a0b280e8ed079dc21aae",
+        "reference.patch": "052101993863b04cd112a59802e0b85ea76820a3fa7dfbd41265f991ee07f601",
+        "test.patch": "d3a79b7c6ddaa80bbcf35c8cdbcf9943df0be398fe08724173ff5e7cab7e9d11",
+        "oracle.json": "6404c7e52a90a840e6544e20119371e3e13055775637ea8aeab183619aca373b"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-untrusted-keys\\preflight.json",
+        "result_sha256": "7e0e7ad09759e4aeb69679e1070549225a0ae769eab3ea035c284f7a9f59dbd4"
+      }
+    },
+    {
+      "case_id": "ansible-mount-facts",
+      "role": "excluded_material",
+      "instance_id": "instance_ansible__ansible-40ade1f84b8bb10a63576b0ac320c13f57c87d34-v6382ea168a93d80a64aab1fbd8c4f02dc5ada5bf",
+      "title": "跨平台掛載來源的解析與整合",
+      "repo": "ansible/ansible",
+      "language": "Python",
+      "domain": "多來源解析、去重與逾時",
+      "base_commit": "9ab63986ad528a6ad5bf4c59fe104d5106d6ef9b",
+      "source_url": "https://github.com/ansible/ansible/commit/40ade1f84b8bb10a63576b0ac320c13f57c87d34",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/ansible-mount-facts/task.md",
+      "reference_files": [
+        "changelogs/fragments/83508_mount_facts.yml",
+        "lib/ansible/modules/mount_facts.py"
+      ],
+      "test_files": [
+        "test/integration/targets/mount_facts/aliases",
+        "test/integration/targets/mount_facts/meta/main.yml",
+        "test/integration/targets/mount_facts/tasks/main.yml",
+        "test/units/modules/mount_facts_data.py",
+        "test/units/modules/test_mount_facts.py"
+      ],
+      "structural_comparison": "不同來源如何在解析邊界歸一，讓篩選、去重與逾時不互相干擾。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "A1_complete",
+      "calibration_status": "excluded_public_contract_conflict",
+      "artifact_sha256": {
+        "task.md": "a254a429aedd23b82fa00f70d35b6f1ea3f1112597ae69fbba6306f815f6998b",
+        "source.json": "3bacf2fac40da5ad9121894e1baa360fedb02348d6d79f8331fe5097699a7d08",
+        "reference.patch": "5e3986cb7764e2777648eac239fb7ce27498b1ff70df090f9ae62ef33d00e4b7",
+        "test.patch": "c2adaed9ada7f0a5d16dab15c58970612abccaf8f9a21010cca3d6b2a076d615",
+        "oracle.json": "096c115de2cdba266669ae05802526539a1ab3bab8c635664a29e52f4f674140"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "tokio-5179",
+      "role": "calibrated_not_selected",
+      "instance_id": "tokio-rs__tokio-5179",
+      "title": "執行緒結束時的本地任務清理",
+      "repo": "tokio-rs/tokio",
+      "language": "Rust",
+      "domain": "執行緒生命週期與資源所有權",
+      "base_commit": "9e3fb1673a73046363af64c09a040eeed67f2a4c",
+      "source_url": "https://github.com/tokio-rs/tokio/issues/5162",
+      "source_family": "Multi-SWE-bench full",
+      "source_dataset_revision": "56ff018c04a38e27ada1e9d0a6d5839a51f88f0d",
+      "actor_task": "cases/tokio-5179/task.md",
+      "reference_files": [
+        "tokio/src/runtime/context.rs",
+        "tokio/src/runtime/coop.rs",
+        "tokio/src/task/local.rs",
+        "tokio/src/util/mod.rs",
+        "tokio/src/util/vec_deque_cell.rs"
+      ],
+      "test_files": [
+        "tokio/tests/task_local_set.rs"
+      ],
+      "structural_comparison": "本地任務狀態的生命週期如何與 LocalSet 所有權一致，避免清理時依赖已銷毀的執行緒狀態。",
+      "contract_review": "public bug reproduction matches teardown regression test; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "e27213276d823b69285b4fd8b22d71e17da8df1888229ec0759f9787a10e4d99",
+        "task.md": "1ef7c7817508ecae39498859a1d7ae3b7dd31e3eced388c26680887014870fc4",
+        "reference.patch": "04ba747226c7e1f22368c63b74279d0a9a675d1c908f1b93883a2a19ea1d76c2",
+        "test.patch": "80eb807e6195bab156b04bd3510e92c33bbc336c0a3fdfe5c5e6444c64ab306f",
+        "oracle.json": "db63c5698e88d3ef44edde40cf78471c0dedf5a0b1466a4e1cb48a1c979f03e3"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "tracing-1523",
+      "role": "primary",
+      "instance_id": "tokio-rs__tracing-1523",
+      "title": "多層追蹤過濾的獨立視圖與組合",
+      "repo": "tokio-rs/tracing",
+      "language": "Rust",
+      "domain": "樹狀組合、快取與脈絡視圖",
+      "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+      "source_url": "https://github.com/tokio-rs/tracing/pull/1523",
+      "source_family": "Multi-SWE-bench full",
+      "source_dataset_revision": "56ff018c04a38e27ada1e9d0a6d5839a51f88f0d",
+      "actor_task": "cases/tracing-1523/task.md",
+      "reference_files": [
+        "tracing-subscriber/CHANGELOG.md",
+        "tracing-subscriber/debug.log",
+        "tracing-subscriber/src/filter/layer_filters.rs",
+        "tracing-subscriber/src/filter/mod.rs",
+        "tracing-subscriber/src/layer.rs",
+        "tracing-subscriber/src/layer/context.rs",
+        "tracing-subscriber/src/layer/layered.rs",
+        "tracing-subscriber/src/layer/mod.rs",
+        "tracing-subscriber/src/lib.rs",
+        "tracing-subscriber/src/registry/extensions.rs",
+        "tracing-subscriber/src/registry/mod.rs",
+        "tracing-subscriber/src/registry/sharded.rs",
+        "tracing-subscriber/src/registry/stack.rs",
+        "tracing-subscriber/src/reload.rs"
+      ],
+      "test_files": [
+        "tracing-subscriber/src/layer/tests.rs",
+        "tracing-subscriber/tests/cached_layer_filters_dont_break_other_layers.rs",
+        "tracing-subscriber/tests/hinted_layer_filters_dont_break_other_layers.rs",
+        "tracing-subscriber/tests/layer_filter_interests_are_cached.rs",
+        "tracing-subscriber/tests/layer_filters/filter_scopes.rs",
+        "tracing-subscriber/tests/layer_filters/main.rs",
+        "tracing-subscriber/tests/layer_filters/trees.rs",
+        "tracing-subscriber/tests/multiple_layer_filter_interests_cached.rs",
+        "tracing-subscriber/tests/support.rs",
+        "tracing-subscriber/tests/unhinted_layer_filters_dont_break_other_layers.rs",
+        "tracing/tests/event.rs",
+        "tracing/tests/support/event.rs",
+        "tracing/tests/support/field.rs",
+        "tracing/tests/support/metadata.rs",
+        "tracing/tests/support/mod.rs",
+        "tracing/tests/support/span.rs",
+        "tracing/tests/support/subscriber.rs"
+      ],
+      "structural_comparison": "各層對事件及祖先的視圖，如何在樹狀過濾、全域限制與快取之間保持一致。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "source.json": "04959f61631d4b441d46c3645b12ae3ad6488ff599daea2150b3cba88577805a",
+        "task.md": "ac7574e8adf4a093e17c87654b34aaedd51f16cd97e2d45251f18e9489b59adf",
+        "reference.patch": "0ff492ada2756e73119c8a17ae5b0a729dab433b13d465669e03e4003fb9c261",
+        "test.patch": "f3a29f49e113087a8b5ca2384a83c691f2f9f6e32d5484ee1995ca25c669041e",
+        "oracle.json": "bb966e1af563b2e6fd67eb915ddd3dd72b771e7354a41c1fa10597787eeba917"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\tracing-1523\\preflight.json",
+        "result_sha256": "37156d15811048f369e31dd0b3ba9e5c69159c0b6f7d5f02ee4e6eab7a47514b"
+      }
+    },
+    {
+      "case_id": "clap-2297",
+      "role": "primary",
+      "instance_id": "clap-rs__clap-2297",
+      "title": "重複選項的分組與覆寫",
+      "repo": "clap-rs/clap",
+      "language": "Rust",
+      "domain": "解析狀態與出現次序",
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "source_url": "https://github.com/clap-rs/clap/pull/2297",
+      "source_family": "Multi-SWE-bench full",
+      "source_dataset_revision": "56ff018c04a38e27ada1e9d0a6d5839a51f88f0d",
+      "actor_task": "cases/clap-2297/task.md",
+      "reference_files": [
+        "src/build/app/settings.rs",
+        "src/parse/arg_matcher.rs",
+        "src/parse/matches/arg_matches.rs",
+        "src/parse/matches/matched_arg.rs",
+        "src/parse/parser.rs",
+        "src/parse/validator.rs"
+      ],
+      "test_files": [
+        "tests/grouped_values.rs"
+      ],
+      "structural_comparison": "解析狀態與出現次序",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "source.json": "750a36535af4fc4b57def1968ded97e2be2ed5450f960d36756156fc04bf0e2f",
+        "task.md": "70bcee17f36c541b78c7ce6517288bb274e9bf0e8dce4e63ea45924ab104d1f8",
+        "reference.patch": "10f1c84dfa23f4e4bc40f6947e6ca717a7c4959f833ede53d6cf8962f2897477",
+        "test.patch": "22e68bba556c95f8fa06a06e1a7c5e7c107d16f3442ac3898110b0a3b37d9ce9",
+        "oracle.json": "28ccd4aadde5dd9b781be8c11344f7903ceee91c73feb1606f70bb209fb06a9a"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\clap-2297\\preflight.json",
+        "result_sha256": "418b0953df73e09378bfb6bb15083f4935fffab0e04f9ebab0c08b6fe534f8cc"
+      }
+    },
+    {
+      "case_id": "tokio-6205",
+      "role": "calibrated_not_selected",
+      "instance_id": "tokio-rs__tokio-6205",
+      "title": "有界通道的批次容量預留",
+      "repo": "tokio-rs/tokio",
+      "language": "Rust",
+      "domain": "資源所有權、取消與喚醒",
+      "base_commit": "c029771247e31bfba61fd62400986c0d155ef0d0",
+      "source_url": "https://github.com/tokio-rs/tokio/pull/6205",
+      "source_family": "Multi-SWE-bench full",
+      "source_dataset_revision": "56ff018c04a38e27ada1e9d0a6d5839a51f88f0d",
+      "actor_task": "cases/tokio-6205/task.md",
+      "reference_files": [
+        "tokio/src/sync/batch_semaphore.rs",
+        "tokio/src/sync/mpsc/bounded.rs",
+        "tokio/src/sync/mpsc/mod.rs",
+        "tokio/src/sync/rwlock.rs",
+        "tokio/src/sync/semaphore.rs"
+      ],
+      "test_files": [
+        "tokio/tests/sync_mpsc.rs"
+      ],
+      "structural_comparison": "資源所有權、取消與喚醒",
+      "contract_review": "Public behavior and required API frozen before A1; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "6419e808b0e42de2a7921a8e33a85df9c5942dda900395dda17c0870b820f7c8",
+        "task.md": "4088f7a9f9df77564eceb8d61f035628ed306a5b031780faac2d44935db07e3f",
+        "reference.patch": "86a4a4c88cbeaa34adf1e8ea8b66c060a99ce68b4e41d75892ce80a197652e1d",
+        "test.patch": "ffed12d5ff3afaa39ec3ff0dc240b1aa5607e68d2c2f37f5f4bea51215a7361f",
+        "oracle.json": "3f48c416539da0a6d8a648e3cf75195e8f5bec24ec71b909c2de523c2dd61904"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "django-15957",
+      "role": "calibrated_not_selected",
+      "instance_id": "django__django-15957",
+      "title": "關聯資料預載的逐物件切片",
+      "repo": "django/django",
+      "language": "Python",
+      "domain": "查詢規劃、排序與關聯快取",
+      "base_commit": "f387d024fc75569d2a4a338bfda76cc2f328f627",
+      "source_url": "https://github.com/django/django/pull/15957",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": "1-4 hours",
+      "actor_task": "cases/django-15957/task.md",
+      "reference_files": [
+        "django/db/models/fields/related_descriptors.py"
+      ],
+      "test_files": [
+        "tests/prefetch_related/tests.py"
+      ],
+      "structural_comparison": "每個父物件的切片如何與 SQL 排序、關聯過濾及既有快取維持同一份語意。",
+      "contract_review": "Public acceptance mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "18f3a5fe84e7c620af93d3245eb4f3d8b84df45a8ab0c12247bf23774cea668c",
+        "task.md": "b3d38fc7afed3c5aa586261c4e02b55e20c5e7092abf50d70dbc0fd47f18a5b1",
+        "reference.patch": "bbb8d0c537cad1f83cc69e1a3f91b3b21e7dbc54f6e8777747e1aadeebe4e8f4",
+        "test.patch": "f76861bbba77def35d4bbaea7365c934e93b265ba60df10d0cd522cc0541b028",
+        "oracle.json": "ef39aebe1f77d9b53b6033321b3456c6eb121c22f70508a9b6eb174ee839e095"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "sphinx-7590",
+      "role": "calibrated_not_selected",
+      "instance_id": "sphinx-doc__sphinx-7590",
+      "title": "C++ 自訂常值的語法與識別碼",
+      "repo": "sphinx-doc/sphinx",
+      "language": "Python",
+      "domain": "詞法邊界、語法樹與穩定識別碼",
+      "base_commit": "2e506c5ab457cba743bb47eb5b8c8eb9dd51d23d",
+      "source_url": "https://github.com/sphinx-doc/sphinx/pull/7590",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": ">4 hours",
+      "actor_task": "cases/sphinx-7590/task.md",
+      "reference_files": [
+        "sphinx/domains/c.py",
+        "sphinx/domains/cpp.py",
+        "sphinx/util/cfamily.py"
+      ],
+      "test_files": [
+        "tests/test_domain_cpp.py",
+        "tests/test_domain_c.py"
+      ],
+      "structural_comparison": "數值與後綴的邊界如何一致地支援解析、文字還原和 C++ 識別碼，並維持 C 語法行為。",
+      "contract_review": "Public literal and identifier semantics disclosed before Actor; no private AST names required",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "89e6964ce9ebd77122572e724addaa60cd7f2a16421f251ea8c8b7d1fd06db3e",
+        "task.md": "d8bf615fe1a421d0af3139c1a3deb156ac4f4586ce67d000d1838f491583fdb9",
+        "reference.patch": "23c3b2333c3512be7350376c631bbbb079684b7ce1563c5a30ddf665c0f1ec7a",
+        "test.patch": "77ee427a569addb63364093290096af046dffd77fa65fcc6f60197db7021d8da",
+        "oracle.json": "34e03d0b6b2dd044e941accf803dd789b1283b922badb0196bd8ea3a44093cb5"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "django-13344",
+      "role": "calibrated_not_selected",
+      "instance_id": "django__django-13344",
+      "title": "同步與非同步中介層的交接",
+      "repo": "django/django",
+      "language": "Python",
+      "domain": "中介層初始化與非同步邊界",
+      "base_commit": "e39e727ded673e74016b5d3658d23cbe20234d11",
+      "source_url": "https://github.com/django/django/pull/13344",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": "1-4 hours",
+      "actor_task": "cases/django-13344/task.md",
+      "reference_files": [
+        "django/contrib/sessions/middleware.py",
+        "django/middleware/cache.py",
+        "django/middleware/security.py"
+      ],
+      "test_files": [
+        "tests/cache/tests.py",
+        "tests/deprecation/test_middleware_mixin.py",
+        "tests/runtests.py"
+      ],
+      "structural_comparison": "中介層初始化與非同步邊界",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "931d5e296e1cb1b860308637ba7888ae49bc6da6c7fc095cbe7b6637b2eb2553",
+        "task.md": "b051bda6f86ad9083d7ebe1487787a02995551c10ae070710955e0b047583abd",
+        "reference.patch": "cd4ce142ef39fd702719df87d61b4d6c21d40a39985baf48a469c3fa9248459a",
+        "test.patch": "f5a64bd24eaf102fc5e6fce0aa0bcc5ce6dd8a7d3a5c63e91f52e3375dc756dd",
+        "oracle.json": "c4079399d30adeb4ba316145035b8cc6acaca55388b9303a111a6c9ded0af570"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "django-15128",
+      "role": "calibrated_not_selected",
+      "instance_id": "django__django-15128",
+      "title": "組合查詢的別名碰撞",
+      "repo": "django/django",
+      "language": "Python",
+      "domain": "SQL 別名、關聯合併與查詢隔離",
+      "base_commit": "cb383753c0e0eb52306e1024d32a782549c27e61",
+      "source_url": "https://github.com/django/django/pull/15128",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": "1-4 hours",
+      "actor_task": "cases/django-15128/task.md",
+      "reference_files": [
+        "django/db/models/sql/query.py"
+      ],
+      "test_files": [
+        "tests/queries/models.py",
+        "tests/queries/tests.py"
+      ],
+      "structural_comparison": "SQL 別名、關聯合併與查詢隔離",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "b8b768f3b03012678f4072f3bb6ca10caae836b23def40046d11254675121826",
+        "task.md": "7fdaa081666a641aa690a537f9a1fa1e39acbf35ebef5c221b532757ca3e205a",
+        "reference.patch": "8c9e92991c30d98e546ad01e81e667a1110b10729b16708bf3613bb08250be61",
+        "test.patch": "92699941d8f6203c55d151936ea74d3bf60385b4f986a6c8bee6bb57fce09874",
+        "oracle.json": "78813b194cacc62542e262528dfd0bcd55863fc6c497e4a1e91271dd5f7cd3db"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "django-15629",
+      "role": "calibrated_not_selected",
+      "instance_id": "django__django-15629",
+      "title": "主鍵與關聯欄位的排序規則",
+      "repo": "django/django",
+      "language": "Python",
+      "domain": "資料庫結構與關聯一致性",
+      "base_commit": "694cf458f16b8d340a3195244196980b2dec34fd",
+      "source_url": "https://github.com/django/django/pull/15629",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": "1-4 hours",
+      "actor_task": "cases/django-15629/task.md",
+      "reference_files": [
+        "django/db/backends/base/schema.py",
+        "django/db/backends/oracle/features.py",
+        "django/db/backends/sqlite3/schema.py",
+        "django/db/models/fields/related.py"
+      ],
+      "test_files": [
+        "tests/migrations/test_base.py",
+        "tests/migrations/test_operations.py"
+      ],
+      "structural_comparison": "資料庫結構與關聯一致性",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "0024aac04d38c6465169170b7f909ed5ea8dd7e8dce1de5d2cfdcd91252e2211",
+        "task.md": "5cb2a592bf3c5c2fcb03ed3c02ba27bcc30e006282eeb87942018adb4c70a1eb",
+        "reference.patch": "50f993edaa94aeef286b9fbcb787a08ad0d09bdb894ca8dc787a736ded879405",
+        "test.patch": "5f8467d2511b1712fde6c6fec06ddc7e5b11c8554399ecd5ee9d6adfd1fe8ab2",
+        "oracle.json": "e68284b1d06335f6e71bdac981d6f1d3ada8b6808639ecdc33e6f0a9c751b912"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "sympy-16597",
+      "role": "calibrated_not_selected",
+      "instance_id": "sympy__sympy-16597",
+      "title": "有限數值域與假設推理的一致性",
+      "repo": "sympy/sympy",
+      "language": "Python",
+      "domain": "三值邏輯、推論規則與消費端",
+      "base_commit": "6fd65310fa3167b9626c38a5487e171ca407d988",
+      "source_url": "https://github.com/sympy/sympy/pull/16597",
+      "source_family": "SWE-bench Verified",
+      "source_dataset_revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+      "difficulty": "1-4 hours",
+      "actor_task": "cases/sympy-16597/task.md",
+      "reference_files": [
+        "sympy/assumptions/ask.py",
+        "sympy/assumptions/ask_generated.py",
+        "sympy/core/assumptions.py",
+        "sympy/core/power.py",
+        "sympy/printing/tree.py",
+        "sympy/tensor/indexed.py"
+      ],
+      "test_files": [
+        "sympy/core/tests/test_assumptions.py",
+        "sympy/functions/elementary/tests/test_miscellaneous.py"
+      ],
+      "structural_comparison": "三值邏輯、推論規則與消費端",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "d5aa46df28139a0905340c65a5015f19c16d7b0ad5391a8d0dc24bb273b1ef73",
+        "task.md": "8d9c04be69b1bf7e1cc32d422ff802e211dc4227304722042d7023c2ecbbc366",
+        "reference.patch": "413a90c09ecfd8f552a5db49bb59f74eac1ae550dca0d19aaa1eb11575bea1ac",
+        "test.patch": "aa1263270ae0b8e7befe02678ac8ace76ea44779054690595982de41a56956e9",
+        "oracle.json": "e1c79879cf93193dbc1196995c6376920184b9c074d21ed16c45313f96e2b49d"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "mpmath-819",
+      "role": "calibrated_not_selected",
+      "instance_id": "mpmath__mpmath-819",
+      "title": "任意精度數值的格式化",
+      "repo": "mpmath/mpmath",
+      "language": "Python",
+      "domain": "數值表示、捨入與輸出格式",
+      "base_commit": "e9168a32aaf1ac96c6882082f787eae819f6518e",
+      "source_url": "https://github.com/mpmath/mpmath/pull/819",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/mpmath-819/task.md",
+      "reference_files": [
+        "CHANGES",
+        "docs/matrices.rst",
+        "mpmath/ctx_mp.py",
+        "mpmath/ctx_mp_python.py",
+        "mpmath/libmp/__init__.py",
+        "mpmath/libmp/libmpf.py",
+        "mpmath/matrices/eigen.py",
+        "mpmath/matrices/eigen_symmetric.py",
+        "mpmath/matrices/linalg.py"
+      ],
+      "test_files": [
+        "mpmath/tests/test_format.py"
+      ],
+      "structural_comparison": "數值表示、捨入與輸出格式",
+      "contract_review": "Public format behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "80402a1d27256d9641931fa11b64efbb4462758881838df11dcef5b686db9720",
+        "task.md": "6ccfdabd69161e71c0e2aa12d9d843ea1be2a3c6d7e344ca5c7f78499cd9e449",
+        "reference.patch": "0f7eb300ec302761c0fc6744fce114700be22087ba44c1ca28664af4c2f42484",
+        "test.patch": "ddc75546fa97642119e117eedadbbcb3a2ee3ec12a546c8efd9c9110c0b9ed2f",
+        "oracle.json": "70ca9a53804b892eaf42cf3c60445c8b3bd5aa15eb780a08473fb3cf36e245e0"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "config-rs-207",
+      "role": "calibrated_not_selected",
+      "instance_id": "mehcode__config-rs-207",
+      "title": "非同步設定來源與合併",
+      "repo": "mehcode/config-rs",
+      "language": "Rust",
+      "domain": "建構期狀態與來源順序",
+      "base_commit": "11602b0b046b0753541ca916a2ce1237f9d28e05",
+      "source_url": "https://github.com/mehcode/config-rs/pull/207",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/config-rs-207/task.md",
+      "reference_files": [
+        ".github/workflows/msrv.yml",
+        "Cargo.toml",
+        "examples/async_source/main.rs",
+        "src/builder.rs",
+        "src/config.rs",
+        "src/lib.rs",
+        "src/source.rs"
+      ],
+      "test_files": [
+        "tests/Settings.json",
+        "tests/async_builder.rs"
+      ],
+      "structural_comparison": "建構期狀態與來源順序",
+      "contract_review": "Public contract mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "e1d1686e468575b4f98a055d4d824f7c6bfd0d0f7e1a7a1340e4fa6bbf872cc1",
+        "task.md": "bba5489b92333c76d5cca0c9eb9add017ebca176881f04d99fc1975e5d05936f",
+        "reference.patch": "af9ca91a9efe743a4dd2c48feae6de10f9be665f31e72f5344069e90ddc148eb",
+        "test.patch": "f0b75c693932bd0cfa498c7eab9c4c1500ee5f82cedd8f82e7c9b00cc093b9f5",
+        "oracle.json": "86b0002925b2182b0c819cda9c7584cd13b336a2ea9f486f406f3c317092e3fe"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "regexp-404",
+      "role": "primary",
+      "instance_id": "ota-meshi__eslint-plugin-regexp-404",
+      "title": "正規表示式中的巢狀冗餘分支",
+      "repo": "ota-meshi/eslint-plugin-regexp",
+      "language": "TypeScript",
+      "domain": "語法樹、語意包含與診斷位置",
+      "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+      "source_url": "https://github.com/ota-meshi/eslint-plugin-regexp/pull/404",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/regexp-404/task.md",
+      "reference_files": [
+        "lib/rules/no-dupe-disjunctions.ts",
+        "lib/utils/partial-parser.ts"
+      ],
+      "test_files": [
+        "tests/lib/rules/no-dupe-disjunctions.ts"
+      ],
+      "structural_comparison": "語法樹、語意包含與診斷位置",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "source.json": "05f04904c5c104d0475c0178e4bbf3b21f7ac3dce8d962d3813cbe6cfcc8429e",
+        "task.md": "d46f0b6e938ebddfef3678bf51c2e0ace9a4ffd04b802400692583da0403c906",
+        "reference.patch": "c389daf4daa70cdb20f779f69dc34e49d4b761691a35030beef3788fbee4c662",
+        "test.patch": "d73ff13d51f5ea5988f37c0afab29b3707ad9c3dce9ef597a0acaf81c9d2d1f1",
+        "oracle.json": "9a4fd45f7071e238cd7f20edfdead303d01bc524d9916f5ebcee7e67f9348dee"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\regexp-404\\preflight.json",
+        "result_sha256": "0772483fc8a4a041e4fd2cdb2898a9dcf4fc20b143a3ad0c52e3ecd5de2b700a"
+      }
+    },
+    {
+      "case_id": "sqlglot-6374",
+      "role": "calibrated_not_selected",
+      "instance_id": "tobymao__sqlglot-6374",
+      "title": "Oracle INSERT 的別名與欄位解析",
+      "repo": "tobymao/sqlglot",
+      "language": "Python",
+      "domain": "方言語法與共用解析邊界",
+      "base_commit": "c94d0ebb383c7d7ab7f38b96586c19f09b921a52",
+      "source_url": "https://github.com/tobymao/sqlglot/pull/6374",
+      "source_family": "SWE-rebench leaderboard",
+      "source_dataset_revision": "34d5a58864acf91613740a09ec5d205228dcfa39",
+      "difficulty": "Empirically among least frequently solved tasks, November 2025 leaderboard",
+      "actor_task": "cases/sqlglot-6374/task.md",
+      "reference_files": [
+        "sqlglot/dialects/oracle.py",
+        "sqlglot/parser.py"
+      ],
+      "test_files": [
+        "tests/dialects/test_oracle.py"
+      ],
+      "structural_comparison": "方言語法與共用解析邊界",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "1e3ea0e9d5e779121096b5ec34570e13fe58a4daaeac0531e74bd5f45f8d046a",
+        "task.md": "cab846754c388a136102191f68cc74c5683d6488e0c0d43d8f0ff243cd0da39b",
+        "reference.patch": "f4eaeffd069268c61a39492350c9213fdf15baae78b08e3c685bbe69c357155a",
+        "test.patch": "c0eaaaef593bfacba743bac563f2b6acb9d92c5972314858c3e301ff4460277a",
+        "oracle.json": "652dd37c760bf8d82d7bee17add317854b9affa5f8ac38543a694e3c36a6943c"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "sympy-28660",
+      "role": "calibrated_not_selected",
+      "instance_id": "sympy__sympy-28660",
+      "title": "有理函數積分的共軛根處理",
+      "repo": "sympy/sympy",
+      "language": "Python",
+      "domain": "符號運算與數值驗證",
+      "base_commit": "52a71d9c1d8d6039e42078664cc88323fc2438e8",
+      "source_url": "https://github.com/sympy/sympy/pull/28660",
+      "source_family": "SWE-rebench leaderboard",
+      "source_dataset_revision": "34d5a58864acf91613740a09ec5d205228dcfa39",
+      "difficulty": "Empirically among least frequently solved tasks, November 2025 leaderboard",
+      "actor_task": "cases/sympy-28660/task.md",
+      "reference_files": [
+        "sympy/integrals/rationaltools.py"
+      ],
+      "test_files": [
+        "sympy/integrals/tests/test_rationaltools.py"
+      ],
+      "structural_comparison": "符號運算與數值驗證",
+      "contract_review": "Public behavior mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "ee24d6ea5bb9e43c20b8d48ea6ff199ee5398b190f1ec6840a88fcf7753539aa",
+        "task.md": "3533ac2d3627a6138c91585ce466c1f983db7a1137f93ab2e92861c93c806b2c",
+        "reference.patch": "c6422661b3dd6edb399f6ef80ceb6b425cebbd4d1c6ea40c770953bd5955043f",
+        "test.patch": "5e5b15a0fe9be655655a8dd2dfdaa4588c08971fb00cf1ffa3e03dc808161165",
+        "oracle.json": "5f768e76fa439b74a6d9825733640dbf09b182379edd5eea91ec7e446cbea852"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "algorand-454",
+      "role": "calibrated_not_selected",
+      "instance_id": "algorand__js-algorand-sdk-454",
+      "title": "巢狀 ABI 型別的二進位編解碼",
+      "repo": "algorand/js-algorand-sdk",
+      "language": "TypeScript",
+      "domain": "遞迴型別、可變長度編碼與表示邊界",
+      "base_commit": "f11084b807477a86a4e9d61ba7abff3499fd189e",
+      "source_url": "https://github.com/algorand/js-algorand-sdk/pull/454",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/algorand-454/task.md",
+      "reference_files": [
+        "src/abi/abi_type.ts",
+        "src/encoding/bigint.ts",
+        "src/main.ts"
+      ],
+      "test_files": [
+        "tests/10.ABI.ts"
+      ],
+      "structural_comparison": "遞迴型別、可變長度編碼與表示邊界",
+      "contract_review": "Public behavior and API mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "c4f9ffb595264f2e4134f143e075a4d4b56a8c55505edbf63f295ddfbd342aba",
+        "task.md": "b01881a6287f90f0bcba3fb7b2f48d23e637956f3fb097e3269cef02d29c1a4a",
+        "reference.patch": "2af78bc8f37028f8372e0e4207f3c515b5ed944fb977f420d5e5337a2e7de2d2",
+        "test.patch": "60fa29553c5bd79e482b3db8bed1eb55b433ed02617406b5586bab3bb38ea72c",
+        "oracle.json": "7643ad799f45eb133265f87898cc7f55c094af29af1acdd2aca50349fa41ccaf"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "pyfakefs-1286",
+      "role": "calibrated_not_selected",
+      "instance_id": "pytest-dev__pyfakefs-1286",
+      "title": "模擬檔案系統的物件生命週期",
+      "repo": "pytest-dev/pyfakefs",
+      "language": "Python",
+      "domain": "擁有權與弱引用生命週期",
+      "base_commit": "50579559c7957f5350a5d2408e2827b355e1017c",
+      "source_url": "https://github.com/pytest-dev/pyfakefs/pull/1286",
+      "source_family": "SWE-rebench leaderboard",
+      "source_dataset_revision": "34d5a58864acf91613740a09ec5d205228dcfa39",
+      "difficulty": "unlabelled; recent ownership regression",
+      "actor_task": "cases/pyfakefs-1286/task.md",
+      "reference_files": [
+        "CHANGES.md",
+        "docs/troubleshooting.rst",
+        "pyfakefs/fake_filesystem_shutil.py",
+        "pyfakefs/fake_io.py",
+        "pyfakefs/fake_open.py",
+        "pyfakefs/fake_os.py",
+        "pyfakefs/fake_path.py",
+        "pyfakefs/fake_pathlib.py"
+      ],
+      "test_files": [
+        "pyfakefs/tests/fake_filesystem_vs_real_test.py"
+      ],
+      "structural_comparison": "擁有權與弱引用生命週期",
+      "contract_review": "Public behavior and API mapped before Actor; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "87a88c28284435339e1a510490af2671869729e4275873ea85c76812137fe64b",
+        "task.md": "4ba32ef19869de470020416ef0eb3f30f6ba3ece9f64513f023a1954ebd93739",
+        "reference.patch": "4ae5325598f36b1280a570e7f3f78636b09cc45da57d110fa462e9223d498dbd",
+        "test.patch": "c61073c5ba18854d0fcdb81f10831161e2e77a6791dc8ca0a19986b345357b21",
+        "oracle.json": "a8f7197c16a9c073786bd5067950a79f0b8ec97584c7fcd151d1f0e285410fee"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "openlibrary-marc880",
+      "role": "calibrated_not_selected",
+      "instance_id": "instance_internetarchive__openlibrary-b67138b316b1e9c11df8a4a8391fe5cc8e75ff9f-ve8c8d62a2b60610a3c4631f5f23ed866bada9818",
+      "title": "MARC 替代文字與跨表示解析",
+      "repo": "internetarchive/openlibrary",
+      "language": "Python",
+      "domain": "二進位與 XML 表示、連結與資料歸一",
+      "base_commit": "d8518f64d954113c9363335eb25201befa2de6f2",
+      "source_url": "https://github.com/internetarchive/openlibrary/commit/b67138b316b1e9c11df8a4a8391fe5cc8e75ff9f",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/openlibrary-marc880/task.md",
+      "reference_files": [
+        "openlibrary/catalog/marc/get_subjects.py",
+        "openlibrary/catalog/marc/marc_base.py",
+        "openlibrary/catalog/marc/marc_binary.py",
+        "openlibrary/catalog/marc/marc_xml.py",
+        "openlibrary/catalog/marc/parse.py",
+        "openlibrary/catalog/marc/parse_xml.py"
+      ],
+      "test_files": [
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/880_Nihon_no_chasho.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/880_alternate_script.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/880_arabic_french_many_linkages.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/880_publisher_unlinked.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/880_table_of_contents.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/bpl_0486266893.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_expect/ithaca_two_856u.json",
+        "openlibrary/catalog/marc/tests/test_data/bin_input/880_Nihon_no_chasho.mrc",
+        "openlibrary/catalog/marc/tests/test_data/bin_input/880_alternate_script.mrc",
+        "openlibrary/catalog/marc/tests/test_data/bin_input/880_arabic_french_many_linkages.mrc",
+        "openlibrary/catalog/marc/tests/test_data/bin_input/880_publisher_unlinked.mrc",
+        "openlibrary/catalog/marc/tests/test_data/bin_input/880_table_of_contents.mrc",
+        "openlibrary/catalog/marc/tests/test_data/xml_expect/nybc200247.json",
+        "openlibrary/catalog/marc/tests/test_data/xml_expect/soilsurveyrepor00statgoog.json",
+        "openlibrary/catalog/marc/tests/test_data/xml_input/nybc200247_marc.xml",
+        "openlibrary/catalog/marc/tests/test_marc_binary.py",
+        "openlibrary/catalog/marc/tests/test_parse.py"
+      ],
+      "structural_comparison": "欄位物件如何共用操作與記錄來源，使標題、作者和出版資料沿同一解析關係保留。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "task.md": "c29e14ec7ba1bc0bd5337867ef40ac13f669a4bb08f378fb0d822b97b00a3ba3",
+        "source.json": "d7e07416b5469f457a62cfd78ce839ea60d1db5bc323a6261878ffec4466da5f",
+        "reference.patch": "4aab66eae6a5e4375aec5a922dd9652ee215aa51afb5cb94a601f79fdeef9c90",
+        "test.patch": "21a27a98c6209b5f9cad05034865951cc99ed66364f9415e4194923c6d6fad89",
+        "oracle.json": "1f39efd18d1027749340ec44101adda0a97d7ca433f2ef18cae8216cdb6a0638"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "vuls-fix-state",
+      "role": "calibrated_not_selected",
+      "instance_id": "instance_future-architect__vuls-ef2be3d6ea4c0a13674aaab08b182eca4e2b9a17-v264a82e2f4818e30f5a25e4da53b27ba119f62b5",
+      "title": "OVAL 套件修補狀態與模組版本",
+      "repo": "future-architect/vuls",
+      "language": "Go",
+      "domain": "套件識別、狀態傳遞與資料來源",
+      "base_commit": "827f2cb8d86509c4455b2df2fe79b9d59533d3b0",
+      "source_url": "https://github.com/future-architect/vuls/commit/ef2be3d6ea4c0a13674aaab08b182eca4e2b9a17",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/vuls-fix-state/task.md",
+      "reference_files": [
+        "go.mod",
+        "go.sum",
+        "gost/gost.go",
+        "gost/redhat.go",
+        "oval/redhat.go",
+        "oval/util.go"
+      ],
+      "test_files": [
+        "gost/gost_test.go",
+        "oval/redhat_test.go",
+        "oval/util_test.go"
+      ],
+      "structural_comparison": "套件匹配如何保存修補處置與模組身分，讓輸出只有一個狀態來源。",
+      "contract_review": "pending final test mapping before A1",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "task.md": "ae11fb73057c13fc72ad07c86becf781d784d3f0d82691d45d6fd2158ba2847c",
+        "source.json": "7f9565952056a3014637e1d52753b7fdd13f65c58f92ba7aa78f5acd17b7dc88",
+        "reference.patch": "391b4cc6e813751da2d887743c077422a64ba0ab07bd9d4636e71778603ec943",
+        "test.patch": "0ac30d5ecaa82c5071d4fa4888d15c8c5fc78b44fb0a755b906d92ffb64b1040",
+        "oracle.json": "1c2240ebe837dc3df6f91fb35625c568ac93cf73d93c970c447a64c25479ae01"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "ndarray-986",
+      "role": "calibrated_not_selected",
+      "instance_id": "rust-ndarray__ndarray-986",
+      "title": "多維陣列消耗式迭代與釋放",
+      "repo": "rust-ndarray/ndarray",
+      "language": "Rust",
+      "domain": "資料布局、移動所有權與資源生命週期",
+      "base_commit": "4e31d2fcd27916cf954981329aa7af3c7a0d2a0c",
+      "source_url": "https://github.com/rust-ndarray/ndarray/pull/986",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/ndarray-986/task.md",
+      "reference_files": [
+        "src/data_repr.rs",
+        "src/impl_constructors.rs",
+        "src/impl_methods.rs",
+        "src/impl_owned_array.rs",
+        "src/iterators/into_iter.rs",
+        "src/iterators/mod.rs",
+        "src/layout/mod.rs",
+        "src/zip/mod.rs"
+      ],
+      "test_files": [
+        "tests/iterators.rs"
+      ],
+      "structural_comparison": "資料布局與所有權如何共用一條迭代與釋放流程。",
+      "contract_review": "Public ownership and order mapped; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "d26111311f4deeb374e1fcce692b2650ad245808d16f9a3b5a7d5025352662ac",
+        "task.md": "e8d7b40da5680534e1fffb9477ae06df99b84e9e4f8762d68cbdd57d3ddc1ed7",
+        "reference.patch": "e21ee12f9fac7a5b24f9dc33b550052e2ee2c9a8f28efb3fb95b33c9a0d8d334",
+        "test.patch": "101fc8102ae9cf92506e38372ce3a69fae4f52a2247f0afb4f64ac3ebe55f495",
+        "oracle.json": "e858bb71b45d3f0676e750bedf6c42dd544f11946813512c72b6d9b007270118"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "fmt-3750",
+      "role": "calibrated_not_selected",
+      "instance_id": "fmtlib__fmt-3750",
+      "title": "本地化整數格式的進位與分組",
+      "repo": "fmtlib/fmt",
+      "language": "C++",
+      "domain": "數值格式、字元表示與共用輸出邊界",
+      "base_commit": "5471a2426c432503bdadeab0c03df387bea97463",
+      "source_url": "https://github.com/fmtlib/fmt/pull/3750",
+      "source_family": "SWE-bench Multilingual",
+      "source_dataset_revision": "846e647b9f33c0b51b739d005d13d85493c9af09",
+      "difficulty": "Three public model runs unresolved",
+      "actor_task": "cases/fmt-3750/task.md",
+      "reference_files": [
+        "include/fmt/format.h"
+      ],
+      "test_files": [
+        "test/format-test.cc"
+      ],
+      "structural_comparison": "格式規格與數值分類是否沿單一輸出流程。",
+      "contract_review": "Public formatting behavior mapped; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "e683baa3d21dff050e5cd555cd913350b508962bb1c1635bd5193456bb8c5208",
+        "task.md": "6868a10c157df89441083fb3c067a0d23b4c1ccb6bcd5d4820c5f5167b1eb30f",
+        "reference.patch": "ff9e464796224a582cbf4e39b579a0d2e45873fff2b03cb88960e31a60d0b4fb",
+        "test.patch": "3359813bda05130864c1f81af650f4a3ebe93df2ca8ec448b1cb3e443ae1f358",
+        "oracle.json": "a3c5fc9f23fac9eacb3a5b620a4857647b003de4787a7077c58cfbee0de51131"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "fmt-2310",
+      "role": "calibrated_not_selected",
+      "instance_id": "fmtlib__fmt-2310",
+      "title": "浮點特殊值的補位規則",
+      "repo": "fmtlib/fmt",
+      "language": "C++",
+      "domain": "數值格式、字元表示與共用輸出邊界",
+      "base_commit": "7612f18dc8e0112e64e0845a1ebe9da6cfb8a123",
+      "source_url": "https://github.com/fmtlib/fmt/pull/2310",
+      "source_family": "SWE-bench Multilingual",
+      "source_dataset_revision": "846e647b9f33c0b51b739d005d13d85493c9af09",
+      "difficulty": "Three public model runs unresolved",
+      "actor_task": "cases/fmt-2310/task.md",
+      "reference_files": [
+        "include/fmt/core.h",
+        "include/fmt/format.h"
+      ],
+      "test_files": [
+        "test/format-test.cc"
+      ],
+      "structural_comparison": "格式規格與數值分類是否沿單一輸出流程。",
+      "contract_review": "Public formatting behavior mapped; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "7757d6b8d1ea866cde7986802cc377e7225859ff0f762261fac1da01ee897018",
+        "task.md": "0b5a626cf3df9106cb54d0cfcda3ad4715e0249095608b41bb950f10c524d92f",
+        "reference.patch": "eaa55ff6ed3fbc7d79dbd48bc83bfa819aebcc5ecc6661e211357045d70e2513",
+        "test.patch": "4cbba31e89383a5aff3375411c29c00bbcfc3b9bb070470428c7967616348bb1",
+        "oracle.json": "067437b189a4d5e41f233e0e1caf765077b8cf3ea19feb4bce302329947a477d"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "flipt-storage-cache",
+      "role": "primary",
+      "instance_id": "instance_flipt-io__flipt-e2bd19dafa7166c96b082fb2a59eb54b4be0d778",
+      "title": "跨層旗標快取與請求儲存政策",
+      "repo": "flipt-io/flipt",
+      "language": "Go",
+      "domain": "請求脈絡、序列化與儲存責任",
+      "base_commit": "0eaf98f050d86247bfe9bd7e41178865cb585060",
+      "source_url": "https://github.com/flipt-io/flipt/commit/e2bd19dafa7166c96b082fb2a59eb54b4be0d778",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/flipt-storage-cache/task.md",
+      "reference_files": [
+        "build/hack/loadtest.go",
+        "internal/cache/cache.go",
+        "internal/cmd/grpc.go",
+        "internal/cmd/http.go",
+        "internal/server/middleware/grpc/middleware.go",
+        "internal/storage/auth/cache/cache.go",
+        "internal/storage/cache/cache.go"
+      ],
+      "test_files": [
+        "build/testing/integration.go",
+        "build/testing/integration/api/api.go",
+        "build/testing/integration/readonly/testdata/default.yaml",
+        "internal/server/middleware/grpc/middleware_test.go",
+        "internal/storage/cache/cache_test.go"
+      ],
+      "structural_comparison": "請求的儲存政策如何沿資料流傳到旗標快取，並將評估回應與儲存資料各自放在所屬邊界。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "8185c94aebd010a45fd02177be92a180a5544077c2ffcca16b58a44876669969",
+        "source.json": "273f89852aaadc195c2e2f56e1750a8243f0d80a795343abb8d445486f6306fb",
+        "reference.patch": "2f55e59aafe8750726b7b3a449ad0c2f3cb1c39addc1deb2568827169468f9b0",
+        "test.patch": "7639f2c15e181c49ffed9cba7ef54065d3c3f8476973dc3aa14cbd3e8496a78c",
+        "oracle.json": "10c9e902f31068a8c2b400c9c80c578e0aa2ce8b1c6519e561d3ba76395f854a"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-storage-cache\\preflight.json",
+        "result_sha256": "98a195d74696c3c1faaffd9a2df584a94fabd2aa3014ab0fe52880eb096caf1a"
+      }
+    },
+    {
+      "case_id": "proton-mailbox-retry",
+      "role": "primary",
+      "instance_id": "instance_protonmail__webclients-e65cc5f33719e02e1c378146fb981d27bc24bdf4",
+      "title": "郵件清單操作重疊與延遲重試",
+      "repo": "protonmail/webclients",
+      "language": "TypeScript",
+      "domain": "非同步操作、請求排程與可見狀態",
+      "base_commit": "bd293dcc05b75ecca4a648edd7ae237ec48c1454",
+      "source_url": "https://github.com/protonmail/webclients/commit/e65cc5f33719e02e1c378146fb981d27bc24bdf4",
+      "source_family": "SWE-bench Pro V2 hard",
+      "source_dataset_revision": "2d52cb3df914a3fcf80c7f66738b3a88ae37fc50",
+      "actor_task": "cases/proton-mailbox-retry/task.md",
+      "reference_files": [
+        "applications/mail/src/app/hooks/mailbox/useElements.ts",
+        "applications/mail/src/app/hooks/useApplyLabels.tsx",
+        "applications/mail/src/app/hooks/useEmptyLabel.tsx",
+        "applications/mail/src/app/hooks/useMarkAs.tsx",
+        "applications/mail/src/app/hooks/usePermanentDelete.tsx",
+        "applications/mail/src/app/logic/elements/elementsActions.ts",
+        "applications/mail/src/app/logic/elements/elementsReducers.ts",
+        "applications/mail/src/app/logic/elements/elementsSelectors.ts",
+        "applications/mail/src/app/logic/elements/elementsSlice.ts",
+        "applications/mail/src/app/logic/elements/elementsTypes.ts",
+        "applications/mail/src/app/logic/elements/helpers/elementQuery.ts"
+      ],
+      "test_files": [
+        "applications/mail/src/app/containers/mailbox/tests/Mailbox.retries.test.tsx"
+      ],
+      "structural_comparison": "操作計數、待刷新狀態和延遲重試如何共用狀態來源，使畫面與後端完成時序一致。",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "333e20acc12d7605227478e70b3e07870b0ae439950f8c72191bbb4594f2c9c1",
+        "source.json": "2ccedcf477f3967f34fdcb168a5ddb2e79ca978cf2814b77304943b0bf2a645d",
+        "reference.patch": "160c7d05b1c7e05df763d8ca1c0a897ee0fe20ce8a6a7a1c282a31e32b385f2e",
+        "test.patch": "aed33267a1d2fa1a5a984b7b51094676e83032bffd5c248093def6691b4bb244",
+        "oracle.json": "56a862fc00b5dccff4dbe6f77f4073f17e28b6942d60cbe25456c75bdff0dfac"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-mailbox-retry\\preflight.json",
+        "result_sha256": "9a26c2a756f3ae6cd043a4f33c075e9ca5d07c97b8fc7bb48450fe521683a3f2"
+      }
+    },
+    {
+      "case_id": "chalk-671",
+      "role": "calibrated_not_selected",
+      "instance_id": "rust-lang__chalk-671",
+      "title": "型別求解器的環境與生命週期綁定",
+      "repo": "rust-lang/chalk",
+      "language": "Rust",
+      "domain": "作用域、正規化與環境展開",
+      "base_commit": "9332c49e1d3bfd66e54ce0754223a297b081ab95",
+      "source_url": "https://github.com/rust-lang/chalk/pull/671",
+      "source_family": "SWE-rebench V2",
+      "source_dataset_revision": "475dd5e8703bb5fb22dd3c60b5d038b019eba1e0",
+      "difficulty": "hard",
+      "actor_task": "cases/chalk-671/task.md",
+      "reference_files": [
+        "chalk-engine/src/logic.rs",
+        "chalk-ir/src/fold.rs",
+        "chalk-ir/src/lib.rs",
+        "chalk-recursive/src/solve.rs",
+        "chalk-solve/src/clauses.rs",
+        "chalk-solve/src/clauses/env_elaborator.rs"
+      ],
+      "test_files": [
+        "tests/test/misc.rs"
+      ],
+      "structural_comparison": "環境推導如何維持生命週期與 binder 的作用域，避免資料在展開或正規化時失去歸屬。",
+      "contract_review": "Public issue and unchanged assertions aligned; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "A1_complete_not_selected",
+      "artifact_sha256": {
+        "source.json": "385d00276ab41560682f8ded9dc04458fa40b2aa25ab92e4aac58a38372ace9e",
+        "task.md": "8d804d0940a28cf34f4114b20f5f0f5d73f3c10c696ee5e21c34a2a8f5786740",
+        "reference.patch": "56efea96f19ae63ab7f70b34563227ac05160ca3f8f0259598ea000ce0aa4d58",
+        "test.patch": "57a2a26d3d20ca4b5e77f8e5081b5f7dc21a6059ab197dd908c01e188e5704db",
+        "oracle.json": "14fba90fe74adb287c9629b4c1a9becc803387d5c30bc47d7f299bc4b85c2c93"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "fb-packaging-metadata",
+      "role": "excluded_material",
+      "instance_id": "pypa__packaging.013f3b03.test_metadata.e00b5801.lv1",
+      "title": "Python 套件中繼資料與相依規格處理",
+      "repo": "pypa/packaging",
+      "language": "Python",
+      "domain": "解析、版本規則與錯誤彙整",
+      "base_commit": "d2acde42cc310e8c8aec02ac4fe4306911e5b6c5",
+      "source_base_commit": "013f3b03a61fb795587d2b6e0c288656abca1d45",
+      "source_url": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+      "source_family": "FeatureBench V1.1 fast",
+      "source_dataset_revision": "76b4a4566e04f4bcc13c35125d4f301791efa736",
+      "actor_task": "cases/fb-packaging-metadata/task.md",
+      "reference_files": [
+        "src/packaging/_parser.py",
+        "src/packaging/metadata.py",
+        "src/packaging/requirements.py"
+      ],
+      "test_files": [
+        "tests/test_metadata.py"
+      ],
+      "structural_comparison": "解析、版本規則與錯誤彙整",
+      "contract_review": "Public V1.1 interfaces and test scope inspected; preflight pending",
+      "execution_status": "A1_complete",
+      "calibration_status": "excluded_public_contract_conflict",
+      "artifact_sha256": {
+        "task.md": "f4dc9663db69bc63c5b5772ba7d85aa57c6929544adaad8900bbd0b654c8f0ce",
+        "source.json": "50c0b326d4e01da9aca2c2ef4a74e960aafcefef62c605550d6342b95bb96c72",
+        "reference.patch": "c115202c88981e862ec32bd15e03bda0398c740e2c5fdfa12c150c805e14d688",
+        "test.patch": "8f7c68d7a546f877772657ae4dfbc40680e6def94f0eaa403dc81ef3ccd72763",
+        "oracle.json": "a1d21363948d36bf8938202b5138018343407829b75b100cc4de835c29093e0a",
+        "corruption.patch": "26b63856550849f57f4b3d127c11b5a88295936e1aec879ea16e5b89f2e3497b",
+        "source-test-removal.patch": "49be6d90111bf8db9e6097867f77b56cfa6ae4aa85cdd089b6287d0c57cb1dbd"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "fb-metaflow-stubs",
+      "role": "primary",
+      "instance_id": "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+      "title": "由執行期物件產生 Python 型別宣告",
+      "repo": "Netflix/metaflow",
+      "language": "Python",
+      "domain": "型別表示、作用域與模組狀態",
+      "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+      "source_base_commit": "b390a8d4459fed4c5e13271a434f9d77e756164c",
+      "source_url": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+      "source_family": "FeatureBench V1.1 fast",
+      "source_dataset_revision": "76b4a4566e04f4bcc13c35125d4f301791efa736",
+      "actor_task": "cases/fb-metaflow-stubs/task.md",
+      "reference_files": [
+        "metaflow/cmd/develop/stub_generator.py"
+      ],
+      "test_files": [
+        "test/cmd/develop/test_stub_generator.py"
+      ],
+      "structural_comparison": "型別表示、作用域與模組狀態",
+      "contract_review": "preflight_and_public_contract_review_complete",
+      "execution_status": "A1_complete",
+      "calibration_status": "selected_A1_complete",
+      "artifact_sha256": {
+        "task.md": "f26975997bb1f8a52bb39633def9f22b54b551e54a9800ad2a911288ef6f058a",
+        "source.json": "56516ef8c5d3294b3d2a6453edb8bf6c5eadafee0d85394524ac6e5c942f8757",
+        "reference.patch": "8728f834630228d2dfc07e1973044ed605151624e6f44e9935b78a883a2485cc",
+        "test.patch": "09ae3307c967262aa8f74d0e617f122b45dc3430eb7da9c4dcc7e78fdcc4256f",
+        "oracle.json": "b3196cc5de24d526c84d5e2d000595f14cfa1c0caf7fb2fb4fa459115bb69beb",
+        "corruption.patch": "b6e27bed7cc11b1fb0fb8645297d4f2ac3a7a92f41db932473d2167978630fce",
+        "source-test-removal.patch": "1bf613df6118620c71426a750d2373cd867042c3e674984e640b25ee2ca36106"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": true,
+      "preflight": {
+        "valid": true,
+        "result_path": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\fb-metaflow-stubs\\preflight.json",
+        "result_sha256": "10b8c7cd5610d54b2576ef89b5dabcad9f9702251c6dd714589f86a37b1d0cc4"
+      }
+    },
+    {
+      "case_id": "fb-sympy-puiseux",
+      "role": "excluded_material",
+      "instance_id": "sympy__sympy.c1097516.test_puiseux.cd575f09.lv1",
+      "title": "有理數與分數次方多項式運算",
+      "repo": "sympy/sympy",
+      "language": "Python",
+      "domain": "代數表示、正規化與型別互通",
+      "base_commit": "d108d30ffef1d9d1873f2eca08a4a40a48e83237",
+      "source_base_commit": "c1097516c793b0364c4f3fe2eeb66b15a94eedfd",
+      "source_url": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+      "source_family": "FeatureBench V1.1 fast",
+      "source_dataset_revision": "76b4a4566e04f4bcc13c35125d4f301791efa736",
+      "actor_task": "cases/fb-sympy-puiseux/task.md",
+      "reference_files": [
+        "sympy/external/pythonmpq.py",
+        "sympy/polys/puiseux.py"
+      ],
+      "test_files": [
+        "sympy/polys/tests/test_puiseux.py"
+      ],
+      "structural_comparison": "代數表示、正規化與型別互通",
+      "contract_review": "Public V1.1 interfaces and test scope inspected; preflight pending",
+      "execution_status": "actor_interrupted",
+      "calibration_status": "excluded_task_scope",
+      "artifact_sha256": {
+        "task.md": "f53d89cb0fa535d7b4e3f7290de9f31cb4e767b100ceb2aa6385c8e29f52a9ee",
+        "source.json": "174a6f5bb1ae4d75f4bada6ab578e5308712208006b97913eb2e96d9040c9968",
+        "reference.patch": "b7324bc132ea6a7d75e2c668aa4a22ac4b1596ef18eb8113a42e8ac91543802a",
+        "test.patch": "64abd9fe2ba2033b2ff2255f8c3744af1054abb63a4f85aa43c01212816c6e1a",
+        "oracle.json": "9bab1a8cfb2d3afecaf63b6d21c0cc98777dede2ba062bf3a1e1efa732486349",
+        "corruption.patch": "4fc9f1b068a07459a3ac50be59a32fae64843ed16aa48e2d989e17737b989617",
+        "source-test-removal.patch": "58822d62a7928cc747e2332953c78acdf61493a9a20632036b4e6bb60ca8f117"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    },
+    {
+      "case_id": "fb-pydantic-self",
+      "role": "calibrated_not_selected",
+      "instance_id": "pydantic__pydantic.e1dcaf9e.test_types_self.3ae7e16d.lv1",
+      "title": "遞迴 Self 型別的驗證與結構描述",
+      "repo": "pydantic/pydantic",
+      "language": "Python",
+      "domain": "型別解析脈絡、繼承與遞迴資料",
+      "base_commit": "26cdc53f98971861bdef5aa09ad5f884c2d0ef9d",
+      "source_base_commit": "e1dcaf9e68fc89731b45235e53245447edf35084",
+      "source_url": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+      "source_family": "FeatureBench V1.1 fast",
+      "source_dataset_revision": "76b4a4566e04f4bcc13c35125d4f301791efa736",
+      "actor_task": "cases/fb-pydantic-self/task.md",
+      "reference_files": [
+        "pydantic/_internal/_generate_schema.py",
+        "pydantic/_internal/_known_annotated_metadata.py",
+        "pydantic/_internal/_validate_call.py",
+        "pydantic/json_schema.py",
+        "pydantic/main.py",
+        "pydantic/type_adapter.py",
+        "pydantic/validate_call_decorator.py"
+      ],
+      "test_files": [
+        "tests/test_types_self.py"
+      ],
+      "structural_comparison": "型別解析脈絡、繼承與遞迴資料",
+      "contract_review": "Public V1.1 interfaces and test scope inspected; preflight pending",
+      "execution_status": "preflight_only",
+      "calibration_status": "not_run",
+      "artifact_sha256": {
+        "task.md": "dd27c6abd0ab977d88d8e32cd5129e411b30f1baabdb139c97e8abd943ce963b",
+        "source.json": "07b7f1db01bdda6aa0cf5d8b6b9a20cd0a5921f12da19883c4e1c215fb4ff8c7",
+        "reference.patch": "bebfd029c7260965f3c42bd500084204bc191e54a4240713b8a8d9008bb3a0c1",
+        "test.patch": "4e3a3372447c9a1c2660d76d55add4077f6ddf533ebe6ba4837dc5a1bcc577cd",
+        "oracle.json": "dbb6a107e127188b6de7dac45a11afe399cbf69ed724dd743e19db9ddb44d51d",
+        "corruption.patch": "fa6cf3d2e4b7bafa04dbf829b8521510386119814e791642d2eff03d737fca8a",
+        "source-test-removal.patch": "f1b06cf9c78f2a8f65a5661a7bd2bf4dc493bcc4e78e98ddb9a25b13be3cd604"
+      },
+      "initial_role": "replacement_candidate",
+      "selected": false
+    }
+  ],
+  "replacement_candidate_count": 0,
+  "selected_cases": [
+    "nodebb-images",
+    "ansible-type-tags",
+    "element-sessions",
+    "flipt-segments",
+    "openlibrary-index-state",
+    "proton-mailbox-retry",
+    "flipt-storage-cache",
+    "fb-metaflow-stubs",
+    "tracing-1523",
+    "proton-untrusted-keys",
+    "regexp-404",
+    "clap-2297"
+  ],
+  "updated_at": "2026-09-26T12:51:36.858296+00:00"
+}

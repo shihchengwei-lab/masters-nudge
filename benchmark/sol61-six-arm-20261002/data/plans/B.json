@@ -1,0 +1,643 @@
+{
+  "name": "Fresh B 12 cases x 2, finalized data/distinctions/information prompt and file-origin facts; archived Sol61 A comparison",
+  "status": "sealed",
+  "created_utc": "2026-10-01T06:02:07.118290+00:00",
+  "cases": {
+    "nodebb-images": {
+      "base_commit": "ab5e2a416324ec56cea44b79067ba798f8394de1",
+      "container": true,
+      "image_id": "sha256:267632c93bae96eb120292b36e68227a41f2b6edd8e8ff5d7a3bdd7ef4af3b6b",
+      "A1_result_sha256": "5cc440dc0a16362ab4d92c3208e3b1808c50c9f3f2403f85b954f35994ffae84",
+      "task_sha256": "be2bdc67429744c3fc0d65332c3b334419908d82d463614e79b4df96b59dacf2",
+      "A_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "B_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "C_prompt_sha256": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\nodebb-images",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\nodebb-images\\actor.json",
+          "result_sha256": "5cc440dc0a16362ab4d92c3208e3b1808c50c9f3f2403f85b954f35994ffae84",
+          "patch_sha256": "6f3695e2001aa71e83cbe8ff338237315c8b5cbef7d397ebf8f3a7796090355d",
+          "prompt_sha256": "bd50f475f94a4d61ba135c8fe09ab187a15670fa2b20243495f77a3bb1439932"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\nodebb-images\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\nodebb-images\\A2\\result.json",
+          "result_sha256": "7c2ae3c1f8cff84f6088ccb4780576c9c0a2879a50dd05797145a00267bd93ff",
+          "patch_sha256": "9513fc2a83e5698ff5041d3434df70eafe065c8237d336534877a49611cafad0",
+          "prompt_sha256": "eae2bb0fe87d05b3fc8d6d77b1e34f0c9bb6f37046952d1c83acc2406e9b52ca"
+        }
+      }
+    },
+    "ansible-type-tags": {
+      "base_commit": "dcc5dac1846be3bf6e948a2950b93477b9193076",
+      "container": true,
+      "image_id": "sha256:4cf51f69dad7c8cb966fa2af791058ba72e3b4124461d7418239bda01b5a6a9f",
+      "A1_result_sha256": "e568170d86daeace6a82316ed8ddfb0ea9f2b67a7b9990021c688c7cec74065a",
+      "task_sha256": "4ff4ff2177c0cf040171c83a6c10392cfdd4eb28bf634ab9d762f0b94fa854e9",
+      "A_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "B_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "C_prompt_sha256": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\ansible-type-tags",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\ansible-type-tags\\actor.json",
+          "result_sha256": "e568170d86daeace6a82316ed8ddfb0ea9f2b67a7b9990021c688c7cec74065a",
+          "patch_sha256": "b3c121b92c3979e479b7134244a58b5e1b4ac62844c3a9d503ad4838dfc56844",
+          "prompt_sha256": "4a827e5feb4fe8fe3c788e7205b7528434a248a3c225565e680b8450024d0218"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\ansible-type-tags\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\ansible-type-tags\\A2\\result.json",
+          "result_sha256": "1cd2c953624216fe18ecc8daf48cb024ea477f75be01978a68029f8e19aacdde",
+          "patch_sha256": "c5eab86d0ca096bfd7482f4c910b5e8bd6f9c2a1534666043617e4e059cf9106",
+          "prompt_sha256": "efee71dee70aa9657edd66cb66e5d99d9ad11e3c08e832191c41a7fa251cf8f1"
+        }
+      }
+    },
+    "element-sessions": {
+      "base_commit": "7a33818bd7ec89c21054691afcb6db2fb2631e14",
+      "container": true,
+      "image_id": "sha256:807fb8ab2e02372cc9b597e5b7432f35afcca267fc267a1fec95f16eaabaa5b2",
+      "A1_result_sha256": "3a98615fa95dee0ae156ecaf92ad6a5f530b0a166ee288ee1d884ec9c0bcc02d",
+      "task_sha256": "62400375e074f051501c0608aed510c2ceff2f3f428ba1aa544d0a4943621960",
+      "A_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "B_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "C_prompt_sha256": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\element-sessions",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\element-sessions\\actor.json",
+          "result_sha256": "3a98615fa95dee0ae156ecaf92ad6a5f530b0a166ee288ee1d884ec9c0bcc02d",
+          "patch_sha256": "f647eabca2f74327aecf65606b7b80c7ba5960bce5af1d86aa148d3a83262de0",
+          "prompt_sha256": "422fddc8b58db2206b6db980cff280c2e2a9ea920cf83b76215927cc82d70a94"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\element-sessions\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\element-sessions\\A2\\result.json",
+          "result_sha256": "090df7003a79f293673f37337f8979c934e213a0da17a0c61c8b24557e8a80e8",
+          "patch_sha256": "80768c55ba45cb0e7e81ed794d98b79c32871e7e1ac48bc634e3cf416a1abc08",
+          "prompt_sha256": "c57ceb9fb20dec7f506e3bd9d94c4c278853690e6719c04a3e58e0a49cab7ae0"
+        }
+      }
+    },
+    "flipt-segments": {
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "container": true,
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "A1_result_sha256": "25d480a6eec13102f333da25c905ee38b1c09d127245e6cbb5cba59935900a13",
+      "task_sha256": "a3cec9366cef19371ff820b40e47ebb9640b6c24b93a2f9e29635d0b8fe9b9d1",
+      "A_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "B_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "C_prompt_sha256": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\flipt-segments",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-segments\\actor.json",
+          "result_sha256": "25d480a6eec13102f333da25c905ee38b1c09d127245e6cbb5cba59935900a13",
+          "patch_sha256": "1031c6b5f18a48826bbe97ff3d8f4838b73ea5c4c7e110d8970f51328843f11f",
+          "prompt_sha256": "e43c438f522eb3fbb9800a7f9f83e8082ceb14aa38a34577389da4e0346e5998"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-segments\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-segments\\A2\\result.json",
+          "result_sha256": "e1a8e1730eec2bbbd6a6f38f3bf155880e6029fd9e73c1b37f5b21a14c400f44",
+          "patch_sha256": "c43666ded14a7fd04cf7582ceb94fc16adf1417df486036165b8cdc8feb3fc44",
+          "prompt_sha256": "8183d139a72d192711e3f718cde3c8297778804cd1de79be747380e7ecdc05c0"
+        }
+      }
+    },
+    "openlibrary-index-state": {
+      "base_commit": "0d5acead6fdfb5e41a1d29a076a6e89ad1a39027",
+      "container": true,
+      "image_id": "sha256:bc38d36c23ecc5f3a2d6db194dabcc1fb67146105629d0385ed1a9a3d67e6939",
+      "A1_result_sha256": "733715499155cfe35701c7cee3a4824d66a932c74b8ea62c5fe4b75c06bb537d",
+      "task_sha256": "928856e278fd2db168d6aa3b2a0336c7dc5db5e81f0813dbda4ebffe0eed1a75",
+      "A_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "B_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "C_prompt_sha256": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\openlibrary-index-state",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\openlibrary-index-state\\actor.json",
+          "result_sha256": "733715499155cfe35701c7cee3a4824d66a932c74b8ea62c5fe4b75c06bb537d",
+          "patch_sha256": "dbaa11e2171179e9939b0d48c3d400b46dbcf0b834ae76f924e1aa9c6250367c",
+          "prompt_sha256": "ed0b7d5e5d476f929e8cc16dcaeabbc5bbd38e222356f0adc71c9ba616ba0057"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\openlibrary-index-state\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\openlibrary-index-state\\A2\\result.json",
+          "result_sha256": "cae3aaf1906bfcfdda0d79b6a87eb7c2f65b97fce86fa53a9c5d6167363f2eef",
+          "patch_sha256": "5fe5f94410e41a279152fa26ce0f277bf7d3c43bbf584b94d93e92d65153fe26",
+          "prompt_sha256": "21410d21dba80146353fcdce7793f3275558146eb9302972ef9c0598677583ea"
+        }
+      }
+    },
+    "proton-mailbox-retry": {
+      "base_commit": "bd293dcc05b75ecca4a648edd7ae237ec48c1454",
+      "container": true,
+      "image_id": "sha256:61c22479df649f471ab2ed603deffaf7c290c96ff0b1fe725a62f588d7f4dc9d",
+      "A1_result_sha256": "5cca7f6125df595edc11128ec12e1b8bedeed6ebb25a42dc9597ba39a1e6bd21",
+      "task_sha256": "c538199ba6308555674a560479016bebe383432401c1cdea0e845502815b4fdc",
+      "A_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "B_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "C_prompt_sha256": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {}
+    },
+    "flipt-storage-cache": {
+      "base_commit": "0eaf98f050d86247bfe9bd7e41178865cb585060",
+      "container": true,
+      "image_id": "sha256:0d69bb686032bf1a248e5e4ccafb53e905bb6424bd38a7c1a0c6d37bb261b404",
+      "A1_result_sha256": "d81afc019b91018495400a238776a99c6d1221ac13b86b93f1ef929cafe885f6",
+      "task_sha256": "8185c94aebd010a45fd02177be92a180a5544077c2ffcca16b58a44876669969",
+      "A_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "B_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "C_prompt_sha256": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\flipt-storage-cache",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\flipt-storage-cache\\actor.json",
+          "result_sha256": "d81afc019b91018495400a238776a99c6d1221ac13b86b93f1ef929cafe885f6",
+          "patch_sha256": "2a1c513e82863579470355cc74cf70512a5eb9bfd78241905fc15d2380dee6c4",
+          "prompt_sha256": "104f43acf39961c395de47fa53e51ff8ecf1c33a92580fe1bc7d4a8b8e325093"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-storage-cache\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\flipt-storage-cache\\A2\\result.json",
+          "result_sha256": "e6de445bb1e2413228b32f7fb62cbaf51fba0626bf10ceefca972354655a1961",
+          "patch_sha256": "10ed415af10f9dd8c247813a8b963684f7888ce3bbd43092ce81a0cb868c7cba",
+          "prompt_sha256": "106c7987d6e3a4bff650864cbe346f4b33b64907079255659aef3e894b0f2703"
+        }
+      }
+    },
+    "fb-metaflow-stubs": {
+      "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "ae242a1871aa057d5bd26e8892c9ff352477cb22af7c1c78d9a38a4ba52c6be5",
+      "task_sha256": "f26975997bb1f8a52bb39633def9f22b54b551e54a9800ad2a911288ef6f058a",
+      "A_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "B_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "C_prompt_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\fb-metaflow-stubs",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\fb-metaflow-stubs\\actor.json",
+          "result_sha256": "ae242a1871aa057d5bd26e8892c9ff352477cb22af7c1c78d9a38a4ba52c6be5",
+          "patch_sha256": "acfe4de1a5b6153b1a0a44a835dfe1cfca5152faf3911d65e581ce57fa637dfd",
+          "prompt_sha256": "3bda1970dc75281c4c1e5ba49c41b5f43d2cdbe1683d5369b53f2ba9a3f0b7cf"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\fb-metaflow-stubs\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\fb-metaflow-stubs\\A2\\result.json",
+          "result_sha256": "e5c73e88aa44eaac8750bbf0b068eb75d9a02f8c2a9f6abadae30886d5d2ad54",
+          "patch_sha256": "b90b66169f039b2bde988a8dc33f4d557ada29000b3783a04a304f684ab84dc0",
+          "prompt_sha256": "dc6884d850a9804713dbb2dfd199740d179c67a52e6c93b87b345b0d2790a176"
+        }
+      }
+    },
+    "tracing-1523": {
+      "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "e86096776f1ceecee58f0e2ffc8f6515f1e5d16df1f3a61d4c0e1b922d8c778b",
+      "task_sha256": "ac7574e8adf4a093e17c87654b34aaedd51f16cd97e2d45251f18e9489b59adf",
+      "A_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "B_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "C_prompt_sha256": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\tracing-1523",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\tracing-1523\\actor.json",
+          "result_sha256": "e86096776f1ceecee58f0e2ffc8f6515f1e5d16df1f3a61d4c0e1b922d8c778b",
+          "patch_sha256": "b8f1baa9ed9fa7963a8e26007eb1aef15c6490e1c57ae71ca06cac8cf99e2b04",
+          "prompt_sha256": "04d39b2c9674cc64d538f9312aac1d3a4b1986ed3992a52d3ac8c9615eda9a10"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\tracing-1523\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\tracing-1523\\A2\\result.json",
+          "result_sha256": "21e0253c220862e5ec08732648aba3853ed7e0e521a5b4e3d1fe1c240b2f34b9",
+          "patch_sha256": "6839caec9f121bfea72769b078d09f49911db99288e966af938ef9131a1d53d4",
+          "prompt_sha256": "0ecadfe560316e709b846d10f762c368003366c42fe4617bff1f73a5c7610988"
+        }
+      }
+    },
+    "proton-untrusted-keys": {
+      "base_commit": "aba05b2f451b2f8765207846b11dc67190cb9930",
+      "container": true,
+      "image_id": "sha256:48c8f7c7552cbd2ab7d734d7ab8e4961ba105db00e4cc0de51a2a04c783f08d0",
+      "A1_result_sha256": "2b653d4fef5d2504a00b8030a6c808ae980a3b37889087f4b77aad49dcf47adb",
+      "task_sha256": "c7abb9e735101879a3cb5209ba401077a0a431873904aa4fcfbc842e5a97000b",
+      "A_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "B_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "C_prompt_sha256": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\proton-untrusted-keys",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\proton-untrusted-keys\\actor.json",
+          "result_sha256": "2b653d4fef5d2504a00b8030a6c808ae980a3b37889087f4b77aad49dcf47adb",
+          "patch_sha256": "bfefe905e22bd4067aaa6a616430cd4258a05e21de43976a1f6b330f1fadae06",
+          "prompt_sha256": "58c16311cccaf4ad9633222d4a005c05e2590833fcaf7626a1714e8b9e3174eb"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\proton-untrusted-keys\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\proton-untrusted-keys\\A2\\result.json",
+          "result_sha256": "08f753c7d59deb87fdee86443c9f445d59f220fcec96f227aa83a2e7d12428ab",
+          "patch_sha256": "9c70059e5a7c86a10398b7e87078c184f16b3a9afb4815d5e8509821e047e1bd",
+          "prompt_sha256": "033611133e3d44cc97ed2548f821da4d8df2d2f4cf5fce250e3df110b4a57977"
+        }
+      }
+    },
+    "regexp-404": {
+      "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "fe028aba83077d2b24f789e3c2f0a618d63b75258d58169fb3a893c710a19a32",
+      "task_sha256": "d46f0b6e938ebddfef3678bf51c2e0ace9a4ffd04b802400692583da0403c906",
+      "A_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "B_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "C_prompt_sha256": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\regexp-404",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\regexp-404\\actor.json",
+          "result_sha256": "fe028aba83077d2b24f789e3c2f0a618d63b75258d58169fb3a893c710a19a32",
+          "patch_sha256": "eb541678e9bb76caff5a2186b14b3690760b5e427246e4646417330897618b43",
+          "prompt_sha256": "7120d8e0dc2edd049b4ad9727248ee466250a77578de4cd9c0123af5e1846638"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\regexp-404\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\regexp-404\\A2\\result.json",
+          "result_sha256": "3f5e550272f166b83089d3dbcfeb7312f166da5faaedc8ee266a4bab171f2634",
+          "patch_sha256": "5bf8ca2fdc8550bc173d4c0e6047a2a68c406dc6e5d7ae9108dad8bfaf62c4e0",
+          "prompt_sha256": "e621dabfe39fbcfe03cb5c4089d5e4d72945a93b9eadf75c833479bb0a058a0e"
+        }
+      }
+    },
+    "clap-2297": {
+      "base_commit": "440cee8ff5d1e239462238a39d871eb1aab166cd",
+      "container": false,
+      "image_id": null,
+      "A1_result_sha256": "f97bbca5ae39ceab40b7fcd0e7fbde6fce8d24ddd7a1289eb20c0e268c95153d",
+      "task_sha256": "70bcee17f36c541b78c7ce6517288bb274e9bf0e8dce4e63ea45924ab104d1f8",
+      "A_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "B_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "C_prompt_sha256": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+      "new_order": [
+        "B1",
+        "B2"
+      ],
+      "archived": {
+        "A1": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-calibration\\actors\\clap-2297",
+          "result": "D:\\masters-nudge-benchmark\\round-10-calibration\\state\\clap-2297\\actor.json",
+          "result_sha256": "f97bbca5ae39ceab40b7fcd0e7fbde6fce8d24ddd7a1289eb20c0e268c95153d",
+          "patch_sha256": "e47f054ab21c20f72905090a86d334f08c564640896679f01a9433f0ff1b3b79",
+          "prompt_sha256": "90d56d58a902d65ae542ee24c0107acc6f0a14edbab92198979c1c92d9404b8d"
+        },
+        "A2": {
+          "directory": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\clap-2297\\A2",
+          "result": "D:\\masters-nudge-benchmark\\round-10-benchmark\\runs\\clap-2297\\A2\\result.json",
+          "result_sha256": "3fd6b06221d5ac1a6acef2d507b4983d91be824aa454b5f419cf44eb4b0d05a0",
+          "patch_sha256": "75a708d967312b5a83bff7d29629b155c88ac9eaa504e3fe21cf8ffdb3f81e50",
+          "prompt_sha256": "405957842371865625f923374f55597836d67d6e9dc7dd28bf89f5ba85f3eb38"
+        }
+      }
+    }
+  },
+  "actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "medium",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "medium",
+  "judge_model": "gpt-6-astra",
+  "judge_reasoning": "medium",
+  "feedback_limit": 3,
+  "new_arms": [
+    "B1",
+    "B2"
+  ],
+  "trials_per_case": 2,
+  "expected_deliveries": 24,
+  "workers": 2,
+  "actor_wall_timeout_seconds": 1800,
+  "pairwise_comparisons": [
+    "A-B"
+  ],
+  "A": "Reuse the immutable 24 archived A results; do not run or rescore A.",
+  "B": "24 fresh B trials using the finalized package with file-origin facts and 40/25/61/35 field limits; maximum three delivered nudges.",
+  "product_commit": "7491d9a4c02f9e53cfcec79acf02fb7905640c91",
+  "product_working_changes": true,
+  "prompt_semantic_sha256": "e67172b2e0daa982139a2c99b1656b6e01982ec7ee54d96193395e3763eb0214",
+  "package_hashes": {
+    ".mcp.json": "181e3ee48aed1b9bc3c8e372cdf1fd7ad27802c29e4121effeba0db14acbbd3d",
+    "buddy-prompt.txt": "6c058c7110caac5cf86f96a457821d60feb481ef8fbf25ca52b39e7b6e6109a3",
+    "hook_entry.py": "8ba6735af4d3004fbdd5cf009646d040b47fd94adcadf1d56716d5c1cebb1ee3",
+    "LICENSE": "e47f465cb04d113ef607aa7653f27d435eedd541b5f0bdfe9d8e7bd9ec967c61",
+    "masters_nudge_cli.py": "64bd8ed0d7e16be5e70f8b1ace583751c2044bb95c756c0f801457c6c4261e69",
+    "mcp_entry.py": "13ad60127dc1646ebc66328784980ddb96ed027c4d34777cf97a3cf02b540535",
+    "nudge-schema.json": "bbbfdb6c89b72b4f8fc0f0a17154d947a2475464dcab58ecceb64c0322654345",
+    ".codex-plugin/plugin.json": "4f8e18fdd624f5834a01a52e252cc816674b712c3c22e1b262a4df80ba9afd28",
+    "hooks/hooks.json": "667a252f2d31c4f196cc28cae683b4ca0fcfa7d3cebefa3b99e79f2b228bf5a7",
+    "hooks/run_python.cmd": "8c90bca172a2e23451479b7e189f131d491d46ad601c97c4d0f3230365d2639d",
+    "hooks/run_python.sh": "5778abc2114d2ee6df940c0dd3e6fd55b0746bdceee9dd737190f1f4a558d42f",
+    "masters_nudge/codex_adapter.py": "3afbba0417c4366233d9c64f728691f86a28f0a9c9feb0b5c0e50d20bcdecd08",
+    "masters_nudge/contracts.py": "87b5c14c4e000c241e9cfef1de18f461ba26014a6beb6e2541ac6fca46ae5cdf",
+    "masters_nudge/core.py": "6d7e33e9085f821f8d99d4249c67be340b072cf247ad6e67758f0fac5dc47614",
+    "masters_nudge/evidence.py": "5da430f6ca3d0d99ca6a4622bf52e458531be48703f9fc477300f0931cb9b471",
+    "masters_nudge/management.py": "5c327153e6774f67745392ff8c4a1268143b4a6ddbeaa84ca8f88f8ddc3bad19",
+    "masters_nudge/plugin_inventory.py": "e1d74529ff50123342d1fea57b1dd681fc11cbd929786cd5613c5caca7aa1c59",
+    "masters_nudge/prompting.py": "0075b234602db26ec467231678a4ce7c1a216920f487b2ed1c53d0b13be9e1ae",
+    "masters_nudge/providers.py": "4757c46ecf1b26478543556c30fb79df492aae8afa5a303ca86fb96b1b0d0f5c",
+    "masters_nudge/provider_contract.py": "ee797b2cce604adaae1855b4890ac36cc10a45a1adafc20e8033031a19a9e12e",
+    "masters_nudge/read_only_repo_mcp.py": "88871cb3c35493cbac20628ba16683033646c38300ab009178c4db76b7113be6",
+    "masters_nudge/runtime.py": "b5a082ab75c734a8cda302cbbaf7c3dab5ea3934d12dee32df77ac8f185ef4cd",
+    "masters_nudge/settings.py": "b4904c5eab5d4a5e7d9e3bfa4a3992af675635fbdf4932e49861d07774481729",
+    "masters_nudge/storage.py": "6e603a990b78531cd7ff3b3c0b89854020fbb497de7e8d0af37342ae94f10c49",
+    "masters_nudge/__init__.py": "0baf124d1551a8c96c40950d10f06beeeb07d56b77097d65377d14570eccf413",
+    "skills/doctor/SKILL.md": "f41b63bf57ca38e64c5ca7b7239431dae7976c40fca3942c37c6f08251fd51f7",
+    "skills/recent-nudges/SKILL.md": "3f968bb5cca49257c5fc6477c4ec4a345bd9ff4cef26be0c7fccc5ed82221a5d",
+    "skills/select-provider/SKILL.md": "1843464ef6aadc934d747be8b7f3503567bc7b1d2852506d1eb3b45cfdfdac9c"
+  },
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "harness_sha256": "f54e13ab8ae9c4a8ad00bdee8603949283f7a9127d829c7525b949790ad48f10",
+  "adapter_sha256": "56e3ae225630814f0f695d4d8c1d8b93d56abfa11b38d0ad07669b879ccbfe6c",
+  "experiment_script_sha256": "bf01ddce67718666b46f190660126dd52d1dc120e3be674dbfef18a5b21d4841",
+  "codex_binary": "C:\\Users\\kk789\\AppData\\Local\\OpenAI\\Codex\\bin\\ca9abb0b4d8ac692\\codex.exe",
+  "codex_binary_sha256": "86e8ef1013f98df51fdeea446597f7e3ca32e454d1d4d8c0402a68b03c311d70",
+  "codex_cli_version": "codex-cli 0.159.0",
+  "contract": "Frozen evaluation-v3 checks plus semantic execution-contract review; no extra requirements.",
+  "taste": "Same frozen rubric; newly judge jointly completed archived-A/new-B pairs, two swapped-order Astra medium judges, third for disagreement.",
+  "cost": "Compare recorded original A cost with new B Actor plus Provider cost. Current execution/taste grading costs separate; no new A cost incurred.",
+  "retry_policy": "No outcome-based reruns or repair. Preserve timed-out trials and product faults. Stop scheduling on genuine execution/evaluation infrastructure failure.",
+  "restore": "Restore original worktree contents, nonignored untracked files, and original Git index.",
+  "output_location": "E drive; preserve existing studies and calibration environments.",
+  "comparison_arms": [
+    "A1",
+    "A2",
+    "B1",
+    "B2"
+  ],
+  "comparison_deliveries": 48,
+  "archive_root": "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930",
+  "archived_A_manifest": {
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\result.json": "be1ad8d3d0f5738f99edc17a4ae2bb2601975461cb3991619f1dbb3a2918e825",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\score-v3.json": "087fa2f0f34c95d5267fa95b4daf15249d40d79a3d8c5a38b29d25d3cb00eeff",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\final.patch": "ae08df82a8e5736a8acc33adde7a287cf8e31002b5c629f53cb759c5139a0e19",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\actor-events.jsonl": "7a9a47e1845b4e1ca8c8d536d868c3425e59da80c24d939807642f079b85816b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\actor-final.txt": "08d23952b597d6f0b6ceb870f114c0c3dedcc210fa4237773eb5470ada11cdc0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\execution-review.json": "9b25b94e9323d1a0febeacb869a51662f5c8699134c6c7d8ac5de5320281c3e8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\execution-evidence.json": "ead0026b7e1b3c1d8273c8397734c00136330301cc6babcead7a1afa873e9f6b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\prompt.txt": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A1\\launch.json": "5cd69f1d5e6aa9ec6c072d9c6165400f0cf68a1879559695fb7074823947bb34",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\result.json": "05717f5a56ca7b49150856711a68d010facce660cb99f31103e7b3676607f175",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\score-v3.json": "7ede87508d67d539bbb6c0c40c657b4d70133a468ad1408d562ebc8cd6e4579c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\final.patch": "ebb51ec749e6228c49909327dbb0dfea669d276844e39126a58d4f4219115731",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\actor-events.jsonl": "530a175426dc321feca3f60696192cd079b0f9833158aaa1a8378d6dff058a61",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\actor-final.txt": "70f1d9c2c77b57d892c66eb52614583b005e4f57958b7ca6fd1f3f5aeb537491",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\execution-review.json": "08bbbdd0bdc670e5065622ac8e06c5967353ee78fd056db037222fc8420a86e8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\execution-evidence.json": "e707848c6933a4a5f66863ee2c654e1d3b1d96e2f9921e067ca3187c1fa36994",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\prompt.txt": "f4e11cb6fbec3a0220e8f8588a54c8f04192b5d69fcd12a72194155e6b91a7f5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\nodebb-images\\A2\\launch.json": "2990db064957f9a6aa0291b3d65cb9f88bfa1f03b5b907569f816058583ff0f2",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\result.json": "4f969a74c8da660652d38130bd700c05ef218e5cc7a0712192ee43f1c35eeca7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\score-v3.json": "65ab0fee7e0326bca84072ecbff4c8e9a90177f14edc190008d8575d802f897e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\final.patch": "5156cc9caf284232905def7073aca115d0b4f3862d58eb8ffe7e5c63904a75a3",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\actor-events.jsonl": "ade0aebdfadaa4fe2f5e1d7945ab36cc2649879ad843df8f66dc5e2d048d12e0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\actor-final.txt": "21e2814fb7fded85632bb3c76068b189166e97bafac4747a78e33ef4af9e3650",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\execution-review.json": "55fd048b38621c21addf21b729c16a025e15191d76eed592f143a71aee61ff8f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\execution-evidence.json": "c6bbd0f8968758276f4361a090511e9ab9ba08ae5a3544745a64f405a6b89c19",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\prompt.txt": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A1\\launch.json": "3f0df8378d2fc8a97d585ba783070e9f86caa37ea1740f3372229138ef95d613",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\result.json": "01077bd6df8adbf2406478d4e25977f903442e3aa2d7ff360c8346756f3daeb0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\score-v3.json": "46d06015e4c95604c6558290cfbe878f73659106d090806bcc49268def490d3f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\final.patch": "cd2f75255a9538ef860b001551ee75f00918c34c827032a23a25dd1f5308205b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\actor-events.jsonl": "4c91995507d547ace85c663a319f281a675d7c65bec6a526fa189522e71381c0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\actor-final.txt": "94b664e90af35e9ac2d153e7b8d9dd5f2c2d69222556bab6203ab9074c972fa9",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\execution-review.json": "14fa78e1e2db2e5036c1bfd5801bd5fecf944ab8945716cc64bf09c3452348b9",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\execution-evidence.json": "0d45678d42620cadaefe51356593d1d195b144b8559af1c746c1c7c0644cd3eb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\prompt.txt": "a720816f90b25d1b10b5809946b595571421c010aa4d14ce45cc6557f425a426",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\ansible-type-tags\\A2\\launch.json": "ef44d2ea789f1e9d42a8c111ad4c615b23a035820b98dd8538f5c4917a06366d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\result.json": "0547717fdf2b84b92cfbe6fca0c6fd00108e61b458b02fa42cace3dddc405140",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\score-v3.json": "a223230c011abfaf15e58445dd90e073b30577c3db5a35083dfe0592464d4dbc",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\final.patch": "7499742cfd483b139b6c0e83b35617d5f45bb7cce092466cbec4540ca9f0cdd8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\actor-events.jsonl": "0b2a9a8271d933f12cf2f90ed9b8cb2610d6202f984f8a1baf79314f0d5ec77e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\actor-final.txt": "5d7da1c78a957cf6713ff348a44b59f7f8bcc37949d41c9b0d388d38e4378174",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\execution-review.json": "ae7ee44cb10ecb2d279e1d347d5701c92aee47aab5c5b843852e00ce24232705",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\execution-evidence.json": "09940c6808a1f576077b123259e5f05019d07f263d5f6422f51451d403230520",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\prompt.txt": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A1\\launch.json": "5bb540cb20d81636e9351597d1a0376916831856e3f9de841df26feba26c53e7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\result.json": "d3be48f6758283280d2ac39c02e151ab7b1d1725139136a65f792b96171cc9a8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\score-v3.json": "65398fae498b18cd71a1028f3f76f3ff6f1c8ced6e98ded7584f9e9bf9695875",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\final.patch": "196297fcc918f11dad63719136fe4fab0424bcebcffb5d44d6f9bbcc07168a9f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\actor-events.jsonl": "f3723e99d4543c0fa29170b8523279ad64b2841792e6a287e33058e035a99466",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\actor-final.txt": "07be1b03b3a24034d3e7752a12cc7edb0b58b088b2e7be728346c19233230ef7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\execution-review.json": "7d7c540390d87079545c11c41c71a2aaaef6501c8690544e8bd83708c015bb90",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\execution-evidence.json": "13e4337ac7a031b6f89b4e6f304354b7c57706d3dc68384539877ed776cf70ae",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\prompt.txt": "3b18c0f0c91e930ad7d97ae4ae3586c0369faf7195dddbf8eac5c41cd05ee10a",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\element-sessions\\A2\\launch.json": "1249dba7b5dad052ef167d51962482b2c6069b14bd80df3eba081b9e039438bf",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\result.json": "c8e8962a5fd5e81bfcbe06dee03dde9ee8215804d46fa01f6db29d864d56a70e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\score-v3.json": "181ae59abb4b27f7ea5f684aa888a067badf5955311f54ace65c30fad4c649ee",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\final.patch": "180944f19f0fd0f1c7d0426f9b1b6a3a08c343c56a2df645f562febfc1a42bf5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\actor-events.jsonl": "b948fa57974c4875a6662127cbb0cb32a743eac7300f5ebe1adb6c699077c021",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\actor-final.txt": "345db2f4549837d773f36673677dd8579ebb39b7b3898201d0dfd02e8325dbcd",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\execution-review.json": "edc0f14178ca753ddd61e79003fc8b23d3f5e9a79b924108aef4c5722510f009",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\execution-evidence.json": "2b495e34cbf6674624789c75183736d819fc1986fd81a57bb2ab9c9668d172ba",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\prompt.txt": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A1\\launch.json": "ffcf030fd208e4e78065e9a6455bbb22ef4fe76375a067e49b71a4d2eaa1c758",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\result.json": "0c04409fd4aa33d5e6627a77096fa97ec9f3b9d35830e92674e8e7a54ce2f5de",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\score-v3.json": "d888b9da1f6322680ccb8a2fe5505f8723bebd6fc326be1e6c3446f0c0cf1a02",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\final.patch": "6a4f0e24c51c6d07762ea0d60dca5dac756d182af09a2830c6de96577aa6d612",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\actor-events.jsonl": "8fc4d8cf114202effa652a221245f2ec209ccdc1ab34afb4ce60022828053fd5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\actor-final.txt": "30221e1cd086b7eed19d5002f4f5110722959a61b9fd1cedd61ffeb01f8265d6",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\execution-review.json": "ad7bd2d204289e31efeb40b006a221581a63d2d1b328f0c3ca1f65f64d3f510d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\execution-evidence.json": "0b643d8e3b7da5f05e443409951c98bfa67a929032361d16ad8c8708d6990ba2",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\prompt.txt": "4df5a6614e4fa3cb0178aa776021e31f24362d95a37b599a66790f7357b76190",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-segments\\A2\\launch.json": "4e8f89ddf48e789929262dd35ce1805eb0c3e66e652e554c35d3c6436180fd6b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\result.json": "4851b540f2a0b0737d6951ba87a1e9af763baed2996cb800a8e7600f9b5591f7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\score-v3.json": "a2112a9b93988fb59f4e80917f26e8fa4b797660a7c341188a6acb0fd573d315",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\final.patch": "887559dd082fb2ae6bb0e0f2757799de21d6bbc92c41d74ad9cafdcf5dcac70e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\actor-events.jsonl": "bcc293f77b76733bb7e7e994ce4e13bb3b1d4da2eb5d3aa46be9f55d872cc20e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\actor-final.txt": "bbdf5c81f42fd65f4973ec0b7e031a11e73a22d536fc2cc30473e1e46d8a27eb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\execution-review.json": "0ad320b8ec19d73e1d36584ae6666cc25c9721e08812b4f3eb350a5214feb0ec",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\execution-evidence.json": "24047fb6808ab8b1e60b75c2473f9db9693eb7bb70bb0b9fcc7a5686505832ff",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\prompt.txt": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A1\\launch.json": "2dbd0181618ba6534a60df8f6733d63bf80352922b573fbaff66ae44332303b7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\result.json": "d601966e557ccf74f2f5d749501d281d9c65aaad93bc0cafaa60d3395634ce7f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\score-v3.json": "7a475c6aca59cad00f5d303f882532349732a0c4ad3453dfd459adc3e2f337c0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\final.patch": "82f5f7e2ebb4e571c7c2c1be889129621df7fdcb40046eb6575c08ea6f05e0b3",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\actor-events.jsonl": "ced19b8056f629f5aa9345c3fa1bccd23fc59af71fbf16a79f511f39e6684671",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\actor-final.txt": "521ba93537511933a9552abdf5a43ceaa9a8c65004f0f510984796a6e55f3d29",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\execution-review.json": "9d0b28d46eb5a026538ea28b85ceb8272e87fa8aead158a50f91fc3bc269a7c1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\execution-evidence.json": "e4985eaf6946dcf4994780811740adfc1895dd89ec03d50957de3a862d234fd3",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\prompt.txt": "e10e2baea9c371368f52c8dd614428f34d023704b0ae916c8071251a09604bf5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\openlibrary-index-state\\A2\\launch.json": "fb3fd577a9ee58c5f641c7df2f875c18f9e66da61ab553cc7d5f0368409b8121",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\result.json": "e0882019918cc321bc53d9087a7218a893fa49260e9fca8946e5ac0a109ae9f3",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\score-v3.json": "138bb989f7a29a4101db2caff918e0387853fe3f7f468b2fbb7e314763a90472",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\final.patch": "27361156d86bc9895f7a92dee7a28a1c3088aeafd93aadcd2cee8155ac69056f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\actor-events.jsonl": "9947afc7a84140297802f95cd46cbba2676a91c35d5960f54b4c7203c0e926e1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\actor-final.txt": "cce6628b098e5746f4bd63533e2f17ceae62609d7c4b1f4fbe18086592e905ca",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\execution-review.json": "5ec61c70e50a63542117b42ba8c76be2346402f132ac85307a5b065172cd91ad",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\execution-evidence.json": "f643fdd0aacf827ad4340999364b4add400dc61963e98681a8ef57a99ad00fde",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\prompt.txt": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A1\\launch.json": "15deebc2a52ac8059a9f5fc37d79473027a2180e7e49690161c9767169465a3c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\result.json": "2f065b601094feb1cb545e42f7d4e260e23291f56acfc069b395bc0a528e26ee",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\score-v3.json": "5cb15c4a90d23f669913432ad7d00da682516bf785d123bd816107623f273bd1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\final.patch": "cb4ff1f0153bd480f7b4257141b3c8909cd127bd61470fd68fa19a8346217f2e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\actor-events.jsonl": "344dd98f452b1aa7ddd16f2502ff17bd808bf77e89d63f701f503731fe40e5a9",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\actor-final.txt": "c848cff99f3fd4c0cd628af96a8bc5990f18b5c270fb20f0ab9c6a6316a15b35",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\execution-review.json": "c66b19ab6b4825b407185df25639aa6ab12d78bf75bb8b3be2d64b32221f4af8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\execution-evidence.json": "1209cd01b2492daefdd16d5dba7d9bc33d536af5d4ef3a31f1461303d033ad1b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\prompt.txt": "2f5851634f778c19eab48e2ecf609809b7d67db0ccdcaff4093affceb01599df",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-mailbox-retry\\A2\\launch.json": "25a13f5ac0993dbb79afdb4b9ac73e7fafde728d024eee84765772a927e60432",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\result.json": "116a22c94c2de41466423cd3d8ee554c5a30b6a7b838bd5ff6e18757bd395f85",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\score-v3.json": "ba712afb61a9ac6bd4533cedab36f69a697ab95e878f6328fad08d0dac6f72ea",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\final.patch": "73b6b40693975aee4cb0270f624ba4697f939ccbc32c986406ff7de45bcd33d6",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\actor-events.jsonl": "396d6f372a7157f7d5bfb67999aacec772dfd73564f05692f0e9a871d2e8bded",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\actor-final.txt": "b4c154c195dd2dbf711e9fef678aff881ee71e9d3beaa9a2c4ceb9ef8353bfe1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\execution-review.json": "7194f4b215b8c7f1899877cbf377d5a823fbe792d23449fd11d434eb9324756e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\execution-evidence.json": "858c8f3923fc6620106c03f44cfc616f2d6a0ed4e26bc505a20e9e5da321512f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\prompt.txt": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A1\\launch.json": "909f6bb550e31ebb72d6368e28b4632922fdfc0ea7d292eeadb7186aad94808a",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\result.json": "55dd77355973899d06171ab4c0dbd8f88b57d5a4a84c0e5cddc363bfe1765b80",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\score-v3.json": "23f7aa7060d23a360c3c389e77c1bf8df6cbfa408cd164cdfd22c26500c4c46e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\final.patch": "3d5ae806fabcb95e97df6d6e5f4ead16ee664e0652dbf450130f7dd9c2726f68",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\actor-events.jsonl": "39207f32ce5e738908e12a73a800197bb98cd73dbb8205f85683f935712a0a2d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\actor-final.txt": "6db4ca3a92b15c2483dbaa9aad0bb5d7d10b9bf591a86d6bf4d7e7ca67b17940",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\execution-review.json": "02a93bb2e8d9d38a9995b6cd39eeaeca1f893ad2089b68ff494a5f46d2d94b81",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\execution-evidence.json": "c82ace1added291f8601720a820241159ceac4964fb3042f44138458cd893c6f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\prompt.txt": "79c507fd888bc767c109676b463f7570150f75b3db76343c291b7044cddb45e4",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\flipt-storage-cache\\A2\\launch.json": "f71f214057cb86e1aab37fd69aed71401f826e4ac4544ce8c1da5c1291dd8575",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\result.json": "53662bd816db400ea09e0b1a3a220748e76ca950d77ea6791cfd7e302f09702f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\score-v3.json": "5dc08d994037149ae64c1287c555b7c83084d908bddb684908853e557dea305f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\final.patch": "0d7032eda0153de163eb7d029cac1df8048722b39aced8c19945b79888b64bd7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\actor-events.jsonl": "df3eaafdfe71ecd4d636c045bd33cd2c9eade35f73b65b551228e4f491506854",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\actor-final.txt": "6c84ea4b01f31506c814001571d22dad92a4be2d47ae1a1d7e533dba7fe044fc",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\execution-review.json": "ad05d8ee6a1a522e35359bc479a7e252ae0f6f5123e65f559af8f81a18426aff",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\execution-evidence.json": "01d68b58bd930b5e37e32da0badc2a636155dac54cc43cad229b67c5b56b036b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\prompt.txt": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A1\\launch.json": "06fcb22393c2997747e53c7739356a847c206163826519918fc0c839e987ec43",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\result.json": "84f83957ce93abd391faaf33c3b4a9f0f8863c833f8d07e755e6ef4010214847",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\score-v3.json": "9de44abda9b08bb9e3a1622b92d672d0cc4eac8f15fadb989e248600a7f6b6dc",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\final.patch": "28ce8c551f8b350fa7ede6e4f58ae3e212e90ce11d98d6456ef9f51951734ea8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\actor-events.jsonl": "f7472e91be6bb91c97e687a81551afe4dad64f9b0ce1e62f8b257bca307a41f2",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\actor-final.txt": "dcaab3903b7f00434648b29fdcb46796c13cc6529920b2f400cb4dfea2e8bfd6",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\execution-review.json": "df34396a00be03ae8ecf325fd34fa0016c12ae4557f6ba0fe017ef3012ecdd1b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\execution-evidence.json": "935737f4498b6e05c99d0b6122121e371f6cd5e99514fb297b6fde6bde3371bb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\prompt.txt": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\fb-metaflow-stubs\\A2\\launch.json": "cd4f0495629bd332191934604b731997ef8b888c64ee6c346f298655c7b72459",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\result.json": "b9b1f2dcdde3b6107049625332ac7a5e31b916e42ad17b7814f1b03c1a3db26f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\score-v3.json": "d85ed87551c2f68f0e101c14757f0faa0b850111c301b151d9fa51deca7443cd",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\final.patch": "65fa2255eeef3c91d073cbd382b78961d08d245169d2fd9da706ce8a2cdc755c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\actor-events.jsonl": "333394ca24b9e068e9628c62d744cdf29519c4e05d87211f523a3ef02ce096e4",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\execution-review.json": "eb01f28dacd768825de415a2daa0da92889a13f9eb9a3c83f00411487e912602",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\execution-evidence.json": "fe571f303583cf699c5eaa41f2a71cc5c051f975704d7c0374f680f1437f56bc",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\prompt.txt": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A1\\launch.json": "c603d1af16f168fd6402feea2633a3b0834e80cbcb655144e34e30ac22101baa",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\result.json": "4b82f906dc9192ec910e302531f71806eb84ba99796c1e0b7795ae2d9d77bc07",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\score-v3.json": "efa3a2825e6e6b8704bc7830737c72993d9f0a6144e5028869d666dde17e8fbb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\final.patch": "dfe03f6fdb23673ff60e74f46bfdc3d10be347dea695408cdece872b4274ec00",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\actor-events.jsonl": "16a869bfb3c42354dae424d0f399ec620079c8e9743c60d1cd5cbc5a1277f580",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\execution-review.json": "33fb59132bbf7cd4fba11528ae8a86e6282d0d41d962320998a221cdd55834b3",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\execution-evidence.json": "d18587cf52201575de52cfa789ac9ae1477c5eb4c903a507bbca8faef98f28bd",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\prompt.txt": "df7d9c32b7f923f95b2ff3df38084fdbb2f7da7afd89dc7b3664cef9c90891c0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\tracing-1523\\A2\\launch.json": "470159d747f3f58824c2def5929de7eab2371a39eb46afce406649b903914b3e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\result.json": "ff9391fc58572c5b8cd62f8813d24d301f35e2f6906e3c0b148bf72a83944f59",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\score-v3.json": "b019fc8648c8bf88996527e6bd8710e751cb19761e4fee9aa6abf1e3cf139ee9",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\final.patch": "827bcb78f923463658ed7eecaf1291f6ab875d59dffcadffcbf997865b26d654",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\actor-events.jsonl": "4904b909ab13dd12176cb9acb90e2da8c4e65276a8fb1640620dbbf94705472f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\actor-final.txt": "1ec873081a3de4fbbd4308b49f1db3fb3f9ece06746956e440755bad6f370d2f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\execution-review.json": "3f75ad1d5f2a469c00db1f2455374d97cf6a54c3750fb4d815d593e3b5f2557c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\execution-evidence.json": "b3d54e722b507e3cad760dd95ffbe772b5922f57f01dbd282d03338e3c8e93eb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\prompt.txt": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A1\\launch.json": "b54d0abead3d04a9134265aa9c8ccd314b1a16e645c0deee23fb6cfe1f45b079",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\result.json": "187df8520487cd06fbb04872ae0cdfe5b46e57c9e0e5c05c4a3fc3240f0c22a7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\score-v3.json": "da434d537f20702761d2f16ed4dcbd25d19943ae06643ffa5c353275085e5bff",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\final.patch": "ee51b983c06077d83968ea4f7062f31eaa0e0188de0e88244405e9135485c6f5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\actor-events.jsonl": "953861f396afef646f07e633cc457d76badc0e2a89af8eae1ae3362750e8544c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\actor-final.txt": "b8aed886e1a43dbef58d5d4591096dac9c09f774e925b9ec4d06f8745c00e95b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\execution-review.json": "20e905799e82a7a57cc556f284142b9c5c1bf80cf1372de24f6022d08089efda",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\execution-evidence.json": "b99c72699067fe8f835a0c9d4200a6b9c7d7a9c9ccebcd6b0c67f5bc36eeb863",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\prompt.txt": "7b75b6934fb6ac6e0937e06bdb7da28120153eb823f721e035577f2a4592670f",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\proton-untrusted-keys\\A2\\launch.json": "dab7093b7551540ffebc453658260aa0500cf84adca6ac4f3838240b29eb7895",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\result.json": "72c866592d4f0742af190d1d4816c2d0bd0e63af21e400530db0d98ec67fb803",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\score-v3.json": "3e6996624ccf438b9a935c0937357595f131b1e285f815bc8bc5b9b720c9e4d8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\final.patch": "2667a0549706ee36534e4578ca5722d56bce23a06c6a9490c83508067687a7b0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\actor-events.jsonl": "3ba8e650d77325207225292da3d192ceb8c364a7bb3d4bc9106aa9b942b69972",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\actor-final.txt": "1f3277af079cf7c45d57e0bba6d29ca20187cf6baefdbe3a4b5fb11d5adbe3dd",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\execution-review.json": "03bdbec36bf85db6c020166fac382277b0dda19c5ac6506cfb655a895b141657",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\execution-evidence.json": "635bc377e334eece3fffb0c77ca7a930848a3e22024a815c2819bbb00add11e0",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\prompt.txt": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A1\\launch.json": "45fb08170ba83f02ffd7a627454e6f3592bcd9c3aef53b7ab8eba820ea188f7b",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\result.json": "b3704b5bf23eb81fca230368ef91a3729ad13ea6e270f5340737aee4bf568785",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\score-v3.json": "d5001192acc2c2b71e6f649b7a2b18ecc69998838a2c9aea87f869046f1d8eb5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\final.patch": "304dcaeba51efbac1b3260cc08b8e851cd35a74dd4386a386544879e544e7bcb",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\actor-events.jsonl": "d47fa304438552b888b753f64207ff0492323cf74b60a1ddabc5fe1689f8cb23",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\actor-final.txt": "d338541ca622cf3f0b5313cd8de93ee8f61eb513f8ef2407d4033b6f03d360b1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\execution-review.json": "4ccd848c44adfdaebf72cdd32710895740218ff61c8975adcff7801607bbfcac",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\execution-evidence.json": "f28f65498ae39592d83d5ac728a444d348a6ffab9e19cd550d30e52c9924bef1",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\prompt.txt": "4f6bccd37a4ecad176ebb5ed80660b943121624424acc045fce9fae99891c40d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\regexp-404\\A2\\launch.json": "af3a5927853a7234091f9ed10fb6c860f474f878af84fe356c9f030da4b9dcd5",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\result.json": "48590f31966c4c226c9ed6fcdc377baec0881c3ed64c8081008f5528a20a3eee",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\score-v3.json": "fa7af44d4d6d695abae42cbe26898d33d4a28290d6582a2208ae4622ab3c085c",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\final.patch": "8a9cf1d13d67e3c900e143b64e272c6733e23796e954000cec34af3dd74ac34a",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\actor-events.jsonl": "0d516cd49a17b25299afd59a49b81e093d1d6eb7726d88df4b28c6923fe4d1ed",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\actor-final.txt": "6e8c9ee91d4f0610dd8b01ba4745b04c7ef7201d60d3c3e6b01b39698162773e",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\execution-review.json": "da53732c9214cf627de37f512cebee3e8c836aa4c18a822f5b370c1581a7acf7",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\execution-evidence.json": "556799dc0b35637bc5576a8d57df6e72fd13e2e870717531460a58775db2fb85",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\prompt.txt": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A1\\launch.json": "c7243fdb474a847f552f4265d93b26b7179ebc54f64e2102c769b25b7b03aabf",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\result.json": "81fe16e800c7e8fcf0cf5d93acea60fdd7b02513ead9875f13f00fb01755b5be",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\score-v3.json": "35c8f24d3e9fc335c74f6589bb9d73ae75811be0f24fbe0f88f76bc2ecd2d049",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\final.patch": "13dc77f138dfc5949805bdac19d2433ced0eee23889930c49eff7584bfe7194a",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\actor-events.jsonl": "ba0d99563ef66853d7a130353fcff5dd837e0c25b560560d6e231adecca4db32",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\actor-final.txt": "e8526cbbb99ca4bd7435ed313fa2be6a22784a446dfada81f3226440702d31ea",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\execution-review.json": "70b2ee2f5ff76750bb968347f9a90e7a3a5555175ca751c2a101c66f0565a0df",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\execution-evidence.json": "cc3be98bbfcc97a680407c557aebd68672c1193fdc3c68e2445a75d454877b3d",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\prompt.txt": "8deacb9c5dbe3fa649970ac502747636ed6d770a0cbcc8c25a37ed3077b489b8",
+    "E:\\masters-nudge-benchmark\\sol61-ab-12case-20260930\\runs\\clap-2297\\A2\\launch.json": "433dc678986a7a50e2c34b8a9847513ce866bcd96949b636d07fd240c1a5aafa"
+  },
+  "comparison_scope": "New B versus archived same-model A. Historical comparison; original study and the one-case pilot remain separate."
+}

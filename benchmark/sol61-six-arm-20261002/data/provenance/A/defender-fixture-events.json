@@ -1,0 +1,12 @@
+[
+  {
+    "TimeCreated": "2026-09-30T20:21:29.1054776+08:00",
+    "Id": 1117,
+    "Message": "Microsoft Defender 防毒軟體 已使用 Defender 安全情報偵測到惡意軟體或潛在的垃圾軟體，並套用安全性設定中定義的補救動作。\r\n如欲了解詳細資訊，請參閱以下內容:\r\nhttps://go.microsoft.com/fwlink/?linkid=37020&name=Trojan:Win32/Ceevee&threatid=2147797550&enterprise=0\r\n \t名稱: Trojan:Win32/Ceevee\r\n \t識別碼: 2147797550\r\n \t嚴重性: 嚴重\r\n \t類別: 特洛伊木馬病毒\r\n \t路徑: file:_D:\\masters-nudge-benchmark\\round-10-calibration\\cases\\nodebb-images\\test\\files\\toobig.jpg\r\n \t偵測原點: 本機電腦\r\n \t偵測類型: 實體\r\n \t偵測來源: 即時保護\r\n \t使用者: NT AUTHORITY\\SYSTEM\r\n \t流程名稱: C:\\Users\\kk789\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe\\ripgrep-15.1.0-x86_64-pc-windows-msvc\\rg.exe\r\n \t動作: 隔離\r\n \t動作狀態:  No additional actions required\r\n \t錯誤碼: 0x00000000\r\n \t錯誤描述: 操作順利完成。 \r\n \t安全情報版本: AV: 1.459.480.0, AS: 1.459.480.0, NIS: 1.459.480.0\r\n \t引擎版本: AM: 1.1.26080.3, NIS: 1.1.26080.3"
+  },
+  {
+    "TimeCreated": "2026-09-30T20:20:58.8905846+08:00",
+    "Id": 1116,
+    "Message": "Microsoft Defender 防毒軟體 已偵測到惡意程式碼或其他潛在的垃圾軟體。\r\n如需詳細資訊，請參閱以下資訊:\r\nhttps://go.microsoft.com/fwlink/?linkid=37020&name=Trojan:Win32/Ceevee&threatid=2147797550&enterprise=0\r\n \t名稱: Trojan:Win32/Ceevee\r\n \t識別碼: 2147797550\r\n \t嚴重性: 嚴重\r\n \t類別: 特洛伊木馬病毒\r\n \t路徑: file:_D:\\masters-nudge-benchmark\\round-10-calibration\\cases\\nodebb-images\\test\\files\\toobig.jpg\r\n \t偵測原點: 本機電腦\r\n \t偵測類型: 實體\r\n \t偵測來源: 即時保護\r\n \t使用者: SC_ACER\\kk789\r\n \t處理序名稱: C:\\Users\\kk789\\AppData\\Local\\Microsoft\\WinGet\\Packages\\BurntSushi.ripgrep.MSVC_Microsoft.Winget.Source_8wekyb3d8bbwe\\ripgrep-15.1.0-x86_64-pc-windows-msvc\\rg.exe\r\n \t安全性情報版本: AV: 1.459.480.0, AS: 1.459.480.0, NIS: 1.459.480.0\r\n \t引擎版本: AM: 1.1.26080.3, NIS: 1.1.26080.3"
+  }
+]

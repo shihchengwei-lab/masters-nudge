@@ -1,0 +1,2867 @@
+{
+  "arms": {
+    "D": {
+      "recorded": 24,
+      "completed": 8,
+      "frozen_completed": 9,
+      "failed": 16,
+      "unresolved": 0,
+      "case_completed_trials": {
+        "nodebb-images": 0,
+        "ansible-type-tags": 0,
+        "element-sessions": 2,
+        "flipt-segments": 1,
+        "openlibrary-index-state": 0,
+        "proton-mailbox-retry": 2,
+        "flipt-storage-cache": 0,
+        "fb-metaflow-stubs": 0,
+        "tracing-1523": 0,
+        "proton-untrusted-keys": 1,
+        "regexp-404": 0,
+        "clap-2297": 2
+      },
+      "cases_at_least_one_complete": 5,
+      "cases_both_complete": 3,
+      "seconds": 16383.378,
+      "usage_missing": 0,
+      "provider_feedback": 33,
+      "provider_faults": 0,
+      "tokens": {
+        "input_tokens": 33455350,
+        "cached_input_tokens": 30558208,
+        "uncached_input_tokens": 2897142,
+        "output_tokens": 330339
+      }
+    },
+    "E": {
+      "recorded": 24,
+      "completed": 10,
+      "frozen_completed": 12,
+      "failed": 14,
+      "unresolved": 0,
+      "case_completed_trials": {
+        "nodebb-images": 0,
+        "ansible-type-tags": 1,
+        "element-sessions": 2,
+        "flipt-segments": 1,
+        "openlibrary-index-state": 0,
+        "proton-mailbox-retry": 2,
+        "flipt-storage-cache": 1,
+        "fb-metaflow-stubs": 0,
+        "tracing-1523": 0,
+        "proton-untrusted-keys": 2,
+        "regexp-404": 0,
+        "clap-2297": 1
+      },
+      "cases_at_least_one_complete": 7,
+      "cases_both_complete": 3,
+      "seconds": 23030.092,
+      "usage_missing": 2,
+      "provider_feedback": 27,
+      "provider_faults": 0,
+      "tokens": {
+        "input_tokens": 42887516,
+        "cached_input_tokens": 39747840,
+        "uncached_input_tokens": 3139676,
+        "output_tokens": 494427
+      }
+    }
+  },
+  "comparisons": {
+    "D-E": {
+      "reference": "D",
+      "contract_counts": {
+        "both_failed": 12,
+        "E_only_completed": 4,
+        "both_completed": 6,
+        "reference_only_completed": 2
+      },
+      "contract_delta": 2,
+      "contract_label": "進步",
+      "taste_pairs": 6,
+      "taste": {
+        "D": 5,
+        "E": 1
+      },
+      "taste_label": "退步",
+      "matched_usage": {
+        "pair_count": 22,
+        "excluded_pairs": [
+          {
+            "case": "tracing-1523",
+            "trial": 1
+          },
+          {
+            "case": "tracing-1523",
+            "trial": 2
+          }
+        ],
+        "arms": {
+          "D": {
+            "input_tokens": 27890508,
+            "cached_input_tokens": 25369344,
+            "uncached_input_tokens": 2521164,
+            "output_tokens": 265486
+          },
+          "E": {
+            "input_tokens": 42711218,
+            "cached_input_tokens": 39656576,
+            "uncached_input_tokens": 3054642,
+            "output_tokens": 491334
+          }
+        }
+      }
+    }
+  },
+  "deliveries": [
+    {
+      "case": "nodebb-images",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "nodebb_group_variants.js",
+        "nodebb_images.js",
+        "nodebb_images_files.js"
+      ],
+      "seconds": 456.687,
+      "tokens": {
+        "input_tokens": 693713,
+        "cached_input_tokens": 597888,
+        "output_tokens": 9185,
+        "uncached_input_tokens": 95825
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 622409,
+        "cached_input_tokens": 562816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8549,
+        "reasoning_output_tokens": 1733
+      },
+      "provider_usage": {
+        "input_tokens": 71304,
+        "cached_input_tokens": 35072,
+        "output_tokens": 636,
+        "reasoning_output_tokens": 421
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "11862a5f49458a48e570caeaaff1d6cea562480fb316abdceaabe6231d90816c",
+      "reasoning": "medium"
+    },
+    {
+      "case": "nodebb-images",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "nodebb_group_variants.js"
+      ],
+      "seconds": 404.485,
+      "tokens": {
+        "input_tokens": 701108,
+        "cached_input_tokens": 588160,
+        "output_tokens": 8299,
+        "uncached_input_tokens": 112948
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 648612,
+        "cached_input_tokens": 588160,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 7403,
+        "reasoning_output_tokens": 782
+      },
+      "provider_usage": {
+        "input_tokens": 52496,
+        "cached_input_tokens": 0,
+        "output_tokens": 896,
+        "reasoning_output_tokens": 650
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "657142e0d03cd68018d8162d5f14fd6b57e41243540bff559174787bb769603d",
+      "reasoning": "medium"
+    },
+    {
+      "case": "nodebb-images",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "nodebb_group_variants.js"
+      ],
+      "seconds": 729.343,
+      "tokens": {
+        "input_tokens": 1775702,
+        "cached_input_tokens": 1606400,
+        "output_tokens": 18451,
+        "uncached_input_tokens": 169302
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1690901,
+        "cached_input_tokens": 1575936,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17758,
+        "reasoning_output_tokens": 6421
+      },
+      "provider_usage": {
+        "input_tokens": 84801,
+        "cached_input_tokens": 30464,
+        "output_tokens": 693,
+        "reasoning_output_tokens": 415
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "2b4458f4b72917d8b704c3fd35be4c87c361d8241091ac2db3898cad2a2e4aa5",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "nodebb-images",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "nodebb_group_variants.js",
+        "nodebb_images.js",
+        "nodebb_images_files.js"
+      ],
+      "seconds": 1299.484,
+      "tokens": {
+        "input_tokens": 2882959,
+        "cached_input_tokens": 2695552,
+        "output_tokens": 33859,
+        "uncached_input_tokens": 187407
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2829658,
+        "cached_input_tokens": 2684416,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 32421,
+        "reasoning_output_tokens": 15339
+      },
+      "provider_usage": {
+        "input_tokens": 53301,
+        "cached_input_tokens": 11136,
+        "output_tokens": 1438,
+        "reasoning_output_tokens": 1100
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "ff170ab4ca647b933442f9aa187b92b3d54177f5f971e461fd6a6b5836979af1",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "ansible-type-tags",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "ansible-type-tags-v2-input.py"
+      ],
+      "seconds": 274.454,
+      "tokens": {
+        "input_tokens": 407373,
+        "cached_input_tokens": 325504,
+        "output_tokens": 5345,
+        "uncached_input_tokens": 81869
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 358637,
+        "cached_input_tokens": 295040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4857,
+        "reasoning_output_tokens": 529
+      },
+      "provider_usage": {
+        "input_tokens": 48736,
+        "cached_input_tokens": 30464,
+        "output_tokens": 488,
+        "reasoning_output_tokens": 364
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "b69d9aaea257c2e6ae3ac5dae4cc93d64083d786f6fd7c6a8acb67ad58ca090e",
+      "reasoning": "medium"
+    },
+    {
+      "case": "ansible-type-tags",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "ansible-none-literal-input.py"
+      ],
+      "seconds": 309.36,
+      "tokens": {
+        "input_tokens": 514799,
+        "cached_input_tokens": 434560,
+        "output_tokens": 6378,
+        "uncached_input_tokens": 80239
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 400518,
+        "cached_input_tokens": 357504,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5402,
+        "reasoning_output_tokens": 824
+      },
+      "provider_usage": {
+        "input_tokens": 114281,
+        "cached_input_tokens": 77056,
+        "output_tokens": 976,
+        "reasoning_output_tokens": 567
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "3688407accbf9972260dbf321d1113a33247966ce50f9f220e67be7ef06edabb",
+      "reasoning": "medium"
+    },
+    {
+      "case": "ansible-type-tags",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "ansible-none-literal-input.py"
+      ],
+      "seconds": 625.093,
+      "tokens": {
+        "input_tokens": 1162768,
+        "cached_input_tokens": 1039872,
+        "output_tokens": 15668,
+        "uncached_input_tokens": 122896
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 967448,
+        "cached_input_tokens": 907136,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14042,
+        "reasoning_output_tokens": 6953
+      },
+      "provider_usage": {
+        "input_tokens": 195320,
+        "cached_input_tokens": 132736,
+        "output_tokens": 1626,
+        "reasoning_output_tokens": 932
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "233771c22f23294cd20f83896b0b000aeef1c06d478fd7c4f36d9475823c04c6",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "ansible-type-tags",
+      "arm": "E2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 404.172,
+      "tokens": {
+        "input_tokens": 587742,
+        "cached_input_tokens": 504576,
+        "output_tokens": 10866,
+        "uncached_input_tokens": 83166
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 536813,
+        "cached_input_tokens": 471936,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10426,
+        "reasoning_output_tokens": 3416
+      },
+      "provider_usage": {
+        "input_tokens": 50929,
+        "cached_input_tokens": 32640,
+        "output_tokens": 440,
+        "reasoning_output_tokens": 306
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "5054139e0a55d3c1be52ecfd3a916ba36df38eb111a9d92d21376bc5bcfb2512",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "element-sessions",
+      "arm": "D1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 411.235,
+      "tokens": {
+        "input_tokens": 670210,
+        "cached_input_tokens": 583168,
+        "output_tokens": 9143,
+        "uncached_input_tokens": 87042
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 638866,
+        "cached_input_tokens": 572032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8811,
+        "reasoning_output_tokens": 1716
+      },
+      "provider_usage": {
+        "input_tokens": 31344,
+        "cached_input_tokens": 11136,
+        "output_tokens": 332,
+        "reasoning_output_tokens": 214
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "2a0b817d484b5a8c7805bb37d691e80b3e5da4df416eca6df83b2ef6287f411f",
+      "reasoning": "medium"
+    },
+    {
+      "case": "element-sessions",
+      "arm": "D2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 467.578,
+      "tokens": {
+        "input_tokens": 1110594,
+        "cached_input_tokens": 1009664,
+        "output_tokens": 9992,
+        "uncached_input_tokens": 100930
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1078489,
+        "cached_input_tokens": 1009664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9560,
+        "reasoning_output_tokens": 1838
+      },
+      "provider_usage": {
+        "input_tokens": 32105,
+        "cached_input_tokens": 0,
+        "output_tokens": 432,
+        "reasoning_output_tokens": 319
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "43529c71239e9bcb02dc16ff0f6afb047e6c28acfe9b025fef2729d723f4e5f7",
+      "reasoning": "medium"
+    },
+    {
+      "case": "element-sessions",
+      "arm": "E1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 645.015,
+      "tokens": {
+        "input_tokens": 1171962,
+        "cached_input_tokens": 1061120,
+        "output_tokens": 16696,
+        "uncached_input_tokens": 110842
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1138161,
+        "cached_input_tokens": 1049984,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 16322,
+        "reasoning_output_tokens": 6018
+      },
+      "provider_usage": {
+        "input_tokens": 33801,
+        "cached_input_tokens": 11136,
+        "output_tokens": 374,
+        "reasoning_output_tokens": 273
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "35d942e9f9022d9d138d82e8d2548bf38d1baa82a803b193d6b63ff6c6c0b4ca",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "element-sessions",
+      "arm": "E2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 580.797,
+      "tokens": {
+        "input_tokens": 1091310,
+        "cached_input_tokens": 964224,
+        "output_tokens": 14613,
+        "uncached_input_tokens": 127086
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1058739,
+        "cached_input_tokens": 964224,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14242,
+        "reasoning_output_tokens": 5086
+      },
+      "provider_usage": {
+        "input_tokens": 32571,
+        "cached_input_tokens": 0,
+        "output_tokens": 371,
+        "reasoning_output_tokens": 256
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "dc8853a8c03d24a25c42d2b0c962b4177fbd9367e8b0fd5ed34fd1b3aaf4f97b",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "flipt-segments",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 688.016,
+      "tokens": {
+        "input_tokens": 1914898,
+        "cached_input_tokens": 1801088,
+        "output_tokens": 12676,
+        "uncached_input_tokens": 113810
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1819128,
+        "cached_input_tokens": 1739776,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12296,
+        "reasoning_output_tokens": 2553
+      },
+      "provider_usage": {
+        "input_tokens": 95770,
+        "cached_input_tokens": 61312,
+        "output_tokens": 380,
+        "reasoning_output_tokens": 166
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "585ead2ca4cc0ba9632c9a0c238877acb80624be03dab4d3abf6367d84df5622",
+      "reasoning": "medium"
+    },
+    {
+      "case": "flipt-segments",
+      "arm": "D2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 809.422,
+      "tokens": {
+        "input_tokens": 2106210,
+        "cached_input_tokens": 2005248,
+        "output_tokens": 14942,
+        "uncached_input_tokens": 100962
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2021419,
+        "cached_input_tokens": 1942656,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14352,
+        "reasoning_output_tokens": 2872
+      },
+      "provider_usage": {
+        "input_tokens": 84791,
+        "cached_input_tokens": 62592,
+        "output_tokens": 590,
+        "reasoning_output_tokens": 382
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "82f03754c101d8ced6641793ea9fd3802726dc4daf678b28e8724e1ce06d5f07",
+      "reasoning": "medium"
+    },
+    {
+      "case": "flipt-segments",
+      "arm": "E1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 794.312,
+      "tokens": {
+        "input_tokens": 2411170,
+        "cached_input_tokens": 2278784,
+        "output_tokens": 18726,
+        "uncached_input_tokens": 132386
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2379686,
+        "cached_input_tokens": 2278784,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 18257,
+        "reasoning_output_tokens": 6512
+      },
+      "provider_usage": {
+        "input_tokens": 31484,
+        "cached_input_tokens": 0,
+        "output_tokens": 469,
+        "reasoning_output_tokens": 435
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "fa5620df13c408853fcf11f84f378d60b77ad9062108d648370c5d78a5f3734d",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "flipt-segments",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 744.469,
+      "tokens": {
+        "input_tokens": 2168671,
+        "cached_input_tokens": 2038528,
+        "output_tokens": 17231,
+        "uncached_input_tokens": 130143
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2100947,
+        "cached_input_tokens": 2003840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 16803,
+        "reasoning_output_tokens": 5457
+      },
+      "provider_usage": {
+        "input_tokens": 67724,
+        "cached_input_tokens": 34688,
+        "output_tokens": 428,
+        "reasoning_output_tokens": 285
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "25fe36f9a654a65bfca138ad702abdf73bbc4f4a262271b4d4651b9156167730",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "openlibrary-preload-iterable-input.py",
+        "openlibrary-responses-input.py"
+      ],
+      "seconds": 494.235,
+      "tokens": {
+        "input_tokens": 983928,
+        "cached_input_tokens": 853376,
+        "output_tokens": 10063,
+        "uncached_input_tokens": 130552
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 703594,
+        "cached_input_tokens": 643712,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8489,
+        "reasoning_output_tokens": 1414
+      },
+      "provider_usage": {
+        "input_tokens": 280334,
+        "cached_input_tokens": 209664,
+        "output_tokens": 1574,
+        "reasoning_output_tokens": 781
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "a0b3621a7c1c3cdba3a1ea1cf3889b8a3caa266920239047ba8998095f411448",
+      "reasoning": "medium"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "openlibrary-orphan-batch-input.py"
+      ],
+      "seconds": 523.094,
+      "tokens": {
+        "input_tokens": 890812,
+        "cached_input_tokens": 763008,
+        "output_tokens": 11026,
+        "uncached_input_tokens": 127804
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 729140,
+        "cached_input_tokens": 658176,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10042,
+        "reasoning_output_tokens": 2064
+      },
+      "provider_usage": {
+        "input_tokens": 161672,
+        "cached_input_tokens": 104832,
+        "output_tokens": 984,
+        "reasoning_output_tokens": 537
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "196ab0c768206a73f455de62fb62f23651c19b374fa9459f8b412f4839ecf5ec",
+      "reasoning": "medium"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "openlibrary-orphan-batch-input.py"
+      ],
+      "seconds": 768.437,
+      "tokens": {
+        "input_tokens": 1416289,
+        "cached_input_tokens": 1296000,
+        "output_tokens": 20432,
+        "uncached_input_tokens": 120289
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1262508,
+        "cached_input_tokens": 1174912,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 19340,
+        "reasoning_output_tokens": 7343
+      },
+      "provider_usage": {
+        "input_tokens": 153781,
+        "cached_input_tokens": 121088,
+        "output_tokens": 1092,
+        "reasoning_output_tokens": 651
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "2173747edc8f65768478a053a21e323ccb7b8559d87cd16859af615fa8e9614b",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "openlibrary-edition-keys-input.py"
+      ],
+      "seconds": 1028.5,
+      "tokens": {
+        "input_tokens": 1585196,
+        "cached_input_tokens": 1415680,
+        "output_tokens": 28233,
+        "uncached_input_tokens": 169516
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1461590,
+        "cached_input_tokens": 1350144,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 27487,
+        "reasoning_output_tokens": 9754
+      },
+      "provider_usage": {
+        "input_tokens": 123606,
+        "cached_input_tokens": 65536,
+        "output_tokens": 746,
+        "reasoning_output_tokens": 396
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "cbd00a3717912774e26b13b9737029897734e544125c330d6de1e04ede2ef545",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "arm": "D1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 992.281,
+      "tokens": {
+        "input_tokens": 2621887,
+        "cached_input_tokens": 2477952,
+        "output_tokens": 15225,
+        "uncached_input_tokens": 143935
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2501518,
+        "cached_input_tokens": 2400512,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14408,
+        "reasoning_output_tokens": 3687
+      },
+      "provider_usage": {
+        "input_tokens": 120369,
+        "cached_input_tokens": 77440,
+        "output_tokens": 817,
+        "reasoning_output_tokens": 401
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "f520da103c80995236e4a71c5e87125e80494d7c4b55b0dd7260492d1596d515",
+      "reasoning": "medium"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "arm": "D2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 744.109,
+      "tokens": {
+        "input_tokens": 1625760,
+        "cached_input_tokens": 1482368,
+        "output_tokens": 14161,
+        "uncached_input_tokens": 143392
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1539266,
+        "cached_input_tokens": 1454080,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13465,
+        "reasoning_output_tokens": 3115
+      },
+      "provider_usage": {
+        "input_tokens": 86494,
+        "cached_input_tokens": 28288,
+        "output_tokens": 696,
+        "reasoning_output_tokens": 425
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "5eadac62c4020e0e4d4a36765bef73aaaec0c41621e4d9ad48e08f87d4096438",
+      "reasoning": "medium"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "arm": "E1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 938.375,
+      "tokens": {
+        "input_tokens": 2092980,
+        "cached_input_tokens": 1976576,
+        "output_tokens": 22769,
+        "uncached_input_tokens": 116404
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1978913,
+        "cached_input_tokens": 1879424,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 21983,
+        "reasoning_output_tokens": 9637
+      },
+      "provider_usage": {
+        "input_tokens": 114067,
+        "cached_input_tokens": 97152,
+        "output_tokens": 786,
+        "reasoning_output_tokens": 474
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "e7643d7b75eea048ccd4b00f7cbacf6ac2d136b12530165fe9533c9d70d69455",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "arm": "E2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 1198.891,
+      "tokens": {
+        "input_tokens": 2888089,
+        "cached_input_tokens": 2699776,
+        "output_tokens": 28424,
+        "uncached_input_tokens": 188313
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2677720,
+        "cached_input_tokens": 2560640,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 26948,
+        "reasoning_output_tokens": 14608
+      },
+      "provider_usage": {
+        "input_tokens": 210369,
+        "cached_input_tokens": 139136,
+        "output_tokens": 1476,
+        "reasoning_output_tokens": 744
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "6348467188b7c822aa21f9f6510b3053c39d356519eab0bed3ee15d2f63225ee",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "server-wiring"
+      ],
+      "seconds": 353.313,
+      "tokens": {
+        "input_tokens": 682868,
+        "cached_input_tokens": 615168,
+        "output_tokens": 6347,
+        "uncached_input_tokens": 67700
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 597906,
+        "cached_input_tokens": 555392,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5889,
+        "reasoning_output_tokens": 1182
+      },
+      "provider_usage": {
+        "input_tokens": 84962,
+        "cached_input_tokens": 59776,
+        "output_tokens": 458,
+        "reasoning_output_tokens": 247
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "43c64edf0eb1d548163568c5c6f9a70c960ee86b77a7cfa899c7b1b9f6506a69",
+      "reasoning": "medium"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "server-wiring"
+      ],
+      "seconds": 545.047,
+      "tokens": {
+        "input_tokens": 717845,
+        "cached_input_tokens": 655232,
+        "output_tokens": 9886,
+        "uncached_input_tokens": 62613
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 685669,
+        "cached_input_tokens": 644096,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 9483,
+        "reasoning_output_tokens": 3056
+      },
+      "provider_usage": {
+        "input_tokens": 32176,
+        "cached_input_tokens": 11136,
+        "output_tokens": 403,
+        "reasoning_output_tokens": 369
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "e6c1cc81f7b4cc91bede5331b49d0164eb491186c60596b0d0a45d8b8c0b664a",
+      "reasoning": "medium"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "server-wiring"
+      ],
+      "seconds": 709.531,
+      "tokens": {
+        "input_tokens": 1396927,
+        "cached_input_tokens": 1259264,
+        "output_tokens": 18045,
+        "uncached_input_tokens": 137663
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1345943,
+        "cached_input_tokens": 1259264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17514,
+        "reasoning_output_tokens": 7097
+      },
+      "provider_usage": {
+        "input_tokens": 50984,
+        "cached_input_tokens": 0,
+        "output_tokens": 531,
+        "reasoning_output_tokens": 397
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "4b316bcd91d3b067f4997788ee3364d88ded54d32462795ee7f9b4f0a18744c1",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "arm": "E2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 680.547,
+      "tokens": {
+        "input_tokens": 1132769,
+        "cached_input_tokens": 1026176,
+        "output_tokens": 17487,
+        "uncached_input_tokens": 106593
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1100357,
+        "cached_input_tokens": 1015040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17167,
+        "reasoning_output_tokens": 6708
+      },
+      "provider_usage": {
+        "input_tokens": 32412,
+        "cached_input_tokens": 11136,
+        "output_tokens": 320,
+        "reasoning_output_tokens": 286
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "fc8a5f486d306bce9b1fac191f3e238e77123711232b65a6487f4df6fe1955ea",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "metaflow_members_input.py",
+        "metaflow_review_members_input.py",
+        "metaflow_typed_dict_keys_input.py"
+      ],
+      "seconds": 724.64,
+      "tokens": {
+        "input_tokens": 1092524,
+        "cached_input_tokens": 970624,
+        "output_tokens": 16413,
+        "uncached_input_tokens": 121900
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 920135,
+        "cached_input_tokens": 859008,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14758,
+        "reasoning_output_tokens": 3620
+      },
+      "provider_usage": {
+        "input_tokens": 172389,
+        "cached_input_tokens": 111616,
+        "output_tokens": 1655,
+        "reasoning_output_tokens": 988
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "504834b66771ab1c169612a9e6ef354638ad8e0f8ce9c1ca15e41b1720856ba4",
+      "reasoning": "medium"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "metaflow_members_input.py",
+        "metaflow_review_members_input.py"
+      ],
+      "seconds": 744.797,
+      "tokens": {
+        "input_tokens": 1117560,
+        "cached_input_tokens": 989440,
+        "output_tokens": 14812,
+        "uncached_input_tokens": 128120
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 910071,
+        "cached_input_tokens": 846208,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13624,
+        "reasoning_output_tokens": 3147
+      },
+      "provider_usage": {
+        "input_tokens": 207489,
+        "cached_input_tokens": 143232,
+        "output_tokens": 1188,
+        "reasoning_output_tokens": 552
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "1d8c07ab74cf131e546787c553e1fceec9f9e251f3a7dae864952d4b57182d29",
+      "reasoning": "medium"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "metaflow_members_input.py",
+        "metaflow_review_members_input.py",
+        "metaflow_typed_dict_keys_input.py"
+      ],
+      "seconds": 1101.25,
+      "tokens": {
+        "input_tokens": 1970840,
+        "cached_input_tokens": 1856896,
+        "output_tokens": 28844,
+        "uncached_input_tokens": 113944
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1848094,
+        "cached_input_tokens": 1756928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 27960,
+        "reasoning_output_tokens": 10364
+      },
+      "provider_usage": {
+        "input_tokens": 122746,
+        "cached_input_tokens": 99968,
+        "output_tokens": 884,
+        "reasoning_output_tokens": 509
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "c16daa4c3ccb75c4d32cf15443ebd9abb18e54efe138ecd6b8414c836ee950ba",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "metaflow_members_input.py"
+      ],
+      "seconds": 1274.172,
+      "tokens": {
+        "input_tokens": 2704528,
+        "cached_input_tokens": 2545536,
+        "output_tokens": 33086,
+        "uncached_input_tokens": 158992
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2564679,
+        "cached_input_tokens": 2445184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 31658,
+        "reasoning_output_tokens": 14254
+      },
+      "provider_usage": {
+        "input_tokens": 139849,
+        "cached_input_tokens": 100352,
+        "output_tokens": 1428,
+        "reasoning_output_tokens": 948
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "fe5431dc1699513233535e8bd975ad9bece7254ed9f100744eda26a817df74d3",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "tracing-1523",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "reserved",
+        "tracing_contract_v2.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "seconds": 1485.219,
+      "tokens": {
+        "input_tokens": 2815469,
+        "cached_input_tokens": 2624128,
+        "output_tokens": 31641,
+        "uncached_input_tokens": 191341
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2601482,
+        "cached_input_tokens": 2477184,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 30301,
+        "reasoning_output_tokens": 8659
+      },
+      "provider_usage": {
+        "input_tokens": 213987,
+        "cached_input_tokens": 146944,
+        "output_tokens": 1340,
+        "reasoning_output_tokens": 586
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "3e69983dbd49f70d4f67074dbcae9ed6203e144447e23f5c5929a380bef5bc7a",
+      "reasoning": "medium"
+    },
+    {
+      "case": "tracing-1523",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "tracing_contract_v2.rs",
+        "tracing_hint_bounds.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "seconds": 1438.531,
+      "tokens": {
+        "input_tokens": 2749373,
+        "cached_input_tokens": 2564736,
+        "output_tokens": 33212,
+        "uncached_input_tokens": 184637
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2577575,
+        "cached_input_tokens": 2455168,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 31586,
+        "reasoning_output_tokens": 7696
+      },
+      "provider_usage": {
+        "input_tokens": 171798,
+        "cached_input_tokens": 109568,
+        "output_tokens": 1626,
+        "reasoning_output_tokens": 1044
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "8cf4386d159d886e5f2ec3f2c4b628d4945a7e75b65f24662a7c85d6e249703e",
+      "reasoning": "medium"
+    },
+    {
+      "case": "tracing-1523",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "fail",
+      "failed_checks": [
+        "tracing_contract_v2.rs",
+        "tracing_hint_bounds.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "seconds": 1800.204,
+      "tokens": {
+        "input_tokens": 89793,
+        "cached_input_tokens": 57984,
+        "output_tokens": 1706,
+        "uncached_input_tokens": 31809
+      },
+      "actor_usage_available": false,
+      "actor_usage": {},
+      "provider_usage": {
+        "input_tokens": 89793,
+        "cached_input_tokens": 57984,
+        "output_tokens": 1706,
+        "reasoning_output_tokens": 1286
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "Actor exceeded 1800 second wall budget",
+      "patch_sha256": "bfcfca194da218cd6097a2cbe5c6fa0da15d1f7bfdb25b0e64477af69b568569",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "tracing-1523",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "fail",
+      "failed_checks": [
+        "tracing_contract_v2.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "seconds": 1800.172,
+      "tokens": {
+        "input_tokens": 86505,
+        "cached_input_tokens": 33280,
+        "output_tokens": 1387,
+        "uncached_input_tokens": 53225
+      },
+      "actor_usage_available": false,
+      "actor_usage": {},
+      "provider_usage": {
+        "input_tokens": 86505,
+        "cached_input_tokens": 33280,
+        "output_tokens": 1387,
+        "reasoning_output_tokens": 977
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "Actor exceeded 1800 second wall budget",
+      "patch_sha256": "967612b3c6d3036e3f8f1ff5f48b4a811597b5849aa5b9a0989ed1645715ce06",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "arm": "D1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 825.484,
+      "tokens": {
+        "input_tokens": 2293343,
+        "cached_input_tokens": 2161280,
+        "output_tokens": 14320,
+        "uncached_input_tokens": 132063
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2224597,
+        "cached_input_tokens": 2114816,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 13867,
+        "reasoning_output_tokens": 2258
+      },
+      "provider_usage": {
+        "input_tokens": 68746,
+        "cached_input_tokens": 46464,
+        "output_tokens": 453,
+        "reasoning_output_tokens": 298
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "b5409b24b5ad02afcba5e6098703d87f1a06808917d5329227870ee9a5168457",
+      "reasoning": "medium"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "untrusted_preserve_false.test.ts"
+      ],
+      "seconds": 605.719,
+      "tokens": {
+        "input_tokens": 1426061,
+        "cached_input_tokens": 1318656,
+        "output_tokens": 11034,
+        "uncached_input_tokens": 107405
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1391002,
+        "cached_input_tokens": 1307520,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 10825,
+        "reasoning_output_tokens": 1549
+      },
+      "provider_usage": {
+        "input_tokens": 35059,
+        "cached_input_tokens": 11136,
+        "output_tokens": 209,
+        "reasoning_output_tokens": 175
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "ce4125af6d05a4df0283831d975e710bba2c91bdcf6d57782fce28374caad6e2",
+      "reasoning": "medium"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "arm": "E1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 993.844,
+      "tokens": {
+        "input_tokens": 3102909,
+        "cached_input_tokens": 2929280,
+        "output_tokens": 24259,
+        "uncached_input_tokens": 173629
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 3018322,
+        "cached_input_tokens": 2885376,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 23441,
+        "reasoning_output_tokens": 7370
+      },
+      "provider_usage": {
+        "input_tokens": 84587,
+        "cached_input_tokens": 43904,
+        "output_tokens": 818,
+        "reasoning_output_tokens": 554
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "7971f1444ad07f39f6c467c114d2bfd9c4596cafb345e8d78f4e36d57c3e73fe",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "arm": "E2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 881.563,
+      "tokens": {
+        "input_tokens": 3055500,
+        "cached_input_tokens": 2914304,
+        "output_tokens": 21556,
+        "uncached_input_tokens": 141196
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 3021101,
+        "cached_input_tokens": 2903168,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 21260,
+        "reasoning_output_tokens": 7653
+      },
+      "provider_usage": {
+        "input_tokens": 34399,
+        "cached_input_tokens": 11136,
+        "output_tokens": 296,
+        "reasoning_output_tokens": 262
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "493344d5b9cd70966af209d1c3cd5d3dded276adccfffce4e68878ad1323b94c",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "regexp-404",
+      "arm": "D1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "reserved",
+        "regexp_direction.js",
+        "regexp_judge_concerns.js"
+      ],
+      "seconds": 854.031,
+      "tokens": {
+        "input_tokens": 1563991,
+        "cached_input_tokens": 1448064,
+        "output_tokens": 19052,
+        "uncached_input_tokens": 115927
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1422397,
+        "cached_input_tokens": 1346688,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17027,
+        "reasoning_output_tokens": 6780
+      },
+      "provider_usage": {
+        "input_tokens": 141594,
+        "cached_input_tokens": 101376,
+        "output_tokens": 2025,
+        "reasoning_output_tokens": 1419
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "292d9b54afc76e8ac240f15fa595d05dcc65f41d5af8692db843357a1d101abd",
+      "reasoning": "medium"
+    },
+    {
+      "case": "regexp-404",
+      "arm": "D2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "reserved",
+        "regexp_direction.js",
+        "regexp_judge_concerns.js"
+      ],
+      "seconds": 976.141,
+      "tokens": {
+        "input_tokens": 2001877,
+        "cached_input_tokens": 1795968,
+        "output_tokens": 20234,
+        "uncached_input_tokens": 205909
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1793764,
+        "cached_input_tokens": 1665664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 17439,
+        "reasoning_output_tokens": 5757
+      },
+      "provider_usage": {
+        "input_tokens": 208113,
+        "cached_input_tokens": 130304,
+        "output_tokens": 2795,
+        "reasoning_output_tokens": 1977
+      },
+      "provider_faults": 0,
+      "provider_feedback": 3,
+      "fault": "",
+      "patch_sha256": "b93a962eedef5e1a66b03635924fc123a6ba602801ac55bb97e6f2deb04e2cda",
+      "reasoning": "medium"
+    },
+    {
+      "case": "regexp-404",
+      "arm": "E1",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "regexp_direction.js",
+        "regexp_judge_concerns.js"
+      ],
+      "seconds": 1403.015,
+      "tokens": {
+        "input_tokens": 2049469,
+        "cached_input_tokens": 1894784,
+        "output_tokens": 34637,
+        "uncached_input_tokens": 154685
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1886775,
+        "cached_input_tokens": 1767040,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 33415,
+        "reasoning_output_tokens": 19117
+      },
+      "provider_usage": {
+        "input_tokens": 162694,
+        "cached_input_tokens": 127744,
+        "output_tokens": 1222,
+        "reasoning_output_tokens": 650
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "27fbf47d30fd3d6ce151dca6cb041b97c1337287b98be59c39fd2493046e1562",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "regexp-404",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": false,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "regexp_direction.js",
+        "regexp_judge_concerns.js"
+      ],
+      "seconds": 1179.859,
+      "tokens": {
+        "input_tokens": 2502328,
+        "cached_input_tokens": 2355200,
+        "output_tokens": 30716,
+        "uncached_input_tokens": 147128
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 2454194,
+        "cached_input_tokens": 2332928,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 29736,
+        "reasoning_output_tokens": 13010
+      },
+      "provider_usage": {
+        "input_tokens": 48134,
+        "cached_input_tokens": 22272,
+        "output_tokens": 980,
+        "reasoning_output_tokens": 850
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "9898193dfa728136179da5f9af8aac7cd546eec3b0a1190ac3497dc518cf6bd1",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "clap-2297",
+      "arm": "D1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 604.922,
+      "tokens": {
+        "input_tokens": 1463673,
+        "cached_input_tokens": 1340416,
+        "output_tokens": 13070,
+        "uncached_input_tokens": 123257
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1338354,
+        "cached_input_tokens": 1258368,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 12114,
+        "reasoning_output_tokens": 2428
+      },
+      "provider_usage": {
+        "input_tokens": 125319,
+        "cached_input_tokens": 82048,
+        "output_tokens": 956,
+        "reasoning_output_tokens": 520
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "6f4770ddf635d2d2da3dd8b04df2db3a9479fbaa110a229497544fb5c3dba9d2",
+      "reasoning": "medium"
+    },
+    {
+      "case": "clap-2297",
+      "arm": "D2",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 650.578,
+      "tokens": {
+        "input_tokens": 1289474,
+        "cached_input_tokens": 1152512,
+        "output_tokens": 13883,
+        "uncached_input_tokens": 136962
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 998713,
+        "cached_input_tokens": 941696,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 11846,
+        "reasoning_output_tokens": 3186
+      },
+      "provider_usage": {
+        "input_tokens": 290761,
+        "cached_input_tokens": 210816,
+        "output_tokens": 2037,
+        "reasoning_output_tokens": 1019
+      },
+      "provider_faults": 0,
+      "provider_feedback": 2,
+      "fault": "",
+      "patch_sha256": "25d9bf00ba5fa4c441471f095c1b31a7c80415b75977c04ec440d953397a0f63",
+      "reasoning": "medium"
+    },
+    {
+      "case": "clap-2297",
+      "arm": "E1",
+      "completed": true,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": null,
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 763.719,
+      "tokens": {
+        "input_tokens": 1693369,
+        "cached_input_tokens": 1542400,
+        "output_tokens": 19590,
+        "uncached_input_tokens": 150969
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1644900,
+        "cached_input_tokens": 1531264,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 18956,
+        "reasoning_output_tokens": 6524
+      },
+      "provider_usage": {
+        "input_tokens": 48469,
+        "cached_input_tokens": 11136,
+        "output_tokens": 634,
+        "reasoning_output_tokens": 498
+      },
+      "provider_faults": 0,
+      "provider_feedback": 1,
+      "fault": "",
+      "patch_sha256": "8636c91bdc9e5cd749d2c2309518fa0180594145f24079571ae16f0d3ea40638",
+      "reasoning": "xhigh"
+    },
+    {
+      "case": "clap-2297",
+      "arm": "E2",
+      "completed": false,
+      "frozen_completed": true,
+      "confirmed_original_clause_gap": "Preserve existing argument validation, required/conflict rules, occurrences, defaults, and non-overriding parsing behavior.",
+      "fixed_status": "pass",
+      "execution_status": "pass",
+      "failed_checks": [],
+      "seconds": 685.328,
+      "tokens": {
+        "input_tokens": 1867741,
+        "cached_input_tokens": 1755648,
+        "output_tokens": 17146,
+        "uncached_input_tokens": 112093
+      },
+      "actor_usage_available": true,
+      "actor_usage": {
+        "input_tokens": 1759138,
+        "cached_input_tokens": 1672832,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 16609,
+        "reasoning_output_tokens": 6644
+      },
+      "provider_usage": {
+        "input_tokens": 108603,
+        "cached_input_tokens": 82816,
+        "output_tokens": 537,
+        "reasoning_output_tokens": 336
+      },
+      "provider_faults": 0,
+      "provider_feedback": 0,
+      "fault": "",
+      "patch_sha256": "a41a102684582439546abbca980a670652c10b279dce6312746f0aa2d806a9ec",
+      "reasoning": "xhigh"
+    }
+  ],
+  "pairs": [
+    {
+      "case": "nodebb-images",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "nodebb-images",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "ansible-type-tags",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "ansible-type-tags",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "E",
+      "task_completed": {
+        "D": false,
+        "E": true
+      },
+      "judges": []
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "Y",
+          "reason": "Y 略勝，關鍵是把選取資料與更新函式視為不可拆開的一組，讓選取狀態的讀寫維持同一來源。X 將兩個 prop 分別設為可選、分別回退，容許讀取外部狀態卻更新內部狀態的組合。兩者在正常呼叫路徑、篩選清除與登出生命週期上的結構基本相同。",
+          "evidence": [
+            {
+              "criterion": "非法狀態難以建立",
+              "x_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:47-48",
+              "y_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:57-63",
+              "observation": "X 的型別允許只提供 selectedDeviceIds 或只提供 setSelectedDeviceIds；Y 的聯集型別要求兩者一起提供或一起省略。Y 在元件邊界排除不完整的受控選取模式，減少呼叫端必須自行記住的配對規則。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:224-226",
+              "y_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:229-233",
+              "observation": "X 獨立決定選取值與 setter 的來源；只傳選取值時，切換及取消會更新未被畫面讀取的本地狀態。Y 整組選用外部或本地狀態，讀寫來源一致。代價是增加一個模式判斷，但複雜度集中於確實需要兼容兩種使用方式的邊界；目前雙方的 SessionManagerTab 都完整傳入這組 props，因此這是結構保障差異，並非既有驗收失敗。"
+            },
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62-79",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62-79",
+              "observation": "雙方皆以函式型更新移除本次成功登出的選取 ID，保留等待期間新增的其他選取，並於完成回呼的 finally 清除本次 loading。這部分沒有實質優劣，勝負不來自非同步處理或測試數量。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "element-sessions",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "E1",
+            "Y": "D1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 116046,
+            "cached_input_tokens": 83328,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1045,
+            "reasoning_output_tokens": 32
+          },
+          "elapsed_seconds": 65.813,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "f123e887d6f251ea0a2292f32755e06c217c9ad6278342656db10b93439f86f6",
+          "mapped_concerns": []
+        },
+        {
+          "winner": "X",
+          "reason": "X 的優勢集中在選取狀態的所有權：型別要求選取值與更新函式成對提供，執行時也成對選用，避免讀取外部狀態卻更新內部狀態。Y 分別處理兩個可選參數，容許這種不一致組合。雙方實際頁面的正常路徑與登出生命週期幾乎相同，但 X 在元件邊界排除了有實質影響的錯誤接法。",
+          "evidence": [
+            {
+              "criterion": "非法狀態難以建立",
+              "x_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:57–64、228–233",
+              "y_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:47–48、224–226",
+              "observation": "X 用聯集型別限定兩個選取參數同時提供或同時省略，並成對決定狀態來源。Y 將它們各自設為可選且分別 fallback；只傳 selectedDeviceIds 時，點擊會更新未被畫面讀取的本地狀態；只傳 setter 時，更新送往外部，畫面卻讀本地狀態。這是元件介面的結構弱點，並非宣稱目前頁面或封存驗收失敗。"
+            },
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62–79",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62–79",
+              "observation": "雙方都以函式式更新處理非同步完成，只移除該次請求涉及的選取與載入 ID，成功時刷新清單，並在回呼 finally 清除載入狀態。這個承重流程沒有實質優劣，不作勝負依據。"
+            },
+            {
+              "criterion": "抽象確實消除概念或分支",
+              "x_location": "src/components/views/settings/devices/SelectableDeviceTile.tsx:27–40",
+              "y_location": "src/components/views/settings/devices/SelectableDeviceTile.tsx:27–38",
+              "observation": "Y 將剩餘 props 統一轉交 DeviceTile，X 明確傳遞 device、children 與 onClick。現有 DeviceTileProps 只有這三項，兩者都完整傳遞；Y 的寫法沒有在目前程式消除額外概念或行為分支，因此不足以抵銷選取狀態邊界的差異。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "element-sessions",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "D1",
+            "Y": "E1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 84407,
+            "cached_input_tokens": 53888,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 959,
+            "reasoning_output_tokens": 59
+          },
+          "elapsed_seconds": 38.406,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "6d1e7ffc645f3d1ae4e73cd4c84863ca90da9fa7b25d588b06aeed8eeba783c2",
+          "mapped_concerns": []
+        }
+      ],
+      "concerns": []
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "X",
+          "reason": "X 小幅勝出。兩者的選取與登出結構幾乎相同；承重差異是 X 將「篩選改變就清空選取」集中在一處，Y 又在推薦入口加入無條件清空，讓選取結果額外取決於操作入口，增加維護時需要同步理解的規則。",
+          "evidence": [
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:235–243；src/components/views/settings/tabs/user/SessionManagerTab.tsx:122–124",
+              "y_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:233–241；src/components/views/settings/tabs/user/SessionManagerTab.tsx:122–125",
+              "observation": "X 由清單觀察 filter 是否改變，統一清空選取；推薦入口只設定 filter。Y 保留相同 effect，卻也在推薦入口直接清空。Y 可在入口立即清空，但同一轉換規則分散於父子元件；日後修改保留選取的政策時，必須同時檢查兩處。"
+            },
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:122–124；src/components/views/settings/devices/FilteredDeviceList.tsx:237–242",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:122–125；src/components/views/settings/devices/FilteredDeviceList.tsx:235–240",
+              "observation": "當推薦入口收到與目前相同的 filter，X 不會因這次導覽清空選取，Y 則仍會清空。這不是契約違反，但 Y 讓推薦導覽額外承擔重設選取的語意；X 的行為直接對應實際篩選變化，因果較集中。"
+            },
+            {
+              "criterion": "因果與資料流單向",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62–79",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:62–79",
+              "observation": "登出流程沒有實質優劣：兩者都以函式式更新移除本次成功登出的選取項目，再刷新清單，並在 finally 清除本次 loading IDs。兩者都避免非同步完成時覆蓋其他操作的新狀態；此核心結構不構成勝負差異。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "element-sessions",
+          "trial": 2,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "D2",
+            "Y": "E2"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 26378,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 752,
+            "reasoning_output_tokens": 106
+          },
+          "elapsed_seconds": 27.234,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "a0840ea65359ca6a73d95abccecec1669588a2aa28b247bcf1c9d66f2555208a",
+          "mapped_concerns": []
+        },
+        {
+          "winner": "Y",
+          "reason": "Y 小幅勝出：它將因篩選變更而清空選取的規則集中在清單內。X 在安全建議導覽回呼中另行清空，讓選取結果額外依賴操作入口。其餘主要結構，包括選取狀態來源與非同步登出清理，實質相同。",
+          "evidence": [
+            {
+              "criterion": "同一事實只有一個來源。",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:121–124；src/components/views/settings/devices/FilteredDeviceList.tsx:235–240",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:121–123；src/components/views/settings/devices/FilteredDeviceList.tsx:237–242",
+              "observation": "Y 統一由 filter 的實際變更觸發清空。X 除了相同 effect，又在導覽回呼清空，將相關規則分散到父子元件。X 的取捨是能在導覽事件中立即重設；但實際切換篩選時仍會再由 effect 重設，維護時需要同時理解兩條路徑。"
+            },
+            {
+              "criterion": "局部行為可預測。",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:121–124",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:121–123",
+              "observation": "已位於某個安全建議篩選並選取裝置後，再次導覽至相同篩選，X 仍會清空選取；Y 因篩選未變而保留。這不是契約違反，但 X 讓導覽動作兼具額外的取消選取效果，Y 的因果關係較一致。"
+            },
+            {
+              "criterion": "非法狀態難以建立。",
+              "x_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:57–64、229–232",
+              "y_location": "src/components/views/settings/devices/FilteredDeviceList.tsx:57–64、230–235",
+              "observation": "兩者均以聯集型別要求受控選取值與 setter 成對提供，並在受控與本地狀態間擇一使用，沒有同步兩份選取資料。這部分結構等價，不構成勝負理由。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界。",
+              "x_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:61–80",
+              "y_location": "src/components/views/settings/tabs/user/SessionManagerTab.tsx:61–80",
+              "observation": "兩者均在登出 hook 使用函數式更新，成功後只移除該次登出的選取 ID，並在完成回呼的 finally 清除對應 loading。取消認證與並行登出的狀態管理方式相同，沒有一方在此取得結構優勢。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "element-sessions",
+          "trial": 2,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "E2",
+            "Y": "D2"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 117764,
+            "cached_input_tokens": 83584,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1209,
+            "reasoning_output_tokens": 65
+          },
+          "elapsed_seconds": 47.953,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "63b085852b00c58dc1af7793a1f3e92f36e708fc640cc24606abb10a7209482b",
+          "mapped_concerns": []
+        }
+      ],
+      "concerns": []
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "E",
+      "task_completed": {
+        "D": false,
+        "E": true
+      },
+      "judges": []
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "openlibrary-index-state",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "openlibrary-index-state",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "Y",
+          "reason": "Y 的重試資格由計時器觸發狀態轉移，再由狀態決定是否發送，因果較單一、局部行為較可預測；修改請求的包裝也只承擔請求計數。X 有集中共用判斷與重用 reducer 的優點，但同時以時鐘和計時器解除限制，並把樂觀更新的執行順序納入請求包裝，增加跨層理解成本。整體判 Y 較佳。",
+          "evidence": [
+            {
+              "criterion": "因果與資料流單向",
+              "x_location": "applications/mail/src/app/logic/elements/elementsSelectors.ts:26-28；applications/mail/src/app/logic/elements/elementsActions.ts:43-62",
+              "y_location": "applications/mail/src/app/logic/elements/elementsActions.ts:42-61；applications/mail/src/app/logic/elements/elementsSelectors.ts:115-124",
+              "observation": "Y 等計時器派送 retry／retryStale、清除 retryDueAt 後才解除發送限制。X 除了同樣的計時器路徑，canSendRequest 還會自行比較 Date.now()；因此到期但計時器 action 尚未執行時，兩個階段可以不同步。Y 將時間依賴留在排程邊界，selector 的答案只取決於狀態，較容易追蹤及重現。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "applications/mail/src/app/hooks/useBackendAction.ts:11-18；applications/mail/src/app/hooks/useMarkAs.tsx:75-113",
+              "y_location": "applications/mail/src/app/hooks/useElementAction.ts:11-17；applications/mail/src/app/hooks/useMarkAs.tsx:75-111",
+              "observation": "Y 的包裝只保證每個請求開始與結束成對計數，樂觀更新及 rollback 仍在操作端直線表達。X 透過 callback 保證先計數再樂觀更新，這是實際優點；代價是操作端必須以可變、可能尚未初始化的 rollback 接收 callback 結果，undo 的更新時機也移入包裝。Y 的責任邊界較窄，維護單一操作時需要理解的控制流較少。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:37-53；applications/mail/src/app/logic/elements/elementsSelectors.ts:26-28",
+              "y_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:40-54；applications/mail/src/app/logic/elements/elementsActions.ts:59-61",
+              "observation": "此項 X 較佳：retryStale 重用 retry 的狀態轉移，UI 與 thunk 也共用 canSendRequest。Y 分別寫出兩套 retry 狀態賦值，並在 selector 與 thunk 重複發送限制，後續修改須同步維護。這是 Y 的明確取捨，但不足以抵銷其排程因果與操作邊界較簡單的優勢。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "proton-mailbox-retry",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "E1",
+            "Y": "D1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 149052,
+            "cached_input_tokens": 105344,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1303,
+            "reasoning_output_tokens": 57
+          },
+          "elapsed_seconds": 52.281,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "b3371ce82ccfc9ac2f7059ae9c337fd5e8bb5431c7df4226e6d3f81542813ec2",
+          "mapped_concerns": []
+        },
+        {
+          "winner": "X",
+          "reason": "X 的重試資格由明確的狀態轉移決定，修改請求的包裝也只負責計數與結算，時序較容易局部推導。Y 集中共用請求資格判斷，並將樂觀更新納入保護區間，但同時引入 selector 的隱含時鐘依賴，以及跨回呼初始化 rollback 的關係。整體而言，X 的責任邊界較清楚。",
+          "evidence": [
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "applications/mail/src/app/logic/elements/elementsSelectors.ts:116-126；elementsActions.ts:43-61",
+              "y_location": "applications/mail/src/app/logic/elements/elementsSelectors.ts:26-28、118-131；elementsActions.ts:44-60",
+              "observation": "X 由計時器派送 action 清除 retryDueAt，再開放請求；資格完全由 Redux 狀態決定。Y 除了相同的計時器轉移，還在 canSendRequest 讀取 Date.now()，使資格同時取決於狀態與呼叫時間。Y 可在期限已到而計時器 action 尚未處理時放行，但理解 selector、快取與 thunk 條件的互動也因此需要額外考慮時間。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "applications/mail/src/app/hooks/useElementAction.ts:11-20；useApplyLabels.tsx:379-393",
+              "y_location": "applications/mail/src/app/hooks/useBackendAction.ts:11-21；useApplyLabels.tsx:381-395",
+              "observation": "X 的包裝只將開始與 finally 結束綁定於 API 請求，樂觀更新與 rollback 留在操作端。Y 額外接收 optimisticUpdate，讓計數先於樂觀更新建立，明確保護其觸發的清單變動；代價是操作端必須先宣告可空 rollback，再由包裝呼叫的回呼賦值，失敗路徑改用可選呼叫。這項跨邊界初始化關係也擴散到標記、清空與永久刪除操作。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "applications/mail/src/app/logic/elements/elementsActions.ts:58-61；elementsSelectors.ts:116-126；elementsReducers.ts:39-54",
+              "y_location": "applications/mail/src/app/logic/elements/elementsActions.ts:60；elementsSelectors.ts:26-28、118-131；elementsReducers.ts:37-53",
+              "observation": "此項 Y 較佳：canSendRequest 同時供 thunk 與清單 selector 使用，retryStale 也沿用 retry 的狀態轉移。X 在兩處重述操作計數與重試阻擋條件，並分別維護 failure／Stale 的相同欄位更新，有同步修改的成本。這是 Y 的實質優點，但不足以抵銷其隱含時間輸入與操作回呼耦合。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "proton-mailbox-retry",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "D1",
+            "Y": "E1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 136511,
+            "cached_input_tokens": 97536,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1273,
+            "reasoning_output_tokens": 187
+          },
+          "elapsed_seconds": 49.719,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "64b380e690d1cfc59beba53c54c5bf3d9316c0973d55f874d760a859f64a85e9",
+          "mapped_concerns": []
+        }
+      ],
+      "concerns": []
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "Y",
+          "reason": "Y 的主要優勢是把回應與重試計時器綁定到所屬請求，讓過期非同步事件無法任意改動目前清單；新增的複雜度集中在真正需要它的非同步邊界。X 明確記錄 refreshOwed，有利於表達被擋住的刷新，但必須在多個狀態轉換中同步維護。綜合而言，Y 的事件歸屬與維護關係較清楚。以下契約疑點僅供診斷，不改動既有完成判定。",
+          "evidence": [
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "applications/mail/src/app/logic/elements/elementsActions.ts:32-51；applications/mail/src/app/logic/elements/elementsReducers.ts:66-90",
+              "y_location": "applications/mail/src/app/logic/elements/elementsActions.ts:34-44；applications/mail/src/app/logic/elements/elementsReducers.ts:54-81",
+              "observation": "Y 在排定重試、執行計時回呼及提交回應時核對請求身分；reset 或新請求可以使舊事件失去作用。X 的計時回呼直接修改當前狀態，成功回應也沒有身分檢查，因此理解目前清單還須追蹤先前所有未結束的回應與計時器。Y 多出的 requestId、dueAt 與檢查承擔了實際的生命週期隔離。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:35-119；applications/mail/src/app/logic/elements/elementsSelectors.ts:189-192",
+              "y_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:35-43、62-115；applications/mail/src/app/logic/elements/elementsSelectors.ts:184-192",
+              "observation": "X 在 pending、retry、invalidate、成功提交與手動載入等路徑額外維護 refreshOwed，使顯示狀態與排程狀態需要共同更新。Y 由既有 pendingRequest、invalidated 與資料不足條件推導 loading，減少新增轉換時漏同步的關係。取捨是 X 能明確記錄被擋住的翻頁需求，Y 的推導則必須涵蓋每一種欠缺資料的情境。"
+            },
+            {
+              "criterion": "抽象確實消除概念或分支",
+              "x_location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-51；applications/mail/src/app/logic/elements/elementsReducers.ts:35-47",
+              "y_location": "applications/mail/src/app/logic/elements/elementsActions.ts:34-61；applications/mail/src/app/logic/elements/elementsReducers.ts:35-43",
+              "observation": "Y 的 scheduleRetry 統一失敗與 Stale 的計時器有效性規則，retryStale 也共用 retry 的狀態轉換；兩種原因只保留延遲與錯誤資料的差異。X 分別安排計時器並重複設定欠刷新狀態，未來調整重試生命週期時需要同步修改兩條路徑。這是行為規則的集中，而非單純減少 helper 或行數。"
+            }
+          ],
+          "contract_concerns": [
+            {
+              "candidate": "X",
+              "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+              "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-43；applications/mail/src/app/logic/elements/elementsReducers.ts:42-47",
+              "observation": "靜態推演：第一個 Stale 回應排定計時器後，reset 並取得第二個 Stale 回應；第一個計時器仍可清除第二次請求的 pendingRequest，讓第二次重試在自身 1000 ms 到期前變成可發送。未執行此反例，僅列為診斷疑點。"
+            },
+            {
+              "candidate": "Y",
+              "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+              "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:118-130；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、184-192",
+              "observation": "靜態推演：已有完整快取頁時，在修改操作期間切到未快取的相鄰頁；若參數不變，且原頁不符合 needsMoreElements，便不會 reset、發送請求或 updatePage，也沒有 invalidated 被設定。loading 可能維持 false 並繼續顯示原頁內容。X 對此有 shouldHoldRequest 分支。未執行此反例，僅列為診斷疑點。"
+            }
+          ],
+          "case": "proton-mailbox-retry",
+          "trial": 2,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "E2",
+            "Y": "D2"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 146465,
+            "cached_input_tokens": 103424,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1819,
+            "reasoning_output_tokens": 171
+          },
+          "elapsed_seconds": 47.438,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "4c9e8b323dab830062910bb3c42ce7e4ad45f8d02a9af16663661bb11f8e8387",
+          "mapped_concerns": [
+            {
+              "candidate": "X",
+              "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+              "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-43；applications/mail/src/app/logic/elements/elementsReducers.ts:42-47",
+              "observation": "靜態推演：第一個 Stale 回應排定計時器後，reset 並取得第二個 Stale 回應；第一個計時器仍可清除第二次請求的 pendingRequest，讓第二次重試在自身 1000 ms 到期前變成可發送。未執行此反例，僅列為診斷疑點。",
+              "arm": "E2"
+            },
+            {
+              "candidate": "Y",
+              "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+              "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:118-130；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、184-192",
+              "observation": "靜態推演：已有完整快取頁時，在修改操作期間切到未快取的相鄰頁；若參數不變，且原頁不符合 needsMoreElements，便不會 reset、發送請求或 updatePage，也沒有 invalidated 被設定。loading 可能維持 false 並繼續顯示原頁內容。X 對此有 shouldHoldRequest 分支。未執行此反例，僅列為診斷疑點。",
+              "arm": "D2"
+            }
+          ]
+        },
+        {
+          "winner": "X",
+          "reason": "X 較能把非同步結果的有效範圍限制在所屬請求，並由既有狀態推導 loading；Y 雖明確拆出「需要請求」與「允許發送」，卻增加 refreshOwed 與多處同步維護，以及畫面 effect 回寫刷新狀態的關係。X 的請求識別與計時器檢查增加了複雜度，但主要留在真正需要處理競態的邊界，因此整體結構較佳。以下契約疑點僅供診斷，不改動既有驗收結論。",
+          "evidence": [
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "applications/mail/src/app/logic/elements/elementsActions.ts:33-64；applications/mail/src/app/logic/elements/elementsReducers.ts:55-83",
+              "y_location": "applications/mail/src/app/logic/elements/elementsActions.ts:31-52；applications/mail/src/app/logic/elements/elementsReducers.ts:66-90",
+              "observation": "X 以 requestId 限定回應的提交資格，計時器也須符合目前 requestId 與 dueAt 才能 dispatch。reset 或新請求取代舊請求後，舊工作不能任意改寫目前生命週期。Y 的計時器與 fulfilled reducer 沒有相同歸屬檢查，理解目前狀態時必須同時考慮先前尚未結束的請求。Y 較簡單，但省略的是非同步工作的有效範圍。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:36-46、98-115；applications/mail/src/app/logic/elements/elementsSelectors.ts:185-193",
+              "y_location": "applications/mail/src/app/logic/elements/elementsReducers.ts:36-47、57-120、149-167；applications/mail/src/app/logic/elements/elementsSelectors.ts:190-193",
+              "observation": "X 從 pendingRequest、invalidated 與資料不足等事實推導 loading，retryStale 也沿用 retry 的狀態轉移。Y 額外儲存 refreshOwed，必須在一般載入、重試、手動載入、失效及加密搜尋結果等路徑同步更新；請求資格仍依其他旗標決定。其優點是 loading 的意義直接，但每增加一條狀態轉移，都要維持兩套判斷的一致性。"
+            },
+            {
+              "criterion": "因果與資料流單向",
+              "x_location": "applications/mail/src/app/hooks/mailbox/useElements.ts:94-131；applications/mail/src/app/logic/elements/elementsSelectors.ts:114-125",
+              "y_location": "applications/mail/src/app/hooks/mailbox/useElements.ts:96-138；applications/mail/src/app/logic/elements/elementsSelectors.ts:115-130",
+              "observation": "Y 的 requestDue 抽象有實質價值：分開刷新需求與操作阻擋，並供發送和暫扣判斷共用。不過 shouldHoldRequest 又經 effect dispatch invalidate，回寫 requestDue 所依賴的狀態，使暫扣呈現跨越 selector、畫面 effect 與 reducer。X 的操作阻擋主要留在 selector 與 thunk 入口，關係較直接；代價是其 loading 推導未完整涵蓋外部頁碼需求，另列診斷。"
+            }
+          ],
+          "contract_concerns": [
+            {
+              "candidate": "X",
+              "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+              "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:94-131；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、185-193",
+              "observation": "靜態閱讀疑點：已載入頁面後，在操作進行中切到相鄰但未快取的頁面，shouldResetCache 可為 false，shouldUpdatePage 因目標頁未快取也為 false。請求被 pendingActions 擋住，但 loading 不讀目標頁的 pageCached，若原頁資料完整且未 invalidated，仍可能為 false，繼續呈現原頁內容。未執行此反例，僅列供補查。"
+            },
+            {
+              "candidate": "Y",
+              "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+              "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-50；applications/mail/src/app/logic/elements/elementsReducers.ts:28-47",
+              "observation": "靜態閱讀疑點：舊 Stale 計時器尚未到期時，若 reset 後的新請求也收到 Stale，舊計時器仍會無條件 dispatch retryStale，清除新請求的 pendingRequest 並設定 invalidated，可能在新回應自己的 1000 ms 延遲結束前觸發請求。未執行此交錯情境，僅列供補查。"
+            }
+          ],
+          "case": "proton-mailbox-retry",
+          "trial": 2,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "D2",
+            "Y": "E2"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 145454,
+            "cached_input_tokens": 102656,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1856,
+            "reasoning_output_tokens": 151
+          },
+          "elapsed_seconds": 66.156,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "7119caad2560a502f14be24dc4809599499dbfedc34c507b015b84d05c118fb9",
+          "mapped_concerns": [
+            {
+              "candidate": "X",
+              "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+              "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:94-131；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、185-193",
+              "observation": "靜態閱讀疑點：已載入頁面後，在操作進行中切到相鄰但未快取的頁面，shouldResetCache 可為 false，shouldUpdatePage 因目標頁未快取也為 false。請求被 pendingActions 擋住，但 loading 不讀目標頁的 pageCached，若原頁資料完整且未 invalidated，仍可能為 false，繼續呈現原頁內容。未執行此反例，僅列供補查。",
+              "arm": "D2"
+            },
+            {
+              "candidate": "Y",
+              "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+              "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-50；applications/mail/src/app/logic/elements/elementsReducers.ts:28-47",
+              "observation": "靜態閱讀疑點：舊 Stale 計時器尚未到期時，若 reset 後的新請求也收到 Stale，舊計時器仍會無條件 dispatch retryStale，清除新請求的 pendingRequest 並設定 invalidated，可能在新回應自己的 1000 ms 延遲結束前觸發請求。未執行此交錯情境，僅列供補查。",
+              "arm": "E2"
+            }
+          ]
+        }
+      ],
+      "concerns": [
+        {
+          "candidate": "X",
+          "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+          "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-43；applications/mail/src/app/logic/elements/elementsReducers.ts:42-47",
+          "observation": "靜態推演：第一個 Stale 回應排定計時器後，reset 並取得第二個 Stale 回應；第一個計時器仍可清除第二次請求的 pendingRequest，讓第二次重試在自身 1000 ms 到期前變成可發送。未執行此反例，僅列為診斷疑點。",
+          "arm": "E2"
+        },
+        {
+          "candidate": "Y",
+          "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+          "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:118-130；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、184-192",
+          "observation": "靜態推演：已有完整快取頁時，在修改操作期間切到未快取的相鄰頁；若參數不變，且原頁不符合 needsMoreElements，便不會 reset、發送請求或 updatePage，也沒有 invalidated 被設定。loading 可能維持 false 並繼續顯示原頁內容。X 對此有 shouldHoldRequest 分支。未執行此反例，僅列為診斷疑點。",
+          "arm": "D2"
+        },
+        {
+          "candidate": "X",
+          "exact_clause": "While a fetch of the element list is owed but has not yet been issued, the list must present itself as loading and must keep showing its placeholders.",
+          "location": "applications/mail/src/app/hooks/mailbox/useElements.ts:94-131；applications/mail/src/app/logic/elements/elementsSelectors.ts:105-130、185-193",
+          "observation": "靜態閱讀疑點：已載入頁面後，在操作進行中切到相鄰但未快取的頁面，shouldResetCache 可為 false，shouldUpdatePage 因目標頁未快取也為 false。請求被 pendingActions 擋住，但 loading 不讀目標頁的 pageCached，若原頁資料完整且未 invalidated，仍可能為 false，繼續呈現原頁內容。未執行此反例，僅列供補查。",
+          "arm": "D2"
+        },
+        {
+          "candidate": "Y",
+          "exact_clause": "Before a Stale retry becomes due, do not issue an extra fetch or display the stale response.",
+          "location": "applications/mail/src/app/logic/elements/elementsActions.ts:40-50；applications/mail/src/app/logic/elements/elementsReducers.ts:28-47",
+          "observation": "靜態閱讀疑點：舊 Stale 計時器尚未到期時，若 reset 後的新請求也收到 Stale，舊計時器仍會無條件 dispatch retryStale，清除新請求的 pendingRequest 並設定 invalidated，可能在新回應自己的 1000 ms 延遲結束前觸發請求。未執行此交錯情境，僅列供補查。",
+          "arm": "E2"
+        }
+      ]
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "E",
+      "task_completed": {
+        "D": false,
+        "E": true
+      },
+      "judges": []
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "fb-metaflow-stubs",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "tracing-1523",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "tracing-1523",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "E",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "Y",
+          "reason": "Y 在編輯模型中保留兩種信任範圍的偏好，切換金鑰信任狀態時可重新選取適用值；X 過早只留下合併後的 encrypt，使後續偏好取決於先前操作路徑。Y 雖增加衍生狀態同步成本，但這份複雜度保住了任務要求區分的資訊，且儲存時維持布林表示，整體結構較合理。",
+          "evidence": [
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:226-230；packages/shared/lib/keys/publicKeys.ts:174-182",
+              "y_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:226-232；packages/shared/lib/keys/publicKeys.ts:218-229",
+              "observation": "兩方的 Trust 操作都會加入 pinnedKeys 並更新 trustedFingerprints。X 隨後沿用 model.encrypt，原本未釘選時的選擇便會帶入釘選狀態；Y 保留 encryptToPinned 與 encryptToUntrusted，依新的金鑰狀態重新選取。Y 的有效值可由當前金鑰種類及對應偏好解釋，X 則需要知道先前操作歷史。這是結構與維護差異，不另行改判驗收結果。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "packages/components/containers/contacts/email/ContactPGPSettings.tsx:138-143；packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:228",
+              "y_location": "packages/components/containers/contacts/email/ContactPGPSettings.tsx:139-149；packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:226-244",
+              "observation": "X 只有一個可變 encrypt，狀態同步較少，但它同時承擔使用者偏好與目前有效值，失去偏好的適用範圍。Y 將兩種偏好作為重算依據，切換開關時更新所屬偏好。不過 Y 仍同時儲存並直接更新衍生 encrypt，且以 effect 再同步，留下多欄位一致性的維護成本；這是其保留資訊所付出的實際取捨。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:147-161",
+              "y_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:147-161；packages/shared/lib/contacts/vcard.ts:242-260",
+              "observation": "X 在建立內部 vCard 屬性時先將加密與簽章布林值轉成字串，讀取時卻使用布林值，使同一欄位的內部表示依來源而異。Y 保留布林值直到既有 ICAL 序列化邊界，與 VCardContact 的欄位型別及讀取結果一致，減少下游需要理解的表示差異。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "proton-untrusted-keys",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "D1",
+            "Y": "E1"
+          },
+          "winner_arm": "E",
+          "usage": {
+            "input_tokens": 206396,
+            "cached_input_tokens": 128640,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1374,
+            "reasoning_output_tokens": 15
+          },
+          "elapsed_seconds": 88.297,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "3309f19e722752d829ef0b582aecf6fa3ff853b802d1c469c63e242bc0957ae5",
+          "mapped_concerns": []
+        },
+        {
+          "winner": "X",
+          "reason": "X 在編輯期間保留 pinned 與 untrusted 兩種偏好的身分，金鑰信任狀態改變後，能依目前類別重新決定加密值。Y 只保留合併後的 encrypt，切換類別時沿用先前結果，使不同類別的偏好互相滲透。X 的代價是增加衍生狀態同步與重複判定，但在本任務中，保留偏好來源的結構優勢較重要。",
+          "evidence": [
+            {
+              "criterion": "局部行為可預測",
+              "x_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:224-243",
+              "y_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:224-239",
+              "observation": "兩方的取消信任操作都會移除 pinned key。X 隨後依剩餘金鑰選取 encryptToPinned 或 encryptToUntrusted；Y 則沿用 model.encrypt。例如原有 pinned=false、untrusted=true，取消最後一把 pinned key 的信任後，X 採用 untrusted 的 true，Y 仍保留 false。X 的結果由目前偏好與金鑰類別決定，Y 則受上一個類別的有效值影響。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "packages/shared/lib/interfaces/EncryptionPreferences.ts:64；packages/components/containers/contacts/email/ContactPGPSettings.tsx:138-145",
+              "y_location": "packages/shared/lib/interfaces/EncryptionPreferences.ts:64-71；packages/components/containers/contacts/email/ContactPGPSettings.tsx:137-142",
+              "observation": "X 明確保存兩個來源偏好，切換開關只更新目前類別的偏好；Y 的單一 encrypt 同時代表使用者選擇與套用規則後的結果，合併後無法恢復另一類別的選擇。不過 X 也同時寫入 encrypt，並在 effect 再推導一次，因此仍有同步負擔；其優勢是沒有將兩個不同事實壓成一個值。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:145-161",
+              "y_location": "packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx:145-161",
+              "observation": "X 建立 vCard 屬性時維持 boolean，與欄位型別及讀取結果一致，再交給既有序列化流程。Y 在畫面儲存流程先轉成字串，使記憶體中的同一偏好依來源可能是 boolean 或字串。兩者都能通過序列化驗收，但 X 減少了內部表示差異。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "proton-untrusted-keys",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "E1",
+            "Y": "D1"
+          },
+          "winner_arm": "E",
+          "usage": {
+            "input_tokens": 173002,
+            "cached_input_tokens": 131456,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 1247,
+            "reasoning_output_tokens": 58
+          },
+          "elapsed_seconds": 76.86,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "4170191515b1d3a4446d6dc28e79e58d66f35c11f51c4ef2c8fffbef06fc5613",
+          "mapped_concerns": []
+        }
+      ],
+      "concerns": []
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "E",
+      "task_completed": {
+        "D": false,
+        "E": true
+      },
+      "judges": []
+    },
+    {
+      "case": "regexp-404",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "regexp-404",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "both_failed",
+      "task_completed": {
+        "D": false,
+        "E": false
+      },
+      "judges": []
+    },
+    {
+      "case": "clap-2297",
+      "trial": 1,
+      "pair": "D-E",
+      "status": "blind_complete",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": true
+      },
+      "judges": [
+        {
+          "winner": "X",
+          "reason": "X 略勝：直接以巢狀集合保存每次出現的值，讓群組邊界成為資料結構本身的一部分；Y 的平坦值陣列加範圍表則需要持續維護兩者一致。Y 保留既有平坦查詢與計數方式，確實減少相容層的複雜度；但本任務同時涉及分組、追加及整組覆寫，X 在這些核心操作上的結構較穩固。兩者都將自我覆寫移至新 occurrence 開始時處理，這部分沒有實質優劣。",
+          "evidence": [
+            {
+              "criterion": "非法狀態難以建立",
+              "x_location": "src/parse/matches/matched_arg.rs:14–17；src/parse/arg_matcher.rs:129–143",
+              "y_location": "src/parse/matches/matched_arg.rs:14–19；src/parse/arg_matcher.rs:129–144",
+              "observation": "X 的每個內層 Vec 就是一組值，空群組也有直接表示。Y 另存 Range，必須維持範圍有效、順序正確且與 vals 對應；目前追加操作有維護這些條件，但型別仍容許越界或錯配。X 消除了這項跨欄位不變條件。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "src/parse/parser.rs:1297–1312；src/parse/matches/arg_matches.rs:255–259",
+              "y_location": "src/parse/parser.rs:1298–1329；src/parse/matches/arg_matches.rs:266–271",
+              "observation": "X 覆寫時清除 vals，值與群組邊界同時消失，分組查詢也直接讀取同一結構。Y 必須一起清除 vals 與 val_groups，查詢時再用範圍切取值。Y 現有實作正確配對了清除，但往後修改值集合時仍須記得同步處理範圍表。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "src/parse/matches/matched_arg.rs:34–40；src/parse/matches/arg_matches.rs:1006–1149；src/parse/validator.rs:443–500",
+              "y_location": "src/parse/matches/arg_matches.rs:988–1103；src/parse/arg_matcher.rs:146–166",
+              "observation": "這項取捨偏向 Y：保留平坦儲存，使原有值迭代器與長度查詢繼續使用標準切片能力。X 必須展平群組、加總各組長度，並在 Values 與 OsValues 的正反向迭代中維護 remaining。這是 X 的實際成本；不過它主要集中在讀取介面，而 Y 的同步責任落在可變的核心儲存上，因此未抵銷 X 的整體優勢。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "clap-2297",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 1,
+          "mapping": {
+            "X": "D1",
+            "Y": "E1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 27783,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 907,
+            "reasoning_output_tokens": 132
+          },
+          "elapsed_seconds": 32.375,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "b2a4918265eb1b0e6605c932eab79b00061413d4f7154279fba085d239dab29c",
+          "mapped_concerns": []
+        },
+        {
+          "winner": "Y",
+          "reason": "Y 將每次出現的值直接存成一組，讓群組歸屬由資料結構表達；X 則必須同步維護平坦值與索引範圍。兩者都把自我覆寫移到新一次出現的入口，因果結構相近。Y 的代價是平坦查詢需要轉接與計數，但這些複雜度比 X 儲存層持續維護跨欄位一致性的責任更容易局部掌握，因此判 Y 勝。",
+          "evidence": [
+            {
+              "criterion": "非法狀態難以建立",
+              "x_location": "src/parse/matches/matched_arg.rs:14–29；src/parse/arg_matcher.rs:129–142",
+              "y_location": "src/parse/matches/matched_arg.rs:14–26；src/parse/arg_matcher.rs:129–140",
+              "observation": "X 的 vals 與 val_groups 可分別修改，必須保證範圍不越界、群組依序涵蓋對應的值；新增值時還須同步更新最後一組的 end。Y 直接將值加入最後一個 Vec，空群組也自然表示為空 Vec，消除了範圍與底層值失配這一類狀態。這是表示法的維護差異，並非宣稱 X 已發生錯誤。"
+            },
+            {
+              "criterion": "同一事實只有一個來源",
+              "x_location": "src/parse/parser.rs:1298–1328；src/parse/matches/arg_matches.rs:1059–1088",
+              "y_location": "src/parse/parser.rs:1297–1313；src/parse/matches/matched_arg.rs:30–40",
+              "observation": "X 自我覆寫時必須同時清除 vals 與 val_groups，群組讀取再用範圍切回 vals。Y 清除 vals 就同時清除了值及其群組；平坦遍歷與總值數均由群組推導。日後修改值的生命週期時，Y 少了一項必須跨欄位維持的同步責任。"
+            },
+            {
+              "criterion": "複雜度留在真正需要它的邊界",
+              "x_location": "src/parse/matches/arg_matches.rs:1056–1101；src/parse/matches/matched_arg.rs:19",
+              "y_location": "src/parse/matches/arg_matches.rs:1006–1150；src/parse/matches/matched_arg.rs:34–40",
+              "observation": "X 保留平坦儲存，因此既有平坦迭代器與常數時間的值數查詢較直接，這是實質優點。Y 為保留 ExactSizeIterator，在 Values 與 OsValues 各維護 remaining，num_vals 也需遍歷群組。不過 remaining 僅存在於借用不可變資料的迭代器內，由前後取值操作更新；相較之下，X 的範圍一致性牽涉儲存、追加、覆寫與讀取。此任務以群組為新增核心語意，Y 的取捨較合理。"
+            }
+          ],
+          "contract_concerns": [],
+          "case": "clap-2297",
+          "trial": 1,
+          "pair": "D-E",
+          "judge": 2,
+          "mapping": {
+            "X": "E1",
+            "Y": "D1"
+          },
+          "winner_arm": "D",
+          "usage": {
+            "input_tokens": 27783,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 871,
+            "reasoning_output_tokens": 80
+          },
+          "elapsed_seconds": 30.594,
+          "model": "gpt-6-astra",
+          "reasoning": "medium",
+          "prompt_sha256": "8bf3ae1bd48f31f84d5b916ad5c05c5e1393657581c9a9ac9aed6c1865e6d8e9",
+          "mapped_concerns": []
+        }
+      ],
+      "concerns": []
+    },
+    {
+      "case": "clap-2297",
+      "trial": 2,
+      "pair": "D-E",
+      "status": "contract_result",
+      "winner": "D",
+      "task_completed": {
+        "D": true,
+        "E": false
+      },
+      "judges": []
+    }
+  ],
+  "grading_cost_separate": {
+    "calls": 36,
+    "seconds": 1430.4390000000237,
+    "tokens": {
+      "input_tokens": 2747086,
+      "cached_input_tokens": 1745280,
+      "output_tokens": 34420
+    }
+  },
+  "plan_sha256": "6911e73202d38a9231e8b85e457df68c19b4ad2304429c3f448f8aa92e22484e",
+  "contract_coverage": "Frozen evaluation plus the same Flipt C03 / Clap occurrences checks symmetrically applied before taste."
+}

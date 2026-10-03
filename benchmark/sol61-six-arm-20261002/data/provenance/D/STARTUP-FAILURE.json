@@ -1,0 +1,32 @@
+{
+  "status": "infrastructure_startup_failure",
+  "reason": "Official npm same-version CLI rejected requested Sol model before any Actor work.",
+  "counted_as_benchmark_samples": false,
+  "actors_reached_task_work": 0,
+  "requests_attempted": 2,
+  "provider_attempts": 0,
+  "case_states_restored": 12,
+  "original_records_retained": true,
+  "desktop_startup_probes": {
+    "gpt-6.1-sol": {
+      "model": "gpt-6.1-sol",
+      "reasoning": "medium",
+      "binary": "C:\\Users\\kk789\\AppData\\Local\\OpenAI\\Codex\\bin\\de8a38d2100ae498\\codex.exe",
+      "binary_sha256": "34549ded6e2aee87c911c62d025e52e26c488683d0f489cd68f756baef1a6df6",
+      "version": "codex-cli 0.159.2",
+      "exit_code": 0,
+      "seconds": 7.312999999994645,
+      "ready": true
+    },
+    "gpt-6-astra": {
+      "model": "gpt-6-astra",
+      "reasoning": "medium",
+      "binary": "C:\\Users\\kk789\\AppData\\Local\\OpenAI\\Codex\\bin\\de8a38d2100ae498\\codex.exe",
+      "binary_sha256": "34549ded6e2aee87c911c62d025e52e26c488683d0f489cd68f756baef1a6df6",
+      "version": "codex-cli 0.159.2",
+      "exit_code": 0,
+      "seconds": 6.672000000020489,
+      "ready": true
+    }
+  }
+}
