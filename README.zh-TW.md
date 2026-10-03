@@ -6,9 +6,41 @@
 >
 > 綠燈代表現在能過。六個月後呢？
 
-Masters’ Nudge 在寫程式的模型（Actor）完成修改後，讓另一個模型（Provider）唯讀檢查任務與程式關係，提出一則簡短的結構建議。Actor 決定是否採納，並負責實作、驗證與完整交付。
+AI 可以把功能做出來、讓測試通過，程式結構卻仍靠同步、特殊分支與局部補丁維持正確。需求再變，這些補救也可能繼續增加。
 
-## 它怎麼運作
+Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入一則高品味結構的提醒，讓另一種資料與責任安排進入後續思考，增加產生更好結構的機會。
+
+## 效果與代價
+
+最新完整比較是 **2026-09-30 至 10-02 的六臂測試**：12 題、每題每臂兩次，共 144 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
+
+**同樣由 Sol medium 提供提醒時，這批測試中的 Sol medium 有結構品味收益；Sol xhigh 與直接做的品味持平，花費更多時間。** 以下兩組只改變是否加入 Sol medium 提醒：
+
+| 寫程式的模型 | 加工具相對直接做的品味 | 累計時間 | 未快取輸入 Token |
+|---|---|---|---|
+| Sol medium | 5 勝、1 敗 | +14.2% | +88.9% |
+| Sol xhigh | 3 勝、3 敗、2 持平 | +27.7% | +51.1% |
+
+品味由匿名評審比較雙方完整交付的同題／同次序程式；時間涵蓋每臂全部 24 次嘗試，Token 使用六臂共同 19 個有完整用量的位置。這裡呈現的是結構品質、時間與用量，並非金額帳單。
+
+完整交付結果如下：
+
+| 臂 | 寫程式的模型 | 提供提醒的模型 | 完整交付 |
+|---|---|---|---|
+| A | Sol medium | 無 | 6/24 |
+| B | Sol medium | Sol medium | 8/24 |
+| C | Sol xhigh | 無 | 13/24 |
+| D | Sol medium | Astra medium | 8/24 |
+| E | Sol xhigh | Astra medium | 10/24 |
+| F | Sol xhigh | Sol medium | 11/24 |
+
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C > F > E > B = D > A**。B 比 A 多完成兩份；F 比 C 少完成兩份。B 對 C 的品味為四勝四敗；各組共同完成的樣本不同，不能串成總品味排名。
+
+逐題結果、CLI 版本差異與完整評比見[六臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早研究見[測試索引](benchmark/README.zh-TW.md)。
+
+## 工具做了什麼
+
+寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。Actor 完成一次修改後，Provider 唯讀檢查任務與相關程式，提出一則簡短的結構建議；建議自動進入 Actor 的上下文，Actor 決定是否採納並繼續實作與驗證。
 
 ```mermaid
 flowchart LR
@@ -19,20 +51,7 @@ flowchart LR
     D --> E
 ```
 
-Provider 在一次呼叫內做兩步判斷：先從完整交付結果回推容易漏掉的契約條件；再從必要責任、資料區別與資訊，找出目前靠補救維持正確的關係，提出讓要求自然成立的結構方向。五條準則聚焦非法狀態、單向因果、可預測行為、單一事實來源，以及邊界與抽象。
-
-| 回饋欄位 | 內容 | 字元上限 |
-|---|---|---|
-| `REQUIRED` | 從任務契約選出的可檢查結果 | 35 |
-| `OBSERVED` | 簡短程式位置或識別字，以及可見關係 | 40 |
-| `WHY` | 該關係對任務的可能影響 | 25 |
-| `STRUCTURE` | 支持完整交付的替代資料與責任關係 | 61 |
-
-Provider 先填 `required`；交給 Actor 時依 `OBSERVED → WHY → STRUCTURE → REQUIRED` 顯示。四欄含標籤與換行最多 200 字元，工具另附固定文字，引導 Actor 核對契約、實作採納的關係並驗證結果。
-
-每輪最多三則建議或兩次沉默，先到任一上限就停止。可辨識的純測試修改直接略過，不呼叫 Provider、不耗額度。工具不接管驗收，也不監看是否刪除了任務要求的測試。完整責任與資料流見[行為規格](SPEC.zh-TW.md)。
-
-## 一個實際案例
+### 一個實際案例
 
 最新六臂測試的 Element 題要求支援多裝置勾選、選取數量、取消與一次批次登出。以下比較 **A1 直接做**與 **B1 加工具**：Actor 都是 GPT-6.1 Sol medium，使用相同 CLI、任務與基底。
 
@@ -55,43 +74,42 @@ Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「�
 
 兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[六臂完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
 
-## 目前測到什麼
+## 作用原理
 
-最新完整比較是 **2026-09-30 至 10-02 的六臂測試**：12 題、每題每臂兩次，共 144 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
+Actor 的後續生成受任務、既有程式與前面的解題脈絡影響。遇到問題時，沿著原本方向加一個判斷或特例，是一條容易延續的局部修補路徑。
 
-| 臂 | Actor | Provider | 完整交付 |
-|---|---|---|---|
-| A | Sol medium | 無 | 6/24 |
-| B | Sol medium | Sol medium | 8/24 |
-| C | Sol xhigh | 無 | 13/24 |
-| D | Sol medium | Astra medium | 8/24 |
-| E | Sol xhigh | Astra medium | 10/24 |
-| F | Sol xhigh | Sol medium | 11/24 |
+Nudge 把另一種具體的資料與責任安排注入上下文，讓「從結構上消除補救」也成為後續生成的候選方向。它希望影響 Actor 接下來選中的 token，提高採用更好結構的機率。
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C > F > E > B = D > A**。共同完成的程式碼品味：B 對 A 五勝一敗；B 對 C 四勝四敗；F 對 C 三勝三敗、兩組持平。各組樣本不同，不能串成總品味排名。
+Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達、保持單向因果與可預測行為、讓事實只有一個權威來源，以及把必要複雜度留在真正的邊界。提醒聚焦可檢查的替代關係，讓 Actor 能判斷並實作。兩步選題、四欄格式與字元額度見[行為規格](SPEC.zh-TW.md)。
 
-B 比 A 多完成兩份、結構品味較佳，累計時間多約 14.2%。F 比 C 少完成兩份、品味持平，時間多約 27.7%。六臂共同 19 個有完整用量的位置中，B 比 A 的未快取輸入多約 88.9%，F 比 C 多約 51.1%。這批結果支持 medium Actor 加工具的收益，也顯示 xhigh Actor 加工具的額外成本與收尾問題。CLI 版本差異、逐題結果與全部分母見[完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
+## 限制
 
-報告、測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早結果與版本定位見[測試索引](benchmark/README.zh-TW.md)。
+- Actor 負責完成任務、判斷提醒、實作與驗證；工具不接管驗收。
+- 每輪最多三則建議或兩次沉默，先到任一上限就停止。可辨識的純測試修改直接略過，不呼叫 Provider、不耗額度。
+- Provider 只支援 OpenAI／Codex。只觀察明確的 `apply_patch` 修改，無法觀察沒有提供修改內容的命令列寫檔。
+- Windows 同步 `PostToolUse` 期間中斷該輪，既有重現曾缺少對應的 `hook/completed`；詳見[重現與追蹤](https://github.com/openai/codex/issues/46765)。
 
-## 使用與限制
+## 環境需求
 
-需要 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 和 `turn_id` 的 Actor 執行環境。Provider 目前只支援 OpenAI／Codex。只辨識事件中的明確 `apply_patch` 修改，無法觀察沒有提供修改內容的命令列寫檔。
+需要 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
 
-從 repo 根目錄使用 PowerShell：
+本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+
+## 安裝、啟用與第一次使用
+
+1. 確認 Python、Git 與 Codex CLI 已安裝；若 CLI 尚未登入，在 PowerShell 執行 `codex login`。
+2. 在 Codex 桌面版的外掛頁，選 **Add → Add Marketplace → Add from a repository**，填入 `https://github.com/shihchengwei-lab/masters-nudge`，按 **Sync**。repo 的[外掛目錄](.agents/plugins/marketplace.json)提供 Masters’ Nudge；開啟它並安裝、啟用。來源與安裝介面可參照[官方步驟](https://developers.openai.com/learn/developers-codex-plugin)。
+3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit` 與 `PostToolUse`；安裝與啟用不會自動完成 Hook 信任，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
+4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入與啟用狀態。
+5. 在自己的 Git 專案開啟新對話，交給 Actor 一項正常的程式修改。完成一次產品程式的 `apply_patch` 後，請 Codex：「顯示 Masters’ Nudge 最近的提醒紀錄。」`feedback` 表示已產生建議，`silence` 表示正常判斷後沒有建議；工具故障會另列原因。若有建議，可核對 Actor 上下文中的四欄提醒與後續程式改動。
+
+如果已下載本 repo，也可在 repo 根目錄用 PowerShell 手動設定與查詢：
 
 ```powershell
-python masters_nudge_cli.py provider get
 python masters_nudge_cli.py provider set openai --model gpt-6.1-sol
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
-
-設定只選 Provider 模型，不會更換 Actor。Provider 深度由程式固定為 medium；未設定模型時預設 `gpt-5.6-sol`，已儲存設定覆蓋預設。`doctor` 檢查依賴、登入與外掛啟用狀態；完整 Hook 送達仍需實測。
-
-本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。外掛入口與開發流程見[開發說明](docs/DEVELOPMENT.zh-TW.md)。
-
-Windows 同步 `PostToolUse` 期間若中斷該輪，既有重現曾缺少對應的 `hook/completed`。重現與追蹤見 [openai/codex#46765](https://github.com/openai/codex/issues/46765)；此處記錄已觀察的限制，不宣告目前上游處理狀態。
 
 ## 隱私
 

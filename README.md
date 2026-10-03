@@ -6,9 +6,41 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-Masters’ Nudge asks a second model (the Provider) to read the task and code relations after the coding model (the Actor) completes an edit. It returns one short structural suggestion. The Actor decides whether to adopt it and owns implementation, verification, and complete delivery.
+AI can implement a feature and pass its tests while the code still depends on synchronization, special branches, and local patches to stay correct. As requirements change, those workarounds can keep growing.
 
-## How it works
+Masters’ Nudge aims to improve this: it adds a short structural suggestion while AI writes code, bringing an alternative data and responsibility arrangement into the next generation and making a better structure more likely.
+
+## Results and costs
+
+The latest complete comparison is the **six-arm study from September 30 to October 2, 2026**: 12 tasks, two attempts per task and arm, totaling 144 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
+
+**With Sol medium providing feedback, this study found a structural taste benefit for a Sol medium Actor. For a Sol xhigh Actor, taste tied direct implementation while taking more time.** These two comparisons change only whether Sol medium feedback is added:
+
+| Coding model | Tool-assisted taste versus direct implementation | Total time | Non-cached input tokens |
+|---|---|---|---|
+| Sol medium | 5 wins, 1 loss | +14.2% | +88.9% |
+| Sol xhigh | 3 wins, 3 losses, 2 ties | +27.7% | +51.1% |
+
+Anonymous judges compare code only where both implementations completely delivered the same task and attempt position. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all six arms. These are structure, time, and usage measurements, not monetary bills.
+
+Complete deliveries were:
+
+| Arm | Coding model | Feedback model | Complete deliveries |
+|---|---|---|---|
+| A | Sol medium | None | 6/24 |
+| B | Sol medium | Sol medium | 8/24 |
+| C | Sol xhigh | None | 13/24 |
+| D | Sol medium | Astra medium | 8/24 |
+| E | Sol xhigh | Astra medium | 10/24 |
+| F | Sol xhigh | Sol medium | 11/24 |
+
+Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C > F > E > B = D > A**. B completed two more deliveries than A; F completed two fewer than C. B versus C split four to four on taste. Jointly completed populations differ, so these comparisons cannot form an overall taste ranking.
+
+See the [six-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The harness and original evidence are included for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). Earlier studies are listed in the [benchmark index](benchmark/README.zh-TW.md).
+
+## What the tool does
+
+The coding model is the Actor; the feedback model is the Provider. After an Actor edit, the Provider reads the task and related code and returns one short structural suggestion. It enters the Actor's context automatically. The Actor decides whether to adopt it and continues implementation and verification.
 
 ```mermaid
 flowchart LR
@@ -19,20 +51,7 @@ flowchart LR
     D --> E
 ```
 
-Within one call, the Provider first works backward from complete delivery to select a contract condition that could be missed. It then traces necessary responsibilities, data distinctions, and information to find relations currently maintained by workarounds, and proposes a structure that lets the required results hold naturally. Five criteria focus on invalid states, one-way causality, predictable behavior, one authoritative source, and boundaries and abstraction.
-
-| Feedback field | Content | Character limit |
-|---|---|---|
-| `REQUIRED` | A checkable result selected from the task contract | 35 |
-| `OBSERVED` | A short code anchor and the visible relation | 40 |
-| `WHY` | The relation's possible impact on the task | 25 |
-| `STRUCTURE` | An alternative data and responsibility relation supporting complete delivery | 61 |
-
-The Provider writes `required` first. Actor-facing order is `OBSERVED → WHY → STRUCTURE → REQUIRED`. The four labeled fields, including line breaks, fit within 200 characters. The tool adds fixed guidance to check the contract, implement an adopted relation, and verify results.
-
-A turn stops after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use. The tool does not own acceptance or monitor removal of task-required tests. See the [behavior specification](SPEC.zh-TW.md) for responsibilities and data flow.
-
-## A real example
+### A real example
 
 The latest six-arm study's Element task required multi-device selection, a selection count, cancellation, and bulk sign-out. Compare **A1, direct implementation**, with **B1, using the tool**: both Actors used GPT-6.1 Sol medium, the same CLI, task, and base commit.
 
@@ -55,43 +74,42 @@ The Actor then required both halves together and used one decision to choose the
 
 Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [six-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for overall benefits and costs.
 
-## What the benchmark found
+## Why a nudge can help
 
-The latest complete comparison is the **six-arm study from September 30 to October 2, 2026**: 12 tasks, two attempts per task and arm, totaling 144 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
+The Actor's next generation is shaped by the task, existing code, and its preceding approach. When a problem appears, adding another condition or special case offers a readily available continuation of the same local repair path.
 
-| Arm | Actor | Provider | Complete deliveries |
-|---|---|---|---|
-| A | Sol medium | None | 6/24 |
-| B | Sol medium | Sol medium | 8/24 |
-| C | Sol xhigh | None | 13/24 |
-| D | Sol medium | Astra medium | 8/24 |
-| E | Sol xhigh | Astra medium | 10/24 |
-| F | Sol xhigh | Sol medium | 11/24 |
+A nudge injects a concrete alternative data and responsibility arrangement into that context. Removing the need for a workaround through structure becomes another candidate direction for subsequent generation. The aim is to influence the Actor's next token choices and increase the probability of adopting a better structure.
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C > F > E > B = D > A**. Among jointly completed pairs, B beat A five to one; B versus C split four to four; F versus C split three to three with two ties. Pair populations differ, so these results cannot form an overall taste ranking.
+The Provider uses five taste criteria to find that direction: make invalid states unrepresentable, keep causality one-way and behavior predictable, give facts one authoritative source, and keep necessary complexity at real boundaries. Suggestions name checkable alternative relations so the Actor can judge and implement them. See the [behavior specification](SPEC.zh-TW.md) for the two selection steps, four-field format, and character limits.
 
-B completed two more deliveries than A with better structural taste and about 14.2% more total time. F completed two fewer than C with tied taste and about 27.7% more time. Across the same 19 positions with complete usage records in all arms, B used about 88.9% more non-cached input than A; F used about 51.1% more than C. This study shows benefits with a medium Actor, and additional cost and deadline problems with an xhigh Actor. See the [complete report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for CLI version differences, task results, and denominators.
+## Limitations
 
-The report, harness, and original evidence are included in this repo for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). The [benchmark index](benchmark/README.zh-TW.md) distinguishes earlier studies and versions.
+- The Actor owns complete delivery, evaluation of feedback, implementation, and verification. The tool does not take over acceptance.
+- A turn stops after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use.
+- The Provider supports OpenAI/Codex only. Edits must arrive as explicit `apply_patch` content; opaque shell writes are unsupported.
+- A recorded Windows interruption during synchronous `PostToolUse` lacked a matching `hook/completed` event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
 
-## Use and limits
+## Requirements
 
-Requires Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`. The Provider supports OpenAI/Codex only. Edits are observed through explicit `apply_patch` event content; shell writes without edit content are unsupported.
+Requires Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
 
-From the repo root in PowerShell:
+The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+
+## Install, enable, and try it
+
+1. Make sure Python, Git, and Codex CLI are installed. If the CLI is not signed in, run `codex login` in PowerShell.
+2. In the Codex desktop Plugins page, choose **Add → Add Marketplace → Add from a repository**, enter `https://github.com/shihchengwei-lab/masters-nudge`, and select **Sync**. The repo's [marketplace](.agents/plugins/marketplace.json) exposes Masters’ Nudge; open it, install it, and enable it. See the [official installation steps](https://developers.openai.com/learn/developers-codex-plugin).
+3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit` and `PostToolUse` hooks. Installation and enablement do not automatically trust hooks; see the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
+4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness reports dependencies, login, and enablement.
+5. Start a new chat in your own Git project and give the Actor a normal code change. After a product-code `apply_patch`, ask Codex: “Show recent Masters’ Nudge attempts.” `feedback` means a suggestion was produced; `silence` means a successful judgment found no suggestion. Faults have separate reasons. For feedback, inspect the four-field suggestion in the Actor context and the subsequent code changes.
+
+If you downloaded this repo, you can also configure and inspect the tool manually from its root in PowerShell:
 
 ```powershell
-python masters_nudge_cli.py provider get
 python masters_nudge_cli.py provider set openai --model gpt-6.1-sol
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```
-
-The setting selects the Provider model; it does not change the Actor. Provider reasoning is fixed at medium in code. Without a saved model selection, the default is `gpt-5.6-sol`; saved settings override it. `doctor` checks dependencies, login, and plugin enablement; complete Hook delivery still requires a runtime test.
-
-The repo plugin manifest version is `0.6.0+codex.20260925224104`. See the [development guide](docs/DEVELOPMENT.zh-TW.md) for plugin entry points and workflow.
-
-A recorded Windows interruption during synchronous `PostToolUse` lacked a matching `hook/completed` event. See [openai/codex#46765](https://github.com/openai/codex/issues/46765) for reproduction and tracking. This records the observed limitation rather than asserting the current upstream issue status.
 
 ## Privacy
 
