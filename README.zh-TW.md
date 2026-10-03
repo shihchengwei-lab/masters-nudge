@@ -57,7 +57,7 @@ Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「�
 
 ## 目前測到什麼
 
-最新保留的完整比較是 **2026-09-30 至 10-02 的六臂測試**：12 題、每題每臂兩次，共 144 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
+最新完整比較是 **2026-09-30 至 10-02 的六臂測試**：12 題、每題每臂兩次，共 144 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
 
 | 臂 | Actor | Provider | 完整交付 |
 |---|---|---|---|
@@ -72,7 +72,7 @@ Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「�
 
 B 比 A 多完成兩份、結構品味較佳，累計時間多約 14.2%。F 比 C 少完成兩份、品味持平，時間多約 27.7%。六臂共同 19 個有完整用量的位置中，B 比 A 的未快取輸入多約 88.9%，F 比 C 多約 51.1%。這批結果支持 medium Actor 加工具的收益，也顯示 xhigh Actor 加工具的額外成本與收尾問題。CLI 版本差異、逐題結果與全部分母見[完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
 
-報告、測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早結果與版本定位見[測試索引](benchmark/README.zh-TW.md)。三道難題的後續提示改寫已撤回，不屬現行提示或效果依據。
+報告、測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早結果與版本定位見[測試索引](benchmark/README.zh-TW.md)。
 
 ## 使用與限制
 
@@ -89,7 +89,7 @@ python masters_nudge_cli.py recent-nudges --limit 10
 
 設定只選 Provider 模型，不會更換 Actor。Provider 深度由程式固定為 medium；未設定模型時預設 `gpt-5.6-sol`，已儲存設定覆蓋預設。`doctor` 檢查依賴、登入與外掛啟用狀態；完整 Hook 送達仍需實測。
 
-本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。目前文件描述工作樹與生成外掛，不代表已安裝副本、公開版本或遠端 repo 已更新。外掛入口與開發流程見[開發說明](docs/DEVELOPMENT.zh-TW.md)。
+本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。外掛入口與開發流程見[開發說明](docs/DEVELOPMENT.zh-TW.md)。
 
 Windows 同步 `PostToolUse` 期間若中斷該輪，既有重現曾缺少對應的 `hook/completed`。重現與追蹤見 [openai/codex#46765](https://github.com/openai/codex/issues/46765)；此處記錄已觀察的限制，不宣告目前上游處理狀態。
 

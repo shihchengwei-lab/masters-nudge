@@ -21,7 +21,7 @@
 
 外掛清單在 `plugins/masters-nudge/.codex-plugin/plugin.json`；Hook 在 `hooks/hooks.json`，只接 `UserPromptSubmit` 與 `PostToolUse`。`.mcp.json` 宣告常駐 Nudge MCP。三個管理技能是靜態外掛文件，由技能自身說明使用時機。
 
-現行 Provider 提示採 2026-10-01 定稿；載入後去除首尾空白的 SHA-256 為 `e67172b2e0daa982139a2c99b1656b6e01982ec7ee54d96193395e3763eb0214`。之後為三道難題嘗試的選題改寫已回退。四欄上限依顯示順序為 **40／25／61／35**，含標籤總上限 **200**；Provider 五條準則與盲評拆開的六項準則各有用途。
+現行 Provider 提示採 2026-10-01 定稿；載入後去除首尾空白的 SHA-256 為 `e67172b2e0daa982139a2c99b1656b6e01982ec7ee54d96193395e3763eb0214`。四欄上限依顯示順序為 **40／25／61／35**，含標籤總上限 **200**；Provider 五條準則與盲評拆開的六項準則各有用途。
 
 ## 設定與本機資料
 

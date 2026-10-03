@@ -6,7 +6,7 @@
 
 | 文件 | 用途 |
 |---|---|
-| [繁體中文首頁](../README.zh-TW.md)／[英文首頁](../README.md) | 工具用途、四欄回饋、使用限制、隱私與最新保留結果 |
+| [繁體中文首頁](../README.zh-TW.md)／[英文首頁](../README.md) | 工具用途、四欄回饋、使用限制、隱私與最新測試結果 |
 | [工具規格](../SPEC.zh-TW.md) | 責任、兩步選題、五條準則、資料、額度與故障行為 |
 | [開發說明](DEVELOPMENT.zh-TW.md) | 原始碼責任、外掛入口、設定與驗證流程 |
 | [本次整理紀錄](REPOSITORY-STATUS.zh-TW.md) | 文件對齊範圍與本次實際驗證 |
@@ -23,4 +23,4 @@
 
 較早 benchmark 與評測協定保留原模型、提示、題目及數值，使用[測試索引](../benchmark/README.zh-TW.md)辨識版本。六臂包內的 `protocol/` 與 `harness/` 是凍結來源，不是另一套需要同步維護的現行程式。
 
-`HANDOFF.md` 是忽略的本機交接；`docs/spec-refactor-progress.zh-TW.md`、`docs/model-communication-protocol-handoff.zh-TW.md` 與 `docs/codex-post-tool-batch-issue-draft.md` 也是本機保留的歷史記錄／草案，不屬 clone 後必備文件。撤回的三題提示改寫與相關研究已移入回收桶，不列為現行方案或可用的效果證據。
+`HANDOFF.md` 是忽略的本機交接；`docs/spec-refactor-progress.zh-TW.md`、`docs/model-communication-protocol-handoff.zh-TW.md` 與 `docs/codex-post-tool-batch-issue-draft.md` 也是本機保留的歷史記錄／草案，不屬 clone 後必備文件。

@@ -57,7 +57,7 @@ Both judges, with anonymous presentation order swapped, preferred B1. The differ
 
 ## What the benchmark found
 
-The latest retained complete comparison is the **six-arm study from September 30 to October 2, 2026**: 12 tasks, two attempts per task and arm, totaling 144 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
+The latest complete comparison is the **six-arm study from September 30 to October 2, 2026**: 12 tasks, two attempts per task and arm, totaling 144 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
 
 | Arm | Actor | Provider | Complete deliveries |
 |---|---|---|---|
@@ -72,7 +72,7 @@ Complete delivery includes functionality, execution rules, the 30-minute deadlin
 
 B completed two more deliveries than A with better structural taste and about 14.2% more total time. F completed two fewer than C with tied taste and about 27.7% more time. Across the same 19 positions with complete usage records in all arms, B used about 88.9% more non-cached input than A; F used about 51.1% more than C. This study shows benefits with a medium Actor, and additional cost and deadline problems with an xhigh Actor. See the [complete report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for CLI version differences, task results, and denominators.
 
-The report, harness, and original evidence are included in this repo for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). The [benchmark index](benchmark/README.zh-TW.md) distinguishes earlier studies and versions. Later prompt changes for the three unsolved tasks were withdrawn and are outside the current prompt and effect evidence.
+The report, harness, and original evidence are included in this repo for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). The [benchmark index](benchmark/README.zh-TW.md) distinguishes earlier studies and versions.
 
 ## Use and limits
 
@@ -89,7 +89,7 @@ python masters_nudge_cli.py recent-nudges --limit 10
 
 The setting selects the Provider model; it does not change the Actor. Provider reasoning is fixed at medium in code. Without a saved model selection, the default is `gpt-5.6-sol`; saved settings override it. `doctor` checks dependencies, login, and plugin enablement; complete Hook delivery still requires a runtime test.
 
-The repo plugin manifest version is `0.6.0+codex.20260925224104`. These docs describe the working tree and generated plugin; they do not establish that an installed copy, public release, or remote repo has been updated. See the [development guide](docs/DEVELOPMENT.zh-TW.md) for plugin entry points and workflow.
+The repo plugin manifest version is `0.6.0+codex.20260925224104`. See the [development guide](docs/DEVELOPMENT.zh-TW.md) for plugin entry points and workflow.
 
 A recorded Windows interruption during synchronous `PostToolUse` lacked a matching `hook/completed` event. See [openai/codex#46765](https://github.com/openai/codex/issues/46765) for reproduction and tracking. This records the observed limitation rather than asserting the current upstream issue status.
 
