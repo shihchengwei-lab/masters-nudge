@@ -20,3 +20,4 @@
 
 # Frozen benchmark hashes cover exact bytes and retain original formatting.
 benchmark/model-comparison-20261004/** -text -eol -whitespace
+benchmark/unresolved-challenges-20261004/** -text -eol -whitespace
