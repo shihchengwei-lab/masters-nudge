@@ -12,16 +12,18 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 ## 效果與代價
 
-最新完整比較是 **2026-09-30 至 10-02 的六臂測試**：12 題、每題每臂兩次，共 144 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
+最新完整比較是 **2026-09-30 至 10-04 的七臂測試（A–F＋I）**：12 題、每題每臂兩次，共 168 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
 
-**同樣由 Sol medium 提供提醒時，這批測試中的 Sol medium 有結構品味收益；Sol xhigh 與直接做的品味持平，花費更多時間。** 以下兩組只改變是否加入 Sol medium 提醒：
+**Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，時間相近。各組結果如下：
 
-| 寫程式的模型 | 加工具相對直接做的品味 | 累計時間 | 未快取輸入 Token |
+| 比較條件 | 前者品味：勝／敗／持平 | 累計時間 | 未快取輸入 Token |
 |---|---|---|---|
-| Sol medium | 5 勝、1 敗 | +14.2% | +88.9% |
-| Sol xhigh | 3 勝、3 敗、2 持平 | +27.7% | +51.1% |
+| B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +14.2% | +88.9% |
+| F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +27.7% | +51.1% |
+| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 9／0／2 | +26.9% | +73.1% |
+| I 對 F：Provider medium→xhigh | 5／2／2 | −0.6% | +14.5% |
 
-品味由匿名評審比較雙方完整交付的同題／同次序程式；時間涵蓋每臂全部 24 次嘗試，Token 使用六臂共同 19 個有完整用量的位置。這裡呈現的是結構品質、時間與用量，並非金額帳單。
+品味由匿名評審比較雙方完整交付的同題／同次序程式；時間涵蓋每臂全部 24 次嘗試，Token 使用七臂共同 19 個有完整用量的位置。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
 
 完整交付結果如下：
 
@@ -33,10 +35,11 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 | D | Sol medium | Astra medium | 8/24 |
 | E | Sol xhigh | Astra medium | 10/24 |
 | F | Sol xhigh | Sol medium | 11/24 |
+| I | Sol xhigh | Sol xhigh | 13/24 |
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C > F > E > B = D > A**。B 比 A 多完成兩份；F 比 C 少完成兩份。B 對 C 的品味為四勝四敗；各組共同完成的樣本不同，不能串成總品味排名。
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 提供較好的匿名品味，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
 
-逐題結果、CLI 版本差異與完整評比見[六臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早研究見[測試索引](benchmark/README.zh-TW.md)。
+逐題結果、CLI 版本差異與完整評比見[七臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早研究見[測試索引](benchmark/README.zh-TW.md)。
 
 ## 工具做了什麼
 
@@ -53,7 +56,7 @@ flowchart LR
 
 ### 一個實際案例
 
-最新六臂測試的 Element 題要求支援多裝置勾選、選取數量、取消與一次批次登出。以下比較 **A1 直接做**與 **B1 加工具**：Actor 都是 GPT-6.1 Sol medium，使用相同 CLI、任務與基底。
+Benchmark 的 Element 題要求支援多裝置勾選、選取數量、取消與一次批次登出。以下比較 **A1 直接做**與 **B1 加工具**：Actor 都是 GPT-6.1 Sol medium，使用相同 CLI、任務與基底。
 
 | | 沒有工具：A1 | 加上工具：B1 |
 |---|---|---|
@@ -72,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「畫面看一份、點擊改另一份」的組合無法合法傳入元件；不用等接錯後再補同步或特殊處理。
 
-兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[六臂完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
+兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[七臂完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
 
 ## 作用原理
 
@@ -93,7 +96,7 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 
 需要 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
 
-本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；I 臂的 xhigh 使用封存工具的實驗覆寫，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
 
 ## 安裝、啟用與第一次使用
 

@@ -1,0 +1,11 @@
+{
+  "previous_evidence_sha256": "9b6384a7549f6a7a372bbb6069ec9f11fa371ed5c8e5b4b0f262e6dbe81fc8f1",
+  "previous_source_index_sha256": "d79a491ce97dfc528ca120db02069a46a2a1c969c1baae9cfe48fae959430d76",
+  "previous_source_files": 6338,
+  "added_arm": "I",
+  "source_study": "E:\\masters-nudge-benchmark\\sol61-i-xhigh-sol-xhigh-provider-12case-20261004",
+  "new_actors": 0,
+  "new_judges": 0,
+  "all_previous_source_bytes_preserved": true,
+  "added_source_files": 1376
+}

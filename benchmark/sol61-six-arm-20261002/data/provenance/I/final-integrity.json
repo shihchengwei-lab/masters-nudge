@@ -1,0 +1,48 @@
+{
+  "new_I_deliveries": 24,
+  "references_C_F_unchanged": true,
+  "same_frozen_cli_as_E": true,
+  "CLI_difference_C": {
+    "version": "codex-cli 0.159.0",
+    "sha256": "86e8ef1013f98df51fdeea446597f7e3ca32e454d1d4d8c0402a68b03c311d70"
+  },
+  "case_states_match": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "index_entries_match": {
+    "nodebb-images": true,
+    "ansible-type-tags": true,
+    "element-sessions": true,
+    "flipt-segments": true,
+    "openlibrary-index-state": true,
+    "proton-mailbox-retry": true,
+    "flipt-storage-cache": true,
+    "fb-metaflow-stubs": true,
+    "tracing-1523": true,
+    "proton-untrusted-keys": true,
+    "regexp-404": true,
+    "clap-2297": true
+  },
+  "actual_actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "xhigh",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "xhigh",
+  "I_execution_status": {
+    "pass": 21,
+    "fail": 3
+  },
+  "source_snapshots": 32,
+  "summary_sha256": "92e2b94773a041261e88731158f9a2211ef0f9d77ed894ea60f8334581cef0c6",
+  "report_sha256": "314816c73de2c38f9337e9c36d224359ae416d3122001bf789e65a96cdc8fda7"
+}

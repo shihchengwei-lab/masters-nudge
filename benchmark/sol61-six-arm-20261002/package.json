@@ -1,9 +1,35 @@
 {
-  "file": "BENCHMARK-AUDIT.zip",
-  "sha256": "9d597ca180b1784a215bcc858be4d6fad0aac4a0cf0f141f819c536fd4107381",
-  "bytes": 29096146,
-  "bundle_files": 393,
+  "arms": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "I"
+  ],
+  "deliveries": 168,
+  "cases": 12,
+  "trials_per_arm_case": 2,
+  "study_period": "2026-09-30/2026-10-04",
+  "evidence_file": "evidence.zip",
+  "evidence_sha256": "ab203fe2fc0fdbc9c2393ba17157cac59f3056a283f3b313844ef6b990203fda",
+  "evidence_bytes": 33812633,
+  "source_files": 7714,
+  "bundle_source_files": 464,
   "portable_extraction_verified": true,
+  "original_six_arm_outer_archive": {
+    "file": "BENCHMARK-AUDIT.zip",
+    "sha256": "9d597ca180b1784a215bcc858be4d6fad0aac4a0cf0f141f819c536fd4107381",
+    "bytes": 29096146,
+    "bundle_files": 393,
+    "portable_extraction_verified": true,
+    "new_actors": 0,
+    "new_judges": 0
+  },
   "new_actors": 0,
-  "new_judges": 0
+  "new_judges": 0,
+  "original_A_F_statistics_unchanged": true,
+  "original_A_F_delivery_records_unchanged": true,
+  "original_A_F_source_bytes_preserved": true
 }

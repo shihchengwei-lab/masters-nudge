@@ -1,0 +1,188 @@
+{
+  "task_clause": "Rollout YAML keeps its existing segment: {key: <segmentKey>, value: <bool>} shape unchanged on import and export.",
+  "scope": "Diagnostic of an existing task clause raised by blind review; frozen scoring and Actors are untouched.",
+  "rows": [
+    {
+      "arm": "C1",
+      "patch_sha256": "7a38169d39e24fbabb3620a72dc95fc755bd85468f26cd77360b513dd6faa6ef",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 35.453370884,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "C2",
+      "patch_sha256": "4ebdb8f7b390af43bc3a6f2b7e057f759b316931cdb0d0ef0928430da570ea31",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.367441305,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "F1",
+      "patch_sha256": "38a726e2de39bf81a75a072a43d321c243c7d0b23920d2d3b625f74fb340ea91",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.38388634099999,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "F2",
+      "patch_sha256": "748bbf3c92716a4f07b53461cb89b2e484c1e6637094ac0ac15ab463ee4f880a",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 1,
+      "seconds": 34.225929241,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "keys": [
+              "internal_users"
+            ],
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": false
+        }
+      ],
+      "network": "none",
+      "contract_passed": false,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "I1",
+      "patch_sha256": "95d43365903c20cdbf4b1e05c4215400c258a9bbbcd85639e3dde768cf83bc2f",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.34509846400002,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    },
+    {
+      "arm": "I2",
+      "patch_sha256": "f49e2d2ff8bad5b29b7f611f3bf41776e18351e6fd758fdf3052c7dc4146833c",
+      "fixture_sha256": "6800a89c0be79a8fa85ab53336db49db3733ddf1be280c0256338beccf663db3",
+      "base_commit": "190b3cdc8e354d1b4d1d2811cb8a29f62cab8488",
+      "image_id": "sha256:3e22d74aee90feeb81e56bf39af968f91aed67da27dc192fa52486efac3c59be",
+      "exit_code": 0,
+      "seconds": 34.47261391499998,
+      "probes": [
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "scalar_key_control",
+          "passed": true
+        },
+        {
+          "actual_segment": {
+            "key": "internal_users",
+            "value": true
+          },
+          "case": "single_list_key",
+          "passed": true
+        }
+      ],
+      "network": "none",
+      "contract_passed": true,
+      "original_actor_and_scores_unchanged": true
+    }
+  ]
+}

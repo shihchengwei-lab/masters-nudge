@@ -25,6 +25,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Verify generated plugin runtime
         run: python tools/build_plugin.py --check
+      - name: Check README local links
+        run: python tools/check_docs.py
       - name: Compile Python sources
         run: python -m compileall -q .
       - name: Run full test suite

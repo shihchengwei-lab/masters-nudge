@@ -4,6 +4,7 @@ import hashlib
 import json
 import shutil
 import zipfile
+import argparse
 
 ROOT = Path(__file__).resolve().parent
 BASE = ROOT.parent
@@ -25,6 +26,120 @@ DIAGNOSTICS = {
     'F_flipt': ('F', 'diagnostics/flipt-segments'),
     'F_clap': ('F', 'diagnostics/clap-2297'),
 }
+
+
+def add_i(source_root):
+    """Append a completed study while preserving every existing source byte."""
+    collection = read(ROOT / 'collection.json')
+    assert 'I' not in collection['studies'], 'I is already collected'
+    index = read(ROOT / 'source-index.json')
+    old_count = len(index)
+    destination = ROOT / 'evidence.zip'
+    assert sha(destination) == collection['evidence_zip_sha256']
+    root = Path(source_root).resolve()
+    plan = read(root / 'plan.json')
+    assert read(root / 'pipeline-status.json')['status'] == 'complete'
+    assert read(root / 'final-integrity.json')['new_I_deliveries'] == 24
+    cases = list(read(ROOT / 'data/plans/F.json')['cases'])
+    assert list(plan['cases']) == cases
+    receipt = {'previous_evidence_sha256': sha(destination),
+               'previous_source_index_sha256': sha(ROOT / 'source-index.json'),
+               'previous_source_files': old_count, 'added_arm': 'I',
+               'source_study': str(root), 'new_actors': 0, 'new_judges': 0}
+
+    def files(folder):
+        return sorted(p for p in folder.rglob('*') if p.is_file()
+                      and '__pycache__' not in p.parts and p.suffix != '.pyc')
+
+    def record(source, target, location):
+        index.append({'source': str(source), 'sha256': sha(source), location: target})
+
+    def copy(source, target):
+        target_path = ROOT / target
+        assert not target_path.exists(), target
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target_path)
+        assert sha(source) == sha(target_path)
+        record(source, target, 'bundle_path')
+
+    copy(root / 'plan.json', 'data/plans/I.json')
+    copy(root / 'results-summary.json', 'data/summaries/I.json')
+    for name in ('final-integrity.json', 'grading-protocol.json', 'pipeline-status.json',
+                 'restoration-confirmed.json', 'execution-summary.json', 'reference-manifest.json',
+                 'infrastructure-recovery.json', 'timeout-recovery.json', 'timeout-cleanup.json',
+                 'verification-recovery.json', 'continuation-plan.json',
+                 'continuation-preserved-results.json', 'grading-resume-preserved-results.json',
+                 'actual-launch-observation.json', 'actual-provider-launch.json'):
+        copy(root / name, 'data/provenance/I/' + name)
+    manifest = root / 'harness-source-manifest.json'
+    copy(manifest, 'harness/I/source-manifest.json')
+    for entry in read(manifest):
+        source = root / entry['snapshot']
+        assert sha(source) == entry['sha256']
+        copy(source, 'harness/I/' + entry['snapshot'].removeprefix('harness-sources/'))
+    for relative, expected in plan['package_hashes'].items():
+        source = root / 'frozen-plugin' / relative
+        assert sha(source) == expected
+        copy(source, 'protocol/nudge-plugin-I/' + relative)
+    for suffix, folder in (('flipt', 'flipt-segments'), ('clap', 'clap-2297')):
+        copy(root / 'diagnostics' / folder / 'comparison.json', f'data/diagnostics/I_{suffix}.json')
+    indexed = {entry['source'] for entry in index}
+    for source, expected in plan['reference_manifest'].items():
+        if source not in indexed:
+            path = Path(source)
+            assert sha(path) == expected
+            copy(path, 'data/provenance/I/references/' + path.parent.name + '/' + path.name)
+
+    temporary = ROOT / 'evidence.extending.zip'
+    shutil.copyfile(destination, temporary)
+    with zipfile.ZipFile(temporary, 'a', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+        existing = set(archive.namelist())
+
+        def pack(source, target):
+            assert target not in existing, target
+            archive.write(source, target)
+            existing.add(target)
+            record(source, target, 'zip_member')
+
+        def pack_folder(folder, prefix):
+            assert folder.is_dir(), str(folder)
+            for source in files(folder):
+                pack(source, prefix + '/' + source.relative_to(folder).as_posix())
+
+        for cid in cases:
+            for trial in (1, 2):
+                slot = 'I' + str(trial)
+                folder = root / 'runs' / cid / slot
+                assert all((folder / n).is_file() for n in
+                           ('result.json', 'score-v3.json', 'final.patch', 'launch.json', 'prompt.txt'))
+                pack_folder(folder, f'runs/I/{cid}/{slot}')
+                pack_folder(root / 'evaluation-v3' / cid / slot, f'evaluation/I/{cid}/{slot}')
+        pack_folder(root / 'blind-v3/judges', 'judges/I')
+        pack_folder(root / 'execution-judges', 'execution-judges/I')
+        pack_folder(root / 'diagnostics', 'diagnostics/I')
+        pack_folder(root / 'harness-amendments', 'infrastructure/I/harness-amendments')
+        pack_folder(root / 'infrastructure-attempts', 'infrastructure/I/attempts')
+        pack_folder(root / 'errors', 'infrastructure/I/errors')
+        for source in sorted(root.glob('*.txt')):
+            pack(source, 'infrastructure/I/logs/' + source.name)
+        for name in ('REPORT.zh-TW.md', 'MATERIALS.zh-TW.md', 'blind-contract-concerns.json'):
+            pack(root / name, 'study/I/' + name)
+    with zipfile.ZipFile(temporary) as archive:
+        for entry in index:
+            actual = hashlib.sha256(archive.read(entry['zip_member'])).hexdigest() if 'zip_member' in entry else sha(ROOT / entry['bundle_path'])
+            assert actual == entry['sha256'], entry
+    assert all(sha(Path(e['source'])) == e['sha256'] for e in index[old_count:])
+    temporary.replace(destination)
+    receipt['all_previous_source_bytes_preserved'] = True
+    receipt['added_source_files'] = len(index) - old_count
+    save(ROOT / 'data/provenance/I/collection-extension.json', receipt)
+    save(ROOT / 'source-index.json', index)
+    collection['studies']['I'] = root.name
+    collection.update(records=168, original_sources_unchanged=len(index),
+                      evidence_zip_sha256=sha(destination), evidence_zip_bytes=destination.stat().st_size,
+                      note='A available source collected at closure; B-F and I verified against study snapshots. I appended with all existing source bytes preserved.')
+    save(ROOT / 'collection.json', collection)
+    print(json.dumps(receipt, ensure_ascii=False))
 
 
 def read(path):
@@ -160,4 +275,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--add-i', metavar='COMPLETED_STUDY_ROOT')
+    args = parser.parse_args()
+    add_i(args.add_i) if args.add_i else main()

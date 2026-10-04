@@ -43,15 +43,11 @@ class TransportTests(unittest.TestCase):
         self.assertIn('model_reasoning_effort="medium"', args)
         self.assertIn("mcp_servers.readrepo.required=true", args)
         self.assertIn('mcp_servers.readrepo.enabled_tools=["search_repo","read_file"]', args)
+        self.assertIn('mcp_servers.readrepo.env={PYTHONIOENCODING="utf-8"}', args)
         self.assertIn("read-only", args)
         self.assertEqual(process.call_args.kwargs["input_text"].count("SYSTEM-unique"), 1)
         self.assertEqual(process.call_args.kwargs["input_text"].count("PACKET-unique"), 1)
         self.assertEqual(result.usage["input_tokens"], 123)
-
-    def test_mcp_process_explicitly_uses_utf8(self):
-        with mock.patch.object(providers, "_run_cli_process", side_effect=self.fake_process) as process:
-            self.call()
-        self.assertIn('mcp_servers.readrepo.env={PYTHONIOENCODING="utf-8"}', process.call_args.args[0])
 
     def test_successful_null_without_mcp_startup_is_a_fault(self):
         def process(command, **kwargs):
@@ -101,30 +97,63 @@ class TransportTests(unittest.TestCase):
                 with mock.patch.object(providers, "_run_cli_process", **behavior), self.assertRaises(ToolFault):
                     self.call()
 
-    def test_timeout_terminates_provider_process_tree(self):
-        process = mock.Mock(pid=4321)
-        process.wait.side_effect = subprocess.TimeoutExpired("provider", 1)
-        with mock.patch.object(providers.subprocess, "Popen", return_value=process), \
-             mock.patch.object(providers, "_terminate_process_tree", return_value=("partial", "")) as terminate:
-            with self.assertRaises(subprocess.TimeoutExpired):
-                providers._run_cli_process(["provider"], input_text="data", environment={}, timeout_sec=1)
-        terminate.assert_called_once_with(process, log_error=providers._noop)
-
     @unittest.skipUnless(os.name == "nt", "Windows process-tree cleanup")
-    def test_timeout_cleanup_finishes_inside_host_reserve(self):
-        process = mock.Mock(pid=4321)
-        process.communicate.side_effect = [
-            subprocess.TimeoutExpired("provider", 1),
-            subprocess.TimeoutExpired("provider", 0.5),
-        ]
-        with mock.patch.object(providers.subprocess, "run",
-                               side_effect=subprocess.TimeoutExpired("taskkill", 3)) as run:
-            self.assertEqual(providers._terminate_process_tree(process), ("", ""))
-        self.assertEqual(run.call_args.kwargs["timeout"], 3)
-        self.assertEqual(
-            [call.kwargs["timeout"] for call in process.communicate.call_args_list],
-            [1, 0.5],
-        )
+    def test_timeout_ends_real_parent_and_child_with_bounded_cleanup(self):
+        import ctypes
+        from ctypes import wintypes
+        import threading
+        import time
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handles, outcomes = [], []
+        finished = threading.Event()
+        with tempfile.TemporaryDirectory() as raw:
+            pid_file = Path(raw) / "processes.json"
+            provider = (
+                "import json,os,pathlib,subprocess,sys,time; "
+                "child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)']); "
+                f"record=pathlib.Path({str(pid_file)!r}); "
+                "pending=record.with_suffix('.tmp'); "
+                "pending.write_text(json.dumps([os.getpid(),child.pid])); pending.replace(record); "
+                "time.sleep(30)"
+            )
+            started = time.monotonic()
+            def run():
+                try:
+                    outcomes.append(providers._run_cli_process(
+                        [sys.executable, "-c", provider], environment=dict(os.environ), timeout_sec=3))
+                except Exception as exc:
+                    outcomes.append(exc)
+                finally:
+                    finished.set()
+            worker = threading.Thread(target=run, daemon=True)
+            worker.start()
+            try:
+                while not pid_file.exists() and time.monotonic() - started < 2:
+                    time.sleep(0.01)
+                self.assertTrue(pid_file.exists(), "Provider did not start its child")
+                for pid in json.loads(pid_file.read_text()):
+                    handle = kernel.OpenProcess(0x00100000 | 0x0001, False, pid)
+                    self.assertTrue(handle, f"Cannot track process {pid}")
+                    handles.append(handle)
+                self.assertTrue(finished.wait(8), "Timeout cleanup did not return")
+                self.assertLess(time.monotonic() - started, 8)
+                self.assertEqual(len(outcomes), 1)
+                self.assertIsInstance(outcomes[0], subprocess.TimeoutExpired)
+                for handle in handles:
+                    self.assertEqual(kernel.WaitForSingleObject(handle, 0), 0,
+                                     "Timed-out Provider or its child is still alive")
+            finally:
+                for handle in handles:
+                    if kernel.WaitForSingleObject(handle, 0) != 0:
+                        kernel.TerminateProcess(handle, 1)
+                    kernel.CloseHandle(handle)
+                worker.join(5)
 
     @unittest.skipUnless(os.name == "nt", "Windows inherited-handle behavior")
     def test_exited_provider_does_not_wait_for_a_descendant_holding_its_output(self):
@@ -154,25 +183,12 @@ class TransportTests(unittest.TestCase):
         result = subprocess.run([sys.executable, "-c", code], cwd=ROOT, timeout=5)
         self.assertEqual(result.returncode, 0)
 
-    def test_failed_turn_reports_service_error_instead_of_shell_warning(self):
-        message = 'Selected model is at capacity. Please try a different model.'
-        stdout = '\n'.join(json.dumps(event) for event in (
-            {'type': 'thread.started', 'thread_id': 'test'},
-            {'type': 'error', 'message': message},
-            {'type': 'turn.failed', 'error': {'message': message}},
-        ))
-        stderr = 'WARN shell_snapshot: Shell snapshot not supported yet for PowerShell'
-        result = subprocess.CompletedProcess([], 1, stdout, stderr)
-        with mock.patch.object(providers, '_run_cli_process', return_value=result) as process:
-            with self.assertRaises(ToolFault) as caught:
-                self.call()
-        self.assertEqual(caught.exception.detail, f'Codex 結束碼 1：{message}')
-        self.assertEqual(caught.exception.evidence['stdout'], stdout)
-        self.assertEqual(caught.exception.evidence['stderr'], stderr)
-        process.assert_called_once()
-
     def test_failure_message_uses_terminal_event_then_error_then_stderr(self):
+        capacity = 'Selected model is at capacity. Please try a different model.'
         cases = (
+            (json.dumps({'type': 'error', 'message': capacity}) + '\n' +
+             json.dumps({'type': 'turn.failed', 'error': {'message': capacity}}),
+             'WARN shell_snapshot: Shell snapshot not supported yet for PowerShell', capacity),
             ('{"type":"error","message":"earlier"}\n'
              '{"type":"turn.failed","error":{"message":"final failure"}}', 'warning', 'final failure'),
             ('{"type":"error","message":"authentication failed"}', 'warning', 'authentication failed'),
@@ -182,10 +198,13 @@ class TransportTests(unittest.TestCase):
         for stdout, stderr, expected in cases:
             with self.subTest(expected=expected):
                 result = subprocess.CompletedProcess([], 1, stdout, stderr)
-                with mock.patch.object(providers, '_run_cli_process', return_value=result):
+                with mock.patch.object(providers, '_run_cli_process', return_value=result) as process:
                     with self.assertRaises(ToolFault) as caught:
                         self.call()
                 self.assertEqual(caught.exception.detail, f'Codex 結束碼 1：{expected}')
+                self.assertEqual(caught.exception.evidence['stdout'], stdout)
+                self.assertEqual(caught.exception.evidence['stderr'], stderr)
+                process.assert_called_once()
 
     def test_real_stdio_mcp_initializes_reads_and_records(self):
         with tempfile.TemporaryDirectory() as raw:

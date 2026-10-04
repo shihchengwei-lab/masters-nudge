@@ -1,4 +1,4 @@
-"""Recompute the six-arm report from bundled records. Standard library only.
+"""Recompute the seven-arm report from bundled records. Standard library only.
 
 python -X utf8 aggregate.py           # rebuild tables, CSV and report
 python -X utf8 aggregate.py --verify  # verify the bundle and generated outputs
@@ -16,12 +16,12 @@ import re
 import zipfile
 
 ROOT = Path(__file__).resolve().parent
-ARMS = 'ABCDEF'
+ARMS = 'ABCDEFI'
 PAIR_SOURCES = {'A-B': 'B', 'A-C': 'C', 'B-C': 'C', 'A-D': 'D',
-                'B-D': 'D', 'D-E': 'E', 'C-F': 'F', 'E-F': 'F'}
+                'B-D': 'D', 'D-E': 'E', 'C-F': 'F', 'E-F': 'F', 'C-I': 'I', 'F-I': 'I'}
 NAMES = {'A': 'Sol medium 直接做', 'B': 'Sol medium＋Sol medium',
          'C': 'Sol xhigh 直接做', 'D': 'Sol medium＋Astra medium',
-         'E': 'Sol xhigh＋Astra medium', 'F': 'Sol xhigh＋Sol medium'}
+         'E': 'Sol xhigh＋Astra medium', 'F': 'Sol xhigh＋Sol medium', 'I': 'Sol xhigh＋Sol xhigh'}
 CASE_NOTES = {
     'nodebb-images': ('JavaScript', '依擁有者與圖片類別刪除全部相關檔案，保留其他人的檔案與原介面行為。'),
     'ansible-type-tags': ('Python', '型別轉換保留信任與來源標記，正確處理布林、位元組、序列、映射及空值。'),
@@ -110,12 +110,25 @@ def compute():
     assert all(list(plan['cases']) == cases for plan in plans.values())
     assert len({plan['evaluator_sha256'] for plan in plans.values()}) == 1
     assert all(plans[arm]['package_hashes'] == plans['B']['package_hashes'] for arm in 'DEF')
-    assert len({plans[arm]['prompt_semantic_sha256'] for arm in 'BDEF'}) == 1
+    changed = [name for name, value in plans['I']['package_hashes'].items()
+               if value != plans['F']['package_hashes'][name]]
+    assert changed == ['masters_nudge/runtime.py']
+    standard_runtime = (ROOT / 'protocol/nudge-plugin/masters_nudge/runtime.py').read_bytes()
+    experiment_runtime = (ROOT / 'protocol/nudge-plugin-I/masters_nudge/runtime.py').read_bytes()
+    assert experiment_runtime == standard_runtime.replace(b'PROVIDER_REASONING_EFFORT = "medium"', b'PROVIDER_REASONING_EFFORT = "xhigh"')
+    assert len({plans[arm]['prompt_semantic_sha256'] for arm in 'BDEFI'}) == 1
     assert len({plans[arm]['codex_binary_sha256'] for arm in 'ABC'}) == 1
-    assert len({plans[arm]['codex_binary_sha256'] for arm in 'DEF'}) == 1
-    summaries = {arm: read(ROOT / 'data/summaries' / (arm + '.json')) for arm in 'BCDEF'}
+    assert len({plans[arm]['codex_binary_sha256'] for arm in 'DEFI'}) == 1
+    summaries = {arm: read(ROOT / 'data/summaries' / (arm + '.json')) for arm in 'BCDEFI'}
     records = {}
     with zipfile.ZipFile(ROOT / 'evidence.zip') as archive:
+        for filename, expected_count in (('continuation-preserved-results.json', 17),
+                                         ('grading-resume-preserved-results.json', 24)):
+            preserved = read(ROOT / 'data/provenance/I' / filename)
+            assert len(preserved) == expected_count
+            for relative, expected in preserved.items():
+                member = relative.replace('\\', '/').replace('runs/', 'runs/I/', 1)
+                assert digest(archive.read(member)) == expected, relative
         for cid in cases:
             prompt_hashes = set()
             for arm in ARMS:
@@ -129,8 +142,8 @@ def compute():
                     prompt = archive.read(prefix + 'prompt.txt').decode('utf-8').replace('\r\n', '\n')
                     prompt_hashes.add(digest(prompt.encode('utf-8')))
                     assert result['base_commit'] == plans[arm]['cases'][cid]['base_commit']
-                    effort = 'xhigh' if arm in 'CEF' else 'medium'
-                    provider = 'gpt-6.1-sol' if arm in 'BF' else 'gpt-6-astra' if arm in 'DE' else None
+                    effort = 'xhigh' if arm in 'CEFI' else 'medium'
+                    provider = 'gpt-6.1-sol' if arm in 'BFI' else 'gpt-6-astra' if arm in 'DE' else None
                     assert result['actor_model'] == launch['model'] == 'gpt-6.1-sol'
                     assert result['actor_reasoning'] == launch['reasoning'] == effort
                     command = launch['command']
@@ -138,7 +151,7 @@ def compute():
                     assert command[command.index('-m') + 1] == 'gpt-6.1-sol'
                     assert 'model_reasoning_effort="' + effort + '"' in command
                     assert result['provider_model'] == provider
-                    assert result['provider_reasoning'] == ('medium' if provider else None)
+                    assert result['provider_reasoning'] == ('xhigh' if arm == 'I' else 'medium' if provider else None)
                     assert bool(launch['hooks']) == bool(provider)
                     assert launch['timeout_seconds'] == 1800
                     assert result['provider_delivered_count'] <= 3
@@ -160,7 +173,21 @@ def compute():
                         'patch_sha256': result['patch_sha256'], 'evidence_prefix': prefix,
                     }
             assert len(prompt_hashes) == 1, ('Actor prompts differ', cid)
-    assert len(records) == 144
+    assert len(records) == 168
+    index = read(ROOT / 'source-index.json')
+    receipt = read(ROOT / 'data/provenance/I/collection-extension.json')
+    previous_index = encoded(index[:receipt['previous_source_files']])
+    assert receipt['previous_source_index_sha256'] in (
+        digest(previous_index), digest(previous_index.replace(b'\n', b'\r\n')))
+    indexed_sources = {row['source']: row['sha256'] for row in index}
+    for source, expected in plans['I']['reference_manifest'].items():
+        assert indexed_sources[source] == expected, source
+    timeout = records['tracing-1523', 'I1']
+    assert not timeout['completed'] and timeout['seconds'] == 1800
+    assert timeout['patch_sha256'] == digest(b'') and not timeout['actor_usage_available']
+    assert summaries['I']['timeout_recovery']['deadline_patch_unavailable']
+    assert not summaries['I']['timeout_recovery']['actor_rerun']
+    assert not summaries['I']['verification_recovery']['actor_rerun']
     diagnostic = {}
     for path in sorted((ROOT / 'data/diagnostics').glob('*.json')):
         cid = 'flipt-segments' if path.stem.endswith('flipt') else 'clap-2297'
@@ -218,8 +245,9 @@ def compute():
             'common_19_tokens': {key: sum(records[cid, arm + str(trial)]['tokens'][key] for cid, trial in common_usage)
                                  for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')},
         }
-    assert {arm: row['completed'] for arm, row in arms.items()} == dict(zip(ARMS, (6, 8, 13, 8, 10, 11)))
+    assert {arm: row['completed'] for arm, row in arms.items()} == dict(zip(ARMS, (6, 8, 13, 8, 10, 11, 13)))
     assert all(arms[arm]['completed'] == summaries['F']['arms'][arm]['completed'] for arm in 'CEF')
+    assert arms['I']['completed'] == summaries['I']['arms']['I']['completed']
     prior = read(ROOT / 'data/prior-five-arm-summary.json')
     assert all(arms[arm]['completed'] == prior['arms'][arm]['completed'] for arm in 'ABCDE')
 
@@ -253,11 +281,29 @@ def compute():
     }
     for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens'):
         ranks['less_' + key] = ranking({arm: row['common_19_tokens'][key] for arm, row in arms.items()}, False)
+    i_comparisons = {}
+    for reference in 'CF':
+        slots = [(cid, trial) for cid in cases for trial in (1, 2)
+                 if all(records[cid, arm + str(trial)]['actor_usage_available'] for arm in (reference, 'I'))]
+        usage = {arm: {key: sum(records[cid, arm + str(trial)]['tokens'][key] for cid, trial in slots)
+                       for key in ('input_tokens', 'cached_input_tokens', 'uncached_input_tokens', 'output_tokens')}
+                 for arm in (reference, 'I')}
+        original = summaries['I']['comparisons'][reference + '-I']['matched_usage']
+        assert len(slots) == original['pair_count'] and usage == original['arms']
+        i_comparisons[reference + '-I'] = {'usage_slots': len(slots), 'tokens': usage,
+            'time_change_percent': (arms['I']['seconds'] / arms[reference]['seconds'] - 1) * 100,
+            'token_change_percent': {key: (usage['I'][key] / usage[reference][key] - 1) * 100
+                                    for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')}}
     return {'arms': arms, 'deliveries': list(records.values()), 'pairs': pairs, 'rankings': ranks,
             'common_usage_pairs': common_usage, 'excluded_usage_pairs': excluded,
             'common_completed_pairs': common_completed, 'unmeasured_taste_pairs': absent,
             'diagnostics': [{'case': key[0], 'arm': key[1], **value} for key, value in diagnostic.items()],
-            'grading_separate': {arm: summaries[arm]['grading_cost_separate'] for arm in 'BCDEF'},
+            'grading_separate': {arm: summaries[arm]['grading_cost_separate'] for arm in 'BCDEFI'},
+            'I_comparisons': i_comparisons,
+            'I_execution_repairs': {key: summaries['I'][key] for key in ('infrastructure_recovery', 'timeout_recovery', 'verification_recovery')},
+            'preservation_verified': {'original_A_F_source_files': receipt['previous_source_files'],
+                                      'I_before_continuation_results': 17, 'I_before_grading_results': 24,
+                                      'I_reference_source_files': len(plans['I']['reference_manifest'])},
             'new_actors': 0, 'new_judges': 0}
 
 
@@ -292,6 +338,13 @@ def render(summary):
             [[arm, row['calls'], f"{row['seconds']/60:.1f}", *[f"{row['tokens'][key]:,}" for key in ('input_tokens','cached_input_tokens','output_tokens')]] for arm, row in summary['grading_separate'].items()]),
         'COMMON_FOUR': table(['直接比較', '前者勝', '後者勝', '持平'],
             [[name, row['common_four_votes'].get(name[0], 0), row['common_four_votes'].get(name[-1], 0), row['common_four_votes'].get('tie', 0)] for name, row in summary['pairs'].items()]),
+        'UNMEASURED_PAIRS': '、'.join(summary['unmeasured_taste_pairs']),
+        'I_COST_TABLE': table(['I 相對', '完整交付變化', 'I 勝／對方勝／持平', '24 份時間變化', 'Token 配對數', '未快取輸入變化', '快取輸入變化', '輸出變化'],
+            [[ref, arms['I']['completed'] - arms[ref]['completed'],
+              '/'.join(str(summary['pairs'][ref + '-I']['votes'].get(a, 0)) for a in ('I', ref, 'tie')),
+              f"{row['time_change_percent']:+.1f}%", row['usage_slots'],
+              *[f"{row['token_change_percent'][key]:+.1f}%" for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')]]
+             for ref in 'CF' for row in [summary['I_comparisons'][ref + '-I']]]),
     }
     text = (ROOT / 'REPORT.template.zh-TW.md').read_text(encoding='utf-8')
     for key, value in changes.items():
@@ -318,6 +371,8 @@ def verify_sources(include_originals=False):
     collection = read(ROOT / 'collection.json')
     assert sha(ROOT / 'evidence.zip') == collection['evidence_zip_sha256']
     index = read(ROOT / 'source-index.json')
+    assert collection['records'] == 168
+    assert collection['original_sources_unchanged'] == len(index)
     with zipfile.ZipFile(ROOT / 'evidence.zip') as archive:
         for row in index:
             actual = digest(archive.read(row['zip_member'])) if 'zip_member' in row else sha(ROOT / row['bundle_path'])
@@ -340,7 +395,7 @@ def main():
             assert (ROOT / name).read_bytes() == content, 'Generated output differs: ' + name
         else:
             (ROOT / name).write_bytes(content)
-    integrity = {'deliveries': 144, 'source_files_verified': count, 'common_usage_slots': 19,
+    integrity = {'deliveries': len(summary['deliveries']), 'source_files_verified': count, 'common_usage_slots': 19,
                  'taste_direct_comparisons': len(summary['pairs']), 'new_actors': 0, 'new_judges': 0,
                  'evidence_zip_sha256': sha(ROOT / 'evidence.zip'),
                  'outputs': {name: digest(content) for name, content in expected.items()},
@@ -349,7 +404,9 @@ def main():
                  'source_index_sha256': sha(ROOT / 'source-index.json'),
                  'collection_sha256': sha(ROOT / 'collection.json'),
                  'collect_source_sha256': sha(ROOT / 'collect.py'),
-                 'harness_document_sha256': sha(ROOT / 'HARNESS.zh-TW.md')}
+                 'harness_document_sha256': sha(ROOT / 'HARNESS.zh-TW.md'),
+                 'package_metadata_sha256': sha(ROOT / 'package.json'),
+                 'collection_extension_sha256': sha(ROOT / 'data/provenance/I/collection-extension.json')}
     if args.verify:
         assert read(ROOT / 'integrity.json') == integrity
     else:

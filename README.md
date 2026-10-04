@@ -12,16 +12,18 @@ Masters’ Nudge aims to improve this: it adds a short structural suggestion whi
 
 ## Results and costs
 
-The latest complete comparison is the **six-arm study from September 30 to October 2, 2026**: 12 tasks, two attempts per task and arm, totaling 144 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
+The latest complete comparison is the **seven-arm benchmark (A–F plus I), September 30–October 4, 2026**: 12 tasks, two attempts per task and arm, totaling 168 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
 
-**With Sol medium providing feedback, this study found a structural taste benefit for a Sol medium Actor. For a Sol xhigh Actor, taste tied direct implementation while taking more time.** These two comparisons change only whether Sol medium feedback is added:
+**A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with similar time. The observed comparisons are:
 
-| Coding model | Tool-assisted taste versus direct implementation | Total time | Non-cached input tokens |
+| Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
 |---|---|---|---|
-| Sol medium | 5 wins, 1 loss | +14.2% | +88.9% |
-| Sol xhigh | 3 wins, 3 losses, 2 ties | +27.7% | +51.1% |
+| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +14.2% | +88.9% |
+| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +27.7% | +51.1% |
+| I vs C: Sol xhigh + Sol xhigh vs direct | 9 / 0 / 2 | +26.9% | +73.1% |
+| I vs F: Provider medium → xhigh | 5 / 2 / 2 | −0.6% | +14.5% |
 
-Anonymous judges compare code only where both implementations completely delivered the same task and attempt position. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all six arms. These are structure, time, and usage measurements, not monetary bills.
+Anonymous judges compare code only where both implementations completely delivered the same task and attempt position. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
 
 Complete deliveries were:
 
@@ -33,10 +35,11 @@ Complete deliveries were:
 | D | Sol medium | Astra medium | 8/24 |
 | E | Sol xhigh | Astra medium | 10/24 |
 | F | Sol xhigh | Sol medium | 11/24 |
+| I | Sol xhigh | Sol xhigh | 13/24 |
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C > F > E > B = D > A**. B completed two more deliveries than A; F completed two fewer than C. B versus C split four to four on taste. Jointly completed populations differ, so these comparisons cannot form an overall taste ranking.
+Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves anonymous taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
 
-See the [six-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The harness and original evidence are included for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). Earlier studies are listed in the [benchmark index](benchmark/README.zh-TW.md).
+See the [seven-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The harness and original evidence are included for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). Earlier studies are listed in the [benchmark index](benchmark/README.zh-TW.md).
 
 ## What the tool does
 
@@ -53,7 +56,7 @@ flowchart LR
 
 ### A real example
 
-The latest six-arm study's Element task required multi-device selection, a selection count, cancellation, and bulk sign-out. Compare **A1, direct implementation**, with **B1, using the tool**: both Actors used GPT-6.1 Sol medium, the same CLI, task, and base commit.
+The benchmark's Element task required multi-device selection, a selection count, cancellation, and bulk sign-out. Compare **A1, direct implementation**, with **B1, using the tool**: both Actors used GPT-6.1 Sol medium, the same CLI, task, and base commit.
 
 | | Without the tool: A1 | With the tool: B1 |
 |---|---|---|
@@ -72,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 The Actor then required both halves together and used one decision to choose their source. This makes a component call that displays one state but updates another invalid, without later synchronization or special-case repairs.
 
-Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [six-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for overall benefits and costs.
+Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [seven-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for overall benefits and costs.
 
 ## Why a nudge can help
 
@@ -93,7 +96,7 @@ The Provider uses five taste criteria to find that direction: make invalid state
 
 Requires Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
 
-The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; arm I used an override in its frozen experiment plugin, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
 
 ## Install, enable, and try it
 

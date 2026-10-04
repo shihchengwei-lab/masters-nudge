@@ -34,7 +34,7 @@
 | `MASTERS_NUDGE_TEST_MODE=1` | 將故障向測試執行器拋出；一般使用只回故障狀態並讓 Actor 繼續 |
 | `MASTERS_NUDGE_ACTIVE=1` | Provider 子程序的重入防護，避免自己的工具動作再次觸發 Nudge |
 
-模型設定只改 Provider。未設定時是 `gpt-5.6-sol`，Provider 深度固定 medium；六臂研究顯式指定自己的配置。`provider reset` 移除儲存選擇並恢復程式預設，沒有更換 Actor。
+模型設定只改 Provider。未設定時是 `gpt-5.6-sol`，Provider 深度固定 medium；七臂研究顯式指定自己的配置；I 的 xhigh Provider 使用實驗工具覆寫，沒有改動正式預設。`provider reset` 移除儲存選擇並恢復程式預設，沒有更換 Actor。
 
 `recent-nudges` 讀取送達、原材料、讀取紀錄與可用用量；送達紀錄不是採納追蹤。不要從不存在的欄位推論完成率、誤報率或 Actor 採納率。
 
@@ -47,13 +47,14 @@ python --version
 git --version
 python tools/build_plugin.py --write
 python tools/build_plugin.py --check
+python tools/check_docs.py
 python -m unittest discover -s tests -v
 git diff --check
 ```
 
-只有修改生成來源後才需要 `--write`；文件整理可直接 `--check`。檢查成功分別表示副本同步、既有工程契約通過、差異沒有空白錯誤；不證明模型選題、採納或程式品味改善。CI 定義在 `.github/workflows/ci.yml`，設定涵蓋 Windows／Ubuntu／macOS 與 Python 3.10／3.14；本機執行不能代表那些遠端工作均已通過。
+只有修改生成來源後才需要 `--write`；文件整理可直接 `--check`。檢查成功分別表示副本同步、README 本地連結有效、既有工程契約通過、差異沒有空白錯誤；不證明模型選題、採納或程式品味改善。套件同步及文件連結各由獨立檢查負責，不重複列入行為測試。CI 定義在 `.github/workflows/ci.yml`，設定涵蓋 Windows／Ubuntu／macOS 與 Python 3.10／3.14；本機執行不能代表那些遠端工作均已通過。
 
-離線核對最新六臂結果：
+離線核對最新七臂結果：
 
 ```powershell
 python -X utf8 .\benchmark\sol61-six-arm-20261002\aggregate.py --verify
@@ -67,4 +68,4 @@ python -X utf8 .\benchmark\sol61-six-arm-20261002\aggregate.py --verify
 
 現行改動須核對中英文 README、SPEC、固定提示、schema、實作與生成副本。只改字數或 JSON 不足以宣告內容品質改善；模型效果需用對應材料實測。
 
-歷史任務、驗收、提示、原票與數值保留當時條件；只在外層索引或歷史報告的狀態說明中標清版本。六臂凍結包內檔案以指紋核對，不為了對齊現行措辭而改寫。新增研究使用新目錄與計畫。
+歷史任務、驗收、提示、原票與數值保留當時條件；只在外層索引或歷史報告的狀態說明中標清版本。七臂資料包的原始證據、協定與程式快照以指紋核對，不為了對齊現行措辭而改寫；彙整程式、總覽與索引隨新封存結果更新。新增研究使用新目錄與計畫。

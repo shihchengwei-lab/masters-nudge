@@ -1,0 +1,17 @@
+{
+  "actor_rerun": false,
+  "deadline_seconds": 1800,
+  "exit_code_unavailable": true,
+  "post_deadline_overrun_seconds": 291.6506410000002,
+  "deadline_patch_unavailable": true,
+  "final_patch_handling": "No accepted delivery; empty patch for fixed verification.",
+  "retained_material": "after-deadline.patch and unmodified actor-events.jsonl",
+  "actor_usage_handling": "Incomplete terminal usage; exclude Token pairs.",
+  "file_change_events_scope": "Full preserved raw transcript, including post-deadline events; not an accepted delivery.",
+  "test_path_inventory_unavailable_at_deadline": true,
+  "case": "tracing-1523",
+  "arm": "I1",
+  "prior_recorded_deliveries": 17,
+  "remaining_new_actor_deliveries": 6,
+  "harness_amendment": "harness-amendments/timeout-termination-20261004/amendment.json"
+}

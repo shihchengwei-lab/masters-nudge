@@ -1,0 +1,11 @@
+{
+  "utc": "2026-10-03T19:52:56.489794+00:00",
+  "case": "tracing-1523",
+  "actor_pid": 64408,
+  "cause": "actor_runner.py used taskkill /I instead of /F; wait timed out after 30 seconds",
+  "action": "terminated verified overdue Actor process tree; preserved post-deadline patch",
+  "post_deadline_patch_sha256": "382e133aec7332063e3bd5fc65cf429d374cc513dd6497e0cbd81325cf8de54a",
+  "outcome_rerun": false,
+  "original_worktree_restored": true,
+  "actor_termination_confirmed": true
+}

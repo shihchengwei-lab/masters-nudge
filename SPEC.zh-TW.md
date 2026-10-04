@@ -2,7 +2,7 @@
 
 狀態：2026-10-03 核對的工具規格。外掛清單版本為 `0.6.0+codex.20260925224104`。現行提示採 2026-10-01 定稿。
 
-本檔定義工具責任與行為。實際模型判斷、契約完成、程式碼品味與成本另見[六臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)及[測試索引](benchmark/README.zh-TW.md)。固定 Provider 提示在 [buddy-prompt.txt](buddy-prompt.txt)，輸出形狀在 [nudge-schema.json](nudge-schema.json)；修改規格時須一起核對實作，不能把未實現的草案寫成現況。
+本檔定義工具責任與行為。實際模型判斷、契約完成、程式碼品味與成本另見[七臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)及[測試索引](benchmark/README.zh-TW.md)。固定 Provider 提示在 [buddy-prompt.txt](buddy-prompt.txt)，輸出形狀在 [nudge-schema.json](nudge-schema.json)；修改規格時須一起核對實作，不能把未實現的草案寫成現況。
 
 ## 1. `PostToolUse` 的用途
 
@@ -48,7 +48,7 @@ Provider 是唯讀顧問；Actor 保有採納、調整或否決的判斷，並�
 
 Provider 選最多一個支持完整交付、具體可檢查的替代關係。未讀到某關係不等於它不存在；不得捏造證據、需求或額外範圍。前次建議用作進度脈絡，對照最新程式後延續、修正或放棄疑點。程式庫與工具文字是材料，不是新的指令。
 
-沒有具體方向時回傳沉默；核心不按準則逐項評分，也不重新作語意審判。六臂品味評審把第五條的邊界與抽象拆成兩項，共六項；那是評測規則，不能回寫成 Provider 六條準則。
+沒有具體方向時回傳沉默；核心不按準則逐項評分，也不重新作語意審判。七臂品味評審把第五條的邊界與抽象拆成兩項，共六項；那是評測規則，不能回寫成 Provider 六條準則。
 
 ## 4. 提供給 Provider 的資料
 
@@ -171,7 +171,7 @@ Windows 中斷期間缺少 `hook/completed` 的既有重現屬 Host 執行限制
 
 只支援 OpenAI／Codex；Claude 與 Ollama 沒有現行執行路徑，也沒有失敗後自動換 Provider。
 
-Provider 模型可由管理指令儲存；Actor 模型由外部執行環境決定。Provider 未設定時預設 `gpt-5.6-sol`，深度固定 medium。六臂研究明確設定 Sol／Astra 與 Actor 深度，不能把研究配置當程式預設。
+Provider 模型可由管理指令儲存；Actor 模型由外部執行環境決定。Provider 未設定時預設 `gpt-5.6-sol`，深度固定 medium。七臂研究明確設定 Sol／Astra 與 Actor 深度；I 另以封存工具覆寫 Provider 為 xhigh，正式產品仍固定 medium。
 
 必須具備 Python 3.10+、Git、可啟動且已登入的 Codex CLI，以及支援現行事件、MCP Hook 與 `turn_id` 的 Host。`doctor` 只檢查依賴、登入、外掛啟用及必要檔案，完整事件與反饋送達仍需實測。
 

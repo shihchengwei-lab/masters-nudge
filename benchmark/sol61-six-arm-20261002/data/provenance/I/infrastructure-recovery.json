@@ -1,0 +1,41 @@
+{
+  "policy": "one recovery after capacity interruption; no outcome-based reruns",
+  "original_summary": {
+    "expected": 24,
+    "completed": 2,
+    "runs": [
+      {
+        "case": "nodebb-images",
+        "arm": "I1",
+        "state": "complete",
+        "fixed_checks_pass": false,
+        "seconds": 17.172,
+        "fault": "Actor exit 1"
+      },
+      {
+        "case": "ansible-type-tags",
+        "arm": "I1",
+        "state": "complete",
+        "fixed_checks_pass": true,
+        "seconds": 628.172,
+        "fault": ""
+      }
+    ],
+    "errors": [
+      {
+        "case": "nodebb-images",
+        "error": "nodebb-images/I1: Actor exit 1"
+      }
+    ]
+  },
+  "preserved_attempts": [
+    {
+      "case": "nodebb-images",
+      "arm": "I1",
+      "directory": "E:\\masters-nudge-benchmark\\sol61-i-xhigh-sol-xhigh-provider-12case-20261004\\infrastructure-attempts\\nodebb-images\\I1\\capacity-before-edit",
+      "reason": "capacity before any edits or Provider calls"
+    }
+  ],
+  "backoff_seconds": 300,
+  "started_utc": "2026-10-03T16:59:35.417906+00:00"
+}

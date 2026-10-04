@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from masters_nudge.contracts import MaterialLine, MaterialPacket, ToolFault, material_lines
+from masters_nudge.contracts import MATERIAL_MAX_CHARS, MaterialLine, MaterialPacket, ToolFault, material_lines
 from masters_nudge.evidence import fit_packet
 from masters_nudge.prompting import delivery_text
 from masters_nudge.provider_contract import parse_feedback
@@ -18,11 +18,13 @@ class ContractTests(unittest.TestCase):
 
     def test_actor_delivery_uses_fixed_formal_fields(self):
         feedback = parse_feedback(json.dumps(self.feedback()))
+        lines = delivery_text(feedback).splitlines()
         self.assertEqual(
-            delivery_text(feedback).splitlines()[:5],
+            lines[:5],
             ["Masters’ Nudge", "OBSERVED: x:1 x := y", "WHY: sources(y) = 2",
              "STRUCTURE: consumer <- y", "REQUIRED: 保留現有查詢結果"],
         )
+        self.assertTrue("\n".join(lines[5:]).strip(), "Actor guidance is missing")
 
     def test_output_limits_and_partial_feedback(self):
         import copy
@@ -164,25 +166,35 @@ class ContractTests(unittest.TestCase):
                                      "lines": ["a", "b", "c"]}])
         self.assertEqual(packet.render().count("tool/edit/input"), 1)
 
-    def test_expected_large_patch_keeps_all_original_lines_within_budget(self):
+    def test_required_patch_and_task_survive_material_budget_boundary(self):
         from masters_nudge.contracts import SessionRef, ToolCompleted
         from masters_nudge.evidence import build_packet
-        patch = "*** Begin Patch\n" + "\n".join("+" + "x" * 38 for _ in range(293)) + "\n*** End Patch"
-        event = ToolCompleted("edit-1", "apply_patch", {"command": patch}, "Success\n" + "ok\n" * 90)
-        task = "t" * 1048
+        template = "*** Begin Patch\n*** Add File: new.py\n+{}\n*** End Patch"
+        task = {"goal": "keep behavior", "request": "keep behavior"}
         with tempfile.TemporaryDirectory() as raw:
             subprocess.run(["git", "init", "-q", raw], check=True)
-            packet = build_packet(SessionRef("s", "t", raw), {"goal": task, "request": task}, (event,))
-        change = [line.text for line in packet.lines if line.source == "batch_change"]
-        self.assertEqual(change, patch.splitlines())
-        self.assertLessEqual(packet.material_chars, 20000)
+            session = SessionRef("s", "t", raw)
+            def packet_for(patch):
+                return build_packet(session, task, (ToolCompleted("edit-1", "apply_patch", patch, "Success"),))
+            base_size = packet_for(template.format("")).material_chars
+            for offset in (-1, 0, 1):
+                with self.subTest(offset=offset):
+                    target = MATERIAL_MAX_CHARS + offset
+                    patch = template.format("x" * (target - base_size))
+                    packet = packet_for(patch)
+                    self.assertEqual(packet.material_chars, target)
+                    self.assertEqual([line.text for line in packet.lines if line.source == "batch_change"],
+                                     patch.splitlines())
+                    self.assertEqual([line.text for line in packet.lines if line.source == "task_contract"],
+                                     [task["request"]])
 
     def test_oversize_success_output_is_compressed_without_losing_task_or_change(self):
         from masters_nudge.contracts import SessionRef, ToolCompleted
         from masters_nudge.evidence import build_packet
         with tempfile.TemporaryDirectory() as raw:
             subprocess.run(["git", "init", "-q", raw], check=True)
-            event = ToolCompleted("write-1", "write", {"path": "job.py", "content": "x=1"},
+            patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+x=1\n*** End Patch"
+            event = ToolCompleted("edit-1", "apply_patch", patch,
                                   {"exit_code": 0, "output": "ok\n" * 12000})
             packet = build_packet(SessionRef("s", "t", raw), {"goal": "保留行為", "request": "修改 x"}, (event,))
             self.assertLessEqual(packet.material_chars, 20000)
@@ -195,10 +207,11 @@ class ContractTests(unittest.TestCase):
         from masters_nudge.evidence import build_packet
         with tempfile.TemporaryDirectory() as raw:
             subprocess.run(["git", "init", "-q", raw], check=True)
-            event = ToolCompleted("run-1", "exec", {"cmd": "test"},
+            patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+x=1\n*** End Patch"
+            event = ToolCompleted("edit-1", "apply_patch", patch,
                                   {"exit_code": 0, "output": 'profile["enabled"] = True\r\nnext()'})
             packet = build_packet(SessionRef("s", "t", raw), {"goal": "g", "request": "r"}, (event,))
-            output = [line for line in packet.lines if line.path == "tool/run-1/output/output"]
+            output = [line for line in packet.lines if line.path == "tool/edit-1/output/output"]
             self.assertEqual([line.text for line in output], ['profile["enabled"] = True', "next()"])
             self.assertEqual([line.line for line in output], [1, 2])
 

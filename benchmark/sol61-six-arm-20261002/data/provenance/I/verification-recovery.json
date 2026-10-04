@@ -1,0 +1,28 @@
+{
+  "case": "nodebb-images",
+  "arm": "I1",
+  "reason": "stale evidence references initial pre-edit capacity attempt",
+  "preserved_evidence": "E:\\masters-nudge-benchmark\\sol61-i-xhigh-sol-xhigh-provider-12case-20261004\\infrastructure-attempts\\nodebb-images\\I1\\stale-capacity-verification",
+  "prior_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "actual_patch_sha256": "b8ed6459aef0ca58e2baf6be1331d028ffb313b904a0669aab688e9878426448",
+  "new_evidence_sha256": "e8e816c50b101567d3329e3084cb11d86c9cc6c2f9d1cc71223e7e55d4730c1a",
+  "verification_seconds": 39.21900000004098,
+  "checks": [
+    {
+      "exit_code": 1,
+      "reward": "0",
+      "passed": 1,
+      "elapsed_seconds": 32.837,
+      "checks": {
+        "reserved": "pass",
+        "nodebb_group_variants.js": "pass",
+        "nodebb_images.js": "fail",
+        "nodebb_images_files.js": "fail"
+      },
+      "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+      "log": "E:\\masters-nudge-benchmark\\sol61-i-xhigh-sol-xhigh-provider-12case-20261004\\evaluation-v3\\nodebb-images\\I1\\evidence.json"
+    }
+  ],
+  "actor_rerun": false,
+  "recorded_actor_results_unchanged": true
+}

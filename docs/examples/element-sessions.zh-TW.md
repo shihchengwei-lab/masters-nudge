@@ -1,4 +1,4 @@
-# 最新六臂案例：Element 裝置勾選
+# Element 有／無工具案例：裝置勾選
 
 本頁整理 2026-09-30 至 10-02 六臂研究中 `element-sessions` 的 **A1／B1**，沒有新增模型呼叫。選這組是因為 Actor 模型、深度、CLI、任務及基底相同，且能從第一份修改、原始提醒及後續修改追到採納關係。
 
@@ -82,4 +82,4 @@ const setSelectedDeviceIds = isControlled ? onSelectionChange : setLocalSelected
 
 最終 patch SHA-256：A1 為 `7499742cfd483b139b6c0e83b35617d5f45bb7cce092466cbec4540ca9f0cdd8`；B1 為 `f95b677ecfebbfc6d0f7747335d43ce9b8d7bf29c551d933c2e68a0e42de847b`。程式來源與授權見封存評測的[來源說明](../../benchmark/sol61-six-arm-20261002/protocol/evaluation/ATTRIBUTION.md)。
 
-本例是最新完整研究中的一組可追溯採納案例；工具整體的契約完成、品味配對與花費仍以[六臂完整報告](../../benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)為準。
+本例是完整研究中的一組可追溯採納案例；工具整體的契約完成、品味配對與花費仍以[七臂完整報告](../../benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)為準。

@@ -2,7 +2,6 @@ import io
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sqlite3
@@ -15,7 +14,6 @@ from unittest.mock import patch
 import masters_nudge_cli
 from masters_nudge.runtime import HOOK_TIMEOUT_SEC, PROVIDER_TIMEOUT_SEC, RuntimePaths, RuntimeSettings
 from masters_nudge.settings import load_user_settings, save_provider
-from tools.build_plugin import check_plugin
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -113,37 +111,16 @@ class SettingsPackageTests(unittest.TestCase):
             with patch.object(sys, "argv", argv), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 masters_nudge_cli.main()
 
-    def test_generated_plugin_is_current(self):
-        self.assertEqual(check_plugin(), [])
-        self.assertFalse((ROOT / ".claude-plugin/marketplace.json").exists())
+    def test_post_tool_hook_calls_the_persistent_mcp_synchronously(self):
         manifest = json.loads((ROOT / "plugins/masters-nudge/.codex-plugin/plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["mcpServers"], "./.mcp.json")
         hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         self.assertEqual(set(hooks), {"UserPromptSubmit", "PostToolUse"})
-
-    def test_public_docs_match_manifest_and_local_links_resolve(self):
-        manifest = json.loads(
-            (ROOT / "plugins/masters-nudge/.codex-plugin/plugin.json").read_text(encoding="utf-8")
-        )
-        for path in ("README.md", "README.zh-TW.md", "SPEC.zh-TW.md"):
-            self.assertIn(manifest["version"], (ROOT / path).read_text(encoding="utf-8"))
-        for path in ("README.md", "README.zh-TW.md"):
-            document = (ROOT / path).read_text(encoding="utf-8")
-            for target in re.findall(r"\[[^]]*\]\(([^)]+)\)", document):
-                if "://" in target:
-                    continue
-                local_path = target.split("#", 1)[0]
-                self.assertTrue((ROOT / local_path).is_file(), f"{path}: missing {target}")
-
-    def test_post_tool_hook_calls_the_persistent_mcp_synchronously(self):
-        hooks = json.loads((ROOT / "plugins/masters-nudge/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
         hook = hooks["PostToolUse"][0]["hooks"][0]
         self.assertEqual(hook["type"], "mcp_tool")
         self.assertEqual((hook["server"], hook["tool"]), ("masters_nudge", "review_patch"))
         self.assertNotIn("async", hook)
         self.assertGreater(hook["timeout"], PROVIDER_TIMEOUT_SEC)
-        self.assertEqual(PROVIDER_TIMEOUT_SEC, 1200)
-        self.assertEqual(HOOK_TIMEOUT_SEC, 1320)
         self.assertEqual(hook["timeout"], HOOK_TIMEOUT_SEC)
         self.assertEqual(set(hook["input"]), {
             "hook_event_name", "session_id", "turn_id", "cwd", "transcript_path",
