@@ -12,7 +12,7 @@ Masters’ Nudge aims to improve this: it adds a short structural suggestion whi
 
 ## Results and costs
 
-The latest complete comparison is the **seven-arm benchmark (A–F plus I), September 30–October 4, 2026**: 12 tasks, two attempts per task and arm, totaling 168 deliveries. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra.
+We compared direct implementation with structural feedback across **12 code-change tasks and seven model configurations**, measuring complete delivery, code structure, and cost. Each task was attempted twice per configuration, totaling 168 deliveries, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
 
 **A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with similar time. The observed comparisons are:
 
@@ -27,7 +27,7 @@ Anonymous judges compare code only where both implementations completely deliver
 
 Complete deliveries were:
 
-| Arm | Coding model | Feedback model | Complete deliveries |
+| Configuration | Coding model | Feedback model | Complete deliveries |
 |---|---|---|---|
 | A | Sol medium | None | 6/24 |
 | B | Sol medium | Sol medium | 8/24 |
@@ -39,7 +39,7 @@ Complete deliveries were:
 
 Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves anonymous taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
 
-See the [seven-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The harness and original evidence are included for [offline statistical reconstruction](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md). Earlier studies are listed in the [benchmark index](benchmark/README.zh-TW.md).
+See the [model configuration comparison](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The [methods and original data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
 
 ## What the tool does
 
@@ -75,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 The Actor then required both halves together and used one decision to choose their source. This makes a component call that displays one state but updates another invalid, without later synchronization or special-case repairs.
 
-Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [seven-arm report](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md) for overall benefits and costs.
+Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [model configuration comparison](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for overall benefits and costs.
 
 ## Why a nudge can help
 
@@ -96,7 +96,7 @@ The Provider uses five taste criteria to find that direction: make invalid state
 
 Requires Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
 
-The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; arm I used an override in its frozen experiment plugin, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
 
 ## Install, enable, and try it
 
@@ -130,4 +130,4 @@ python tools/build_plugin.py --check
 python -m unittest discover -s tests -v
 ```
 
-The [documentation index](docs/README.zh-TW.md) distinguishes current guidance from historical records.
+See the [documentation index](docs/README.zh-TW.md) for usage, specifications, and development guidance.

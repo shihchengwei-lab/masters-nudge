@@ -17,7 +17,7 @@
 | `masters_nudge/plugin_inventory.py` | 外掛生成檔與靜態檔的唯一清單 |
 | `plugins/masters-nudge/` | 可分發外掛；生成程式不得另行手改成第二套實作 |
 | `tests/spec/` | 現行工程契約檢查 |
-| `tools/`、`benchmark/`、`experiments/` | 開發驗證、固定研究與歷史材料；不在日常外掛執行路徑 |
+| `tools/`、`benchmark/`、`experiments/` | 開發驗證、效果證據與 Host 問題重現；不在日常外掛執行路徑 |
 
 外掛清單在 `plugins/masters-nudge/.codex-plugin/plugin.json`；Hook 在 `hooks/hooks.json`，只接 `UserPromptSubmit` 與 `PostToolUse`。`.mcp.json` 宣告常駐 Nudge MCP。三個管理技能是靜態外掛文件，由技能自身說明使用時機。
 
@@ -54,13 +54,13 @@ git diff --check
 
 只有修改生成來源後才需要 `--write`；文件整理可直接 `--check`。檢查成功分別表示副本同步、README 本地連結有效、既有工程契約通過、差異沒有空白錯誤；不證明模型選題、採納或程式品味改善。套件同步及文件連結各由獨立檢查負責，不重複列入行為測試。CI 定義在 `.github/workflows/ci.yml`，設定涵蓋 Windows／Ubuntu／macOS 與 Python 3.10／3.14；本機執行不能代表那些遠端工作均已通過。
 
-離線核對最新七臂結果：
+離線核對模型配置對比結果：
 
 ```powershell
-python -X utf8 .\benchmark\sol61-six-arm-20261002\aggregate.py --verify
+python -X utf8 .\benchmark\model-comparison-20261004\aggregate.py --verify
 ```
 
-這只讀包內凍結材料並重建統計，不呼叫 Actor、Provider 或評審。用 `--originals` 才額外核對原研究電腦的 D/E 槽來源；一般 clone 不需要它。完整方法見[harness 說明](../benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。
+這只讀包內凍結材料並重建統計，不呼叫 Actor、Provider 或評審。用 `--originals` 才額外核對原研究電腦的 D/E 槽來源；一般 clone 不需要它。完整方法見[harness 說明](../benchmark/model-comparison-20261004/HARNESS.zh-TW.md)。
 
 另有四個需明確指定輸出／執行條件的診斷工具：`verify_spec_provider.py` 測真實 Provider／MCP 能力；`verify_spec_recorded_reads.py` 重播已記錄的唯讀操作；`verify_spec_actor.py` 測原生 Actor 至外掛的交付路徑；`verify_spec_app_server.py` 測事件、故障與中斷。它們不屬一般單元測試，其中模型診斷會消耗模型用量；單次路徑通過不代表多題品味改善。執行前讀各程式的參數與用途，不把歷史輸出當目前驗證。
 
@@ -68,4 +68,4 @@ python -X utf8 .\benchmark\sol61-six-arm-20261002\aggregate.py --verify
 
 現行改動須核對中英文 README、SPEC、固定提示、schema、實作與生成副本。只改字數或 JSON 不足以宣告內容品質改善；模型效果需用對應材料實測。
 
-歷史任務、驗收、提示、原票與數值保留當時條件；只在外層索引或歷史報告的狀態說明中標清版本。七臂資料包的原始證據、協定與程式快照以指紋核對，不為了對齊現行措辭而改寫；彙整程式、總覽與索引隨新封存結果更新。新增研究使用新目錄與計畫。
+公開文件說明工具現況與支撐效果結論的證據；開發交接、提示迭代與撤回嘗試留在本機交接或封存。對比資料包的任務、驗收、提示、原票與數值保留測試當時條件，以指紋核對；不為了對齊現行措辭而改寫。結果總覽、查驗方法與連結須保持一致。

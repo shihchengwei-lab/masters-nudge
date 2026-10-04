@@ -4,7 +4,7 @@
 
 ## 任務與共同條件
 
-使用者要能勾選多個裝置、看見選取數量、取消選取，並在一次請求中登出全部選取裝置；切換篩選須清空選取，成功登出須刷新，取消驗證須解除載入。完整[任務契約](../../benchmark/sol61-six-arm-20261002/protocol/evaluation/cases/element-sessions/task.md)另有既有介面及測試識別字要求。
+使用者要能勾選多個裝置、看見選取數量、取消選取，並在一次請求中登出全部選取裝置；切換篩選須清空選取，成功登出須刷新，取消驗證須解除載入。完整[任務契約](../../benchmark/model-comparison-20261004/protocol/evaluation/cases/element-sessions/task.md)另有既有介面及測試識別字要求。
 
 | 條件 | A1 | B1 |
 |---|---|---|
@@ -68,7 +68,7 @@ const setSelectedDeviceIds = isControlled ? onSelectionChange : setLocalSelected
 
 ## 如何沿原始證據核對
 
-材料都在 repo 的[原始證據包](../../benchmark/sol61-six-arm-20261002/evidence.zip)。用檔案總管開啟，或依 [harness 說明](../../benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)解壓後讀取：
+材料都在 repo 的[原始證據包](../../benchmark/model-comparison-20261004/evidence.zip)。用檔案總管開啟，或依 [harness 說明](../../benchmark/model-comparison-20261004/HARNESS.zh-TW.md)解壓後讀取：
 
 | 包內路徑 | 核對內容 |
 |---|---|
@@ -80,6 +80,6 @@ const setSelectedDeviceIds = isControlled ? onSelectionChange : setLocalSelected
 | `evaluation/A/element-sessions/A1/`、`evaluation/B/element-sessions/B1/` | 固定驗收原始日誌 |
 | `judges/B/element-sessions/trial-1/A-B/pair.json` | 匿名對應、交換順序、兩張票與完整理由 |
 
-最終 patch SHA-256：A1 為 `7499742cfd483b139b6c0e83b35617d5f45bb7cce092466cbec4540ca9f0cdd8`；B1 為 `f95b677ecfebbfc6d0f7747335d43ce9b8d7bf29c551d933c2e68a0e42de847b`。程式來源與授權見封存評測的[來源說明](../../benchmark/sol61-six-arm-20261002/protocol/evaluation/ATTRIBUTION.md)。
+最終 patch SHA-256：A1 為 `7499742cfd483b139b6c0e83b35617d5f45bb7cce092466cbec4540ca9f0cdd8`；B1 為 `f95b677ecfebbfc6d0f7747335d43ce9b8d7bf29c551d933c2e68a0e42de847b`。程式來源與授權見封存評測的[來源說明](../../benchmark/model-comparison-20261004/protocol/evaluation/ATTRIBUTION.md)。
 
-本例是完整研究中的一組可追溯採納案例；工具整體的契約完成、品味配對與花費仍以[七臂完整報告](../../benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)為準。
+本例是完整研究中的一組可追溯採納案例；工具整體的契約完成、品味配對與花費仍以[七臂完整報告](../../benchmark/model-comparison-20261004/REPORT.zh-TW.md)為準。

@@ -1,2 +1,0 @@
-# Preserve the exact bytes recorded in manifest.json across Git checkouts.
-* -text

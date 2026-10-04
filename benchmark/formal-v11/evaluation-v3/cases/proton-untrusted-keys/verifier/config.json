@@ -1,9 +1,0 @@
-{
-  "fail_to_pass": "['containers/contacts/email/ContactEmailSettingsModal.test.tsx | should save a contact with updated email settings (no keys)', 'containers/contacts/email/ContactEmailSettingsModal.test.tsx | should enable encryption by default if WKD keys are found', 'containers/contacts/email/ContactEmailSettingsModal.test.tsx | should warn if encryption is enabled and WKD keys are not valid for sending', 'shared | get contact public key model > should determine encryption flag based on `encryptToPinned` when pinned keys are present', 'shared | get contact public key model > should determine encryption flag based on `encryptToUntrusted` when only API keys are present', 'shared | get contact public key model > should set the encryption flag when pinned keys are present and `encryptToPinned` is missing', 'shared | get contact public key model > should not determine encryption flag based on `encryptToUntrusted` if API keys are missing', 'shared | get contact public key model > should not determine encryption flag based on `encryptToUntrusted` for internal users']",
-  "pass_to_pass": "[\"containers/contacts/email/ContactEmailSettingsModal.test.tsx | should warn if encryption is enabled and uploaded keys are not valid for sending\"]",
-  "selected_test_files_to_run": [
-    "packages/shared/test/keys/publicKeys.spec.ts",
-    "packages/shared/test/mail/encryptionPreferences.spec.ts",
-    "packages/components/containers/contacts/email/ContactEmailSettingsModal.test.tsx"
-  ]
-}

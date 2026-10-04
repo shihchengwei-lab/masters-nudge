@@ -12,7 +12,7 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 ## 效果與代價
 
-最新完整比較是 **2026-09-30 至 10-04 的七臂測試（A–F＋I）**：12 題、每題每臂兩次，共 168 份交付。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra。
+我們用 **12 道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完成度、程式結構及成本。每題每配置各跑兩次，共 168 份交付；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
 **Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，時間相近。各組結果如下：
 
@@ -27,7 +27,7 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 完整交付結果如下：
 
-| 臂 | 寫程式的模型 | 提供提醒的模型 | 完整交付 |
+| 配置 | 寫程式的模型 | 提供提醒的模型 | 完整交付 |
 |---|---|---|---|
 | A | Sol medium | 無 | 6/24 |
 | B | Sol medium | Sol medium | 8/24 |
@@ -39,7 +39,7 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 提供較好的匿名品味，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
 
-逐題結果、CLI 版本差異與完整評比見[七臂報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。測試 harness 與原始證據已收入 repo，可[離線重建統計](benchmark/sol61-six-arm-20261002/HARNESS.zh-TW.md)。較早研究見[測試索引](benchmark/README.zh-TW.md)。
+逐題結果、執行檔版本差異與完整評比見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。[測試方法與原始數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
 
 ## 工具做了什麼
 
@@ -62,7 +62,7 @@ Benchmark 的 Element 題要求支援多裝置勾選、選取數量、取消與�
 |---|---|---|
 | 勾選清單與修改清單的方法 | 各自可選，各自決定讀寫來源 | 必須成對提供或全部省略，一起決定讀寫來源 |
 | 只提供一半時 | 介面容許畫面讀外部清單，點擊卻修改本地清單 | 型別排除這種組合，執行時也讓讀寫同源 |
-| 本輪完整交付判定 | 通過 | 通過 |
+| 完整交付判定 | 通過 | 通過 |
 
 B1 第一份修改也把讀寫來源分開選。Provider 提醒：
 
@@ -75,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「畫面看一份、點擊改另一份」的組合無法合法傳入元件；不用等接錯後再補同步或特殊處理。
 
-兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[七臂完整報告](benchmark/sol61-six-arm-20261002/REPORT.zh-TW.md)。
+兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。
 
 ## 作用原理
 
@@ -96,7 +96,7 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 
 需要 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
 
-本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；I 臂的 xhigh 使用封存工具的實驗覆寫，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
 
 ## 安裝、啟用與第一次使用
 
@@ -130,4 +130,4 @@ python tools/build_plugin.py --check
 python -m unittest discover -s tests -v
 ```
 
-文件入口與現行／歷史分類見[文件索引](docs/README.zh-TW.md)。
+使用、規格與開發文件見[文件索引](docs/README.zh-TW.md)。

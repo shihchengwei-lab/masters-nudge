@@ -19,4 +19,4 @@
 *.cmd text eol=crlf
 
 # Frozen benchmark hashes cover exact bytes and retain original formatting.
-benchmark/sol61-six-arm-20261002/** -text -eol -whitespace
+benchmark/model-comparison-20261004/** -text -eol -whitespace

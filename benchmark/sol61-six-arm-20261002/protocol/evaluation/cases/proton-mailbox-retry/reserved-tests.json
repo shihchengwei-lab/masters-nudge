@@ -1,5 +1,0 @@
-[
-  "src/app/containers/mailbox/tests/Mailbox.retries.test.tsx | should retry when API call fails",
-  "src/app/containers/mailbox/tests/Mailbox.retries.test.tsx | should retry when API respond with stale flag",
-  "src/app/containers/mailbox/tests/Mailbox.retries.test.tsx | should wait for all API actions to be finished before loading elements"
-]

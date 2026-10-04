@@ -16,11 +16,9 @@ HANDOFF.md
 !/experiments/champion-vs-preserved-result-20260920/
 /experiments/champion-vs-preserved-result-20260920/PARTIAL.zh-TW.md
 
-# Local comparison, calibration, and post-change test reports.
-/benchmark/formal-v1/DELIVERY-RESULTS.md
-/benchmark/formal-v6/CALIBRATION.zh-TW.md
-/benchmark/formal-v8/COMPARISON.zh-TW.md
-/benchmark/formal-v8/CALIBRATION.zh-TW.md
+# Local benchmark history and superseded study directories.
+/.local-benchmark-history/
+/benchmark/formal-v*/
 /experiments/champion-vs-preserved-result-20260920/RESULT.zh-TW.md
 
 # Superseded design and acceptance records kept locally for reference.
