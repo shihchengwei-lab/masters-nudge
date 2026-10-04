@@ -1,0 +1,2933 @@
+{
+  "source_commit": "7f459d43c73cfd949dc72e564aae1acd6f509e84",
+  "method": "Single code reviewer, aware of arm identities and initial votes; not a new blind assessment.",
+  "scope": {
+    "deliveries_in_seven_arms": 168,
+    "completed_deliveries_restored": 69,
+    "taste_eligible_pairs_reviewed": 71,
+    "cases_with_eligible_pairs": 9
+  },
+  "unchanged": [
+    "Actor answers",
+    "original blind votes",
+    "completion judgments",
+    "cost and timing records",
+    "current product prompt"
+  ],
+  "preserved_original_pairs": 65,
+  "wins_revised_to_ties": 6,
+  "reversed_winners": 0,
+  "original_counts_left_right_tie": {
+    "A-B": {
+      "left": 1,
+      "right": 5,
+      "tie": 0
+    },
+    "A-C": {
+      "left": 2,
+      "right": 4,
+      "tie": 0
+    },
+    "B-C": {
+      "left": 4,
+      "right": 4,
+      "tie": 0
+    },
+    "A-D": {
+      "left": 0,
+      "right": 5,
+      "tie": 0
+    },
+    "B-D": {
+      "left": 2,
+      "right": 1,
+      "tie": 2
+    },
+    "D-E": {
+      "left": 5,
+      "right": 1,
+      "tie": 0
+    },
+    "C-F": {
+      "left": 3,
+      "right": 3,
+      "tie": 2
+    },
+    "E-F": {
+      "left": 0,
+      "right": 7,
+      "tie": 0
+    },
+    "C-I": {
+      "left": 0,
+      "right": 9,
+      "tie": 2
+    },
+    "F-I": {
+      "left": 2,
+      "right": 5,
+      "tie": 2
+    }
+  },
+  "reassessed_counts_left_right_tie": {
+    "A-B": {
+      "left": 1,
+      "right": 5,
+      "tie": 0
+    },
+    "A-C": {
+      "left": 2,
+      "right": 4,
+      "tie": 0
+    },
+    "B-C": {
+      "left": 4,
+      "right": 4,
+      "tie": 0
+    },
+    "A-D": {
+      "left": 0,
+      "right": 5,
+      "tie": 0
+    },
+    "B-D": {
+      "left": 2,
+      "right": 1,
+      "tie": 2
+    },
+    "D-E": {
+      "left": 4,
+      "right": 1,
+      "tie": 1
+    },
+    "C-F": {
+      "left": 3,
+      "right": 3,
+      "tie": 2
+    },
+    "E-F": {
+      "left": 0,
+      "right": 6,
+      "tie": 1
+    },
+    "C-I": {
+      "left": 0,
+      "right": 7,
+      "tie": 4
+    },
+    "F-I": {
+      "left": 0,
+      "right": 5,
+      "tie": 4
+    }
+  },
+  "completion_unchanged": {
+    "A": 6,
+    "B": 8,
+    "C": 13,
+    "D": 8,
+    "E": 10,
+    "F": 11,
+    "I": 13
+  },
+  "decisions": [
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "A-B",
+      "a": "A1",
+      "b": "B1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "74c9abd0c8d76ca25590dcc5cf90d7fe14e2b6d22b44e6c86c34cf8e5712dd7e",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "d8f7ec6ba8a0eced24f136aee029d8ca151804e41575ebb2c2c3dce9205f9a1a",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "5e424e30b0cef10fff56178ddc1b2b52d9d0ccc6866cc79e10755279e4316e3f",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "9e369cd9ba3e153448bf4abb0645081cec89d43b2518b2b14b2c3cb06d0c1ef7",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "A-B",
+      "a": "A2",
+      "b": "B2",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "84a2000f4f1d8f6af7e4e289d0cafb9d30e71df2a1bdd0626846814b6f3dad5c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "34207e1df5ddc6772c2fc94875ab8d8ce245c4304e343a1276297b09e655eda0",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "55b6fe8a69cfd5f6c7701940643ec4407bf51d02a268d77a18ef2010de44991a",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "A-B",
+      "a": "A1",
+      "b": "B1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "型別化的格式轉換及新舊欄位衝突檢查留在 YAML 邊界；保留的格式標記有成本，但沒有進入核心排程，收益仍小幅成立。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "2ab622c03e1dd39241bbc7fbf9927786fa60c85950174c58838fd6f25cb937dd",
+          "archive_path": "sources/flipt-segments/A1/internal/ext/common.go"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/A1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/A1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "5bd13881db5ecef3b1c186701b99db6d657b1b33be1d2132e129b8658d5e3457",
+          "archive_path": "sources/flipt-segments/B1/internal/ext/common.go"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/B1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/B1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "A-B",
+      "a": "A2",
+      "b": "B2",
+      "original_winner": "A",
+      "reassessed_winner": "A",
+      "changed": false,
+      "reason": "單鍵 operator 由區域值供儲存與回傳使用，不修改呼叫者的請求；一般欄位也由別名重用，減少同步維護。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "4efc15207295c3141c8f58e1dcdb072624cddab89d038423f722047707311aca",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/common.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "2deb7ee950d8f8d419f1b1e7e8ecee702ade98895d93d1da15bf0624cb691332",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/rule_yaml.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "14085382d00e42c02ff7a20b1bf5745a1cf631dafbf3ddb6932e8a4f91d63516",
+          "archive_path": "sources/flipt-segments/B2/internal/ext/common.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "A-B",
+      "a": "A1",
+      "b": "B1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "等待重試與實際請求分開，載入顯示使用目前查詢的欠載入事實；新增旗標承載獨立限制，避免快取重設誤改等待資格。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "49ba7a089166791177240aeb1ce74edbc74069fd89f75729a3eb891e9d63b37e",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "e771badd5c9d77d9c27f14e181a70c5bd0a7a7f50658c35fce8d23e0f647a8e3",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "6a2cbd5981ee8172c691f4a283c35a87a4e353df12fa0623d4be4b9d0504e9dc",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "b6669f04ccb5d4d661c93f5e8d253c4fa0e0e1e571738111732ea8024d2dc6a2",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "1f92b83f52aa8b824667ad1c41a024d9eae7e32e3d53cdb0d8302e25251e4e61",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "A-B",
+      "a": "A2",
+      "b": "B2",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "欠可用資料、請求執行、重試期限分開，共用欠請求判斷；計時同步有成本，但確實減少畫面與排程重建不同條件。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "8ebd45cede3b6c35d91a1cdc99a3346db18e822973674bdf8bd43ddfbd1e8074",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "fba8aa75aeea6a48484f3c6c3b29d1bdb9950c684957475d0dffdb26aa44027c",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "ab368051add9e96d804b714eb1cd2adf7bd6a2566ced769f1b05b496dd90f161",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d2810d2b34f3bcee53226d205c36ddc3a7585944c96a38a74b7340afe21c242b",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "15bb032a18a34ddfe0535dd3b4aebfe82ba000e41849921f5140baa530992be8",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "A-C",
+      "a": "A1",
+      "b": "C1",
+      "original_winner": "A",
+      "reassessed_winner": "A",
+      "changed": false,
+      "reason": "登出只回報成功刪除的 IDs，由持有選取狀態的畫面更新選取；一個薄回呼確實減少登出流程的責任，沒有新增資料副本。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "74c9abd0c8d76ca25590dcc5cf90d7fe14e2b6d22b44e6c86c34cf8e5712dd7e",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "d8f7ec6ba8a0eced24f136aee029d8ca151804e41575ebb2c2c3dce9205f9a1a",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "0ef23a92ecac980f7ab38d82f51fb9b71cc2bbd7063093c7dd6577c607eb279a",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "A-C",
+      "a": "A2",
+      "b": "C2",
+      "original_winner": "A",
+      "reassessed_winner": "A",
+      "changed": false,
+      "reason": "選取切換使用最新狀態的函式更新，少依賴當次畫面快照；沒有新增狀態或例外路徑，這是小而實際的改善。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "84a2000f4f1d8f6af7e4e289d0cafb9d30e71df2a1bdd0626846814b6f3dad5c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "3cdbc8287dd74f6b17aa47ba56ffbc7522141cc0ee8d1120aa1ddd0e775532e2",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "A-C",
+      "a": "A1",
+      "b": "C1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "把雙格式放進 segment 欄位型別，減少整份規則的重述及下游格式判別；儲存時改寫請求是代價，但核心格式收斂仍較有實際作用。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "2ab622c03e1dd39241bbc7fbf9927786fa60c85950174c58838fd6f25cb937dd",
+          "archive_path": "sources/flipt-segments/A1/internal/ext/common.go"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/A1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/A1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "cb37b019c5ff273a475ab949b9f42e1ef8dc046cad7c38f195845907f389fe2e",
+          "archive_path": "sources/flipt-segments/C1/internal/ext/common.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "40e731bc4f1f9c69b79005e7cbc0d0b27a92991c2c77d8ac76f685bd34d71d99",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "A-C",
+      "a": "A2",
+      "b": "C2",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "兩者儲存資料流相同；C 在輸入邊界拒絕競爭的複數欄位，並在 snapshot 統一單鍵表示。複製一般欄位是代價，但不是完全沒有換到收益的架構擴張。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "4efc15207295c3141c8f58e1dcdb072624cddab89d038423f722047707311aca",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/common.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "2deb7ee950d8f8d419f1b1e7e8ecee702ade98895d93d1da15bf0624cb691332",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/rule_yaml.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "d04a9fc27bb46c66129a41812c83ab31dfd6822d748729750be493a796eda3bb",
+          "archive_path": "sources/flipt-segments/C2/internal/ext/common.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "A-C",
+      "a": "A1",
+      "b": "C1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "回應與計時器隸屬於產生它們的請求，舊工作不能任意改寫新清單；增加請求識別的複雜度有真實競態責任。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "49ba7a089166791177240aeb1ce74edbc74069fd89f75729a3eb891e9d63b37e",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "e771badd5c9d77d9c27f14e181a70c5bd0a7a7f50658c35fce8d23e0f647a8e3",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "1bee45dbad55f1fe8e5537b544717c515da0523e32fa33567ffeb1b0acc18d4f",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "4841b991c3eb95bdc03a1dcb6a4e1767fa18fb6f28c1fc3fdbd32214a0908400",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "f9dc059742b78f157cf4ab611211658a8ebb117046fb60d75b46f9efcd14a9d0",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "A-C",
+      "a": "A2",
+      "b": "C2",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "欠一次載入的判斷供排程與畫面共用，操作計數只決定暫時阻擋；較少跨 hook 與 selector 重複組合條件。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "8ebd45cede3b6c35d91a1cdc99a3346db18e822973674bdf8bd43ddfbd1e8074",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "fba8aa75aeea6a48484f3c6c3b29d1bdb9950c684957475d0dffdb26aa44027c",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0651ed68b4830368cdd16fb252eac848fc11f8769318800e31a9fcff5e495835",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "b4fc330078798781d0c66d679b3a12ac884b2bd4ee28a1749297cd3dc9026bed",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "nodebb-images",
+      "trial": 1,
+      "pair": "B-C",
+      "a": "B1",
+      "b": "C1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "本機路徑與可刪除歸屬分開，依既有擁有者紀錄和另一圖片類別引用確認刪除集合；更多分支承載必要刪除界線，並非過度架構。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "d9307949d5676e4fe07293594235ac17e7a381b2626451568710db0aed137990",
+          "archive_path": "sources/nodebb-images/B1/src/user/picture.js"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "47675c9a6e29a9f48d4a507c79159c38eac8deddcdb89cbae06e8c648b47083d",
+          "archive_path": "sources/nodebb-images/B1/src/groups/cover.js"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "e4d690afac367cb42c89433c965ddb75363d99c1c0fc8b1e1b4064b8c7cdd504",
+          "archive_path": "sources/nodebb-images/BASE/src/file.js"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "d0e0692661fe52dce584f8be9ffde55dfea8f53ad5cecb8e738d0fc6c7b32a44",
+          "archive_path": "sources/nodebb-images/C1/src/user/picture.js"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "24ce3957ff62c2f0d651c77cd45644e18258479c78d863028f80f7d2499c8d3b",
+          "archive_path": "sources/nodebb-images/C1/src/groups/cover.js"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "e4d690afac367cb42c89433c965ddb75363d99c1c0fc8b1e1b4064b8c7cdd504",
+          "archive_path": "sources/nodebb-images/BASE/src/file.js"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "ansible-type-tags",
+      "trial": 1,
+      "pair": "B-C",
+      "a": "B1",
+      "b": "C1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "路徑集合的共同轉換收成一條流程，少掉重複的驗證、標籤處理及已知型別清單；局部失敗旗標不是新的持久架構。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "8a941294a8d5d3d770409728dfa1d3aa71050c00597369089b2f697701317da1",
+          "archive_path": "sources/ansible-type-tags/B1/lib/ansible/config/manager.py"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "f34105c14f065215aff7c5389b1b778878cadb9ae60b0d4224cce56918734593",
+          "archive_path": "sources/ansible-type-tags/C1/lib/ansible/config/manager.py"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "B-C",
+      "a": "B1",
+      "b": "C1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "5e424e30b0cef10fff56178ddc1b2b52d9d0ccc6866cc79e10755279e4316e3f",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "9e369cd9ba3e153448bf4abb0645081cec89d43b2518b2b14b2c3cb06d0c1ef7",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "0ef23a92ecac980f7ab38d82f51fb9b71cc2bbd7063093c7dd6577c607eb279a",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "B-C",
+      "a": "B2",
+      "b": "C2",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "34207e1df5ddc6772c2fc94875ab8d8ce245c4304e343a1276297b09e655eda0",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "55b6fe8a69cfd5f6c7701940643ec4407bf51d02a268d77a18ef2010de44991a",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "3cdbc8287dd74f6b17aa47ba56ffbc7522141cc0ee8d1120aa1ddd0e775532e2",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "B-C",
+      "a": "B1",
+      "b": "C1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "C 的欄位型別讓匯入與 snapshot 共用目標表示，少掉格式來源與整份 YAML 替身；B 無請求副作用較好，整體仍保留 C 的小幅優勢。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "5bd13881db5ecef3b1c186701b99db6d657b1b33be1d2132e129b8658d5e3457",
+          "archive_path": "sources/flipt-segments/B1/internal/ext/common.go"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/B1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/B1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "cb37b019c5ff273a475ab949b9f42e1ef8dc046cad7c38f195845907f389fe2e",
+          "archive_path": "sources/flipt-segments/C1/internal/ext/common.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "40e731bc4f1f9c69b79005e7cbc0d0b27a92991c2c77d8ac76f685bd34d71d99",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "B-C",
+      "a": "B2",
+      "b": "C2",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "局部正規化結果單向流入儲存及回傳，不改動呼叫者持有的 operator；格式判別也限制在欄位邊界。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "14085382d00e42c02ff7a20b1bf5745a1cf631dafbf3ddb6932e8a4f91d63516",
+          "archive_path": "sources/flipt-segments/B2/internal/ext/common.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "d04a9fc27bb46c66129a41812c83ab31dfd6822d748729750be493a796eda3bb",
+          "archive_path": "sources/flipt-segments/C2/internal/ext/common.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "B-C",
+      "a": "B1",
+      "b": "C1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "請求識別隔離舊回應及舊計時器，並直接保留未取得有效回應的責任；載入判斷較分散是代價，但非同步歸屬較清楚。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "6a2cbd5981ee8172c691f4a283c35a87a4e353df12fa0623d4be4b9d0504e9dc",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "b6669f04ccb5d4d661c93f5e8d253c4fa0e0e1e571738111732ea8024d2dc6a2",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "1f92b83f52aa8b824667ad1c41a024d9eae7e32e3d53cdb0d8302e25251e4e61",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "1bee45dbad55f1fe8e5537b544717c515da0523e32fa33567ffeb1b0acc18d4f",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "4841b991c3eb95bdc03a1dcb6a4e1767fa18fb6f28c1fc3fdbd32214a0908400",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "f9dc059742b78f157cf4ab611211658a8ebb117046fb60d75b46f9efcd14a9d0",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "B-C",
+      "a": "B2",
+      "b": "C2",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "獨立的重試期限及欠請求判斷跨快取重設保留，搜尋交接沿用同一限制；比 pendingRequest 混合請求與等待較容易維護。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "ab368051add9e96d804b714eb1cd2adf7bd6a2566ced769f1b05b496dd90f161",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d2810d2b34f3bcee53226d205c36ddc3a7585944c96a38a74b7340afe21c242b",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "15bb032a18a34ddfe0535dd3b4aebfe82ba000e41849921f5140baa530992be8",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0651ed68b4830368cdd16fb252eac848fc11f8769318800e31a9fcff5e495835",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "b4fc330078798781d0c66d679b3a12ac884b2bd4ee28a1749297cd3dc9026bed",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "A-D",
+      "a": "A1",
+      "b": "D1",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "74c9abd0c8d76ca25590dcc5cf90d7fe14e2b6d22b44e6c86c34cf8e5712dd7e",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "d8f7ec6ba8a0eced24f136aee029d8ca151804e41575ebb2c2c3dce9205f9a1a",
+          "archive_path": "sources/element-sessions/A1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "a8eff9e90af2b1abb3ce1a9c888c9e062333ff60ae2a0faf85726e8d36b2eabd",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "A-D",
+      "a": "A2",
+      "b": "D2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "84a2000f4f1d8f6af7e4e289d0cafb9d30e71df2a1bdd0626846814b6f3dad5c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/A2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "39f7e0630678b47d6bb892900ab155577444e6848a3659dc3d8b364e97c17d85",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "A-D",
+      "a": "A2",
+      "b": "D2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "共同解碼入口拒絕衝突並統一單鍵表示，讓匯入與 snapshot 少重建規則；A 的別名少複製欄位是優點，但未抵銷這項收益。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "4efc15207295c3141c8f58e1dcdb072624cddab89d038423f722047707311aca",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/common.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "2deb7ee950d8f8d419f1b1e7e8ecee702ade98895d93d1da15bf0624cb691332",
+          "archive_path": "sources/flipt-segments/A2/internal/ext/rule_yaml.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/A2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "1f0fb1503d9df9228f8199c877031e1fb8012ecb285a8f31de8ad6eb3fc301b3",
+          "archive_path": "sources/flipt-segments/D2/internal/ext/common.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/D2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "cb8ac1117301dea545bb0c6bdf9b3b03c5b5fadcc8a77f76b185d1dd366d8f8d",
+          "archive_path": "sources/flipt-segments/D2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "A-D",
+      "a": "A1",
+      "b": "D1",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "明確的重試等待狀態與較集中載入判斷，比同一旗標兼任實際請求及等待容易掌握；期限目前只當旗標使用是可刪成本，保留小幅勝出。",
+      "sources": [
+        {
+          "delivery": "A1",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "49ba7a089166791177240aeb1ce74edbc74069fd89f75729a3eb891e9d63b37e",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A1",
+          "sha256": "e771badd5c9d77d9c27f14e181a70c5bd0a7a7f50658c35fce8d23e0f647a8e3",
+          "archive_path": "sources/proton-mailbox-retry/A1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "f9a2d386ddde51527291f390cc655e502bb31532d61ccb8f233f337db3dd8f08",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "86e78a69d80c801f3e5ce5301685124fd70f48c8b901bab5aa3d1d6c0496d24f",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "3048517f6fe6da1daabf0fc580e26c078498472fb74ff9510d15de6786deea2d",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "A-D",
+      "a": "A2",
+      "b": "D2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "請求識別限制回應及延遲重試的有效範圍，舊工作無法干擾新查詢；較直接的計時器不足以抵銷這項因果保護。",
+      "sources": [
+        {
+          "delivery": "A2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "8ebd45cede3b6c35d91a1cdc99a3346db18e822973674bdf8bd43ddfbd1e8074",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "A2",
+          "sha256": "fba8aa75aeea6a48484f3c6c3b29d1bdb9950c684957475d0dffdb26aa44027c",
+          "archive_path": "sources/proton-mailbox-retry/A2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2b677c60b76ba5ba202ad775a1d0617eadd377fa43acef874888fafd2c6a7636",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2be18ea0a917676f4b4583aa2c64abc544b790dc17adff4c49b38d64aa334a8f",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "187dfd3cf0a645822f50d07fe7c5151bc8e2c27f46957f8ff1158e3a0744fbd6",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "B-D",
+      "a": "B1",
+      "b": "D1",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "選取所有權、篩選清除與登出結算相同；抽出局部函式或改按鈕文字沒有減少必要責任。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "5e424e30b0cef10fff56178ddc1b2b52d9d0ccc6866cc79e10755279e4316e3f",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "9e369cd9ba3e153448bf4abb0645081cec89d43b2518b2b14b2c3cb06d0c1ef7",
+          "archive_path": "sources/element-sessions/B1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "a8eff9e90af2b1abb3ce1a9c888c9e062333ff60ae2a0faf85726e8d36b2eabd",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "B-D",
+      "a": "B2",
+      "b": "D2",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "資料所有權與清理流程相同；其中一份額外捕捉刷新錯誤，但既有 refreshDevices 已處理一般刷新失敗，這層保護不足以分勝負。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "34207e1df5ddc6772c2fc94875ab8d8ce245c4304e343a1276297b09e655eda0",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "55b6fe8a69cfd5f6c7701940643ec4407bf51d02a268d77a18ef2010de44991a",
+          "archive_path": "sources/element-sessions/B2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "39f7e0630678b47d6bb892900ab155577444e6848a3659dc3d8b364e97c17d85",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "B-D",
+      "a": "B2",
+      "b": "D2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "不回寫請求物件的 operator，且格式辨識留在 segment 邊界；新增轉接型別承擔現有兩種格式，沒有擴張成通用框架。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "14085382d00e42c02ff7a20b1bf5745a1cf631dafbf3ddb6932e8a4f91d63516",
+          "archive_path": "sources/flipt-segments/B2/internal/ext/common.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/B2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "1f0fb1503d9df9228f8199c877031e1fb8012ecb285a8f31de8ad6eb3fc301b3",
+          "archive_path": "sources/flipt-segments/D2/internal/ext/common.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/D2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "cb8ac1117301dea545bb0c6bdf9b3b03c5b5fadcc8a77f76b185d1dd366d8f8d",
+          "archive_path": "sources/flipt-segments/D2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "B-D",
+      "a": "B1",
+      "b": "D1",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "B 用布林表示實際等待限制，D 額外保存未用於時鐘判斷的期限及另一個 action；B 的畫面也使用目前查詢判斷欠資料。",
+      "sources": [
+        {
+          "delivery": "B1",
+          "sha256": "6a2cbd5981ee8172c691f4a283c35a87a4e353df12fa0623d4be4b9d0504e9dc",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "b6669f04ccb5d4d661c93f5e8d253c4fa0e0e1e571738111732ea8024d2dc6a2",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B1",
+          "sha256": "1f92b83f52aa8b824667ad1c41a024d9eae7e32e3d53cdb0d8302e25251e4e61",
+          "archive_path": "sources/proton-mailbox-retry/B1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "f9a2d386ddde51527291f390cc655e502bb31532d61ccb8f233f337db3dd8f08",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "86e78a69d80c801f3e5ce5301685124fd70f48c8b901bab5aa3d1d6c0496d24f",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "3048517f6fe6da1daabf0fc580e26c078498472fb74ff9510d15de6786deea2d",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "B-D",
+      "a": "B2",
+      "b": "D2",
+      "original_winner": "B",
+      "reassessed_winner": "B",
+      "changed": false,
+      "reason": "欠請求與允許發送分開且共用，搜尋交接也沿用；D 的請求識別較好，但 pendingRequest 的雙重意義與分散載入仍增加總協調。",
+      "sources": [
+        {
+          "delivery": "B2",
+          "sha256": "ab368051add9e96d804b714eb1cd2adf7bd6a2566ced769f1b05b496dd90f161",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "d2810d2b34f3bcee53226d205c36ddc3a7585944c96a38a74b7340afe21c242b",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "B2",
+          "sha256": "15bb032a18a34ddfe0535dd3b4aebfe82ba000e41849921f5140baa530992be8",
+          "archive_path": "sources/proton-mailbox-retry/B2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2b677c60b76ba5ba202ad775a1d0617eadd377fa43acef874888fafd2c6a7636",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2be18ea0a917676f4b4583aa2c64abc544b790dc17adff4c49b38d64aa334a8f",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "187dfd3cf0a645822f50d07fe7c5151bc8e2c27f46957f8ff1158e3a0744fbd6",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "D-E",
+      "a": "D1",
+      "b": "E1",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "D1",
+          "sha256": "a8eff9e90af2b1abb3ce1a9c888c9e062333ff60ae2a0faf85726e8d36b2eabd",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "b5515ce608cb6875b23a2da33b9f56344c92113b54174d0800d068127f8fd8ea",
+          "archive_path": "sources/element-sessions/E1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/E1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "D-E",
+      "a": "D2",
+      "b": "E2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "因篩選變更而清空選取的規則集中在清單；另一份另在推薦入口無條件清除，增加一個需要一起維護的觸發來源。",
+      "sources": [
+        {
+          "delivery": "D2",
+          "sha256": "39f7e0630678b47d6bb892900ab155577444e6848a3659dc3d8b364e97c17d85",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2d033607b40a950d72b1288cb76784760f329c4d86a3961166915475932a29e8",
+          "archive_path": "sources/element-sessions/D2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "482746c5999bd2584c2d167e4d25e9ef432ce37c22bc8280ee93e5479b4d2e57",
+          "archive_path": "sources/element-sessions/E2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "df8da6ad0d89ee89100983cc2f08aa372a3d8695da6a4035e173548bd18c3639",
+          "archive_path": "sources/element-sessions/E2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "D-E",
+      "a": "D1",
+      "b": "E1",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "重試解除由明確計時事件推進；E 同時依賴 selector 讀時鐘與計時器，還把樂觀更新納入請求包裝，增加不必要的跨回呼協調。",
+      "sources": [
+        {
+          "delivery": "D1",
+          "sha256": "f9a2d386ddde51527291f390cc655e502bb31532d61ccb8f233f337db3dd8f08",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "86e78a69d80c801f3e5ce5301685124fd70f48c8b901bab5aa3d1d6c0496d24f",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "3048517f6fe6da1daabf0fc580e26c078498472fb74ff9510d15de6786deea2d",
+          "archive_path": "sources/proton-mailbox-retry/D1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "9dafd827341867125b75e74efe880cfceadd0a2c0d5a6fe28e1a16b676e7e4ea",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "aba07d2d154dd3925b19280dc2a03d19988194ac29637287e03c2610210ae0dd",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "50ee098ac14258154684571b6cc5c08407a4214a9d8d847b815cc2ab9c9ed537",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "D-E",
+      "a": "D2",
+      "b": "E2",
+      "original_winner": "D",
+      "reassessed_winner": "D",
+      "changed": false,
+      "reason": "請求識別約束回應及計時器，既有狀態推導載入；E 的刷新旗標需與多個事件及畫面 effect 同步，沒有足夠收益抵銷。",
+      "sources": [
+        {
+          "delivery": "D2",
+          "sha256": "2b677c60b76ba5ba202ad775a1d0617eadd377fa43acef874888fafd2c6a7636",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "2be18ea0a917676f4b4583aa2c64abc544b790dc17adff4c49b38d64aa334a8f",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "D2",
+          "sha256": "187dfd3cf0a645822f50d07fe7c5151bc8e2c27f46957f8ff1158e3a0744fbd6",
+          "archive_path": "sources/proton-mailbox-retry/D2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "1a43e728dcedcccd423fe54ebe92122d42e161e3914f0ddc81f7f849df6e9685",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "ebeadf4a643850a9fc4cd51c06dba1a07231f1736ef6c2f8332961f0cbca9c83",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "71e6a87572a8049cb539634fe2f2d74ced128328c8081a7fe0900bd246c36003",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "trial": 1,
+      "pair": "D-E",
+      "a": "D1",
+      "b": "E1",
+      "original_winner": "E",
+      "reassessed_winner": "E",
+      "changed": false,
+      "reason": "保留受信任與未受信任來源各自的偏好，切換來源時不沿用上一來源的合併值；增加的資料是必要資訊，不能以欄位多就判差。",
+      "sources": [
+        {
+          "delivery": "D1",
+          "sha256": "d34e650983386028e3b1c965c27f1949626fe6fc9b8db1a6172b209d20b96125",
+          "archive_path": "sources/proton-untrusted-keys/D1/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "e83a4c3f4e916a62ba8e3b031c141d6acdf2b75e05c8759d932ef2b25902c99a",
+          "archive_path": "sources/proton-untrusted-keys/D1/packages/shared/lib/keys/publicKeys.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "cce7044e31ed5d7b32517bdec523e7f421bc007b6fed40d4bd8d459cba26c596",
+          "archive_path": "sources/proton-untrusted-keys/E1/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "14995cdc48e1f457a04a1eeea6d129a57f4beb99b5f6d4b7e23dc9ccbfc70940",
+          "archive_path": "sources/proton-untrusted-keys/E1/packages/shared/lib/keys/publicKeys.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "clap-2297",
+      "trial": 1,
+      "pair": "D-E",
+      "a": "D1",
+      "b": "E1",
+      "original_winner": "D",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "D 的巢狀值自然保存分組，省掉值與範圍表的同步；但既有平坦查詢、計數、驗證及精確大小迭代都要轉接，迭代器另維護 remaining。E 的範圍維護集中於追加、開組、清除，保留舊查詢。複雜度是移轉，未形成明確整體勝出。",
+      "sources": [
+        {
+          "delivery": "D1",
+          "sha256": "42667f9e47737813d186f1a3819d8307a909a9be3cb1ab90d2ce887ff215223e",
+          "archive_path": "sources/clap-2297/D1/src/parse/matches/matched_arg.rs"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "d9c140945bab758fd8eaff1d522c0a697480981a238b83ad8c64fcc16e1d3398",
+          "archive_path": "sources/clap-2297/D1/src/parse/matches/arg_matches.rs"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "5536e73c15ec5616c55cc35220674f43e54b8a63b9efd41de9831955bbc60947",
+          "archive_path": "sources/clap-2297/D1/src/parse/arg_matcher.rs"
+        },
+        {
+          "delivery": "D1",
+          "sha256": "42c6469172e58e1d56faa0a0ede1624fc131992150da530993944241296bf0cd",
+          "archive_path": "sources/clap-2297/D1/src/parse/parser.rs"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "0694d25c8e3095b152fd3d99fb0e6a272e61bf9451dd529b132ae3a33726853c",
+          "archive_path": "sources/clap-2297/E1/src/parse/matches/matched_arg.rs"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "99d38e1362d2d3670522e057d88b7f441b2fcceca0d2f3506acaa527637296a6",
+          "archive_path": "sources/clap-2297/E1/src/parse/matches/arg_matches.rs"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "953d2e525c76d46fb681ffbfe2fe661868b2fea3dca064d7ea90129ee8431e10",
+          "archive_path": "sources/clap-2297/E1/src/parse/arg_matcher.rs"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "9f7571b10864abf33e9f64472f999753b1ce48f2b6e10fe3b5f7f65182cb05ec",
+          "archive_path": "sources/clap-2297/E1/src/parse/parser.rs"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "nodebb-images",
+      "trial": 2,
+      "pair": "C-F",
+      "a": "C2",
+      "b": "F2",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "嚴格刪除失敗處理留在圖片清理；F 改動共用 file.delete 的錯誤語意，既有未等待的上傳呼叫卻未一起處理。局部補丁反而有更清楚的影響邊界。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "7a6cb63fb3e20e9bb022311814542abf733442bb9c85d8e49bfad98abc01d6af",
+          "archive_path": "sources/nodebb-images/C2/src/user/picture.js"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "b3e228c4cd4569483318886a2a4a5f55771bd9d44209c27fc90227b17961cad0",
+          "archive_path": "sources/nodebb-images/C2/src/groups/cover.js"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "da6c692b15bb61e52f06f3777e5c8f29a062a945948bafb6c0ff79300ec9ba86",
+          "archive_path": "sources/nodebb-images/C2/src/file.js"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "58a58b79453f54a20c68bebfba11ef24e5e86d0b23bd22a6d5260b78c2044f9a",
+          "archive_path": "sources/nodebb-images/F2/src/user/picture.js"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "e6bf23bd1bbde2122271ec02b2c5047d300931bc2dd06f7c3178cfafead11616",
+          "archive_path": "sources/nodebb-images/F2/src/groups/cover.js"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "6bf95e9a673e051a11ed86072ac7b336d0cfae1b60bb74373d284df38d4ea11e",
+          "archive_path": "sources/nodebb-images/F2/src/file.js"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "C-F",
+      "a": "C1",
+      "b": "F1",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "0ef23a92ecac980f7ab38d82f51fb9b71cc2bbd7063093c7dd6577c607eb279a",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "23090408aaca77294a51457619b4181a0448db39d5fe89632c3081f46e0ae97f",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "C-F",
+      "a": "C2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "3cdbc8287dd74f6b17aa47ba56ffbc7522141cc0ee8d1120aa1ddd0e775532e2",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "1b9eac857173f5504b07845f05b103e35e200303a0d921713cc954347986d367",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0398efb0fe97d73edab3dfa599f91276ce000a9087ae755abd5de448536916b8",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "C-F",
+      "a": "C1",
+      "b": "F1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "C 在核心 segment 型別收斂格式與單鍵表示；F 的無副作用 SQL 寫入較好，但仍維護舊欄位及外層轉接，保留 C 小幅勝出。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "cb37b019c5ff273a475ab949b9f42e1ef8dc046cad7c38f195845907f389fe2e",
+          "archive_path": "sources/flipt-segments/C1/internal/ext/common.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "40e731bc4f1f9c69b79005e7cbc0d0b27a92991c2c77d8ac76f685bd34d71d99",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "858aadf460ca097b4ee0cf468d6c645065d9bfb5eebed5049a9f3216c5ad8463",
+          "archive_path": "sources/flipt-segments/F1/internal/ext/common.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "57fb66e5ac10405cb22d7bcba8759eac472e7d99317efc66c2a9dc979606a524",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "C-F",
+      "a": "C1",
+      "b": "F1",
+      "original_winner": "C",
+      "reassessed_winner": "C",
+      "changed": false,
+      "reason": "舊回應及舊計時器的有效範圍集中在請求邊界，搜尋呼叫端少理解阻擋細節；額外識別有必要用途。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "1bee45dbad55f1fe8e5537b544717c515da0523e32fa33567ffeb1b0acc18d4f",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "4841b991c3eb95bdc03a1dcb6a4e1767fa18fb6f28c1fc3fdbd32214a0908400",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "f9dc059742b78f157cf4ab611211658a8ebb117046fb60d75b46f9efcd14a9d0",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "b29c4561f24934ffbbc5297f59de388d1f8fe89d8a2227e50be76d37f70512fb",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "2a7c98b2598049f2459577504006eb634ce34344fa4cda8d29526dc9f831a308",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "3963286e01e25d9e0bcf58844ae312484e7898f94f034f3c8e94eb3d166ac0aa",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "C-F",
+      "a": "C2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "請求開始時只結清當時的刷新，之後新增的刷新另留欠帳；早回應不能消除後來的需求。新增狀態保存必要時間關係，值得其維護成本。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0651ed68b4830368cdd16fb252eac848fc11f8769318800e31a9fcff5e495835",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "b4fc330078798781d0c66d679b3a12ac884b2bd4ee28a1749297cd3dc9026bed",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "edfe1742be34f0a77fc2b7a1369c62d75a9455b7546ef11b8c199704d4576f41",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "b28a920775015f1d34c1c6a1feb72439afb63b450dc7dd44fdf69fb1d5ca9235",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 1,
+      "pair": "C-F",
+      "a": "C1",
+      "b": "F1",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "儲存快取、略過訊號與共用編碼邊界相同；protobuf 薄轉接的局部取捨不構成整體改善。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "e84f278ca4da16da9aed8101551d57e2ed62e1498c90d5be5173cb4fefa62ab1",
+          "archive_path": "sources/flipt-storage-cache/C1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "36089cc4ad2310227f4dce3727afd0070195171712c923a1ca714735fdcdde66",
+          "archive_path": "sources/flipt-storage-cache/C1/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "ebc74254811c95a28435560b00040cc557833cf73251a54eb89e0ae0c1e8cfda",
+          "archive_path": "sources/flipt-storage-cache/F1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "ee6a52f81d3661dd259fc46744be82f7dad8afd852de58c09a50715531dfa00e",
+          "archive_path": "sources/flipt-storage-cache/F1/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 2,
+      "pair": "C-F",
+      "a": "C2",
+      "b": "F2",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "兩份儲存快取相同，也都移除舊失效分支；context key 及 middleware 排列未形成實際責任差距。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "f0abd3583c4c3fcfeeef3fcc4437c28621b0819580c133d4a136fa8990404fb3",
+          "archive_path": "sources/flipt-storage-cache/C2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "481023386ca8cdc8cd9d121be456cda35459e8b9b903c61b26e32b2aea4fb2d0",
+          "archive_path": "sources/flipt-storage-cache/C2/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0a40bbfca2719cadb02a59ef250129fcf8ee686a67e6a66748b7c5aa348bf89b",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "481023386ca8cdc8cd9d121be456cda35459e8b9b903c61b26e32b2aea4fb2d0",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "ansible-type-tags",
+      "trial": 2,
+      "pair": "E-F",
+      "a": "E2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "F 省掉局部 invalid 旗標，但把含路徑及局部標籤處理的整段轉換包進廣泛 catch；E 的失敗處理較精準。沒有消除持久錯誤狀態，收益不足以超過擴大的錯誤語意。",
+      "sources": [
+        {
+          "delivery": "E2",
+          "sha256": "1e4c1eff1c0e5d581207e73c9bcfad395c3238ddff8be13895d970a5a8bcf6c8",
+          "archive_path": "sources/ansible-type-tags/E2/lib/ansible/config/manager.py"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "f8b6b4474aff75a92ea20a4a655bec07ccc5cb51cf8ba2e954d3d9e4f6bf8150",
+          "archive_path": "sources/ansible-type-tags/F2/lib/ansible/config/manager.py"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "E-F",
+      "a": "E1",
+      "b": "F1",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "E1",
+          "sha256": "b5515ce608cb6875b23a2da33b9f56344c92113b54174d0800d068127f8fd8ea",
+          "archive_path": "sources/element-sessions/E1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/E1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "23090408aaca77294a51457619b4181a0448db39d5fe89632c3081f46e0ae97f",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "E-F",
+      "a": "E2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "篩選清除集中在清單，少掉推薦入口的另一次無條件清除；保留此勝出理由，但不再把重複的刷新 catch 當成額外收益。",
+      "sources": [
+        {
+          "delivery": "E2",
+          "sha256": "482746c5999bd2584c2d167e4d25e9ef432ce37c22bc8280ee93e5479b4d2e57",
+          "archive_path": "sources/element-sessions/E2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "df8da6ad0d89ee89100983cc2f08aa372a3d8695da6a4035e173548bd18c3639",
+          "archive_path": "sources/element-sessions/E2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "1b9eac857173f5504b07845f05b103e35e200303a0d921713cc954347986d367",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0398efb0fe97d73edab3dfa599f91276ce000a9087ae755abd5de448536916b8",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "E-F",
+      "a": "E1",
+      "b": "F1",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "共同解碼入口排除新舊欄位競爭，並讓匯出與 snapshot 的 keys 優先順序一致；這是實際減少重複解讀，不是只多一個 helper。",
+      "sources": [
+        {
+          "delivery": "E1",
+          "sha256": "25e9d3a14b415937e82fd26e74e9e65c75b1f5fe83bd9853ad7102f375bd3fef",
+          "archive_path": "sources/flipt-segments/E1/internal/ext/common.go"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/E1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/E1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "858aadf460ca097b4ee0cf468d6c645065d9bfb5eebed5049a9f3216c5ad8463",
+          "archive_path": "sources/flipt-segments/F1/internal/ext/common.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "57fb66e5ac10405cb22d7bcba8759eac472e7d99317efc66c2a9dc979606a524",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "E-F",
+      "a": "E1",
+      "b": "F1",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "包裝器只負責請求計數與結算，搜尋交接收在實際邊界；E 把樂觀更新及 rollback 回填也納入包裝，selector 又讀時鐘，理解負擔較大。",
+      "sources": [
+        {
+          "delivery": "E1",
+          "sha256": "9dafd827341867125b75e74efe880cfceadd0a2c0d5a6fe28e1a16b676e7e4ea",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "aba07d2d154dd3925b19280dc2a03d19988194ac29637287e03c2610210ae0dd",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "E1",
+          "sha256": "50ee098ac14258154684571b6cc5c08407a4214a9d8d847b815cc2ab9c9ed537",
+          "archive_path": "sources/proton-mailbox-retry/E1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "b29c4561f24934ffbbc5297f59de388d1f8fe89d8a2227e50be76d37f70512fb",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "2a7c98b2598049f2459577504006eb634ce34344fa4cda8d29526dc9f831a308",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "3963286e01e25d9e0bcf58844ae312484e7898f94f034f3c8e94eb3d166ac0aa",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "E-F",
+      "a": "E2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "區分已發出的讀取與其後新增的刷新，使較早回應沒有權限清除較晚需求；雖有旗標同步代價，這份區別是任務真正需要的。",
+      "sources": [
+        {
+          "delivery": "E2",
+          "sha256": "1a43e728dcedcccd423fe54ebe92122d42e161e3914f0ddc81f7f849df6e9685",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "ebeadf4a643850a9fc4cd51c06dba1a07231f1736ef6c2f8332961f0cbca9c83",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "71e6a87572a8049cb539634fe2f2d74ced128328c8081a7fe0900bd246c36003",
+          "archive_path": "sources/proton-mailbox-retry/E2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "edfe1742be34f0a77fc2b7a1369c62d75a9455b7546ef11b8c199704d4576f41",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "b28a920775015f1d34c1c6a1feb72439afb63b450dc7dd44fdf69fb1d5ca9235",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 2,
+      "pair": "E-F",
+      "a": "E2",
+      "b": "F2",
+      "original_winner": "F",
+      "reassessed_winner": "F",
+      "changed": false,
+      "reason": "F 移除已失去對應儲存鍵的 f: 刪除分支；E 仍保留它，而新快取實際使用 s:f:。刪掉死責任是實際簡化。",
+      "sources": [
+        {
+          "delivery": "E2",
+          "sha256": "730b8814b6a18f6c46553e03ee6ff3aeb0d678a1660c4eea500659894587f722",
+          "archive_path": "sources/flipt-storage-cache/E2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "E2",
+          "sha256": "2379701c5f2daf05ce28e94f4cdf179ef874f3bd16e1d4eb619464b733de0c77",
+          "archive_path": "sources/flipt-storage-cache/E2/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0a40bbfca2719cadb02a59ef250129fcf8ee686a67e6a66748b7c5aa348bf89b",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "481023386ca8cdc8cd9d121be456cda35459e8b9b903c61b26e32b2aea4fb2d0",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "ansible-type-tags",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "轉換分支、統一錯誤出口、原實例及標籤保留、暫存路徑例外相同；條件排列與少數輸入政策沒有形成結構勝負。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "f34105c14f065215aff7c5389b1b778878cadb9ae60b0d4224cce56918734593",
+          "archive_path": "sources/ansible-type-tags/C1/lib/ansible/config/manager.py"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "008299ef0432c16f59e38ec24613c33a4bb7cafdd76c5283d94554f11065ddea",
+          "archive_path": "sources/ansible-type-tags/I1/lib/ansible/config/manager.py"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "0ef23a92ecac980f7ab38d82f51fb9b71cc2bbd7063093c7dd6577c607eb279a",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "1997627d3a21ad5f576064f9377eb34dfa22400ab2d65c55e3d8827da3a4d5eb",
+          "archive_path": "sources/element-sessions/I1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/I1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "C-I",
+      "a": "C2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "把選取清單與更新函式綁為一組，排除讀取父層、寫入本地等錯接；新增的型別約束很小，沒有引入另一套狀態或調度架構。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "3cdbc8287dd74f6b17aa47ba56ffbc7522141cc0ee8d1120aa1ddd0e775532e2",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/C2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "16c1e5d890de09a245795b88330a7bff1758cf7e218396a25fcd53cd8ffbdb15",
+          "archive_path": "sources/element-sessions/I2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/I2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "兩種輸入收斂到同一份 Keys，格式差異留在入口；匯入與 snapshot 少掉 Key/Keys 優先序，儲存也不回寫請求。新增型別實際消除了下游分支。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "cb37b019c5ff273a475ab949b9f42e1ef8dc046cad7c38f195845907f389fe2e",
+          "archive_path": "sources/flipt-segments/C1/internal/ext/common.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "6901cc3e80ca6690d795a910e25b7771956a321fbaca05f764b50ad78332195e",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "40e731bc4f1f9c69b79005e7cbc0d0b27a92991c2c77d8ac76f685bd34d71d99",
+          "archive_path": "sources/flipt-segments/C1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "b2660a9841e79077a7277ba19efa811caa144b73582533ce10a7a7882275df33",
+          "archive_path": "sources/flipt-segments/I1/internal/ext/common.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/I1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "95bf142e094b0f8d30009813b3fbec717364fec0d749b49d25ae68f6799f6a49",
+          "archive_path": "sources/flipt-segments/I1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 2,
+      "pair": "C-I",
+      "a": "C2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "I 共用外層 YAML 型別、先選來源再一次建立規則；C 的輸出型別排除舊欄位，snapshot 也統一單鍵。I 仍保留 Key/Keys 優先序，整體是維護成本互換，不能因轉換集中就判勝。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "d04a9fc27bb46c66129a41812c83ab31dfd6822d748729750be493a796eda3bb",
+          "archive_path": "sources/flipt-segments/C2/internal/ext/common.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "8e722186ce5e696ddea57f9f4ec851d9c0f9d89ea009adcfbcbe9d4715677de0",
+          "archive_path": "sources/flipt-segments/C2/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "2685701c12438b90458cdc04d670ac494f338ccdce955bf2cfe7a2b9130df939",
+          "archive_path": "sources/flipt-segments/I2/internal/ext/common.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/I2/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "d77438bbfdc57f0f9b6a732ce10a2a58ecd393be84c4863eec931e94de1d3992",
+          "archive_path": "sources/flipt-segments/I2/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "欠載入由失效與快取關係推導，重試識別及期限留在生命週期；少掉 refreshPending 與多個事件、畫面的交叉同步。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "1bee45dbad55f1fe8e5537b544717c515da0523e32fa33567ffeb1b0acc18d4f",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "4841b991c3eb95bdc03a1dcb6a4e1767fa18fb6f28c1fc3fdbd32214a0908400",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "f9dc059742b78f157cf4ab611211658a8ebb117046fb60d75b46f9efcd14a9d0",
+          "archive_path": "sources/proton-mailbox-retry/C1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "3b301f82f9ee6785af1c02186df45849f669783d1b92c2302ddc51ed70cde7ab",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "08ec03898fed56fe7e3968bdf74b5f9e94aa4b4a9f582cb8c9d9a0a71b083537",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "aa61ec65cc90addbc16166b94abcf99cceb67083d59bb29b979f587840e26da5",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "C-I",
+      "a": "C2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "同一請求識別約束回應及延遲計時，請求開始與結束清楚區分前後失效；受阻刷新也在共同邊界保留，額外狀態有實際用途。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "0651ed68b4830368cdd16fb252eac848fc11f8769318800e31a9fcff5e495835",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "b4fc330078798781d0c66d679b3a12ac884b2bd4ee28a1749297cd3dc9026bed",
+          "archive_path": "sources/proton-mailbox-retry/C2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "479965ce9e3437bdabe1932651494f3a1e8757b1b663c9a018427f71a2f51b69",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "f9268fcedb77341aee1b5e63f727b9d587ea9ca50b2a04c030ba4d5bfa57bf38",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "180eccb4d90c84274e058984d3acd734524be07bb9bd5ad6da54798f48cbe092",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "把正確的 s:f: 鍵失效放在修改成功後；減少修改期間重新填入舊值的窗口。多一段分類與暫存鍵承擔必要順序，並非無效架構。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "e84f278ca4da16da9aed8101551d57e2ed62e1498c90d5be5173cb4fefa62ab1",
+          "archive_path": "sources/flipt-storage-cache/C1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "36089cc4ad2310227f4dce3727afd0070195171712c923a1ca714735fdcdde66",
+          "archive_path": "sources/flipt-storage-cache/C1/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "7dff77feacc9d2282c32b2c14080d4a2dc9bd382f4183535c228a4498d945582",
+          "archive_path": "sources/flipt-storage-cache/I1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "f8c13167d81ad64c145eaefcdb8de81f852249029e7fb6abd95c0d0521906352",
+          "archive_path": "sources/flipt-storage-cache/I1/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 2,
+      "pair": "C-I",
+      "a": "C2",
+      "b": "I2",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "快取責任、略過訊號及共用讀寫政策相同；等價的 context key 和函式排列沒有減少概念。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "f0abd3583c4c3fcfeeef3fcc4437c28621b0819580c133d4a136fa8990404fb3",
+          "archive_path": "sources/flipt-storage-cache/C2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "481023386ca8cdc8cd9d121be456cda35459e8b9b903c61b26e32b2aea4fb2d0",
+          "archive_path": "sources/flipt-storage-cache/C2/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "43467fc59eada6e8f0d0894a130f4acddfba920f9a00808bdc00f5b4648e80ac",
+          "archive_path": "sources/flipt-storage-cache/I2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "2379701c5f2daf05ce28e94f4cdf179ef874f3bd16e1d4eb619464b733de0c77",
+          "archive_path": "sources/flipt-storage-cache/I2/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "trial": 1,
+      "pair": "C-I",
+      "a": "C1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "保留兩份來源偏好並以共用同步選擇規則決定有效值；相較只留下合併值，新增概念有用途，且沒有導入非同步重建流程。",
+      "sources": [
+        {
+          "delivery": "C1",
+          "sha256": "a01a364908e53c3edd980ef09a441bb329d7e58b4ec4cb89bbb4f2f64964adbe",
+          "archive_path": "sources/proton-untrusted-keys/C1/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "C1",
+          "sha256": "ec06b4a570588a293912050532529607ce5f11f635facedd6cc82f91040eca90",
+          "archive_path": "sources/proton-untrusted-keys/C1/packages/shared/lib/keys/publicKeys.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "61238e67427371a070113e56eebf69a2a21fd273b0e09867861e37da6f446211",
+          "archive_path": "sources/proton-untrusted-keys/I1/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "0c011a3bd078d996d5366d21cc7ebbcc7a023aec977dc8bbad19041283aacccb",
+          "archive_path": "sources/proton-untrusted-keys/I1/packages/shared/lib/keys/publicKeys.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-untrusted-keys",
+      "trial": 2,
+      "pair": "C-I",
+      "a": "C2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "I 保留兩種來源偏好較好，但信任類別變更時為求 encrypt 非同步重建完整金鑰模型，另加 refs、取消旗標及版本比對；C 流程簡單卻丟失來源偏好。兩邊各有實質代價，I 不應只因保留資訊就判整體高品味。",
+      "sources": [
+        {
+          "delivery": "C2",
+          "sha256": "89d4e1aac1cd68b12205471925e174296b93aefad090fdb0b28285e5d82f74c4",
+          "archive_path": "sources/proton-untrusted-keys/C2/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "C2",
+          "sha256": "e83a4c3f4e916a62ba8e3b031c141d6acdf2b75e05c8759d932ef2b25902c99a",
+          "archive_path": "sources/proton-untrusted-keys/C2/packages/shared/lib/keys/publicKeys.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "5ee32cbe976f26bbc9d41ffd3905524d14a17ac0a3c4b7bafb3a34c7c0bb207d",
+          "archive_path": "sources/proton-untrusted-keys/I2/packages/components/containers/contacts/email/ContactEmailSettingsModal.tsx"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "e83a4c3f4e916a62ba8e3b031c141d6acdf2b75e05c8759d932ef2b25902c99a",
+          "archive_path": "sources/proton-untrusted-keys/I2/packages/shared/lib/keys/publicKeys.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 1,
+      "pair": "F-I",
+      "a": "F1",
+      "b": "I1",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "以同一條件選出清單與更新函式，或一次選出成對物件，承重關係相同。",
+      "sources": [
+        {
+          "delivery": "F1",
+          "sha256": "23090408aaca77294a51457619b4181a0448db39d5fe89632c3081f46e0ae97f",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/F1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "1997627d3a21ad5f576064f9377eb34dfa22400ab2d65c55e3d8827da3a4d5eb",
+          "archive_path": "sources/element-sessions/I1/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "62acabb65c4158461de25d2913247cdbee456542ec8727c468a39fb73bd92285",
+          "archive_path": "sources/element-sessions/I1/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "element-sessions",
+      "trial": 2,
+      "pair": "F-I",
+      "a": "F2",
+      "b": "I2",
+      "original_winner": "F",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "額外 catch 與共用清理函式沒有改變現有刷新失敗路徑；refreshDevices 已自行處理一般錯誤，雙方 finally 都能清除載入狀態。原判將可能的回呼拒絕當成當前實際差距，勝出應降為持平。",
+      "sources": [
+        {
+          "delivery": "F2",
+          "sha256": "1b9eac857173f5504b07845f05b103e35e200303a0d921713cc954347986d367",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0398efb0fe97d73edab3dfa599f91276ce000a9087ae755abd5de448536916b8",
+          "archive_path": "sources/element-sessions/F2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "16c1e5d890de09a245795b88330a7bff1758cf7e218396a25fcd53cd8ffbdb15",
+          "archive_path": "sources/element-sessions/I2/src/components/views/settings/devices/FilteredDeviceList.tsx"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "30ccd2ab8b234d445ef89adb121bf0a721dbd43045f6bbbcf06b7da55fad8d1c",
+          "archive_path": "sources/element-sessions/I2/src/components/views/settings/tabs/user/SessionManagerTab.tsx"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-segments",
+      "trial": 1,
+      "pair": "F-I",
+      "a": "F1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "I 的單一 Keys 表示消除了匯入與 snapshot 的互斥欄位判別；新增相容分支只留在解碼邊界，完整流程的必要概念較少。",
+      "sources": [
+        {
+          "delivery": "F1",
+          "sha256": "858aadf460ca097b4ee0cf468d6c645065d9bfb5eebed5049a9f3216c5ad8463",
+          "archive_path": "sources/flipt-segments/F1/internal/ext/common.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "57fb66e5ac10405cb22d7bcba8759eac472e7d99317efc66c2a9dc979606a524",
+          "archive_path": "sources/flipt-segments/F1/internal/storage/fs/snapshot.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "b2660a9841e79077a7277ba19efa811caa144b73582533ce10a7a7882275df33",
+          "archive_path": "sources/flipt-segments/I1/internal/ext/common.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "0a7d3d4362512d7f38b20cd84650e45c413ef2586dc9391b20b021b3da8425ef",
+          "archive_path": "sources/flipt-segments/I1/internal/storage/sql/common/rule.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "95bf142e094b0f8d30009813b3fbec717364fec0d749b49d25ae68f6799f6a49",
+          "archive_path": "sources/flipt-segments/I1/internal/storage/fs/snapshot.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "openlibrary-index-state",
+      "trial": 1,
+      "pair": "F-I",
+      "a": "F1",
+      "b": "I1",
+      "original_winner": "F",
+      "reassessed_winner": "tie",
+      "changed": true,
+      "reason": "F 直接產生更新 state 的核心方向較好；但新增依 provider.cache/docs_by_key 推算作者統計，再用可選 Solr enrichment 覆寫同一批欄位，形成另一套來源與模式。I 的反向命令轉 state 有轉接成本，但較保留原處理。整體不能只獎勵核心方向而忽略新增作者責任。",
+      "sources": [
+        {
+          "delivery": "F1",
+          "sha256": "e6585f1c2d305d55301402fe0dc3641cf4ed52846eef18dee82426729450cabc",
+          "archive_path": "sources/openlibrary-index-state/F1/openlibrary/solr/update_work.py"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "d18b05a43fa43ef10b6041c0c51b5d01f31ef78e22bfd64ae2b9bee64a467ace",
+          "archive_path": "sources/openlibrary-index-state/F1/openlibrary/solr/data_provider.py"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "4fdb873a31efc3eeac9f88ccc7fc032b42159b0e0c69b7af9e38f95cb978c39f",
+          "archive_path": "sources/openlibrary-index-state/I1/openlibrary/solr/update_work.py"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "dd8d01cd8c48ee46fc175f1c295a4a595b361406f619273915775b1ce7adec7c",
+          "archive_path": "sources/openlibrary-index-state/BASE/openlibrary/solr/data_provider.py"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 1,
+      "pair": "F-I",
+      "a": "F1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "識別、期限及過期回呼處理集中，搜尋端少維護刷新規則；retry 物件身分比對仍有成本，但替代了更分散的欠刷新旗標協調。",
+      "sources": [
+        {
+          "delivery": "F1",
+          "sha256": "b29c4561f24934ffbbc5297f59de388d1f8fe89d8a2227e50be76d37f70512fb",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "2a7c98b2598049f2459577504006eb634ce34344fa4cda8d29526dc9f831a308",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "3963286e01e25d9e0bcf58844ae312484e7898f94f034f3c8e94eb3d166ac0aa",
+          "archive_path": "sources/proton-mailbox-retry/F1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "3b301f82f9ee6785af1c02186df45849f669783d1b92c2302ddc51ed70cde7ab",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "08ec03898fed56fe7e3968bdf74b5f9e94aa4b4a9f582cb8c9d9a0a71b083537",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "aa61ec65cc90addbc16166b94abcf99cceb67083d59bb29b979f587840e26da5",
+          "archive_path": "sources/proton-mailbox-retry/I1/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "proton-mailbox-retry",
+      "trial": 2,
+      "pair": "F-I",
+      "a": "F2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "把回應及重試繫於同一請求識別，受阻請求統一保存；少掉呼叫端補償與刷新旗標互相維護，新增護欄承擔真正的非同步邊界。",
+      "sources": [
+        {
+          "delivery": "F2",
+          "sha256": "7c5d04e4926800a06d5f6d55ae809deb407116018885c65d831b8a0430d978c8",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "edfe1742be34f0a77fc2b7a1369c62d75a9455b7546ef11b8c199704d4576f41",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "b28a920775015f1d34c1c6a1feb72439afb63b450dc7dd44fdf69fb1d5ca9235",
+          "archive_path": "sources/proton-mailbox-retry/F2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "479965ce9e3437bdabe1932651494f3a1e8757b1b663c9a018427f71a2f51b69",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsActions.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "f9268fcedb77341aee1b5e63f727b9d587ea9ca50b2a04c030ba4d5bfa57bf38",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsReducers.ts"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "180eccb4d90c84274e058984d3acd734524be07bb9bd5ad6da54798f48cbe092",
+          "archive_path": "sources/proton-mailbox-retry/I2/applications/mail/src/app/logic/elements/elementsSelectors.ts"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 1,
+      "pair": "F-I",
+      "a": "F1",
+      "b": "I1",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "修改先成功、再刪除對應快取，副作用明確依結果發生；增加的暫存與分流實際改善時序，不用行數懲罰它。",
+      "sources": [
+        {
+          "delivery": "F1",
+          "sha256": "ebc74254811c95a28435560b00040cc557833cf73251a54eb89e0ae0c1e8cfda",
+          "archive_path": "sources/flipt-storage-cache/F1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "F1",
+          "sha256": "ee6a52f81d3661dd259fc46744be82f7dad8afd852de58c09a50715531dfa00e",
+          "archive_path": "sources/flipt-storage-cache/F1/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "7dff77feacc9d2282c32b2c14080d4a2dc9bd382f4183535c228a4498d945582",
+          "archive_path": "sources/flipt-storage-cache/I1/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "I1",
+          "sha256": "f8c13167d81ad64c145eaefcdb8de81f852249029e7fb6abd95c0d0521906352",
+          "archive_path": "sources/flipt-storage-cache/I1/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "flipt-storage-cache",
+      "trial": 2,
+      "pair": "F-I",
+      "a": "F2",
+      "b": "I2",
+      "original_winner": "tie",
+      "reassessed_winner": "tie",
+      "changed": false,
+      "reason": "儲存快取與 middleware 責任相同；只剩等價的 metadata 判斷及函式組織，不給格式分。",
+      "sources": [
+        {
+          "delivery": "F2",
+          "sha256": "0a40bbfca2719cadb02a59ef250129fcf8ee686a67e6a66748b7c5aa348bf89b",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "481023386ca8cdc8cd9d121be456cda35459e8b9b903c61b26e32b2aea4fb2d0",
+          "archive_path": "sources/flipt-storage-cache/F2/internal/storage/cache/cache.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "43467fc59eada6e8f0d0894a130f4acddfba920f9a00808bdc00f5b4648e80ac",
+          "archive_path": "sources/flipt-storage-cache/I2/internal/server/middleware/grpc/middleware.go"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "2379701c5f2daf05ce28e94f4cdf179ef874f3bd16e1d4eb619464b733de0c77",
+          "archive_path": "sources/flipt-storage-cache/I2/internal/storage/cache/cache.go"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    },
+    {
+      "case": "clap-2297",
+      "trial": 2,
+      "pair": "F-I",
+      "a": "F2",
+      "b": "I2",
+      "original_winner": "I",
+      "reassessed_winner": "I",
+      "changed": false,
+      "reason": "兩份同用平坦值與範圍；I 在新 occurrence 的共同入口同步清除值、組及索引，少掉解析收尾再修正次數。高品味來自去掉時序配合，不要求巢狀資料。",
+      "sources": [
+        {
+          "delivery": "F2",
+          "sha256": "b66c48f6eecba338a2a89b09ab454ee46e150f5021576fae170d17322d5a42e9",
+          "archive_path": "sources/clap-2297/F2/src/parse/matches/matched_arg.rs"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "0248aa390b486e2565cadae867ee76bc45faf360b1b8619d3cc4e64dc6bb0b9e",
+          "archive_path": "sources/clap-2297/F2/src/parse/matches/arg_matches.rs"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "def7b8028395e9ca6054a564803de42aa9f6c60689174807187642e076547aa2",
+          "archive_path": "sources/clap-2297/F2/src/parse/arg_matcher.rs"
+        },
+        {
+          "delivery": "F2",
+          "sha256": "417d348872446b3418e0b7ad5b0a0f5a03502e5d61b7d6e1d2acf34d96781f30",
+          "archive_path": "sources/clap-2297/F2/src/parse/parser.rs"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "0694d25c8e3095b152fd3d99fb0e6a272e61bf9451dd529b132ae3a33726853c",
+          "archive_path": "sources/clap-2297/I2/src/parse/matches/matched_arg.rs"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "ca7fd5b2e688bed1b30d9a341c77aa6c4f357a0496c1a5f8ce9e071b57762600",
+          "archive_path": "sources/clap-2297/I2/src/parse/matches/arg_matches.rs"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "3be29cd0c7365febc149a7c57383ace8a2bcd4a31b23ce08b61b7b69bfc2481e",
+          "archive_path": "sources/clap-2297/I2/src/parse/arg_matcher.rs"
+        },
+        {
+          "delivery": "I2",
+          "sha256": "5b4810c5759ad9ea2850862a9548a50f6a9ee2d4a805284997019c64a54c873f",
+          "archive_path": "sources/clap-2297/I2/src/parse/parser.rs"
+        }
+      ],
+      "review_method": "current-assistant code audit; not a new blind judge vote"
+    }
+  ],
+  "stage": "secondary code review; final taste assessment",
+  "review_date": "2026-10-04",
+  "reviewer": "Codex",
+  "new_actor_runs": 0,
+  "new_anonymous_judge_calls": 0,
+  "source_evidence_sha256": "ab203fe2fc0fdbc9c2393ba17157cac59f3056a283f3b313844ef6b990203fda",
+  "source_initial_summary_sha256": "4b0d087ab96348701f5bd82f75875c317be703312da00b6abdebcb3e9184de30",
+  "source_archive": "sources.zip",
+  "source_archive_sha256": "e98f44ab411613f6dc903c222fe0a22955bff309ff06c7fc4ef84ba8d027cb72"
+}

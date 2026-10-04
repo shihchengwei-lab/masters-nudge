@@ -1,0 +1,23 @@
+{
+  "method": "AST-extracted archived production DataProvider.get_works_of_author",
+  "source": "sources/openlibrary-index-state/F1/openlibrary/solr/data_provider.py",
+  "source_sha256": "d18b05a43fa43ef10b6041c0c51b5d01f31ef78e22bfd64ae2b9bee64a467ace",
+  "scope": "One source method only; not a full-system acceptance rerun or a new completion score.",
+  "observations": [
+    {
+      "known_dataset_work_count": 2,
+      "cached_work_count": 0,
+      "returned_work_count": 0
+    },
+    {
+      "known_dataset_work_count": 2,
+      "cached_work_count": 1,
+      "returned_work_count": 1
+    },
+    {
+      "known_dataset_work_count": 2,
+      "cached_work_count": 2,
+      "returned_work_count": 2
+    }
+  ]
+}

@@ -20,10 +20,10 @@ We compared direct implementation with structural feedback across **12 code-chan
 |---|---|---|---|
 | B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +14.2% | +88.9% |
 | F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +27.7% | +51.1% |
-| I vs C: Sol xhigh + Sol xhigh vs direct | 9 / 0 / 2 | +26.9% | +73.1% |
-| I vs F: Provider medium → xhigh | 5 / 2 / 2 | −0.6% | +14.5% |
+| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +26.9% | +73.1% |
+| I vs F: Provider medium → xhigh | 5 / 0 / 4 | −0.6% | +14.5% |
 
-Anonymous judges compare code only where both implementations completely delivered the same task and attempt position. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
+Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
 
 Complete deliveries were:
 
@@ -37,9 +37,9 @@ Complete deliveries were:
 | F | Sol xhigh | Sol medium | 11/24 |
 | I | Sol xhigh | Sol xhigh | 13/24 |
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves anonymous taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
+Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves reviewed taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
 
-See the [model configuration comparison](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for task results, CLI version differences, and all comparisons. The [methods and original data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
+See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [model configuration report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for task results, costs, and CLI version differences. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
 
 ## What the tool does
 
@@ -75,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 The Actor then required both halves together and used one decision to choose their source. This makes a component call that displays one state but updates another invalid, without later synchronization or special-case repairs.
 
-Both judges, with anonymous presentation order swapped, preferred B1. The difference is whether the component interface prevents split read/write ownership: both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for original feedback, code, and judgment evidence; use the [model configuration comparison](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for overall benefits and costs.
+The code review favored B1's structure: its component interface prevents split read/write ownership with a small constraint and no extra state or coordination. Both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for feedback and code evidence; use the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) and [model configuration report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for overall benefits and costs.
 
 ## Why a nudge can help
 

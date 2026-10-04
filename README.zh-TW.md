@@ -20,10 +20,10 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 |---|---|---|---|
 | B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +14.2% | +88.9% |
 | F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +27.7% | +51.1% |
-| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 9／0／2 | +26.9% | +73.1% |
-| I 對 F：Provider medium→xhigh | 5／2／2 | −0.6% | +14.5% |
+| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +26.9% | +73.1% |
+| I 對 F：Provider medium→xhigh | 5／0／4 | −0.6% | +14.5% |
 
-品味由匿名評審比較雙方完整交付的同題／同次序程式；時間涵蓋每臂全部 24 次嘗試，Token 使用七臂共同 19 個有完整用量的位置。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
+品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋每臂全部 24 次嘗試，Token 使用七臂共同 19 個有完整用量的位置。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
 
 完整交付結果如下：
 
@@ -37,9 +37,9 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 | F | Sol xhigh | Sol medium | 11/24 |
 | I | Sol xhigh | Sol xhigh | 13/24 |
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 提供較好的匿名品味，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 的結構品味較好，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
 
-逐題結果、執行檔版本差異與完整評比見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。[測試方法與原始數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
+最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與執行檔版本差異見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
 
 ## 工具做了什麼
 
@@ -75,7 +75,7 @@ REQUIRED: 選取、計數與批次登出使用同一組 IDs
 
 Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「畫面看一份、點擊改另一份」的組合無法合法傳入元件；不用等接錯後再補同步或特殊處理。
 
-兩位交換匿名順序的評審都偏好 B1。這組差別是元件介面能否防止讀寫來源分離；實際頁面兩份都成對傳入，也都完成契約。原始建議、前後程式與評審依據見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本仍看[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。
+程式碼覆核判定 B1 的結構較好：用很小的介面約束防止讀寫來源分離，沒有增加另一份狀態或協調流程。實際頁面兩份都成對傳入，也都完成契約。建議與前後程式見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)與[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。
 
 ## 作用原理
 
