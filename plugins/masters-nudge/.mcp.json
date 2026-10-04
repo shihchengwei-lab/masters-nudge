@@ -2,7 +2,8 @@
   "mcpServers": {
     "masters_nudge": {
       "command": "python",
-      "args": ["${PLUGIN_ROOT}/mcp_entry.py"],
+      "args": ["launch.py", "mcp"],
+      "cwd": "./",
       "enabled": true,
       "enabled_tools": ["review_patch"],
       "omit_tools_from": ["code_mode", "deferred"],

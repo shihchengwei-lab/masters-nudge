@@ -57,30 +57,80 @@ def _run_cli(command: list[str], environment):
                           timeout=10, shell=shell, env=dict(environment), **_provider_process_kwargs())
 
 
+def _probe_mcp(transport, env):
+    """Probe Codex's resolved transport, not a separately constructed launch path."""
+    if transport.get("type") != "stdio":
+        raise ValueError("Masters' Nudge requires a local stdio MCP transport")
+    child_env = {key: env[key] for key in transport.get("env_vars", []) if key in env}
+    child_env.update(transport.get("env") or {})
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize",
+         "params": {"protocolVersion": "2025-06-18", "capabilities": {},
+                    "clientInfo": {"name": "masters-nudge-doctor", "version": "1"}}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+    ]
+    result = subprocess.run([transport["command"], *transport.get("args", [])],
+                            cwd=transport.get("cwd"), env=child_env,
+                            input="".join(json.dumps(row) + "\n" for row in requests),
+                            capture_output=True, text=True, encoding="utf-8", errors="replace",
+                            timeout=10, **_provider_process_kwargs())
+    if result.returncode:
+        raise ValueError(result.stderr.strip()[:500] or f"MCP exited with {result.returncode}")
+    replies = {row.get("id"): row for line in result.stdout.splitlines()
+               for row in [json.loads(line)] if isinstance(row, dict)}
+    initialized = replies.get(1, {}).get("result", {}).get("serverInfo", {}).get("name")
+    tools = replies.get(2, {}).get("result", {}).get("tools", [])
+    if initialized != "masters-nudge" or not any(tool.get("name") == "review_patch" for tool in tools):
+        raise ValueError("MCP initialization or review_patch discovery failed")
+    return True
+
+
 def doctor(root: Path, host="codex", *, environ=None, **_unused) -> dict:
     env = os.environ if environ is None else environ
     settings = RuntimeSettings.from_env(root, environ=env, host=host)
-    binary = shutil.which("codex", path=env.get("PATH"))
+    binary = env.get("CODEX_CLI_PATH") or shutil.which("codex.exe", path=env.get("PATH")) or shutil.which("codex", path=env.get("PATH"))
     missing = [name for name in runtime_files() if not (root / name).is_file()]
     authenticated = False
-    installed = False
+    installed = None
+    mcp_enabled = None
+    mcp_ready = None
+    transport = None
     error = settings.configuration_error
     if binary:
         try:
             auth = _run_cli([binary, "login", "status"], env)
             authenticated = auth.returncode == 0 and "logged in" in (auth.stdout + auth.stderr).lower()
-            listing = _run_cli([binary, "plugin", "list", "--json"], env)
-            if listing.returncode == 0:
-                value = json.loads(listing.stdout)
-                entries = value.get("installed", []) if isinstance(value, dict) else value
-                installed = any(isinstance(entry, dict) and entry.get("enabled") is True and
-                                (entry.get("name") == "masters-nudge" or
-                                 str(entry.get("pluginId", entry.get("id", ""))).startswith("masters-nudge@"))
-                                for entry in entries)
         except (OSError, subprocess.SubprocessError, ValueError) as exc:
             error = error or str(exc)
-    return {"core_ready": not error and not missing and bool(binary) and authenticated and installed,
+        try:
+            listing = _run_cli([binary, "plugin", "list", "--json"], env)
+            if listing.returncode:
+                raise ValueError(listing.stderr.strip()[:500] or "Codex plugin inventory query failed")
+            value = json.loads(listing.stdout)
+            entries = value.get("installed", []) if isinstance(value, dict) else value
+            installed = any(row.get("enabled") is True and
+                            str(row.get("pluginId", "")).startswith("masters-nudge@")
+                            for row in entries)
+        except (OSError, subprocess.SubprocessError, ValueError, TypeError) as exc:
+            error = error or str(exc)
+        try:
+            listing = _run_cli([binary, "mcp", "list", "--json"], env)
+            if listing.returncode:
+                raise ValueError(listing.stderr.strip()[:500] or "Codex MCP inventory query failed")
+            entries = json.loads(listing.stdout)
+            server = next((row for row in entries if row.get("name") == "masters_nudge"), None)
+            mcp_enabled = bool(server and server.get("enabled"))
+            if mcp_enabled:
+                transport = server["transport"]
+                mcp_ready = False
+                mcp_ready = _probe_mcp(transport, env)
+        except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError) as exc:
+            error = error or str(exc)
+    return {"core_ready": bool(not error and not missing and binary and authenticated and installed and mcp_ready),
             "provider": settings.provider, "model": settings.model,
             "codex_cli": binary or "", "provider_authenticated": authenticated,
-            "plugin_enabled": installed, "missing_files": missing, "error": error,
+            "plugin_enabled": installed, "mcp_enabled": mcp_enabled,
+            "mcp_ready": mcp_ready, "mcp_transport": transport,
+            "missing_files": missing, "error": error,
             "unverified": ["PostToolUse 事件支援與完整反饋交付，須實測確認"] }

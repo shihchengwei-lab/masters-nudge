@@ -1,6 +1,6 @@
 # Masters’ Nudge 工具規格
 
-狀態：2026-10-03 核對的工具規格。外掛清單版本為 `0.6.0+codex.20260925224104`。現行提示採 2026-10-01 定稿。
+狀態：2026-10-03 核對的工具規格。外掛清單版本為 `0.6.1+codex.20261004190000`。現行提示採 2026-10-01 定稿。
 
 本檔定義工具責任與行為。實際模型判斷、契約完成、程式碼品味與成本另見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)及[測試方法與原始數據](benchmark/README.zh-TW.md)。固定 Provider 提示在 [buddy-prompt.txt](buddy-prompt.txt)，輸出形狀在 [nudge-schema.json](nudge-schema.json)；修改規格時須一起核對實作，不能把未實現的草案寫成現況。
 

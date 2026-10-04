@@ -98,15 +98,19 @@ The Provider uses five taste criteria to find that direction: make invalid state
 
 ## Requirements
 
-Requires Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
+Requires the `python` command in the Codex launch environment to run Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
 
-The repo plugin manifest version is `0.6.0+codex.20260925224104`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH. The doctor probes initialization and tool discovery using Codex's resolved MCP transport without calling the Provider. A successful `mcp_ready` check still requires the first-use hook delivery check below.
+
+The repo plugin manifest version is `0.6.1+codex.20261004190000`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
 
 ## Install, enable, and try it
 
 1. Make sure Python, Git, and Codex CLI are installed. If the CLI is not signed in, run `codex login` in PowerShell.
 2. In the Codex desktop Plugins page, choose **Add → Add Marketplace → Add from a repository**, enter `https://github.com/shihchengwei-lab/masters-nudge`, and select **Sync**. The repo's [marketplace](.agents/plugins/marketplace.json) exposes Masters’ Nudge; open it, install it, and enable it. See the [official installation steps](https://developers.openai.com/learn/developers-codex-plugin).
 3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit` and `PostToolUse` hooks. Installation and enablement do not automatically trust hooks; see the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
+After updating an installed version, restart Codex. If a hook is marked modified, review and trust its new command before starting a new chat.
+
 4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness reports dependencies, login, and enablement.
 5. Start a new chat in your own Git project and give the Actor a normal code change. After a product-code `apply_patch`, ask Codex: “Show recent Masters’ Nudge attempts.” `feedback` means a suggestion was produced; `silence` means a successful judgment found no suggestion. Faults have separate reasons. For feedback, inspect the four-field suggestion in the Actor context and the subsequent code changes.
 

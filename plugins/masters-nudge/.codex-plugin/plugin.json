@@ -1,6 +1,6 @@
 {
   "name": "masters-nudge",
-  "version": "0.6.0+codex.20260925224104",
+  "version": "0.6.1+codex.20261004190000",
   "description": "Evidence-bounded engineering nudges before the next agent decision.",
   "author": {
     "name": "shihchengwei-lab",

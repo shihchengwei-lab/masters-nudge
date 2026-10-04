@@ -98,16 +98,20 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 
 ## 環境需求
 
-需要 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
+需要 Codex 啟動環境的 `python` 命令指向 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
 
-本 repo 外掛清單版本為 `0.6.0+codex.20260925224104`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要先讓 Codex 的 `python` 命令指向 Python 3.10+；修改 PATH 後重新開啟 Codex。
+
+本 repo 外掛清單版本為 `0.6.1+codex.20261004190000`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
 
 ## 安裝、啟用與第一次使用
 
 1. 確認 Python、Git 與 Codex CLI 已安裝；若 CLI 尚未登入，在 PowerShell 執行 `codex login`。
 2. 在 Codex 桌面版的外掛頁，選 **Add → Add Marketplace → Add from a repository**，填入 `https://github.com/shihchengwei-lab/masters-nudge`，按 **Sync**。repo 的[外掛目錄](.agents/plugins/marketplace.json)提供 Masters’ Nudge；開啟它並安裝、啟用。來源與安裝介面可參照[官方步驟](https://developers.openai.com/learn/developers-codex-plugin)。
 3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit` 與 `PostToolUse`；安裝與啟用不會自動完成 Hook 信任，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
-4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入與啟用狀態。
+更新已安裝的版本後，重新開啟 Codex；若 hook 被標為「已修改」，檢查新命令後重新信任，再開始新對話。
+
+4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。`mcp_ready` 通過仍需第五步確認實際 hook 交付。
 5. 在自己的 Git 專案開啟新對話，交給 Actor 一項正常的程式修改。完成一次產品程式的 `apply_patch` 後，請 Codex：「顯示 Masters’ Nudge 最近的提醒紀錄。」`feedback` 表示已產生建議，`silence` 表示正常判斷後沒有建議；工具故障會另列原因。若有建議，可核對 Actor 上下文中的四欄提醒與後續程式改動。
 
 如果已下載本 repo，也可在 repo 根目錄用 PowerShell 手動設定與查詢：

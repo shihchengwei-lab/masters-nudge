@@ -67,18 +67,50 @@ class SettingsPackageTests(unittest.TestCase):
                 self.assertNotIn("hookSpecificOutput", response)
                 self.assertTrue(result.stderr)
 
-    @unittest.skipUnless(os.name == "nt", "Windows launcher")
-    def test_packaged_launcher_preserves_failure_and_reports_missing_python(self):
-        launcher = ROOT / "plugins/masters-nudge/hooks/run_python.cmd"
-        command = subprocess.list2cmdline([str(launcher), "-c", "import sys; sys.exit(7)"])
-        result = subprocess.run(command, shell=True, capture_output=True, timeout=15)
-        self.assertEqual(result.returncode, 7)
-        env = {**os.environ, "PATH": str(Path(os.environ["SystemRoot"]) / "System32")}
-        for strict in ("0", "1"):
-            result = subprocess.run(command, shell=True, capture_output=True, text=True,
-                                    env={**env, "MASTERS_NUDGE_TEST_MODE": strict}, timeout=15)
-            self.assertIn("本輪反饋未執行", json.loads(result.stdout)["systemMessage"])
-            self.assertEqual(result.returncode, int(strict))
+    def test_packaged_transport_initializes_from_relocated_package(self):
+        from masters_nudge.management import _probe_mcp
+        with tempfile.TemporaryDirectory() as raw:
+            package = Path(raw) / "中文 package with spaces"
+            shutil.copytree(ROOT / "plugins/masters-nudge", package,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+            server = json.loads((package / ".mcp.json").read_text())["mcpServers"]["masters_nudge"]
+            transport = {**server, "type": "stdio", "cwd": str(package / server["cwd"])}
+            env = {**os.environ, "MASTERS_NUDGE_DATA_DIR": str(Path(raw) / "data"),
+                   "MASTERS_NUDGE_ACTIVE": "0", "PYTHONPATH": ""}
+            self.assertTrue(_probe_mcp(transport, env))
+            from masters_nudge.storage import recent_nudges
+            self.assertEqual(recent_nudges(Path(raw) / "data"), [])
+            event = {"hook_event_name": "UserPromptSubmit", "session_id": "s", "turn_id": "t",
+                     "cwd": raw, "prompt": "task", "transcript_path": None}
+            result = subprocess.run([server["command"], str(package / "launch.py"), "hook",
+                                     "--host", "codex_cli"], cwd=raw, env=env,
+                                    input=json.dumps(event), capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "")
+
+    def test_doctor_does_not_label_inventory_timeout_as_disabled(self):
+        from masters_nudge.management import doctor
+        with patch("masters_nudge.management._run_cli", side_effect=subprocess.TimeoutExpired("codex", 10)):
+            result = doctor(ROOT, environ={**os.environ, "CODEX_CLI_PATH": sys.executable})
+        self.assertIsNone(result["plugin_enabled"])
+        self.assertIsNone(result["mcp_ready"])
+        self.assertFalse(result["core_ready"])
+
+    def test_doctor_exposes_enabled_but_broken_transport(self):
+        from masters_nudge.management import doctor
+        transport = {"type": "stdio", "command": "python", "args": ["${PLUGIN_ROOT}/mcp_entry.py"]}
+        replies = [subprocess.CompletedProcess([], 0, "Logged in", ""),
+                   subprocess.CompletedProcess([], 0, json.dumps({"installed": [
+                       {"pluginId": "masters-nudge@masters-nudge", "enabled": True}]}), ""),
+                   subprocess.CompletedProcess([], 0, json.dumps([
+                       {"name": "masters_nudge", "enabled": True, "transport": transport}]), "")]
+        with patch("masters_nudge.management._run_cli", side_effect=replies), \
+             patch("masters_nudge.management._probe_mcp", side_effect=ValueError("cannot open file")):
+            result = doctor(ROOT, environ={**os.environ, "CODEX_CLI_PATH": sys.executable})
+        self.assertTrue(result["plugin_enabled"])
+        self.assertFalse(result["mcp_ready"])
+        self.assertFalse(result["core_ready"])
+        self.assertIn("cannot open file", result["error"])
 
     def test_settings_outside_data_and_only_supported_choice(self):
         with tempfile.TemporaryDirectory() as raw:
