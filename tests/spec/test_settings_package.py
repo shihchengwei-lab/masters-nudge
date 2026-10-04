@@ -96,6 +96,28 @@ class SettingsPackageTests(unittest.TestCase):
         self.assertIsNone(result["mcp_ready"])
         self.assertFalse(result["core_ready"])
 
+    def test_probe_inherits_host_baseline_and_explicit_overrides_only(self):
+        from masters_nudge.management import _probe_mcp
+        replies = '\n'.join(json.dumps(row) for row in [
+            {"id": 1, "result": {"serverInfo": {"name": "masters-nudge"}}},
+            {"id": 2, "result": {"tools": [{"name": "review_patch"}]}},
+        ])
+        transport = {"type": "stdio", "command": "python", "env_vars": ["CUSTOM"],
+                     "env": {"CUSTOM": "override"}}
+        env = {"SystemRoot": "C:\\Windows", "PATH": "python-dir", "HOME": "/home/user",
+               "CUSTOM": "inherited", "UNRELATED_SECRET": "must not inherit"}
+        with patch("masters_nudge.management.subprocess.run",
+                   return_value=subprocess.CompletedProcess([], 0, replies, "")) as run:
+            self.assertTrue(_probe_mcp(transport, env))
+        child_env = run.call_args.kwargs["env"]
+        self.assertEqual(child_env["PATH"], "python-dir")
+        self.assertEqual(child_env["CUSTOM"], "override")
+        self.assertNotIn("UNRELATED_SECRET", child_env)
+        if os.name == "nt":
+            self.assertEqual(child_env["SYSTEMROOT"], "C:\\Windows")
+        else:
+            self.assertEqual(child_env["HOME"], "/home/user")
+
     def test_doctor_exposes_enabled_but_broken_transport(self):
         from masters_nudge.management import doctor
         transport = {"type": "stdio", "command": "python", "args": ["${PLUGIN_ROOT}/mcp_entry.py"]}

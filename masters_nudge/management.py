@@ -61,8 +61,23 @@ def _probe_mcp(transport, env):
     """Probe Codex's resolved transport, not a separately constructed launch path."""
     if transport.get("type") != "stdio":
         raise ValueError("Masters' Nudge requires a local stdio MCP transport")
-    child_env = {key: env[key] for key in transport.get("env_vars", []) if key in env}
-    child_env.update(transport.get("env") or {})
+    # Codex inherits a platform baseline in addition to configured env_vars.
+    # In particular, Windows Python needs SYSTEMROOT before it can initialize.
+    baseline = (
+        "PATH", "PATHEXT", "SHELL", "COMSPEC", "SYSTEMROOT", "WINDIR", "SYSTEMDRIVE",
+        "USERNAME", "USERDOMAIN", "USERPROFILE", "HOMEDRIVE", "HOMEPATH",
+        "PROGRAMFILES", "PROGRAMFILES(X86)", "PROGRAMW6432", "PROGRAMDATA",
+        "LOCALAPPDATA", "APPDATA", "TEMP", "TMP", "TMPDIR", "POWERSHELL", "PWSH",
+    ) if os.name == "nt" else (
+        "HOME", "LOGNAME", "PATH", "SHELL", "USER", "__CF_USER_TEXT_ENCODING",
+        "LANG", "LC_ALL", "TERM", "TMPDIR", "TZ",
+    )
+    names = {*baseline, *transport.get("env_vars", [])}
+    normalize = str.upper if os.name == "nt" else str
+    names = {normalize(name) for name in names}
+    child_env = {normalize(key): value for key, value in env.items()
+                 if normalize(key) in names}
+    child_env.update({normalize(key): value for key, value in (transport.get("env") or {}).items()})
     requests = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize",
          "params": {"protocolVersion": "2025-06-18", "capabilities": {},
