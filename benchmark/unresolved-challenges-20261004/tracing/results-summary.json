@@ -1,0 +1,582 @@
+{
+  "case": "tracing-1523",
+  "trials": [
+    {
+      "arm": "L1",
+      "task_completed": false,
+      "functional_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "tracing_contract_v2.rs",
+        "tracing_hint_bounds.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "fixed_checks": {
+        "reserved": "pass",
+        "tracing_contract_v2.rs": "fail",
+        "tracing_hint_bounds.rs": "fail",
+        "tracing_judge_concerns.rs": "fail"
+      },
+      "actor_seconds": 1878.922,
+      "actor_usage": {
+        "input_tokens": 5904012,
+        "cached_input_tokens": 5746176,
+        "output_tokens": 63467
+      },
+      "provider_usage": {
+        "input_tokens": 379321,
+        "cached_input_tokens": 269696,
+        "output_tokens": 15475
+      },
+      "provider_attempts": 3,
+      "provider_feedback": 3,
+      "provider_delivered": 3,
+      "provider_silence": 0,
+      "provider_faults": 0,
+      "execution_fault": "",
+      "code_review": {
+        "quality": "有實質行為修補與回歸測試，但尚非完整、可靠的交付；不能因新增抽象與測試量就評為高品味。固定補充探針 6/10 通過，兩份都另通過保留的 148 項測試。",
+        "structure": "Context、SpanRef、Scope 攜帶累積篩選視圖，且 current 使用已進入 span 堆疊，這些結構直接對應不同的關係需求。另一方面，__is_filtered 的單一布林分類不足以區分全域門檻與實際接收者；combine_enabled／combine_hint 的分支規則仍把純全域篩選器當接收者。快照、弱世代、識別值轉移和額外 entered stack 各自有理由，但留下跨層同步責任，並未讓錯誤狀態難以表達。",
+        "findings": [
+          "全域 LevelFilter 允許、所有實際觀察者拒絕時仍啟用 span 且計算欄位：all_observers_reject_under_global_filter 的 field_evaluations=2、span_disabled=false；pure_global_filter_does_not_enable_rejected_items 的 fields=1、span_disabled=false。",
+          "INFO 接收者外加 TRACE 全域門檻，max_level_hint 回傳 TRACE，應為 INFO；全域門檻被錯算為額外接收者。",
+          "自訂 Veto 被 with_filter(true) 包裝後，其拒絕不能阻止兄弟接收事件；wrapped_custom_global_veto_rejects_every_consumer 的 events=1，應為0。Filtered.enabled 將內層拒絕壓為分支拒絕，再被兄弟的 OR 接收蓋過。",
+          "current_view_retains_visible_entered_root 通過：仍進入中的可見 root 不會因另一個無親屬關係的隱藏 root 被漏掉。快取重載、Arc、欄位重入與 Context.enabled 補查亦通過。"
+        ],
+        "adoption": {
+          "classification": "三次提醒均有實際結構採納；不等於完整契約已解決",
+          "explanation": "提醒1要求 Context→SpanRef→Scope 累積視圖與跳過拒絕祖先，最終實作與 nested_filters 測試可見此結構；提醒2要求每次發送獨立決策快照以保護重入，最終 FilterState、EnabledGuard 與 snapshot 及 reentrant_delivery 測試相符；提醒3要求 entered stack 而非 parent chain 求 current，最終 Registry.current_span_filtered／自訂 subscriber ThreadLocalSpanStack 與兩個不同 root 測試相符，固定 current-view 探針也通過。Actor L37、L41、L63-L82 可見對應工作。但 Actor 本已計畫其中部分需求，不能將全部成果因果歸功於 Provider。"
+        },
+        "sources": [
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L1\\final.patch",
+            "line_anchors": {
+              "combine_enabled": [
+                529,
+                1196,
+                1322
+              ],
+              "combine_hint": [
+                552,
+                1215,
+                1353
+              ],
+              "__is_filtered": [
+                850,
+                1078,
+                1151,
+                1166,
+                1187,
+                1199,
+                1218,
+                1267,
+                1284,
+                1297,
+                1298,
+                1316,
+                1325,
+                1326,
+                1335,
+                1336,
+                1356,
+                1357,
+                1368,
+                1369,
+                1393,
+                1394,
+                1936,
+                1937
+              ],
+              "FilterResult": [],
+              "fn __enabled": [],
+              "current_span": [
+                1098,
+                1107,
+                1116,
+                1131,
+                1142,
+                1247,
+                1255,
+                1449,
+                1457,
+                1463,
+                1523,
+                1524,
+                1545,
+                1563,
+                1575,
+                1577,
+                1623,
+                1841,
+                1842,
+                2025,
+                2388,
+                2402,
+                2419,
+                2450,
+                2451,
+                2466
+              ],
+              "snapshot": [
+                338,
+                473,
+                1447,
+                1588,
+                1867,
+                2343
+              ],
+              "revision": [],
+              "None =>": [
+                1560,
+                1593,
+                1737
+              ],
+              "with_filter": [
+                243,
+                265,
+                499,
+                527,
+                570,
+                585,
+                733,
+                788,
+                828,
+                889,
+                903,
+                919,
+                932,
+                943,
+                951,
+                960,
+                992,
+                1050,
+                1068,
+                1474,
+                1500,
+                1555,
+                1568,
+                1581,
+                1713,
+                1727,
+                1778,
+                2089,
+                2094,
+                2119,
+                2120,
+                2137,
+                2178,
+                2180,
+                2230,
+                2231,
+                2233,
+                2250,
+                2251,
+                2258,
+                2260,
+                2265,
+                2268,
+                2301,
+                2310,
+                2315,
+                2329,
+                2330,
+                2365,
+                2373,
+                2407,
+                2478,
+                2491,
+                2498,
+                2512,
+                2523,
+                2538
+              ]
+            }
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L1\\provider-attempts.json",
+            "line_anchors": {
+              "raw_output": [
+                12,
+                3393,
+                3479
+              ]
+            }
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L1\\actor-events.jsonl",
+            "event_lines": [
+              37,
+              41,
+              63,
+              82
+            ]
+          }
+        ],
+        "probe_evidence": [
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_contract_v2_rs.txt",
+            "line": 3,
+            "result": "test all_observers_reject_under_global_filter ... PROBE_RESULT {\"check\":\"all_observers_reject_under_global_filter\",\"field_evaluations\":2,\"span_disabled\":false,\"passed\":false}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_contract_v2_rs.txt",
+            "line": 5,
+            "result": "test boxed_reload_preserves_existing_filter_support ... PROBE_RESULT {\"check\":\"boxed_reload_preserves_existing_filter_support\",\"panicked\":false,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_contract_v2_rs.txt",
+            "line": 7,
+            "result": "test current_view_retains_visible_entered_root ... PROBE_RESULT {\"check\":\"current_view_retains_visible_entered_root\",\"observations\":[[\"visible\", \"visible\"]],\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_contract_v2_rs.txt",
+            "line": 9,
+            "result": "test same_filter_reload_keeps_existing_span_hidden ... PROBE_RESULT {\"check\":\"same_filter_reload_keeps_existing_span_hidden\",\"enters\":0,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_contract_v2_rs.txt",
+            "line": 11,
+            "result": "test shared_arc_keeps_filter_rejection ... PROBE_RESULT {\"check\":\"shared_arc_keeps_filter_rejection\",\"events\":0,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_hint_bounds_rs.txt",
+            "line": 3,
+            "result": "test global_filter_does_not_add_a_consumer ... PROBE_RESULT {\"check\":\"global_filter_does_not_add_a_consumer\",\"hint\":\"Some(LevelFilter::TRACE)\",\"passed\":false}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_judge_concerns_rs.txt",
+            "line": 3,
+            "result": "test context_enabled_is_an_independent_query ... PROBE_RESULT {\"check\":\"context_enabled_is_an_independent_query\",\"events\":0,\"span_disabled\":true,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_judge_concerns_rs.txt",
+            "line": 5,
+            "result": "test field_nested_event_preserves_outer_decision ... PROBE_RESULT {\"check\":\"field_nested_event_preserves_outer_decision\",\"events\":1,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_judge_concerns_rs.txt",
+            "line": 7,
+            "result": "test pure_global_filter_does_not_enable_rejected_items ... PROBE_RESULT {\"check\":\"pure_global_filter_does_not_enable_rejected_items\",\"fields\":1,\"span_disabled\":false,\"passed\":false}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L1\\contract_tracing_judge_concerns_rs.txt",
+            "line": 9,
+            "result": "test wrapped_custom_global_veto_rejects_every_consumer ... PROBE_RESULT {\"check\":\"wrapped_custom_global_veto_rejects_every_consumer\",\"events\":1,\"passed\":false}"
+          }
+        ]
+      }
+    },
+    {
+      "arm": "L2",
+      "task_completed": false,
+      "functional_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "tracing_contract_v2.rs",
+        "tracing_judge_concerns.rs"
+      ],
+      "fixed_checks": {
+        "reserved": "pass",
+        "tracing_contract_v2.rs": "fail",
+        "tracing_hint_bounds.rs": "pass",
+        "tracing_judge_concerns.rs": "fail"
+      },
+      "actor_seconds": 3217.953,
+      "actor_usage": {
+        "input_tokens": 5677348,
+        "cached_input_tokens": 5485440,
+        "output_tokens": 67623
+      },
+      "provider_usage": {
+        "input_tokens": 278970,
+        "cached_input_tokens": 189184,
+        "output_tokens": 14281
+      },
+      "provider_attempts": 3,
+      "provider_feedback": 3,
+      "provider_delivered": 3,
+      "provider_silence": 0,
+      "provider_faults": 0,
+      "execution_fault": "",
+      "code_review": {
+        "quality": "相較第一份，固定補充探針缺口較少（8/10 通過），但仍有核心語意錯誤，尚不宜判為完整或高品味交付。兩次是獨立嘗試，通過數差異不是模型能力的統計結論。",
+        "structure": "FilterResult 明確分開 global 與 consumers，分別 AND 與 OR，比單一 filtered 布林能更精確表達合併責任；Option::None 的空接收者也有直接表示。但 Filtered.__enabled 又對內層結果呼叫 result()，把全域拒絕與分支拒絕壓成同一布林，再回傳 global=true，所以核心區分未跨越包裝邊界。LevelFilter／EnvFilter 特例、四個 TLS 通道、owner 型別／位址與 revision 快取仍需共同維持一致；新增層次本身不能證明減少了完整流程的維護責任。",
+        "findings": [
+          "與第一份相同，自訂全域 Veto 經 with_filter 包裝後被降為分支拒絕，兄弟仍收到一筆事件；wrapped_custom_global_veto_rejects_every_consumer 的 events=1，應為0。",
+          "Context.current_span 只沿目前 span 的父鏈找可見祖先，不能取代 entered stack。另一個隱藏 root 已進入時，仍進入中的可見 root 被漏掉：current_view_retains_visible_entered_root observations=[[\"\",\"\"]]，應為 [[\"visible\",\"visible\"]]。",
+          "全部實際接收者拒絕時的欄位停用、純全域門檻與 max-level-hint 均通過；相較第一份改善了這些具體情況。",
+          "boxed/reload、同篩選器重載保留舊 span 隱藏、Arc、欄位重入與 Context.enabled 補查通過；自身測試只檢查 current 的親屬鏈案例，漏掉兩個獨立 entered root。"
+        ],
+        "adoption": {
+          "classification": "三次提醒均有實際採納；仍漏掉包裝邊界與 current 的關係語意",
+          "explanation": "提醒1要求公開 registry 下的 Filter、函式篩選器與 with_filter，最終公開匯出與建構 API 已接通；提醒2要求快取世代與 pending 決策綁定，最終 revision、Weak 世代及 pending 檢查、reload 首筆事件與整個 Filtered 替換回歸測試對應；提醒3要求 Option::None 為空消費者，最終 false／never／OFF 三組 overrides 與 absent_layers 測試直接採納，global AND／consumer OR 也被明確建模。Actor L46、L59 回報對應修補。這些建議部分與原任務／Actor 既有規劃重疊，採納證據不支持單一因果歸因。"
+        },
+        "sources": [
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L2\\final.patch",
+            "line_anchors": {
+              "combine_enabled": [],
+              "combine_hint": [],
+              "__is_filtered": [],
+              "FilterResult": [
+                15,
+                21,
+                23,
+                30,
+                33,
+                39,
+                43,
+                45,
+                338,
+                420,
+                430,
+                457,
+                490,
+                584,
+                592,
+                607,
+                625,
+                644,
+                645,
+                888,
+                899,
+                900,
+                928,
+                945,
+                961,
+                991,
+                1008,
+                1012,
+                1023,
+                1037,
+                1044,
+                1049,
+                1153,
+                1154,
+                1161,
+                1162,
+                1169,
+                1170,
+                1195,
+                1215,
+                1287,
+                1288,
+                1293,
+                1294,
+                1299,
+                1300,
+                1464,
+                1473,
+                1482,
+                1506,
+                1509,
+                1516,
+                1519,
+                1526,
+                1529,
+                1548,
+                1552,
+                1556,
+                1977,
+                1978,
+                1985,
+                1986,
+                1989,
+                1990
+              ],
+              "fn __enabled": [
+                10,
+                602,
+                1148,
+                1282,
+                1459,
+                1501,
+                1543,
+                1972
+              ],
+              "current_span": [
+                1619,
+                1625,
+                1677,
+                1678,
+                1726,
+                2111,
+                2632,
+                2633
+              ],
+              "snapshot": [],
+              "revision": [
+                306,
+                332,
+                404,
+                406,
+                407,
+                408,
+                411,
+                412,
+                414,
+                514,
+                532,
+                590,
+                608,
+                1120,
+                1126
+              ],
+              "None =>": [
+                1509,
+                1519,
+                1529,
+                1903
+              ],
+              "with_filter": [
+                578,
+                600,
+                609,
+                655,
+                664,
+                672,
+                679,
+                690,
+                698,
+                709,
+                736,
+                752,
+                775,
+                787,
+                1225,
+                1258,
+                1272,
+                1653,
+                1716,
+                1721,
+                1730,
+                1828,
+                1861,
+                1895,
+                2170,
+                2171,
+                2191,
+                2197,
+                2217,
+                2249,
+                2251,
+                2306,
+                2307,
+                2308,
+                2319,
+                2320,
+                2325,
+                2332,
+                2334,
+                2341,
+                2371,
+                2396,
+                2401,
+                2431,
+                2445,
+                2456,
+                2461,
+                2497,
+                2552,
+                2562,
+                2572,
+                2652,
+                2672,
+                2676,
+                2686,
+                2687,
+                2690,
+                2691,
+                2694,
+                2695
+              ]
+            }
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L2\\provider-attempts.json",
+            "line_anchors": {
+              "raw_output": [
+                12,
+                3210,
+                3296
+              ]
+            }
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\runs\\tracing-1523\\L2\\actor-events.jsonl",
+            "event_lines": [
+              37,
+              46,
+              59,
+              72,
+              99,
+              153
+            ]
+          }
+        ],
+        "probe_evidence": [
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_contract_v2_rs.txt",
+            "line": 3,
+            "result": "test all_observers_reject_under_global_filter ... PROBE_RESULT {\"check\":\"all_observers_reject_under_global_filter\",\"field_evaluations\":0,\"span_disabled\":true,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_contract_v2_rs.txt",
+            "line": 5,
+            "result": "test boxed_reload_preserves_existing_filter_support ... PROBE_RESULT {\"check\":\"boxed_reload_preserves_existing_filter_support\",\"panicked\":false,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_contract_v2_rs.txt",
+            "line": 7,
+            "result": "test current_view_retains_visible_entered_root ... PROBE_RESULT {\"check\":\"current_view_retains_visible_entered_root\",\"observations\":[[\"\", \"\"]],\"passed\":false}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_contract_v2_rs.txt",
+            "line": 9,
+            "result": "test same_filter_reload_keeps_existing_span_hidden ... PROBE_RESULT {\"check\":\"same_filter_reload_keeps_existing_span_hidden\",\"enters\":0,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_contract_v2_rs.txt",
+            "line": 11,
+            "result": "test shared_arc_keeps_filter_rejection ... PROBE_RESULT {\"check\":\"shared_arc_keeps_filter_rejection\",\"events\":0,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_hint_bounds_rs.txt",
+            "line": 3,
+            "result": "test global_filter_does_not_add_a_consumer ... PROBE_RESULT {\"check\":\"global_filter_does_not_add_a_consumer\",\"hint\":\"Some(LevelFilter::INFO)\",\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_judge_concerns_rs.txt",
+            "line": 3,
+            "result": "test context_enabled_is_an_independent_query ... PROBE_RESULT {\"check\":\"context_enabled_is_an_independent_query\",\"events\":0,\"span_disabled\":true,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_judge_concerns_rs.txt",
+            "line": 5,
+            "result": "test field_nested_event_preserves_outer_decision ... PROBE_RESULT {\"check\":\"field_nested_event_preserves_outer_decision\",\"events\":1,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_judge_concerns_rs.txt",
+            "line": 7,
+            "result": "test pure_global_filter_does_not_enable_rejected_items ... PROBE_RESULT {\"check\":\"pure_global_filter_does_not_enable_rejected_items\",\"fields\":0,\"span_disabled\":true,\"passed\":true}"
+          },
+          {
+            "file": "<RESEARCH_E>/masters-nudge-benchmark\\astra-max-dual-tracing-2trial-unlimited-20261004\\evaluation\\tracing-1523\\L2\\contract_tracing_judge_concerns_rs.txt",
+            "line": 9,
+            "result": "test wrapped_custom_global_veto_rejects_every_consumer ... PROBE_RESULT {\"check\":\"wrapped_custom_global_veto_rejects_every_consumer\",\"events\":1,\"passed\":false}"
+          }
+        ]
+      }
+    }
+  ],
+  "completed": 0,
+  "expected": 2,
+  "baseline_completed": 0,
+  "baseline_attempts": 14,
+  "actor_model": "gpt-6-astra",
+  "actor_reasoning": "max",
+  "provider_model": "gpt-6-astra",
+  "provider_reasoning": "max",
+  "actor_deadline_seconds": null,
+  "scope": "Exploration; not comparable deadline conditions; original seven arms unchanged"
+}

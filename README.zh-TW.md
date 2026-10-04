@@ -14,32 +14,36 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 我們用 **12 道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完成度、程式結構及成本。每題每配置各跑兩次，共 168 份交付；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
-**Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，時間相近。各組結果如下：
+**主要比較採九題，每配置18次，共126次。** Regexp、Metaflow、Tracing 在七臂及後續雙 Astra max 不限時探索中，尚無實作通過完整驗收契約；維護者確認先前原作者實作的完整契約檢查也未全數通過。因此三題另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)，其六次不計入主要完成率與成本。這是測試後的分類調整，並非預先設定；原始十二題結果全部保留。「未解」不表示不可能，也不表示其他人尚未解決。
+
+**Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，累計時間增加約3.7%。各組結果如下：
 
 | 比較條件 | 前者品味：勝／敗／持平 | 累計時間 | 未快取輸入 Token |
 |---|---|---|---|
-| B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +14.2% | +88.9% |
-| F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +27.7% | +51.1% |
-| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +26.9% | +73.1% |
-| I 對 F：Provider medium→xhigh | 5／0／4 | −0.6% | +14.5% |
+| B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +24.3% | +84.2% |
+| F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +43.6% | +50.7% |
+| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +48.9% | +74.3% |
+| I 對 F：Provider medium→xhigh | 5／0／4 | +3.7% | +15.7% |
 
-品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋每臂全部 24 次嘗試，Token 使用七臂共同 19 個有完整用量的位置。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
+品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋九題每臂全部18次嘗試，Token 使用七臂共同16個有完整用量的位置，包含 Actor 與 Provider。三題原本沒有合格品味配對，因此71組最終複評不變。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
 
 完整交付結果如下：
 
 | 配置 | 寫程式的模型 | 提供提醒的模型 | 完整交付 |
 |---|---|---|---|
-| A | Sol medium | 無 | 6/24 |
-| B | Sol medium | Sol medium | 8/24 |
-| C | Sol xhigh | 無 | 13/24 |
-| D | Sol medium | Astra medium | 8/24 |
-| E | Sol xhigh | Astra medium | 10/24 |
-| F | Sol xhigh | Sol medium | 11/24 |
-| I | Sol xhigh | Sol xhigh | 13/24 |
+| A | Sol medium | 無 | 6/18 |
+| B | Sol medium | Sol medium | 8/18 |
+| C | Sol xhigh | 無 | 13/18 |
+| D | Sol medium | Astra medium | 8/18 |
+| E | Sol xhigh | Astra medium | 10/18 |
+| F | Sol xhigh | Sol medium | 11/18 |
+| I | Sol xhigh | Sol xhigh | 13/18 |
 
 完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 的結構品味較好，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
 
-最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與執行檔版本差異見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
+最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與執行檔版本差異見[九題主要報告](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
+
+[十二題原始報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留原始統計、完整逐題結果與 CLI 差異。
 
 ## 工具做了什麼
 

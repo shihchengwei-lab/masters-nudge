@@ -1,0 +1,64 @@
+{
+  "method": "已知配置的 Codex 語意覆核：閱讀兩次完整 patch、原基底規則、分析→過濾→去重→回報的既有呼叫路徑、固定探針結果、Provider 輸出與 Actor 後續行動。評估完整流程的維護責任，並不以抽象、層次或新增行數給分。不是匿名盲評。",
+  "new_model_judge_calls": 0,
+  "anonymous_taste_ranking": "不適用：原七臂 Regexp 0/14，沒有完整交付可作合格配對。",
+  "trials": {
+    "J1": {
+      "quality": "局部結構方向合理，整體交付仍不合格；不判為高品味成品。",
+      "structure": "保留原量詞上下限，再以「未經過／已經過目標元素」兩種狀態追蹤路徑。這個新增狀態確實消除原先虛構重複次數的補救，複雜度有對應責任，不只是把補丁換個抽象名稱。但新判斷仍需分別接入結果排序、去重、選項與回報，這些接縫沒有完整承接原有語意。",
+      "findings": [
+        "主要功能通過：固定 reserved 與 regexp_contract.js 都通過，能定位巢狀元素、字元類別與範圍端點。這不等於完整交付。",
+        "原有效能責任漏接：/(?:a+|[ab])+$/ 的 reportExponentialBacktracking=certain 不再輸出原有的回溯風險警告。新增 NestedSubset 排在 Overlap 前；去重只允許 PrefixSubset 類別保留第二個效能診斷，NestedSubset 因而壓掉它。",
+        "結果種類混同：/ab|(?:ab|a)/ 中被覆蓋的 ab 與前面的 ab 相等，findNestedDuplication 只查 isSubsetOf 就一律標成 strict subset；相等與嚴格子集沒有留在結果結構裡。",
+        "Actor 原 focused suite 有 67 通過、1 失敗；兩次均保留並說明 /((?:ab|ba)|(?:ba|ac))/ 的舊 valid 案例與新增巢狀回報衝突。固定驗收使用預先封存的套件，77/77 通過，兩種數字不可混用。即使不把該舊案例算失敗，獨立的效能警告與語意檢查仍不通過。",
+        "向後查找只修 NFA，未修較早的 AST 路徑：/(?<=a|a[ab])/ 仍誤報整段 a[ab] 可刪，而不是其中的 a。兩個分析入口對匹配方向不同步。",
+        "引用安全由 Actor 自行補上：iterateNestedElements 跳過 references.length>0 的捕獲群組，因此固定反向引用探針沒有誤報；這是保守限制，沒有把捕獲與引用關係納入同一分析表示。"
+      ],
+      "adoption": {
+        "classification": "實際採納，非只檢查",
+        "delivered_nudges": 1,
+        "distinct_structural_directions_adopted": 1,
+        "explanation": "提醒指出量詞上下限被改成虛構次數，建議 NFA × 是否經過元素。Actor 後續改成 marker 與雙狀態投影，保留原量詞，並新增相應案例；方向被實作，但沒有帶出其他契約缺口。",
+        "evidence": [
+          "provider-attempts.json: 3fc99c2374a84446a901fe1b7bb730f1",
+          "actor-events.jsonl L53、L63、L76",
+          "final.patch: toNestedNFA、removeMarker；原量詞 quantify(parent.min,parent.max)"
+        ]
+      },
+      "evidence": [
+        "evaluation/regexp-404/J1/regexp_direction.js.txt",
+        "evaluation/regexp-404/J1/regexp_judge_concerns.js.txt",
+        "runs/regexp-404/J1/final.patch: findNestedDuplication、deduplicateResults、reportResult",
+        "actor-events.jsonl L95、L97"
+      ]
+    },
+    "J2": {
+      "quality": "局部結構有實際改善，整體仍有錯誤刪除建議；不判為高品味成品。",
+      "structure": "同樣改成保留量詞、追蹤是否經過元素的狀態，並修正 AST 的向後查找與互相依賴的刪除建議。這些都有具體用途。但新增分析把捕獲值與後續引用的依賴丟掉，再以可接受字串集合判定刪除安全；完整使用流程的必要資訊仍不在結構中。",
+      "findings": [
+        "主要功能通過：固定 reserved 與 regexp_contract.js 都通過，能定位巢狀元素、字元類別與範圍端點。這不等於完整交付。",
+        "原有效能責任漏接：/(?:a+|[ab])+$/ 的 reportExponentialBacktracking=certain 不再輸出原有的回溯風險警告。新增 NestedSubset 排在 Overlap 前；去重只允許 PrefixSubset 類別保留第二個效能診斷，NestedSubset 因而壓掉它。",
+        "結果種類混同：/ab|(?:ab|a)/ 中被覆蓋的 ab 與前面的 ab 相等，findNestedDuplication 只查 isSubsetOf 就一律標成 strict subset；相等與嚴格子集沒有留在結果結構裡。",
+        "Actor 原 focused suite 有 67 通過、1 失敗；兩次均保留並說明 /((?:ab|ba)|(?:ba|ac))/ 的舊 valid 案例與新增巢狀回報衝突。固定驗收使用預先封存的套件，77/77 通過，兩種數字不可混用。即使不把該舊案例算失敗，獨立的效能警告與語意檢查仍不通過。",
+        "反向引用造成實際錯誤刪除建議：/(?:a+|([ab]))(?!\\1)/ 被建議刪除 a；固定探針顯示修改前可匹配、修改後不可匹配。保留字串集合及量詞不等於保留捕獲結果。",
+        "向後查找此次通過：AST 的 canOmitRight 只在 ltr 啟用，NFA 依方向延伸；/(?<=a|a[ab])/ 正確定位內部 a。這是局部進步，仍未完成其他責任。"
+      ],
+      "adoption": {
+        "classification": "第二次重複提醒後實際採納；第一次未完成結構修正",
+        "delivered_nudges": 2,
+        "distinct_structural_directions_adopted": 1,
+        "explanation": "兩則提醒都指出同一量詞缺口與 hit 狀態方案。第一則後仍保留錯誤次數模型，第二則後 Actor 改成 marker、原量詞與 before/after 狀態。不能將兩則重複提醒算成兩個獨立改善。",
+        "evidence": [
+          "provider-attempts.json: 17c0d9e4ecdd407185278d4eef4b8909、e29c41525fb14bfda5ee543b93b5d400",
+          "actor-events.jsonl L72、L74、L80、L81",
+          "final.patch: getNestedExpression、toNestedNFA"
+        ]
+      },
+      "evidence": [
+        "evaluation/regexp-404/J2/regexp_direction.js.txt",
+        "evaluation/regexp-404/J2/regexp_judge_concerns.js.txt",
+        "runs/regexp-404/J2/final.patch: getNestedElements、getNestedExpression、deduplicateResults、reportResult"
+      ]
+    }
+  }
+}

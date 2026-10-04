@@ -14,32 +14,36 @@ Masters’ Nudge aims to improve this: it adds a short structural suggestion whi
 
 We compared direct implementation with structural feedback across **12 code-change tasks and seven model configurations**, measuring complete delivery, code structure, and cost. Each task was attempted twice per configuration, totaling 168 deliveries, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
 
-**A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with similar time. The observed comparisons are:
+**The primary comparison covers nine tasks: 18 attempts per configuration, 126 total.** No implementation tested in the seven arms or subsequent dual-Astra-max explorations completed the full Regexp, Metaflow, or Tracing contract. The maintainer also confirmed that prior checks of the authors’ implementations did not satisfy the full contracts. These three tasks are published as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md); their six attempts per arm are excluded from primary completion and cost statistics. This is a post-study classification, not a preregistered exclusion. All original twelve-task results remain available. “Unresolved” does not establish impossibility or mean nobody elsewhere has solved them.
+
+**A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with approximately 3.7% more total time. The observed comparisons are:
 
 | Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
 |---|---|---|---|
-| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +14.2% | +88.9% |
-| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +27.7% | +51.1% |
-| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +26.9% | +73.1% |
-| I vs F: Provider medium → xhigh | 5 / 0 / 4 | −0.6% | +14.5% |
+| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +24.3% | +84.2% |
+| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +43.6% | +50.7% |
+| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +48.9% | +74.3% |
+| I vs F: Provider medium → xhigh | 5 / 0 / 4 | +3.7% | +15.7% |
 
-Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 24 attempts per arm; tokens use the same 19 positions with complete usage records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
+Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 18 attempts per arm on the nine tasks; tokens include Actor and Provider usage at the same 16 positions with complete records across all seven arms. The unresolved tasks had no eligible taste pairs, so all 71 final comparisons are unchanged. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
 
 Complete deliveries were:
 
 | Configuration | Coding model | Feedback model | Complete deliveries |
 |---|---|---|---|
-| A | Sol medium | None | 6/24 |
-| B | Sol medium | Sol medium | 8/24 |
-| C | Sol xhigh | None | 13/24 |
-| D | Sol medium | Astra medium | 8/24 |
-| E | Sol xhigh | Astra medium | 10/24 |
-| F | Sol xhigh | Sol medium | 11/24 |
-| I | Sol xhigh | Sol xhigh | 13/24 |
+| A | Sol medium | None | 6/18 |
+| B | Sol medium | Sol medium | 8/18 |
+| C | Sol xhigh | None | 13/18 |
+| D | Sol medium | Astra medium | 8/18 |
+| E | Sol xhigh | Astra medium | 10/18 |
+| F | Sol xhigh | Sol medium | 11/18 |
+| I | Sol xhigh | Sol xhigh | 13/18 |
 
 Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves reviewed taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
 
-See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [model configuration report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for task results, costs, and CLI version differences. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
+See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [nine-task primary report](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) for task results, costs, and CLI version differences. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
+
+The [original twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) preserves historical statistics, individual results, and CLI differences.
 
 ## What the tool does
 

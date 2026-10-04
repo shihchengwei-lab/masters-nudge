@@ -1,0 +1,614 @@
+{
+  "case": "fb-metaflow-stubs",
+  "source_study": "astra-max-dual-metaflow-2trial-unlimited-20261004",
+  "evidence_sha256": "522137bd4170c2b62a47e94cede5713f659fa2e9548c470872a6971643039f35",
+  "publication": "UTF-8 copies; anonymized user home and research-drive prefixes; no Actor edits, task changes, or new model calls. Original integrity hashes refer to original files; use public_sha256 for exported copies.",
+  "files": [
+    {
+      "path": "actor_runner.py",
+      "original_sha256": "89aafb21bb7d551b5711b41ecbbecc4b9dd6b41d9221db6c85d32017fa7931b8",
+      "public_sha256": "41cb834ebe12bffa5fbd699979a9981587f7de22b39e6e20eadda51c44e33d7e",
+      "changed_for_publication": true
+    },
+    {
+      "path": "actual-model-launches.json",
+      "original_sha256": "63f35c25ad22f1d92a6bbf9547f10444be0034922e6864ed7b97d5bb4e502796",
+      "public_sha256": "6046975a918ec13c25d3a91a54db3b93e3d996547a25060c002e04e191b75be1",
+      "changed_for_publication": true
+    },
+    {
+      "path": "code-review.json",
+      "original_sha256": "9b9e2dbad5e87e03cf26e05c19f42e36cc03c587f2e0a721099ccf93f3f0a475",
+      "public_sha256": "9b9e2dbad5e87e03cf26e05c19f42e36cc03c587f2e0a721099ccf93f3f0a475",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/annotation-api.txt",
+      "original_sha256": "4fb2fe966a83fe5b86d8491f35a607fdbcdc0991561c2602c6c63093bb3198ac",
+      "public_sha256": "4fb2fe966a83fe5b86d8491f35a607fdbcdc0991561c2602c6c63093bb3198ac",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/apply-tests.txt",
+      "original_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "public_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/apply.txt",
+      "original_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "public_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/checkout.txt",
+      "original_sha256": "5130a3f4ac33479463c89bc098f60feb59199473983654c0b0bfa0eb25be5b8c",
+      "public_sha256": "5130a3f4ac33479463c89bc098f60feb59199473983654c0b0bfa0eb25be5b8c",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/class-api.txt",
+      "original_sha256": "78e5ad1f02483ab50ba66ac24bec8b5db4a50c469b50bb029775d41040ba9d8e",
+      "public_sha256": "78e5ad1f02483ab50ba66ac24bec8b5db4a50c469b50bb029775d41040ba9d8e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/evidence.json",
+      "original_sha256": "bf3e5c61fee928e71c14e8f09be73f1b9e8c78bc6921ec7447cac8e835603e59",
+      "public_sha256": "bf3e5c61fee928e71c14e8f09be73f1b9e8c78bc6921ec7447cac8e835603e59",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/function-api.txt",
+      "original_sha256": "8786ad1b3a12ab77e9443155d45ca33ad419a6504c6106d33dccea139b0ea7f8",
+      "public_sha256": "8786ad1b3a12ab77e9443155d45ca33ad419a6504c6106d33dccea139b0ea7f8",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/metaflow_docquotes_input.py.txt",
+      "original_sha256": "d05397083b565bbc76902e547e70abfe75e6ae1961ef5915d9d35e1121651f3a",
+      "public_sha256": "d05397083b565bbc76902e547e70abfe75e6ae1961ef5915d9d35e1121651f3a",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/metaflow_members_input.py.txt",
+      "original_sha256": "adaba2a4e94527798294f8bf503dea420e6ead3afcfbb5162d851d1dcdb42036",
+      "public_sha256": "adaba2a4e94527798294f8bf503dea420e6ead3afcfbb5162d851d1dcdb42036",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/metaflow_review_members_input.py.txt",
+      "original_sha256": "477f61f2693b2358ffbe1963ba9b79eebf5f6fb78f8883b74b54e29390d5937d",
+      "public_sha256": "477f61f2693b2358ffbe1963ba9b79eebf5f6fb78f8883b74b54e29390d5937d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/metaflow_typed_dict_keys_input.py.txt",
+      "original_sha256": "c579b448cf3f8bb0a1e8d057c301e6644930730e67d941d3bf00e25e0774e764",
+      "public_sha256": "c579b448cf3f8bb0a1e8d057c301e6644930730e67d941d3bf00e25e0774e764",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/reserved.txt",
+      "original_sha256": "74c499869cebd779d3a04f8c477f15f1c1b87065f05e280dda456dbb0819e630",
+      "public_sha256": "74c499869cebd779d3a04f8c477f15f1c1b87065f05e280dda456dbb0819e630",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K1/reset-api.txt",
+      "original_sha256": "2016e49737ed69b10a298bd3dd1453327c7db0fa1e1260f5edb2a6d72191c1ad",
+      "public_sha256": "2016e49737ed69b10a298bd3dd1453327c7db0fa1e1260f5edb2a6d72191c1ad",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/annotation-api.txt",
+      "original_sha256": "4fb2fe966a83fe5b86d8491f35a607fdbcdc0991561c2602c6c63093bb3198ac",
+      "public_sha256": "4fb2fe966a83fe5b86d8491f35a607fdbcdc0991561c2602c6c63093bb3198ac",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/apply-tests.txt",
+      "original_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "public_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/apply.txt",
+      "original_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "public_sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/checkout.txt",
+      "original_sha256": "5130a3f4ac33479463c89bc098f60feb59199473983654c0b0bfa0eb25be5b8c",
+      "public_sha256": "5130a3f4ac33479463c89bc098f60feb59199473983654c0b0bfa0eb25be5b8c",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/class-api.txt",
+      "original_sha256": "78e5ad1f02483ab50ba66ac24bec8b5db4a50c469b50bb029775d41040ba9d8e",
+      "public_sha256": "78e5ad1f02483ab50ba66ac24bec8b5db4a50c469b50bb029775d41040ba9d8e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/evidence.json",
+      "original_sha256": "20f10909ccae698c24763cb1590b3c75ca5125b43d1c63a00c472ca5832b95cf",
+      "public_sha256": "20f10909ccae698c24763cb1590b3c75ca5125b43d1c63a00c472ca5832b95cf",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/function-api.txt",
+      "original_sha256": "8786ad1b3a12ab77e9443155d45ca33ad419a6504c6106d33dccea139b0ea7f8",
+      "public_sha256": "8786ad1b3a12ab77e9443155d45ca33ad419a6504c6106d33dccea139b0ea7f8",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/metaflow_docquotes_input.py.txt",
+      "original_sha256": "a2f747dcc9f34648260f3ca6213b95791b39cd5c4b09b7f51aae0185444e346e",
+      "public_sha256": "a2f747dcc9f34648260f3ca6213b95791b39cd5c4b09b7f51aae0185444e346e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/metaflow_members_input.py.txt",
+      "original_sha256": "09789339d1e997927059c7e1f37530ff55ce3888b2b789248624ff3fb4d19267",
+      "public_sha256": "09789339d1e997927059c7e1f37530ff55ce3888b2b789248624ff3fb4d19267",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/metaflow_review_members_input.py.txt",
+      "original_sha256": "4a7785e8f99cfaefaef108cedbddf26366f7ae55725a9a8e0294eefd49e5c38e",
+      "public_sha256": "4a7785e8f99cfaefaef108cedbddf26366f7ae55725a9a8e0294eefd49e5c38e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/metaflow_typed_dict_keys_input.py.txt",
+      "original_sha256": "87481e6e822ff057479e6cfb64fa69070ebbc7e93696106b871eae595debbfcf",
+      "public_sha256": "87481e6e822ff057479e6cfb64fa69070ebbc7e93696106b871eae595debbfcf",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/reserved.txt",
+      "original_sha256": "b817b42b191ba2f8ce81c4f5ae11cd1aea45f048e832b774f5ae941bbab466de",
+      "public_sha256": "b817b42b191ba2f8ce81c4f5ae11cd1aea45f048e832b774f5ae941bbab466de",
+      "changed_for_publication": false
+    },
+    {
+      "path": "evaluation/fb-metaflow-stubs/K2/reset-api.txt",
+      "original_sha256": "2016e49737ed69b10a298bd3dd1453327c7db0fa1e1260f5edb2a6d72191c1ad",
+      "public_sha256": "2016e49737ed69b10a298bd3dd1453327c7db0fa1e1260f5edb2a6d72191c1ad",
+      "changed_for_publication": false
+    },
+    {
+      "path": "execution-summary.json",
+      "original_sha256": "e14acee1c3557617d9f6f21c4ae1717fa85bd73b1459a94dad36da2f778ab684",
+      "public_sha256": "1f360f80d56bbf552e926ba2372873f3591999849c893fa91a1f99847d0f43e5",
+      "changed_for_publication": true
+    },
+    {
+      "path": "export_review.py",
+      "original_sha256": "2089075e1f04ad0cf79ac45962dae12be2cb0daa8599246390b8d9b84148f0dc",
+      "public_sha256": "2089075e1f04ad0cf79ac45962dae12be2cb0daa8599246390b8d9b84148f0dc",
+      "changed_for_publication": false
+    },
+    {
+      "path": "final-integrity.json",
+      "original_sha256": "de9c5f185f1be218423a1f6e0c4e28c35d8cd269a5af51bd16cfd6ff777fe485",
+      "public_sha256": "de9c5f185f1be218423a1f6e0c4e28c35d8cd269a5af51bd16cfd6ff777fe485",
+      "changed_for_publication": false
+    },
+    {
+      "path": "finish_report.py",
+      "original_sha256": "b2accc41fa7c702e0511e91d6c2f7282c84b26ace4ca5b2ac39b779d57356a32",
+      "public_sha256": "b2accc41fa7c702e0511e91d6c2f7282c84b26ace4ca5b2ac39b779d57356a32",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/ATTRIBUTION.md",
+      "original_sha256": "ab0ca17f2102ee09db238ebae36e5f5ea39c59cc28103aad70157d866f585356",
+      "public_sha256": "ab0ca17f2102ee09db238ebae36e5f5ea39c59cc28103aad70157d866f585356",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/metaflow_docquotes_input.py",
+      "original_sha256": "7c6e48d9c3dbf75b54ae966bff4de2f170340482a5215449e542467240eed8d2",
+      "public_sha256": "7c6e48d9c3dbf75b54ae966bff4de2f170340482a5215449e542467240eed8d2",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/metaflow_members_input.py",
+      "original_sha256": "bcd34b33b13b0bf7f2c8a3dca4a5521cd7c0e3540e5fe2935d3093f97ada79bf",
+      "public_sha256": "bcd34b33b13b0bf7f2c8a3dca4a5521cd7c0e3540e5fe2935d3093f97ada79bf",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/metaflow_review_members_input.py",
+      "original_sha256": "254f80de3cac34e537810c2048a13c107284529d49048490c57ee613f4e82e0d",
+      "public_sha256": "254f80de3cac34e537810c2048a13c107284529d49048490c57ee613f4e82e0d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/metaflow_typed_dict_keys_input.py",
+      "original_sha256": "31fa4962fcc26f4660ab45dd657a674f6d5fff8667c1c7a638a03a9145016c24",
+      "public_sha256": "31fa4962fcc26f4660ab45dd657a674f6d5fff8667c1c7a638a03a9145016c24",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/stub_api.py",
+      "original_sha256": "44d7e4749a0b0e38aa2504acf6d59a00e6ed0781383608a74351939ade910143",
+      "public_sha256": "44d7e4749a0b0e38aa2504acf6d59a00e6ed0781383608a74351939ade910143",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/checks/stub_semantics.py",
+      "original_sha256": "ffed7ddad5e9627e9bdbee55e40512a3945466ebea15907e8fe53cf835d653b1",
+      "public_sha256": "ffed7ddad5e9627e9bdbee55e40512a3945466ebea15907e8fe53cf835d653b1",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/contract.json",
+      "original_sha256": "46ac8b12eca67b0ca919740412f4e3a78c2c9b675d2cddb66429bd6846e88fc2",
+      "public_sha256": "46ac8b12eca67b0ca919740412f4e3a78c2c9b675d2cddb66429bd6846e88fc2",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/task.md",
+      "original_sha256": "f26975997bb1f8a52bb39633def9f22b54b551e54a9800ad2a911288ef6f058a",
+      "public_sha256": "05dd56a1f57a51d105a2da6cdd283cd0ca86f0bf4dbc9399046a0b9304b255cc",
+      "changed_for_publication": true
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/test.patch",
+      "original_sha256": "09ae3307c967262aa8f74d0e617f122b45dc3430eb7da9c4dcc7e78fdcc4256f",
+      "public_sha256": "09ae3307c967262aa8f74d0e617f122b45dc3430eb7da9c4dcc7e78fdcc4256f",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases/fb-metaflow-stubs/upstream-licenses/LICENSE",
+      "original_sha256": "c72c533b5cf1c1e557c9c96021fa41af04b1353ff8ca7617dbf954e650737705",
+      "public_sha256": "c72c533b5cf1c1e557c9c96021fa41af04b1353ff8ca7617dbf954e650737705",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/cases.json",
+      "original_sha256": "969c4ca84f906272db5ad4925b24e2bccd2223f55c2622730515eb23c018691d",
+      "public_sha256": "969c4ca84f906272db5ad4925b24e2bccd2223f55c2622730515eb23c018691d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/container_checks.py",
+      "original_sha256": "8e69e86c9beac09b90ade2b4a207d38efa9c8fede63ecf534858e060fb998ba4",
+      "public_sha256": "8e69e86c9beac09b90ade2b4a207d38efa9c8fede63ecf534858e060fb998ba4",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/CONTRACTS.zh-TW.md",
+      "original_sha256": "1015c628efb8fc672653a4e0711662f45eb9fc95f128f2d4fd0a63887e4db816",
+      "public_sha256": "1015c628efb8fc672653a4e0711662f45eb9fc95f128f2d4fd0a63887e4db816",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/environment.json",
+      "original_sha256": "2c65616227d9c54cac784d2462028b0048cbf697303811035a367de1cda271a8",
+      "public_sha256": "2c65616227d9c54cac784d2462028b0048cbf697303811035a367de1cda271a8",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/evaluate.py",
+      "original_sha256": "6f669d8d26bc28bc86b1a57b1f8daf9faade935afb9b0b880fe2401dd039631f",
+      "public_sha256": "6f669d8d26bc28bc86b1a57b1f8daf9faade935afb9b0b880fe2401dd039631f",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/manifest.json",
+      "original_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+      "public_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/native_checks.py",
+      "original_sha256": "cd20a44d0dcc1f4ed76e6abea1974170e7dcd0ad810d139b9232c961db0af4d6",
+      "public_sha256": "cd20a44d0dcc1f4ed76e6abea1974170e7dcd0ad810d139b9232c961db0af4d6",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/oracle-review.json",
+      "original_sha256": "c1b8440eb6ff34527c7b06da4f606174352ca7d67279034ee0bdbafff5bd2c72",
+      "public_sha256": "c1b8440eb6ff34527c7b06da4f606174352ca7d67279034ee0bdbafff5bd2c72",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/PROTOCOL.zh-TW.md",
+      "original_sha256": "812423b22897642cef5323ed064628de346668cc3fd25a85f41606f578c50505",
+      "public_sha256": "812423b22897642cef5323ed064628de346668cc3fd25a85f41606f578c50505",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/README.zh-TW.md",
+      "original_sha256": "9bfe3d1f73e8b82119ac86457e064c7653e5f5a122c56bbef38cff1872401629",
+      "public_sha256": "9bfe3d1f73e8b82119ac86457e064c7653e5f5a122c56bbef38cff1872401629",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/revision.json",
+      "original_sha256": "ba62fafcb69c7ff0db5a416f4d6a4914f9d2b058cba5729535c91f5f7049cb4e",
+      "public_sha256": "ba62fafcb69c7ff0db5a416f4d6a4914f9d2b058cba5729535c91f5f7049cb4e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-evaluation/test_evaluate.py",
+      "original_sha256": "1e4fbe9466d8c3aefb76ef837cbd25a0797e7d51a5aebe0a35e6c8c1403536af",
+      "public_sha256": "1e4fbe9466d8c3aefb76ef837cbd25a0797e7d51a5aebe0a35e6c8c1403536af",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-plugin/buddy-prompt.txt",
+      "original_sha256": "6c058c7110caac5cf86f96a457821d60feb481ef8fbf25ca52b39e7b6e6109a3",
+      "public_sha256": "6c058c7110caac5cf86f96a457821d60feb481ef8fbf25ca52b39e7b6e6109a3",
+      "changed_for_publication": false
+    },
+    {
+      "path": "frozen-plugin/masters_nudge/runtime.py",
+      "original_sha256": "7e15057a5db79f3a25e73254fe05340406eeac6d9d84750440199054065f75b8",
+      "public_sha256": "7e15057a5db79f3a25e73254fe05340406eeac6d9d84750440199054065f75b8",
+      "changed_for_publication": false
+    },
+    {
+      "path": "observe_launches.ps1",
+      "original_sha256": "5942443e096ac7610da19a5aa438bc1193e5ab476d92d09c49bf819abc410598",
+      "public_sha256": "5942443e096ac7610da19a5aa438bc1193e5ab476d92d09c49bf819abc410598",
+      "changed_for_publication": false
+    },
+    {
+      "path": "pipeline-status.json",
+      "original_sha256": "e7e8d4d5732e0b1942a3a7204e41ec5ca6d2280101519c69d3a034647f345fa8",
+      "public_sha256": "e7e8d4d5732e0b1942a3a7204e41ec5ca6d2280101519c69d3a034647f345fa8",
+      "changed_for_publication": false
+    },
+    {
+      "path": "pipeline.py",
+      "original_sha256": "7697c3d4d8bd157e51a46f5379e63ac94167d084c1d87dcc17354252a30d0998",
+      "public_sha256": "fb870996134601f11310165695cf7405e2d168a3f534a59db4766c6b7b561401",
+      "changed_for_publication": true
+    },
+    {
+      "path": "plan.json",
+      "original_sha256": "4f83c6cf7c0bd0c2efb458ab2d23996f1f614e7b20221c3e5ca407e4bd4d195f",
+      "public_sha256": "c6b73862c01070bd0002dd2213e167e04fd3ab3f9d2a15fb557526b655fafa73",
+      "changed_for_publication": true
+    },
+    {
+      "path": "preflight.json",
+      "original_sha256": "cb205b37bd1f0457748115458668cbec63790a623961c363281eb3637780637a",
+      "public_sha256": "cb205b37bd1f0457748115458668cbec63790a623961c363281eb3637780637a",
+      "changed_for_publication": false
+    },
+    {
+      "path": "prompt.txt",
+      "original_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "public_sha256": "d03b451fa4d3599ff76cf23602ffe74f051d70a8bc2125515f55d171c6c143f3",
+      "changed_for_publication": true
+    },
+    {
+      "path": "record_semantic_review.py",
+      "original_sha256": "0ac4ed8646c11289491f7fd40df29712d4fc021a14606669511114048b3c40ff",
+      "public_sha256": "0ac4ed8646c11289491f7fd40df29712d4fc021a14606669511114048b3c40ff",
+      "changed_for_publication": false
+    },
+    {
+      "path": "restoration-confirmed.json",
+      "original_sha256": "4a6cd3c079aaa611533dd0ccf37fdfe60044f9f914fc24cfe8729396ceeeeae5",
+      "public_sha256": "4a6cd3c079aaa611533dd0ccf37fdfe60044f9f914fc24cfe8729396ceeeeae5",
+      "changed_for_publication": false
+    },
+    {
+      "path": "results-summary.json",
+      "original_sha256": "c66409db476480572c1e508dd6f3e14dc30f8df0a9508a7b4b45ad03d5bd3b97",
+      "public_sha256": "c66409db476480572c1e508dd6f3e14dc30f8df0a9508a7b4b45ad03d5bd3b97",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/actor-events.jsonl",
+      "original_sha256": "1d16ddceb781ddac82fcecfeaa0c82ca7ceac82e742623df590e7aeba2903b02",
+      "public_sha256": "3ba0ea599d42ab4273194bd025a9f4be32ebf3a312753b1e95baf8fb0518cc5c",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/actor-final.txt",
+      "original_sha256": "083b21bac33d0b123b759c5a2b69d6f7e8b393bb7c0e5adef81a3a1982a73ac9",
+      "public_sha256": "7e81cfb606fb812f339cd82fdd08906fac97cbf8903cc62aee9cc5337e5dd0f0",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/actor-stderr.txt",
+      "original_sha256": "b2b979a94d778473b46adc7b44cd7323f4436db1ea38b3aa0c2928312d0323ab",
+      "public_sha256": "1b55dc35fbf99742e2e6fc61196d050e0733cd4d6dbd1e943823b36aca9d8442",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/contract-1.txt",
+      "original_sha256": "ed17efbe9e611baec37442d4532899a1ef40c0c0f0212b04baf70a4ec715b115",
+      "public_sha256": "ed17efbe9e611baec37442d4532899a1ef40c0c0f0212b04baf70a4ec715b115",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/execution-evidence.json",
+      "original_sha256": "1a00292a1113e0d3640a27255f5f64b06188d12f5fddc677ccca2fce1111c1e7",
+      "public_sha256": "958f07b11b4440c5a78fadee95a34289b4aee6bec58f10cb527ecd7f70723d4d",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/execution-evidence.zh-TW.md",
+      "original_sha256": "18cd966546f5f18e401e99957d877dd95bd54e3101d6c6ca6a64524a3a656641",
+      "public_sha256": "41223a41906e2f11301e04301f8dab309f22bfc456d32e156ae4727e0bf8f42a",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/execution-review.json",
+      "original_sha256": "4810c60bc2f2c1455e40dfe3222b1b31a879046849107deb17ab5adb118e4dad",
+      "public_sha256": "4810c60bc2f2c1455e40dfe3222b1b31a879046849107deb17ab5adb118e4dad",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/final.patch",
+      "original_sha256": "0d278a26d454568c0ac8d6fd7abf38bc6e2b6d43c19ef242ea6cc736e9ebfa5e",
+      "public_sha256": "0d278a26d454568c0ac8d6fd7abf38bc6e2b6d43c19ef242ea6cc736e9ebfa5e",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/fixed-checks.json",
+      "original_sha256": "bf3e5c61fee928e71c14e8f09be73f1b9e8c78bc6921ec7447cac8e835603e59",
+      "public_sha256": "bf3e5c61fee928e71c14e8f09be73f1b9e8c78bc6921ec7447cac8e835603e59",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/launch.json",
+      "original_sha256": "7855f1858ffeb1a5b44d0f4e43576436d089c8e60cbd4997233e056e5e3350c7",
+      "public_sha256": "f6902ec9a0fcc142d75da1d1463e6ddea8a657071241e133bc32efce6f3ce6b4",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/masters-nudge-data/config.json",
+      "original_sha256": "d964ebd1f63f42ff6880da65af52b5a8738e0f36753d6f19d226a37b936e469d",
+      "public_sha256": "d964ebd1f63f42ff6880da65af52b5a8738e0f36753d6f19d226a37b936e469d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/prompt.txt",
+      "original_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "public_sha256": "d03b451fa4d3599ff76cf23602ffe74f051d70a8bc2125515f55d171c6c143f3",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/provider-attempts.json",
+      "original_sha256": "b03ea718021719a18202ec1dc89b9db83925c465f8c585ff96597f3f15ddccae",
+      "public_sha256": "020e33143fea7efd48cfdbb6dd8971bf2dd5ab90a80be300319e57867173676b",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/result.json",
+      "original_sha256": "aae5ae22b7b2aedbd0fd5786b2ddf1e7ead31922ec5cd4b8010f5e98e9e8355e",
+      "public_sha256": "98b410572bc110a8d31f81940706897cf1408811a62af8ece6c494eda30c68d3",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/review-normalized.diff",
+      "original_sha256": "77530ed5881cd0a8685e6ddffc8a77673e15c66c08083d3a6a2b8b1fb7ad610d",
+      "public_sha256": "77530ed5881cd0a8685e6ddffc8a77673e15c66c08083d3a6a2b8b1fb7ad610d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/review-source.py.txt",
+      "original_sha256": "7900e40c8f7011d05bb7ce153efbe6e13430d927b1d82530be88b6b59713b328",
+      "public_sha256": "7900e40c8f7011d05bb7ce153efbe6e13430d927b1d82530be88b6b59713b328",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K1/score.json",
+      "original_sha256": "c6e0cbf79bc99e7b32b0fab153658ef9172dc483d380b70ceba6e669dcadecf9",
+      "public_sha256": "c6e0cbf79bc99e7b32b0fab153658ef9172dc483d380b70ceba6e669dcadecf9",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/actor-events.jsonl",
+      "original_sha256": "83cb87660418e59d44b949329fc29e62fcf4226fefbab899550d0ad1ad009600",
+      "public_sha256": "f31165aab34104fe5dc423449d2fa761ee578d8b7c08750a8a59806f9f3b397d",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/actor-final.txt",
+      "original_sha256": "636d65abdaff418476aa7fca59bfd38934941cbedf7b56cd4ef00de8fa463aa1",
+      "public_sha256": "cbc3ff9e7802e80889323f8b13fb514d2a86b2de26bfbcd2efd0042f136aee72",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/actor-stderr.txt",
+      "original_sha256": "acd220af356e2bfeffa8ae2e6689a97d45f4fde45474d352b57d0535cbbb145d",
+      "public_sha256": "acd220af356e2bfeffa8ae2e6689a97d45f4fde45474d352b57d0535cbbb145d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/contract-1.txt",
+      "original_sha256": "0a4a94e7e4001a1959518d06cde80442f44364b7ade1499182c2f46e88fc8deb",
+      "public_sha256": "0a4a94e7e4001a1959518d06cde80442f44364b7ade1499182c2f46e88fc8deb",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/execution-evidence.json",
+      "original_sha256": "9f65a7f36df87b3866309f52f92094e33637a39b551cc918f58d891e96639c31",
+      "public_sha256": "a9dbf0510425e31f0ddcdee947cc3463a50e22fa1769f72fdb4e62148232a2b0",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/execution-evidence.zh-TW.md",
+      "original_sha256": "f14e1a05077caba23312356a74f761b9d59c6d56ea394f2ece5dfbce82767f7a",
+      "public_sha256": "206138dc1ffce0a437629fa97eedb17406208c91d12ecec9238862971eafcc94",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/execution-review.json",
+      "original_sha256": "6f09b34035517eea9b2c63141492b2cc2e1a2ac40425e770d071c54fbfee101b",
+      "public_sha256": "6f09b34035517eea9b2c63141492b2cc2e1a2ac40425e770d071c54fbfee101b",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/final.patch",
+      "original_sha256": "99d26ad9e2f8e281cb54600f1b8047fe75d04599f3a3970c6cc3f14f8e986505",
+      "public_sha256": "99d26ad9e2f8e281cb54600f1b8047fe75d04599f3a3970c6cc3f14f8e986505",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/fixed-checks.json",
+      "original_sha256": "20f10909ccae698c24763cb1590b3c75ca5125b43d1c63a00c472ca5832b95cf",
+      "public_sha256": "20f10909ccae698c24763cb1590b3c75ca5125b43d1c63a00c472ca5832b95cf",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/launch.json",
+      "original_sha256": "f7a6f0bd79570713be85fbb25752f614dfd144845816e1f23e9cfbe24bec1788",
+      "public_sha256": "4cfd3357fb58cb72404709d47ff3d76c32cdb8ea26159a561e884702c0899711",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/masters-nudge-data/config.json",
+      "original_sha256": "d964ebd1f63f42ff6880da65af52b5a8738e0f36753d6f19d226a37b936e469d",
+      "public_sha256": "d964ebd1f63f42ff6880da65af52b5a8738e0f36753d6f19d226a37b936e469d",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/prompt.txt",
+      "original_sha256": "4d9bc419c4fcded00111f996d716ce6aeeb7194f3d20d38b6000735f1ac5c383",
+      "public_sha256": "d03b451fa4d3599ff76cf23602ffe74f051d70a8bc2125515f55d171c6c143f3",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/provider-attempts.json",
+      "original_sha256": "3e3a9a3dc22b8e5f4c9f08966c044397ab83f2997a066b6b799d3e9604a33c33",
+      "public_sha256": "247b6c2af396aa650933e992c0118e1e5f71be1c3734dd91b1e9d659a2caa003",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/result.json",
+      "original_sha256": "dac547531b2d13e73dbb0951d5ccf87f683c4855c41cc7ebb67823b405694340",
+      "public_sha256": "fc62df2fd34784ff9c8a01883dba4fe1ec59d0f1533dba353bab6ef89f579d52",
+      "changed_for_publication": true
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/review-normalized.diff",
+      "original_sha256": "c213e01908770e3d8a23fdea54707c269129655ad2bda2283a6a0142716423ac",
+      "public_sha256": "c213e01908770e3d8a23fdea54707c269129655ad2bda2283a6a0142716423ac",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/review-source.py.txt",
+      "original_sha256": "80378dc99708d8891a13076b84b8d9373ec8eadde16907a7db63da8678489d42",
+      "public_sha256": "80378dc99708d8891a13076b84b8d9373ec8eadde16907a7db63da8678489d42",
+      "changed_for_publication": false
+    },
+    {
+      "path": "runs/fb-metaflow-stubs/K2/score.json",
+      "original_sha256": "c3bfbaf1ccf755587725897078a0b566ffa571954f09e1f626f30626c5d2921b",
+      "public_sha256": "c3bfbaf1ccf755587725897078a0b566ffa571954f09e1f626f30626c5d2921b",
+      "changed_for_publication": false
+    }
+  ]
+}

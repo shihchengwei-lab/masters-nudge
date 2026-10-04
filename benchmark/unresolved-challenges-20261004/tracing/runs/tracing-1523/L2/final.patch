@@ -1,0 +1,2697 @@
+diff --git a/tracing-subscriber/src/filter/env/mod.rs b/tracing-subscriber/src/filter/env/mod.rs
+index c129389..15574b5 100644
+--- a/tracing-subscriber/src/filter/env/mod.rs
++++ b/tracing-subscriber/src/filter/env/mod.rs
+@@ -367,6 +367,52 @@ impl EnvFilter {
+ }
+ 
+ impl<S: Subscriber> Layer<S> for EnvFilter {
++    #[cfg(feature = "registry")]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: Context<'_, S>,
++        _: &mut super::FilterMap,
++    ) -> super::FilterResult<bool> {
++        let enabled = <Self as Layer<S>>::enabled(self, metadata, ctx);
++        // Dynamic directives consume matching spans to track the state that
++        // enables later events, even when recording layers hide those spans.
++        let consumes = self.has_dynamics
++            && metadata.is_span()
++            && try_lock!(self.by_cs.read(), else return super::FilterResult::global(false))
++                .contains_key(&metadata.callsite());
++        super::FilterResult {
++            global: enabled,
++            consumers: enabled && consumes,
++        }
++    }
++
++    #[cfg(feature = "registry")]
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> super::FilterResult<Interest> {
++        let global = <Self as Layer<S>>::register_callsite(self, metadata);
++        let consumes = self.has_dynamics && metadata.is_span()
++            && try_lock!(self.by_cs.read(), else return super::FilterResult::global(Interest::sometimes())).contains_key(&metadata.callsite());
++        let consumers = if consumes {
++            global.clone()
++        } else {
++            Interest::never()
++        };
++        super::FilterResult { global, consumers }
++    }
++
++    #[cfg(feature = "registry")]
++    fn __max_level_hint(&self) -> super::FilterResult<Option<LevelFilter>> {
++        let global = <Self as Layer<S>>::max_level_hint(self);
++        super::FilterResult {
++            global,
++            consumers: if self.has_dynamics {
++                global
++            } else {
++                Some(LevelFilter::OFF)
++            },
++        }
++    }
++
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+         if self.has_dynamics && metadata.is_span() {
+             // If this metadata describes a span, first, check if there is a
+diff --git a/tracing-subscriber/src/filter/filter_fn.rs b/tracing-subscriber/src/filter/filter_fn.rs
+new file mode 100644
+index 0000000..dead391
+--- /dev/null
++++ b/tracing-subscriber/src/filter/filter_fn.rs
+@@ -0,0 +1,189 @@
++use super::LevelFilter;
++use crate::layer::{Context, Filter};
++use std::{any::type_name, fmt, marker::PhantomData};
++use tracing_core::{Interest, Metadata};
++
++/// A per-layer filter implemented by a metadata-only predicate.
++#[derive(Clone)]
++pub struct FilterFn<F = fn(&Metadata<'_>) -> bool> {
++    enabled: F,
++    max_level_hint: Option<LevelFilter>,
++}
++
++/// A per-layer filter that can inspect the current span context.
++pub struct DynFilterFn<
++    S,
++    F = fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++    R = fn(&'static Metadata<'static>) -> Interest,
++> {
++    enabled: F,
++    callsite: Option<R>,
++    max_level_hint: Option<LevelFilter>,
++    _s: PhantomData<fn(S)>,
++}
++
++/// Returns a per-layer filter using a metadata-only predicate.
++pub fn filter_fn<F>(enabled: F) -> FilterFn<F>
++where
++    F: Fn(&Metadata<'_>) -> bool,
++{
++    FilterFn::new(enabled)
++}
++
++/// Returns a per-layer filter using a context-sensitive predicate.
++pub fn dynamic_filter_fn<S, F>(enabled: F) -> DynFilterFn<S, F>
++where
++    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++{
++    DynFilterFn::new(enabled)
++}
++
++impl<F> FilterFn<F>
++where
++    F: Fn(&Metadata<'_>) -> bool,
++{
++    /// Constructs a metadata-only filter. Its decisions are cached per callsite.
++    pub fn new(enabled: F) -> Self {
++        Self {
++            enabled,
++            max_level_hint: None,
++        }
++    }
++    /// Specifies the most verbose level this predicate can enable.
++    pub fn with_max_level_hint(mut self, hint: impl Into<LevelFilter>) -> Self {
++        self.max_level_hint = Some(hint.into());
++        self
++    }
++}
++
++impl<S, F> Filter<S> for FilterFn<F>
++where
++    F: Fn(&Metadata<'_>) -> bool,
++{
++    fn enabled(&self, metadata: &Metadata<'_>, _: &Context<'_, S>) -> bool {
++        below_hint(metadata, self.max_level_hint) && (self.enabled)(metadata)
++    }
++    fn callsite_enabled(&self, metadata: &'static Metadata<'static>) -> Interest {
++        if below_hint(metadata, self.max_level_hint) && (self.enabled)(metadata) {
++            Interest::always()
++        } else {
++            Interest::never()
++        }
++    }
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        self.max_level_hint
++    }
++}
++
++impl<S, F> DynFilterFn<S, F>
++where
++    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++{
++    /// Constructs a dynamic filter, evaluated for every span or event.
++    pub fn new(enabled: F) -> Self {
++        Self {
++            enabled,
++            callsite: None,
++            max_level_hint: None,
++            _s: PhantomData,
++        }
++    }
++}
++
++impl<S, F, R> DynFilterFn<S, F, R>
++where
++    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++{
++    /// Specifies the most verbose level this predicate can enable.
++    pub fn with_max_level_hint(mut self, hint: impl Into<LevelFilter>) -> Self {
++        self.max_level_hint = Some(hint.into());
++        self
++    }
++    /// Adds stable callsite decisions. Only `sometimes` calls the dynamic predicate.
++    pub fn with_callsite_filter<R2>(self, callsite: R2) -> DynFilterFn<S, F, R2>
++    where
++        R2: Fn(&'static Metadata<'static>) -> Interest,
++    {
++        DynFilterFn {
++            enabled: self.enabled,
++            callsite: Some(callsite),
++            max_level_hint: self.max_level_hint,
++            _s: PhantomData,
++        }
++    }
++}
++
++impl<S, F, R> Filter<S> for DynFilterFn<S, F, R>
++where
++    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++    R: Fn(&'static Metadata<'static>) -> Interest,
++{
++    fn enabled(&self, metadata: &Metadata<'_>, context: &Context<'_, S>) -> bool {
++        below_hint(metadata, self.max_level_hint) && (self.enabled)(metadata, context)
++    }
++    fn callsite_enabled(&self, metadata: &'static Metadata<'static>) -> Interest {
++        if !below_hint(metadata, self.max_level_hint) {
++            return Interest::never();
++        }
++        self.callsite
++            .as_ref()
++            .map(|callsite| callsite(metadata))
++            .unwrap_or_else(Interest::sometimes)
++    }
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        self.max_level_hint
++    }
++}
++
++fn below_hint(metadata: &Metadata<'_>, hint: Option<LevelFilter>) -> bool {
++    hint.as_ref()
++        .map(|hint| metadata.level() <= hint)
++        .unwrap_or(true)
++}
++
++impl<F> fmt::Debug for FilterFn<F> {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("FilterFn")
++            .field("enabled", &type_name::<F>())
++            .field("max_level_hint", &self.max_level_hint)
++            .finish()
++    }
++}
++impl<S, F, R> fmt::Debug for DynFilterFn<S, F, R> {
++    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
++        f.debug_struct("DynFilterFn")
++            .field("enabled", &type_name::<F>())
++            .field(
++                "callsite",
++                &self.callsite.as_ref().map(|_| type_name::<R>()),
++            )
++            .field("max_level_hint", &self.max_level_hint)
++            .finish()
++    }
++}
++impl<S, F: Clone, R: Clone> Clone for DynFilterFn<S, F, R> {
++    fn clone(&self) -> Self {
++        Self {
++            enabled: self.enabled.clone(),
++            callsite: self.callsite.clone(),
++            max_level_hint: self.max_level_hint,
++            _s: PhantomData,
++        }
++    }
++}
++impl<F> From<F> for FilterFn<F>
++where
++    F: Fn(&Metadata<'_>) -> bool,
++{
++    fn from(enabled: F) -> Self {
++        Self::new(enabled)
++    }
++}
++impl<S, F> From<F> for DynFilterFn<S, F>
++where
++    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
++{
++    fn from(enabled: F) -> Self {
++        Self::new(enabled)
++    }
++}
+diff --git a/tracing-subscriber/src/filter/layer_filters.rs b/tracing-subscriber/src/filter/layer_filters.rs
+index c42b36b..44e636c 100644
+--- a/tracing-subscriber/src/filter/layer_filters.rs
++++ b/tracing-subscriber/src/filter/layer_filters.rs
+@@ -1,422 +1,556 @@
+ use super::LevelFilter;
+ use crate::{
+-    layer::{Context, Layer},
+-    registry,
++    layer::{Context, Filter, Layer},
++    registry::LookupSpan,
++    sync::RwLock,
+ };
+-use std::{any::type_name, cell::Cell, fmt, marker::PhantomData, thread_local};
+-use tracing_core::{
+-    span,
+-    subscriber::{Interest, Subscriber},
+-    Event, Metadata,
++use std::{
++    any::TypeId,
++    cell::RefCell,
++    collections::HashMap,
++    marker::PhantomData,
++    sync::{
++        atomic::{AtomicUsize, Ordering},
++        Arc, Weak,
++    },
+ };
++use tracing_core::{callsite::Identifier, span, Event, Interest, Metadata, Subscriber};
+ 
+-/// A filter that determines whether a span or event is enabled.
+-pub trait Filter<S> {
+-    fn enabled(&self, meta: &Metadata<'_>, cx: &Context<'_, S>) -> bool;
+-
+-    fn callsite_enabled(&self, meta: &'static Metadata<'static>) -> Interest {
+-        let _ = meta;
+-        Interest::sometimes()
+-    }
+-
+-    fn max_level_hint(&self) -> Option<LevelFilter> {
+-        None
+-    }
+-}
+-
+-#[derive(Debug, Clone)]
++/// A layer with a filter that applies only to that layer and its children.
++#[derive(Debug)]
+ pub struct Filtered<L, F, S> {
+-    filter: F,
+     layer: L,
++    filter: F,
+     id: FilterId,
++    interests: RwLock<HashMap<Identifier, Interest>>,
++    revision: Arc<AtomicUsize>,
+     _s: PhantomData<fn(S)>,
+ }
+ 
+-pub struct FilterFn<
+-    S,
+-    F = fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-    R = fn(&'static Metadata<'static>) -> Interest,
+-> {
+-    enabled: F,
+-    register_callsite: Option<R>,
+-    max_level_hint: Option<LevelFilter>,
+-    _s: PhantomData<fn(S)>,
++/// Identifies a per-layer filter in stored span data.
++#[doc(hidden)]
++#[derive(Debug, Copy, Clone, Eq, PartialEq)]
++pub struct FilterId(usize);
++
++/// The filters that enabled a span or event.
++#[doc(hidden)]
++#[derive(Debug, Default, Clone)]
++pub struct FilterMap {
++    enabled: Vec<FilterId>,
++    // Keep pending enabled decisions tied to the filters that produced them.
++    // Weak references also invalidate decisions when a reload replaces a
++    // whole layer, and avoid retaining dropped filters in thread-local state.
++    revisions: Vec<(Weak<AtomicUsize>, usize)>,
++}
++
++/// Separate global restrictions from the interests of independent consumers.
++#[doc(hidden)]
++#[derive(Debug, Clone)]
++pub struct FilterResult<T> {
++    pub(crate) global: T,
++    pub(crate) consumers: T,
+ }
+ 
+-#[derive(Copy, Clone, Debug)]
+-pub struct FilterId(u8);
++// A stable downcast marker, including through erased and reloadable layers.
++pub(crate) struct FilterMarker;
++pub(crate) static FILTER_MARKER: FilterMarker = FilterMarker;
+ 
+-#[derive(Default, Copy, Clone)]
+-pub(crate) struct FilterMap {
+-    bits: u64,
++impl FilterId {
++    fn new() -> Self {
++        static NEXT_ID: AtomicUsize = AtomicUsize::new(1);
++        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
++        assert_ne!(id, 0, "per-layer filter IDs exhausted");
++        Self(id)
++    }
+ }
+ 
+-thread_local! {
+-    /// The current state of `enabled` calls to per-layer filters on this
+-    /// thread.
+-    ///
+-    /// When `Filtered::enabled` is called, the filter will set the bit
+-    /// corresponding to its ID if it will disable the event/span being
+-    /// filtered. When the event or span is recorded, the per-layer filter will
+-    /// check its bit to determine if it disabled that event or span, and skip
+-    /// forwarding the event or span to the inner layer if the bit is set. Once
+-    /// a span or event has been skipped by a per-layer filter, it unsets its
+-    /// bit, so that the `FilterMap` has been cleared for the next set of
+-    /// `enabled` calls.
+-    ///
+-    /// This is also read by the `Registry`, for two reasons:
+-    ///
+-    /// 1. When filtering a span, the registry must store the `FilterMap`
+-    ///    generated by `Filtered::enabled` calls for that span as part of the
+-    ///    span's per-span data. This allows `Filtered` layers to determine
+-    ///    whether they previously disabled a given span, and avoid showing it
+-    ///    to the wrapped layer if it was disabled.
+-    ///
+-    ///    This is the mechanism that allows `Filtered` layers to also filter
+-    ///    out the spans they disable from span traversals (such as iterating
+-    ///    over parents, etc).
+-    /// 2. If all the bits are set, then every per-layer filter has decided it
+-    ///    doesn't want to enable that span or event. In that case, the
+-    ///    `Registry`'s `enabled` method will return `false`, so that we can
+-    ///    skip recording it entirely.
+-    pub(crate) static FILTERING: Cell<FilterMap> = Cell::new(FilterMap::default());
+-    pub(crate) static INTERESTING: Cell<Interest> = Cell::new(Interest::never());
++impl FilterMap {
++    pub(crate) fn enable(&mut self, id: FilterId) {
++        if !self.enabled.contains(&id) {
++            self.enabled.push(id);
++        }
++    }
++    pub(crate) fn is_enabled(&self, id: FilterId) -> bool {
++        self.enabled.contains(&id)
++    }
++    fn extend(&mut self, other: Self) {
++        for id in other.enabled {
++            self.enable(id);
++        }
++        self.revisions.extend(other.revisions);
++    }
++    fn watch(&mut self, revision: &Arc<AtomicUsize>) {
++        self.revisions
++            .push((Arc::downgrade(revision), revision.load(Ordering::Acquire)));
++    }
++    fn is_current(&self) -> bool {
++        self.revisions.iter().all(|(revision, version)| {
++            revision
++                .upgrade()
++                .map(|revision| revision.load(Ordering::Acquire) == *version)
++                .unwrap_or(false)
++        })
++    }
++}
++
++impl<T: Clone> FilterResult<T> {
++    pub(crate) fn global(value: T) -> Self {
++        Self {
++            global: value.clone(),
++            consumers: value,
++        }
++    }
+ }
+ 
+-// === impl Filter ===
++impl FilterResult<bool> {
++    pub(crate) fn combine(self, other: Self) -> Self {
++        Self {
++            global: self.global && other.global,
++            consumers: self.consumers || other.consumers,
++        }
++    }
++    pub(crate) fn result(&self) -> bool {
++        self.global && self.consumers
++    }
++}
+ 
+-impl<S> Filter<S> for LevelFilter {
+-    fn enabled(&self, meta: &Metadata<'_>, _: &Context<'_, S>) -> bool {
+-        meta.level() <= self
++fn and_interest(a: Interest, b: Interest) -> Interest {
++    if a.is_never() || b.is_never() {
++        Interest::never()
++    } else if a.is_sometimes() || b.is_sometimes() {
++        Interest::sometimes()
++    } else {
++        Interest::always()
+     }
++}
+ 
+-    fn callsite_enabled(&self, meta: &'static Metadata<'static>) -> Interest {
+-        if meta.level() <= self {
++impl FilterResult<Interest> {
++    pub(crate) fn combine(self, other: Self) -> Self {
++        // Disagreement must run enabled, even if one consumer always wants the
++        // item: the other consumers still need their individual decisions.
++        let consumers = if self.consumers.is_never() && other.consumers.is_never() {
++            Interest::never()
++        } else if self.consumers.is_always() && other.consumers.is_always() {
+             Interest::always()
+         } else {
+-            Interest::never()
++            Interest::sometimes()
++        };
++        Self {
++            global: and_interest(self.global, other.global),
++            consumers,
+         }
+     }
++    pub(crate) fn result(&self) -> Interest {
++        and_interest(self.global.clone(), self.consumers.clone())
++    }
++}
+ 
+-    fn max_level_hint(&self) -> Option<LevelFilter> {
+-        Some(*self)
++// None is an unknown upper bound, rather than a level below OFF.
++pub(crate) fn restrict(a: Option<LevelFilter>, b: Option<LevelFilter>) -> Option<LevelFilter> {
++    match (a, b) {
++        (Some(a), Some(b)) => Some(std::cmp::min(a, b)),
++        (a, b) => a.or(b),
+     }
+ }
+ 
+-// === impl Filtered ===
++impl FilterResult<Option<LevelFilter>> {
++    pub(crate) fn combine(self, other: Self) -> Self {
++        Self {
++            global: restrict(self.global, other.global),
++            consumers: match (self.consumers, other.consumers) {
++                (Some(a), Some(b)) => Some(std::cmp::max(a, b)),
++                _ => None,
++            },
++        }
++    }
++    pub(crate) fn result(&self) -> Option<LevelFilter> {
++        restrict(self.global, self.consumers)
++    }
++}
+ 
+ impl<L, F, S> Filtered<L, F, S> {
++    /// Wraps a layer with a per-layer filter.
+     pub fn new(layer: L, filter: F) -> Self {
+         Self {
+             layer,
+             filter,
+-            id: FilterId(255),
++            id: FilterId::new(),
++            interests: RwLock::new(HashMap::new()),
++            revision: Arc::new(AtomicUsize::new(0)),
+             _s: PhantomData,
+         }
+     }
++    /// Returns the wrapped layer.
++    pub fn inner(&self) -> &L {
++        &self.layer
++    }
++    /// Returns the filter.
++    pub fn filter(&self) -> &F {
++        &self.filter
++    }
++    /// Returns a mutable reference to the filter.
++    ///
++    /// Rebuild the callsite interest cache after changing an installed filter,
++    /// for example by making the change through a reload handle.
++    pub fn filter_mut(&mut self) -> &mut F {
++        self.interests.get_mut().expect("lock poisoned").clear();
++        self.revision.fetch_add(1, Ordering::Release);
++        &mut self.filter
++    }
++}
+ 
+-    fn did_enable(&self, f: impl FnOnce()) {
+-        FILTERING.with(|filtering| {
+-            if filtering.get().is_enabled(self.id) {
+-                f();
+-
+-                filtering.set(filtering.get().set(self.id, true));
+-            }
+-        })
++impl<L: Clone, F: Clone, S> Clone for Filtered<L, F, S> {
++    fn clone(&self) -> Self {
++        Self::new(self.layer.clone(), self.filter.clone())
+     }
+ }
+ 
+ impl<S, L, F> Layer<S> for Filtered<L, F, S>
+ where
+-    S: Subscriber + for<'span> registry::LookupSpan<'span> + 'static,
+-    F: Filter<S> + 'static,
++    S: Subscriber + for<'a> LookupSpan<'a>,
+     L: Layer<S>,
++    F: Filter<S> + 'static,
+ {
+-    fn on_register(&mut self, subscriber: &mut S) {
+-        self.id = subscriber.register_filter();
+-        self.layer.on_register(subscriber);
+-    }
+-
+-    // TODO(eliza): can we figure out a nice way to make the `Filtered` layer
+-    // not call `is_enabled_for` in hooks that the inner layer doesn't actually
+-    // have real implementations of? probably not...
+-    //
+-    // it would be cool if there was some wild rust reflection way of checking
+-    // if a trait impl has the default impl of a trait method or not, but that's
+-    // almsot certainly impossible...right?
+-
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+-        // self.filter.callsite_enabled(metadata)
+-        Interest::sometimes()
+-    }
+-
+-    fn enabled(&self, metadata: &Metadata<'_>, cx: Context<'_, S>) -> bool {
+-        let enabled = self.filter.enabled(metadata, &cx.with_filter(self.id));
+-        FILTERING.with(|filtering| filtering.set(filtering.get().set(self.id, enabled)));
+-        true // keep filtering
++        self.__callsite(metadata);
++        Interest::always()
++    }
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
++        let interest = self.filter.callsite_enabled(metadata);
++        self.interests
++            .write()
++            .expect("lock poisoned")
++            .insert(metadata.callsite(), interest.clone());
++        self.revision.fetch_add(1, Ordering::Release);
++        let inner = self.layer.__callsite(metadata).result();
++        FilterResult {
++            global: Interest::always(),
++            consumers: and_interest(interest, inner),
++        }
+     }
+-
+-    fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, cx: Context<'_, S>) {
+-        self.did_enable(|| {
+-            self.layer.new_span(attrs, id, cx.with_filter(self.id));
+-        })
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: Context<'_, S>,
++        filters: &mut FilterMap,
++    ) -> FilterResult<bool> {
++        filters.watch(&self.revision);
++        let ctx = ctx.with_filter(self.id);
++        let interest = self
++            .interests
++            .read()
++            .expect("lock poisoned")
++            .get(&metadata.callsite())
++            .cloned();
++        let enabled = match interest {
++            Some(ref interest) if interest.is_always() => true,
++            Some(ref interest) if interest.is_never() => false,
++            _ => self.filter.enabled(metadata, &ctx),
++        };
++        let enabled = enabled && self.layer.__enabled(metadata, ctx, filters).result();
++        if enabled {
++            filters.enable(self.id);
++        }
++        FilterResult {
++            global: true,
++            consumers: enabled,
++        }
+     }
+-
+-    #[doc(hidden)]
+     fn max_level_hint(&self) -> Option<LevelFilter> {
+-        self.filter.max_level_hint()
+-    }
+-
+-    fn on_record(&self, span: &span::Id, values: &span::Record<'_>, cx: Context<'_, S>) {
+-        if let Some(cx) = cx.if_enabled_for(span, self.id) {
+-            self.layer.on_record(span, values, cx)
++        restrict(
++            self.filter.max_level_hint(),
++            self.layer.__max_level_hint().result(),
++        )
++    }
++    fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++        FilterResult {
++            global: None,
++            consumers: self.max_level_hint(),
+         }
+     }
+-
+-    fn on_follows_from(&self, span: &span::Id, follows: &span::Id, cx: Context<'_, S>) {
+-        // only call `on_follows_from` if both spans are enabled by us
+-        if cx.is_enabled_for(span, self.id) && cx.is_enabled_for(follows, self.id) {
+-            self.layer
+-                .on_follows_from(span, follows, cx.with_filter(self.id))
++    fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: Context<'_, S>) {
++        if !current_enabled(self.id) {
++            return;
+         }
+-    }
+-
+-    fn on_event(&self, event: &Event<'_>, cx: Context<'_, S>) {
+-        self.did_enable(|| {
+-            self.layer.on_event(event, cx.with_filter(self.id));
+-        })
+-    }
+-
+-    fn on_enter(&self, id: &span::Id, cx: Context<'_, S>) {
+-        if let Some(cx) = cx.if_enabled_for(id, self.id) {
+-            self.layer.on_enter(id, cx)
++        if let Some(span) = ctx.span(id) {
++            let span = span.with_filter(&[self.id]);
++            if !span.is_enabled() {
++                // Registry stores this alongside the span. Existing custom
++                // SpanData implementations use their extensions instead.
++                span.extensions_mut().replace(current_filters());
++            }
++        }
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(id).is_some() {
++            self.layer.new_span(attrs, id, ctx);
+         }
+     }
+-
+-    fn on_exit(&self, id: &span::Id, cx: Context<'_, S>) {
+-        if let Some(cx) = cx.if_enabled_for(id, self.id) {
+-            self.layer.on_exit(id, cx)
++    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
++        if current_enabled(self.id) {
++            self.layer.on_event(event, ctx.with_filter(self.id));
+         }
+     }
+-
+-    fn on_close(&self, id: span::Id, cx: Context<'_, S>) {
+-        if let Some(cx) = cx.if_enabled_for(&id, self.id) {
+-            self.layer.on_close(id, cx)
++    fn on_record(&self, id: &span::Id, values: &span::Record<'_>, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(id).is_some() {
++            self.layer.on_record(id, values, ctx);
+         }
+     }
+-
+-    // XXX(eliza): the existence of this method still makes me sad...
+-    fn on_id_change(&self, old: &span::Id, new: &span::Id, cx: Context<'_, S>) {
+-        if let Some(cx) = cx.if_enabled_for(old, self.id) {
+-            self.layer.on_id_change(old, new, cx)
++    fn on_follows_from(&self, id: &span::Id, follows: &span::Id, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(id).is_some() && ctx.span(follows).is_some() {
++            self.layer.on_follows_from(id, follows, ctx);
+         }
+     }
+-}
+-
+-// === impl FilterFn ===
+-
+-pub fn filter_fn<S, F>(f: F) -> FilterFn<S, F>
+-where
+-    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-{
+-    FilterFn::new(f)
+-}
+-
+-impl<S, F> FilterFn<S, F>
+-where
+-    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-{
+-    pub fn new(enabled: F) -> Self {
+-        Self {
+-            enabled,
+-            register_callsite: None,
+-            max_level_hint: None,
+-            _s: PhantomData,
++    fn on_enter(&self, id: &span::Id, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(id).is_some() {
++            self.layer.on_enter(id, ctx);
+         }
+     }
+-}
+-
+-impl<S, F, R> FilterFn<S, F, R>
+-where
+-    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-{
+-    pub fn with_max_level_hint(self, max_level_hint: LevelFilter) -> Self {
+-        Self {
+-            max_level_hint: Some(max_level_hint),
+-            ..self
++    fn on_exit(&self, id: &span::Id, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(id).is_some() {
++            self.layer.on_exit(id, ctx);
+         }
+     }
+-
+-    pub fn with_callsite_filter<R2>(self, callsite_enabled: R2) -> FilterFn<S, F, R2>
+-    where
+-        R2: Fn(&'static Metadata<'static>) -> Interest,
+-    {
+-        let register_callsite = Some(callsite_enabled);
+-        let FilterFn {
+-            enabled,
+-            max_level_hint,
+-            _s,
+-            ..
+-        } = self;
+-        FilterFn {
+-            enabled,
+-            register_callsite,
+-            max_level_hint,
+-            _s,
++    fn on_close(&self, id: span::Id, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(&id).is_some() {
++            self.layer.on_close(id, ctx);
+         }
+     }
+-
+-    fn is_below_max_level(&self, metadata: &Metadata<'_>) -> bool {
+-        self.max_level_hint
+-            .as_ref()
+-            .map(|hint| metadata.level() <= hint)
+-            .unwrap_or(true)
++    fn on_id_change(&self, old: &span::Id, new: &span::Id, ctx: Context<'_, S>) {
++        let ctx = ctx.with_filter(self.id);
++        if ctx.span(old).is_some() {
++            self.layer.on_id_change(old, new, ctx);
++        }
+     }
+-
+-    fn default_callsite_enabled(&self, metadata: &Metadata<'_>) -> Interest {
+-        if (self.enabled)(metadata, &Context::none()) {
+-            Interest::always()
++    unsafe fn downcast_raw(&self, id: TypeId) -> Option<*const ()> {
++        if id == TypeId::of::<Self>() {
++            Some(self as *const _ as *const ())
++        } else if id == TypeId::of::<FilterMarker>() {
++            Some(&FILTER_MARKER as *const _ as *const ())
++        } else if id == TypeId::of::<F>() {
++            Some(&self.filter as *const _ as *const ())
+         } else {
+-            Interest::never()
++            self.layer.downcast_raw(id)
+         }
+     }
+ }
+ 
+-impl<S, F, R> Filter<S> for FilterFn<S, F, R>
+-where
+-    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-    R: Fn(&'static Metadata<'static>) -> Interest,
+-{
+-    fn enabled(&self, metadata: &Metadata<'_>, cx: &Context<'_, S>) -> bool {
+-        let enabled = (self.enabled)(metadata, cx);
+-        debug_assert!(
+-            !enabled || self.is_below_max_level(metadata),
+-            "FilterFn<{}> claimed it would only enable {:?} and below, \
+-            but it enabled metadata with the {:?} level\nmetadata={:#?}",
+-            type_name::<F>(),
+-            self.max_level_hint.unwrap(),
+-            metadata.level(),
+-            metadata,
+-        );
+-
+-        enabled
++impl<S> Filter<S> for LevelFilter {
++    fn enabled(&self, metadata: &Metadata<'_>, _: &Context<'_, S>) -> bool {
++        metadata.level() <= self
+     }
+-
+     fn callsite_enabled(&self, metadata: &'static Metadata<'static>) -> Interest {
+-        let interest = self
+-            .register_callsite
+-            .as_ref()
+-            .map(|callsite_enabled| callsite_enabled(metadata))
+-            .unwrap_or_else(|| self.default_callsite_enabled(metadata));
+-        debug_assert!(
+-            interest.is_never() || self.is_below_max_level(metadata),
+-            "FilterFn<{}, {}> claimed it was only interested in {:?} and below, \
+-            but it enabled metadata with the {:?} level\nmetadata={:#?}",
+-            type_name::<F>(),
+-            type_name::<R>(),
+-            self.max_level_hint.unwrap(),
+-            metadata.level(),
+-            metadata,
+-        );
+-
+-        interest
++        if metadata.level() <= self {
++            Interest::always()
++        } else {
++            Interest::never()
++        }
+     }
+-
+     fn max_level_hint(&self) -> Option<LevelFilter> {
+-        self.max_level_hint
++        Some(*self)
+     }
+ }
+ 
+-impl<S, F, R> fmt::Debug for FilterFn<S, F, R> {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        let mut s = f.debug_struct("FilterFn");
+-        s.field("enabled", &format_args!("{}", type_name::<F>()));
+-        if self.register_callsite.is_some() {
+-            s.field(
+-                "register_callsite",
+-                &format_args!("Some({})", type_name::<R>()),
+-            );
+-        } else {
+-            s.field("register_callsite", &format_args!("None"));
+-        }
+-
+-        s.field("max_level_hint", &self.max_level_hint)
+-            .field("subscriber_type", &format_args!("{}", type_name::<S>()))
+-            .finish()
+-    }
++// Subscriber cannot expose the distinction between a global veto and a branch
++// with no interested consumers. These slots pass that distinction between
++// adjacent Layered subscribers without changing tracing-core's Subscriber API.
++// Entries are tagged with their producer, so custom subscribers remain global.
++struct Enabled {
++    owner: Owner,
++    callsite: Identifier,
++    result: FilterResult<bool>,
++    filters: FilterMap,
++}
++#[derive(Clone)]
++struct Dispatching {
++    next: Owner,
++    callsite: Identifier,
++    filters: FilterMap,
++}
++thread_local! {
++    static ENABLED: RefCell<Option<Enabled>> = RefCell::new(None);
++    static INTEREST: RefCell<Option<(Owner, FilterResult<Interest>)>> = RefCell::new(None);
++    static HINT: RefCell<Option<(Owner, FilterResult<Option<LevelFilter>>)>> = RefCell::new(None);
++    static DISPATCHING: RefCell<Option<Dispatching>> = RefCell::new(None);
++}
++// A transparent subscriber wrapper can have the same address as its inner
++// subscriber, but must still be allowed to override that subscriber's result.
++type Owner = (TypeId, usize);
++fn owner<S: 'static>(subscriber: &S) -> Owner {
++    (TypeId::of::<S>(), subscriber as *const S as usize)
++}
++pub(crate) fn is_registry<S: 'static>() -> bool {
++    TypeId::of::<S>() == TypeId::of::<crate::Registry>()
+ }
+ 
+-impl<S, F, R> Clone for FilterFn<S, F, R>
+-where
+-    F: Clone,
+-    R: Clone,
+-{
+-    fn clone(&self) -> Self {
+-        Self {
+-            enabled: self.enabled.clone(),
+-            register_callsite: self.register_callsite.clone(),
+-            max_level_hint: self.max_level_hint,
+-            _s: PhantomData,
++pub(crate) fn subscriber_enabled<S: Subscriber>(
++    subscriber: &S,
++    metadata: &Metadata<'_>,
++    filters: &mut FilterMap,
++) -> FilterResult<bool> {
++    ENABLED.with(|slot| slot.borrow_mut().take());
++    let enabled = subscriber.enabled(metadata);
++    if let Some(inner) = ENABLED.with(|slot| slot.borrow_mut().take()) {
++        if inner.owner == owner(subscriber) && inner.callsite == metadata.callsite() {
++            filters.extend(inner.filters);
++            return inner.result;
+         }
+     }
+-}
+-
+-impl<F, S> From<F> for FilterFn<S, F>
+-where
+-    F: Fn(&Metadata<'_>, &Context<'_, S>) -> bool,
+-{
+-    fn from(f: F) -> Self {
+-        Self::new(f)
++    FilterResult {
++        global: enabled,
++        consumers: enabled && !is_registry::<S>(),
+     }
+ }
+-
+-// === impl FilterId ===
+-
+-impl FilterId {
+-    pub(crate) fn new(id: u8) -> Self {
+-        assert!(id < 64, "filter IDs may not be greater than 64");
+-        Self(id)
+-    }
++pub(crate) fn publish_enabled<S: 'static>(
++    subscriber: &S,
++    metadata: &Metadata<'_>,
++    result: FilterResult<bool>,
++    filters: FilterMap,
++    filtered: bool,
++) -> bool {
++    let enabled = if filtered {
++        result.result()
++    } else {
++        result.global
++    };
++    ENABLED.with(|slot| {
++        *slot.borrow_mut() = Some(Enabled {
++            owner: owner(subscriber),
++            callsite: metadata.callsite(),
++            result,
++            filters,
++        })
++    });
++    enabled
+ }
+-
+-// === impl FilterMap ===
+-
+-impl FilterMap {
+-    pub(crate) fn set(self, FilterId(idx): FilterId, enabled: bool) -> Self {
+-        debug_assert!(idx < 64 || idx == 255);
+-        if idx >= 64 {
+-            return self;
++pub(crate) fn subscriber_interest<S: Subscriber>(
++    subscriber: &S,
++    metadata: &'static Metadata<'static>,
++) -> FilterResult<Interest> {
++    INTEREST.with(|slot| slot.borrow_mut().take());
++    let interest = subscriber.register_callsite(metadata);
++    if let Some((id, result)) = INTEREST.with(|slot| slot.borrow_mut().take()) {
++        if id == owner(subscriber) {
++            return result;
+         }
+-
+-        if enabled {
+-            Self {
+-                bits: self.bits & !(1 << idx),
+-            }
+-        } else {
+-            Self {
+-                bits: self.bits | (1 << idx),
+-            }
++    }
++    FilterResult::global(interest)
++}
++pub(crate) fn publish_interest<S: 'static>(
++    subscriber: &S,
++    result: FilterResult<Interest>,
++    filtered: bool,
++) -> Interest {
++    let interest = if filtered {
++        result.result()
++    } else {
++        result.global.clone()
++    };
++    INTEREST.with(|slot| *slot.borrow_mut() = Some((owner(subscriber), result)));
++    interest
++}
++pub(crate) fn subscriber_hint<S: Subscriber>(subscriber: &S) -> FilterResult<Option<LevelFilter>> {
++    HINT.with(|slot| slot.borrow_mut().take());
++    let hint = subscriber.max_level_hint();
++    if let Some((id, result)) = HINT.with(|slot| slot.borrow_mut().take()) {
++        if id == owner(subscriber) {
++            return result;
+         }
+     }
+-
+-    pub(crate) fn is_enabled(self, FilterId(idx): FilterId) -> bool {
+-        debug_assert!(idx < 64 || idx == 255);
+-        if idx >= 64 {
+-            return false;
++    if is_registry::<S>() {
++        FilterResult {
++            global: None,
++            consumers: Some(LevelFilter::OFF),
+         }
+-
+-        self.bits & (1 << idx) == 0
++    } else {
++        FilterResult::global(hint)
+     }
++}
++pub(crate) fn publish_hint<S: 'static>(
++    subscriber: &S,
++    result: FilterResult<Option<LevelFilter>>,
++    filtered: bool,
++) -> Option<LevelFilter> {
++    let hint = if filtered {
++        result.result()
++    } else {
++        result.global
++    };
++    HINT.with(|slot| *slot.borrow_mut() = Some((owner(subscriber), result)));
++    hint
++}
+ 
+-    pub(crate) fn any_enabled(self) -> bool {
+-        self.bits != u64::MAX
++pub(crate) struct DispatchGuard(Option<Dispatching>);
++impl DispatchGuard {
++    pub(crate) fn new<S: Subscriber, I: 'static>(
++        subscriber: &S,
++        inner: &I,
++        metadata: &Metadata<'_>,
++    ) -> Self {
++        let inherited = DISPATCHING.with(|slot| {
++            slot.borrow()
++                .as_ref()
++                .filter(|frame| {
++                    frame.next == owner(subscriber) && frame.callsite == metadata.callsite()
++                })
++                .map(|frame| frame.filters.clone())
++        });
++        let filters = inherited.unwrap_or_else(|| {
++            let pending = ENABLED.with(|slot| slot.borrow_mut().take());
++            if let Some(pending) = pending {
++                if pending.owner == owner(subscriber)
++                    && pending.callsite == metadata.callsite()
++                    && pending.filters.is_current()
++                {
++                    return pending.filters;
++                }
++            }
++            // An always-interest callsite skips enabled. Populate span views
++            // using the cached stable filter decisions in that case.
++            subscriber.enabled(metadata);
++            ENABLED.with(|slot| {
++                slot.borrow_mut()
++                    .take()
++                    .map(|state| state.filters)
++                    .unwrap_or_default()
++            })
++        });
++        Self(DISPATCHING.with(|slot| {
++            slot.replace(Some(Dispatching {
++                next: owner(inner),
++                callsite: metadata.callsite(),
++                filters,
++            }))
++        }))
+     }
+ }
+-
+-impl fmt::Debug for FilterMap {
+-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        f.debug_struct("FilterMap")
+-            .field("bits", &format_args!("{:#b}", self.bits))
+-            .finish()
++impl Drop for DispatchGuard {
++    fn drop(&mut self) {
++        DISPATCHING.with(|slot| slot.replace(self.0.take()));
+     }
+ }
++pub(crate) fn current_filters() -> FilterMap {
++    // Spans keep their original view for their entire lifetime, even after a
++    // reload. Only pending event/span creation decisions need revision checks.
++    DISPATCHING.with(|slot| {
++        slot.borrow()
++            .as_ref()
++            .map(|frame| FilterMap {
++                enabled: frame.filters.enabled.clone(),
++                revisions: Vec::new(),
++            })
++            .unwrap_or_default()
++    })
++}
++fn current_enabled(id: FilterId) -> bool {
++    DISPATCHING.with(|slot| {
++        slot.borrow()
++            .as_ref()
++            .map(|frame| frame.filters.is_enabled(id))
++            .unwrap_or(false)
++    })
++}
+diff --git a/tracing-subscriber/src/filter/level.rs b/tracing-subscriber/src/filter/level.rs
+index 0fa6012..9668eb4 100644
+--- a/tracing-subscriber/src/filter/level.rs
++++ b/tracing-subscriber/src/filter/level.rs
+@@ -9,6 +9,35 @@ pub use tracing_core::metadata::{LevelFilter, ParseLevelFilterError as ParseErro
+ // === impl LevelFilter ===
+ 
+ impl<S: Subscriber> crate::Layer<S> for LevelFilter {
++    #[cfg(feature = "registry")]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        _: crate::layer::Context<'_, S>,
++        _: &mut super::FilterMap,
++    ) -> super::FilterResult<bool> {
++        super::FilterResult {
++            global: self >= metadata.level(),
++            consumers: false,
++        }
++    }
++
++    #[cfg(feature = "registry")]
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> super::FilterResult<Interest> {
++        super::FilterResult {
++            global: <Self as crate::Layer<S>>::register_callsite(self, metadata),
++            consumers: Interest::never(),
++        }
++    }
++
++    #[cfg(feature = "registry")]
++    fn __max_level_hint(&self) -> super::FilterResult<Option<LevelFilter>> {
++        super::FilterResult {
++            global: Some(*self),
++            consumers: Some(LevelFilter::OFF),
++        }
++    }
++
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+         if self >= metadata.level() {
+             Interest::always()
+diff --git a/tracing-subscriber/src/filter/mod.rs b/tracing-subscriber/src/filter/mod.rs
+index 5bffe8b..65ca2d2 100644
+--- a/tracing-subscriber/src/filter/mod.rs
++++ b/tracing-subscriber/src/filter/mod.rs
+@@ -4,8 +4,22 @@
+ //! [`Layer`]: ../layer/trait.Layer.html
+ #[cfg(feature = "env-filter")]
+ mod env;
++#[cfg(feature = "registry")]
++mod filter_fn;
++#[cfg(feature = "registry")]
++pub(crate) mod layer_filters;
+ mod level;
+ 
++#[cfg(feature = "registry")]
++#[doc(hidden)]
++pub use self::layer_filters::{FilterId, FilterMap, FilterResult};
++#[cfg(feature = "registry")]
++#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
++pub use self::{
++    filter_fn::{dynamic_filter_fn, filter_fn, DynFilterFn, FilterFn},
++    layer_filters::Filtered,
++};
++
+ pub use self::level::{LevelFilter, ParseError as LevelParseError};
+ 
+ #[cfg(feature = "env-filter")]
+diff --git a/tracing-subscriber/src/layer.rs b/tracing-subscriber/src/layer.rs
+index cbddb9d..3db94a0 100644
+--- a/tracing-subscriber/src/layer.rs
++++ b/tracing-subscriber/src/layer.rs
+@@ -6,6 +6,8 @@ use tracing_core::{
+     Event, LevelFilter,
+ };
+ 
++#[cfg(feature = "registry")]
++use crate::filter::{layer_filters, FilterId, FilterMap, FilterResult};
+ #[cfg(feature = "registry")]
+ use crate::registry::Registry;
+ use crate::registry::{self, LookupSpan, SpanRef};
+@@ -17,6 +19,29 @@ use std::{
+     sync::Arc,
+ };
+ 
++/// Determines which spans and events a particular layer observes.
++///
++/// Attach a filter with [`Layer::with_filter`]. Rejected items may still be
++/// enabled for other layers. Returning a stable callsite interest allows the
++/// decision to be cached; context-sensitive filters should return `sometimes`.
++#[cfg(feature = "registry")]
++#[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
++pub trait Filter<S> {
++    /// Returns whether this layer should observe an item in the given context.
++    fn enabled(&self, metadata: &Metadata<'_>, context: &Context<'_, S>) -> bool;
++
++    /// Returns a cacheable decision, or `sometimes` to evaluate every item.
++    fn callsite_enabled(&self, metadata: &'static Metadata<'static>) -> Interest {
++        let _ = metadata;
++        Interest::sometimes()
++    }
++
++    /// Returns the most verbose level this filter can enable, if known.
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        None
++    }
++}
++
+ /// A composable handler for `tracing` events.
+ ///
+ /// The [`Subscriber`] trait in `tracing-core` represents the _complete_ set of
+@@ -185,10 +210,10 @@ use std::{
+ /// Note that the [`Layer::register_callsite`] and [`Layer::enabled`] methods
+ /// determine whether a span or event is enabled *globally*. Thus, they should
+ /// **not** be used to indicate whether an individual layer wishes to record a
+-/// particular span or event. Instead, if a layer is only interested in a subset
+-/// of trace data, but does *not* wish to disable other spans and events for the
+-/// rest of the layer stack should ignore those spans and events in its
+-/// notification methods.
++/// particular span or event. With the `registry` feature enabled, use
++/// [`Layer::with_filter`] to give a layer an independent filter. Its callbacks
++/// and span lookups will then see only the items accepted by that filter.
++/// Filters on composed layers apply to the entire wrapped subtree.
+ ///
+ /// The filtering methods on a stack of `Layer`s are evaluated in a top-down
+ /// order, starting with the outermost `Layer` and ending with the wrapped
+@@ -313,6 +338,41 @@ where
+         None
+     }
+ 
++    /// Applies a filter to this layer and any layers composed inside it.
++    /// Other layers retain their own independent filtering decisions.
++    #[cfg(feature = "registry")]
++    #[cfg_attr(docsrs, doc(cfg(feature = "registry")))]
++    fn with_filter<F>(self, filter: F) -> crate::filter::Filtered<Self, F, S>
++    where
++        Self: Sized,
++        F: Filter<S>,
++    {
++        crate::filter::Filtered::new(self, filter)
++    }
++
++    #[cfg(feature = "registry")]
++    #[doc(hidden)]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: Context<'_, S>,
++        _filters: &mut FilterMap,
++    ) -> FilterResult<bool> {
++        FilterResult::global(self.enabled(metadata, ctx))
++    }
++
++    #[cfg(feature = "registry")]
++    #[doc(hidden)]
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
++        FilterResult::global(self.register_callsite(metadata))
++    }
++
++    #[cfg(feature = "registry")]
++    #[doc(hidden)]
++    fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++        FilterResult::global(self.max_level_hint())
++    }
++
+     /// Notifies this layer that a span with the given `Id` recorded the given
+     /// `values`.
+     // Note: it's unclear to me why we'd need the current span in `record` (the
+@@ -556,6 +616,10 @@ pub trait SubscriberExt: Subscriber + crate::sealed::Sealed {
+ #[derive(Debug)]
+ pub struct Context<'a, S> {
+     subscriber: Option<&'a S>,
++    #[cfg(feature = "registry")]
++    filters: Vec<FilterId>,
++    #[cfg(feature = "registry")]
++    filtered_current: Option<fn(&S, &[FilterId]) -> span::Current>,
+ }
+ 
+ /// A [`Subscriber`] composed of a `Subscriber` wrapped by one or more
+@@ -610,39 +674,100 @@ where
+     S: Subscriber,
+ {
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+-        let outer = self.layer.register_callsite(metadata);
+-        if outer.is_never() {
+-            // if the outer layer has disabled the callsite, return now so that
+-            // the subscriber doesn't get its hopes up.
+-            return outer;
++        #[cfg(feature = "registry")]
++        {
++            let outer = self.layer.__callsite(metadata);
++            let result = if outer.global.is_never() {
++                outer
++            } else {
++                let inner = layer_filters::subscriber_interest(&self.inner, metadata);
++                if layer_filters::is_registry::<S>() {
++                    outer
++                } else {
++                    outer.combine(inner)
++                }
++            };
++            return layer_filters::publish_interest(self, result, self.has_filters());
+         }
++        #[cfg(not(feature = "registry"))]
++        {
++            let outer = self.layer.register_callsite(metadata);
++            if outer.is_never() {
++                // if the outer layer has disabled the callsite, return now so that
++                // the subscriber doesn't get its hopes up.
++                return outer;
++            }
+ 
+-        let inner = self.inner.register_callsite(metadata);
+-        if outer.is_sometimes() {
+-            // if this interest is "sometimes", return "sometimes" to ensure that
+-            // filters are reevaluated.
+-            outer
+-        } else {
+-            // otherwise, allow the inner subscriber to weigh in.
+-            inner
++            let inner = self.inner.register_callsite(metadata);
++            if outer.is_sometimes() {
++                // if this interest is "sometimes", return "sometimes" to ensure that
++                // filters are reevaluated.
++                outer
++            } else {
++                // otherwise, allow the inner subscriber to weigh in.
++                inner
++            }
+         }
+     }
+ 
+     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
+-        if self.layer.enabled(metadata, self.ctx()) {
+-            // if the outer layer enables the callsite metadata, ask the subscriber.
+-            self.inner.enabled(metadata)
+-        } else {
+-            // otherwise, the callsite is disabled by the layer
+-            false
++        #[cfg(feature = "registry")]
++        {
++            let mut filters = FilterMap::default();
++            let outer = self.layer.__enabled(metadata, self.ctx(), &mut filters);
++            let result = if outer.global {
++                outer.combine(layer_filters::subscriber_enabled(
++                    &self.inner,
++                    metadata,
++                    &mut filters,
++                ))
++            } else {
++                outer
++            };
++            return layer_filters::publish_enabled(
++                self,
++                metadata,
++                result,
++                filters,
++                self.has_filters(),
++            );
++        }
++        #[cfg(not(feature = "registry"))]
++        {
++            if self.layer.enabled(metadata, self.ctx()) {
++                // if the outer layer enables the callsite metadata, ask the subscriber.
++                self.inner.enabled(metadata)
++            } else {
++                // otherwise, the callsite is disabled by the layer
++                false
++            }
+         }
+     }
+ 
+     fn max_level_hint(&self) -> Option<LevelFilter> {
++        #[cfg(feature = "registry")]
++        {
++            let result = self
++                .layer
++                .__max_level_hint()
++                .combine(layer_filters::subscriber_hint(&self.inner));
++            return layer_filters::publish_hint(self, result, self.has_filters());
++        }
++        #[cfg(not(feature = "registry"))]
+         std::cmp::max(self.layer.max_level_hint(), self.inner.max_level_hint())
+     }
+ 
+     fn new_span(&self, span: &span::Attributes<'_>) -> span::Id {
++        #[cfg(feature = "registry")]
++        let _guard = if self.has_filters() {
++            Some(layer_filters::DispatchGuard::new(
++                self,
++                &self.inner,
++                span.metadata(),
++            ))
++        } else {
++            None
++        };
+         let id = self.inner.new_span(span);
+         self.layer.new_span(span, &id, self.ctx());
+         id
+@@ -659,6 +784,16 @@ where
+     }
+ 
+     fn event(&self, event: &Event<'_>) {
++        #[cfg(feature = "registry")]
++        let _guard = if self.has_filters() {
++            Some(layer_filters::DispatchGuard::new(
++                self,
++                &self.inner,
++                event.metadata(),
++            ))
++        } else {
++            None
++        };
+         self.inner.event(event);
+         self.layer.on_event(event, self.ctx());
+     }
+@@ -732,6 +867,41 @@ where
+     B: Layer<S>,
+     S: Subscriber,
+ {
++    #[cfg(feature = "registry")]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: Context<'_, S>,
++        filters: &mut FilterMap,
++    ) -> FilterResult<bool> {
++        let outer = self.layer.__enabled(metadata, ctx.clone(), filters);
++        if !outer.global {
++            return outer;
++        }
++        outer.combine(self.inner.__enabled(metadata, ctx, filters))
++    }
++
++    #[cfg(feature = "registry")]
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
++        let outer = self.layer.__callsite(metadata);
++        if outer.global.is_never() {
++            return outer;
++        }
++        outer.combine(self.inner.__callsite(metadata))
++    }
++
++    #[cfg(feature = "registry")]
++    fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++        self.layer
++            .__max_level_hint()
++            .combine(self.inner.__max_level_hint())
++    }
++
++    #[cfg(feature = "registry")]
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        self.__max_level_hint().result()
++    }
++
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+         let outer = self.layer.register_callsite(metadata);
+         if outer.is_never() {
+@@ -828,6 +998,41 @@ where
+     L: Layer<S>,
+     S: Subscriber,
+ {
++    #[cfg(feature = "registry")]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: Context<'_, S>,
++        filters: &mut FilterMap,
++    ) -> FilterResult<bool> {
++        match self {
++            Some(layer) => layer.__enabled(metadata, ctx, filters),
++            None => FilterResult {
++                global: true,
++                consumers: false,
++            },
++        }
++    }
++    #[cfg(feature = "registry")]
++    fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
++        match self {
++            Some(layer) => layer.__callsite(metadata),
++            None => FilterResult {
++                global: Interest::always(),
++                consumers: Interest::never(),
++            },
++        }
++    }
++    #[cfg(feature = "registry")]
++    fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++        match self {
++            Some(layer) => layer.__max_level_hint(),
++            None => FilterResult {
++                global: None,
++                consumers: Some(LevelFilter::OFF),
++            },
++        }
++    }
+     #[inline]
+     fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: Context<'_, S>) {
+         if let Some(ref inner) = self {
+@@ -921,6 +1126,23 @@ where
+ 
+ macro_rules! layer_impl_body {
+     () => {
++        #[cfg(feature = "registry")]
++        fn __enabled(
++            &self,
++            metadata: &Metadata<'_>,
++            ctx: Context<'_, S>,
++            filters: &mut FilterMap,
++        ) -> FilterResult<bool> {
++            self.deref().__enabled(metadata, ctx, filters)
++        }
++        #[cfg(feature = "registry")]
++        fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
++            self.deref().__callsite(metadata)
++        }
++        #[cfg(feature = "registry")]
++        fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++            self.deref().__max_level_hint()
++        }
+         #[inline]
+         fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: Context<'_, S>) {
+             self.deref().new_span(attrs, id, ctx)
+@@ -986,14 +1208,7 @@ macro_rules! layer_impl_body {
+ 
+ impl<L, S> Layer<S> for Arc<L>
+ where
+-    L: Layer<S>,
+-    S: Subscriber,
+-{
+-    layer_impl_body! {}
+-}
+-
+-impl<S> Layer<S> for Arc<dyn Layer<S>>
+-where
++    L: Layer<S> + ?Sized,
+     S: Subscriber,
+ {
+     layer_impl_body! {}
+@@ -1001,14 +1216,7 @@ where
+ 
+ impl<L, S> Layer<S> for Box<L>
+ where
+-    L: Layer<S>,
+-    S: Subscriber,
+-{
+-    layer_impl_body! {}
+-}
+-
+-impl<S> Layer<S> for Box<dyn Layer<S>>
+-where
++    L: Layer<S> + ?Sized,
+     S: Subscriber,
+ {
+     layer_impl_body! {}
+@@ -1032,6 +1240,21 @@ where
+     fn ctx(&self) -> Context<'_, S> {
+         Context {
+             subscriber: Some(&self.inner),
++            #[cfg(feature = "registry")]
++            filters: Vec::new(),
++            #[cfg(feature = "registry")]
++            filtered_current: None,
++        }
++    }
++
++    #[cfg(feature = "registry")]
++    fn has_filters(&self) -> bool
++    where
++        L: Layer<S>,
++    {
++        let marker = TypeId::of::<layer_filters::FilterMarker>();
++        unsafe {
++            self.layer.downcast_raw(marker).is_some() || self.inner.downcast_raw(marker).is_some()
+         }
+     }
+ }
+@@ -1076,6 +1299,10 @@ where
+     /// Returns the wrapped subscriber's view of the current span.
+     #[inline]
+     pub fn current_span(&self) -> span::Current {
++        #[cfg(feature = "registry")]
++        if let (Some(subscriber), Some(current)) = (self.subscriber, self.filtered_current) {
++            return current(subscriber, &self.filters);
++        }
+         self.subscriber
+             .map(Subscriber::current_span)
+             // TODO: this would be more correct as "unknown", so perhaps
+@@ -1187,7 +1414,7 @@ where
+         } else if event.is_contextual() {
+             self.lookup_current()
+         } else {
+-            event.parent().and_then(|id| self.span(id))
++            event.parent().and_then(|id| self.span_or_parent(id))
+         }
+     }
+ 
+@@ -1200,7 +1427,7 @@ where
+     where
+         S: for<'lookup> LookupSpan<'lookup>,
+     {
+-        let span = self.subscriber.as_ref()?.span(id)?;
++        let span = self.span(id)?;
+         Some(span.metadata())
+     }
+ 
+@@ -1223,7 +1450,16 @@ where
+     where
+         S: for<'lookup> LookupSpan<'lookup>,
+     {
+-        self.subscriber.as_ref()?.span(id)
++        let span = self.subscriber.as_ref()?.span(id)?;
++        #[cfg(feature = "registry")]
++        let span = {
++            let span = span.with_filter(&self.filters);
++            if !span.is_enabled() {
++                return None;
++            }
++            span
++        };
++        Some(span)
+     }
+ 
+     /// Returns `true` if an active span exists for the given `Id`.
+@@ -1240,7 +1476,7 @@ where
+     where
+         S: for<'lookup> LookupSpan<'lookup>,
+     {
+-        self.subscriber.as_ref().and_then(|s| s.span(id)).is_some()
++        self.span(id).is_some()
+     }
+ 
+     /// Returns [stored data] for the span that the wrapped subscriber considers
+@@ -1262,10 +1498,9 @@ where
+     where
+         S: for<'lookup> LookupSpan<'lookup>,
+     {
+-        let subscriber = self.subscriber.as_ref()?;
+-        let current = subscriber.current_span();
++        let current = self.current_span();
+         let id = current.id()?;
+-        let span = subscriber.span(id);
++        let span = self.span(id);
+         debug_assert!(
+             span.is_some(),
+             "the subscriber should have data for the current span ({:?})!",
+@@ -1339,7 +1574,7 @@ where
+     where
+         S: for<'lookup> LookupSpan<'lookup>,
+     {
+-        Some(self.span(id)?.scope())
++        Some(self.span_or_parent(id)?.scope())
+     }
+ 
+     /// Returns an iterator over the [stored data] for all the spans in the
+@@ -1373,7 +1608,45 @@ where
+ 
+ impl<'a, S> Context<'a, S> {
+     pub(crate) fn none() -> Self {
+-        Self { subscriber: None }
++        Self {
++            subscriber: None,
++            #[cfg(feature = "registry")]
++            filters: Vec::new(),
++            #[cfg(feature = "registry")]
++            filtered_current: None,
++        }
++    }
++}
++
++impl<'a, S> Context<'a, S>
++where
++    S: Subscriber + for<'lookup> LookupSpan<'lookup>,
++{
++    fn span_or_parent(&self, id: &span::Id) -> Option<SpanRef<'_, S>> {
++        let span = self.subscriber.as_ref()?.span(id)?;
++        #[cfg(feature = "registry")]
++        let span = span.with_filter(&self.filters);
++        span.scope().next()
++    }
++
++    #[cfg(feature = "registry")]
++    pub(crate) fn with_filter(mut self, id: FilterId) -> Self {
++        fn current<S>(subscriber: &S, filters: &[FilterId]) -> span::Current
++        where
++            S: Subscriber + for<'lookup> LookupSpan<'lookup>,
++        {
++            let current = subscriber.current_span();
++            let visible = current
++                .id()
++                .and_then(|id| subscriber.span(id))
++                .and_then(|span| span.with_filter(filters).scope().next());
++            visible
++                .map(|span| span::Current::new(span.id(), span.metadata()))
++                .unwrap_or_else(span::Current::none)
++        }
++        self.filters.push(id);
++        self.filtered_current = Some(current::<S>);
++        self
+     }
+ }
+ 
+@@ -1381,7 +1654,13 @@ impl<'a, S> Clone for Context<'a, S> {
+     #[inline]
+     fn clone(&self) -> Self {
+         let subscriber = self.subscriber.as_ref().copied();
+-        Context { subscriber }
++        Context {
++            subscriber,
++            #[cfg(feature = "registry")]
++            filters: self.filters.clone(),
++            #[cfg(feature = "registry")]
++            filtered_current: self.filtered_current,
++        }
+     }
+ }
+ 
+diff --git a/tracing-subscriber/src/registry/mod.rs b/tracing-subscriber/src/registry/mod.rs
+index 5db41e3..adc1cf1 100644
+--- a/tracing-subscriber/src/registry/mod.rs
++++ b/tracing-subscriber/src/registry/mod.rs
+@@ -64,6 +64,8 @@
+ //! [`SpanData`]: trait.SpanData.html
+ use std::fmt::Debug;
+ 
++#[cfg(feature = "registry")]
++use crate::filter::FilterId;
+ use tracing_core::{field::FieldSet, span::Id, Metadata};
+ 
+ /// A module containing a type map of span extensions.
+@@ -128,6 +130,10 @@ pub trait LookupSpan<'a> {
+         Some(SpanRef {
+             registry: self,
+             data,
++            #[cfg(feature = "registry")]
++            filters: Vec::new(),
++            #[cfg(feature = "registry")]
++            filtered_parent: None,
+         })
+     }
+ }
+@@ -154,6 +160,15 @@ pub trait SpanData<'a> {
+     /// The extensions may be used by `Layer`s to store additional data
+     /// describing the span.
+     fn extensions_mut(&self) -> ExtensionsMut<'_>;
++
++    #[cfg(feature = "registry")]
++    #[doc(hidden)]
++    fn is_enabled_for(&self, filter: FilterId) -> bool {
++        self.extensions()
++            .get::<crate::filter::FilterMap>()
++            .map(|filters| filters.is_enabled(filter))
++            .unwrap_or(false)
++    }
+ }
+ 
+ /// A reference to [span data] and the associated [registry].
+@@ -168,6 +183,10 @@ pub trait SpanData<'a> {
+ pub struct SpanRef<'a, R: LookupSpan<'a>> {
+     registry: &'a R,
+     data: R::Data,
++    #[cfg(feature = "registry")]
++    filters: Vec<FilterId>,
++    #[cfg(feature = "registry")]
++    filtered_parent: Option<Id>,
+ }
+ 
+ /// An iterator over the parents of a span, ordered from leaf to root.
+@@ -177,6 +196,8 @@ pub struct SpanRef<'a, R: LookupSpan<'a>> {
+ pub struct Scope<'a, R> {
+     registry: &'a R,
+     next: Option<Id>,
++    #[cfg(feature = "registry")]
++    filters: Vec<FilterId>,
+ }
+ 
+ impl<'a, R> Scope<'a, R>
+@@ -212,9 +233,19 @@ where
+     type Item = SpanRef<'a, R>;
+ 
+     fn next(&mut self) -> Option<Self::Item> {
+-        let curr = self.registry.span(self.next.as_ref()?)?;
+-        self.next = curr.parent_id().cloned();
+-        Some(curr)
++        loop {
++            let curr = self.registry.span(self.next.as_ref()?)?;
++            self.next = curr.parent_id().cloned();
++            #[cfg(feature = "registry")]
++            let curr = {
++                let curr = curr.with_filter(&self.filters);
++                if !curr.is_enabled() {
++                    continue;
++                }
++                curr
++            };
++            return Some(curr);
++        }
+     }
+ }
+ 
+@@ -334,18 +365,20 @@ where
+     /// Returns the ID of this span's parent, or `None` if this span is the root
+     /// of its trace tree.
+     pub fn parent_id(&self) -> Option<&Id> {
++        #[cfg(feature = "registry")]
++        if !self.filters.is_empty() {
++            return self.filtered_parent.as_ref();
++        }
+         self.data.parent()
+     }
+ 
+     /// Returns a `SpanRef` describing this span's parent, or `None` if this
+     /// span is the root of its trace tree.
+     pub fn parent(&self) -> Option<Self> {
+-        let id = self.data.parent()?;
+-        let data = self.registry.span_data(id)?;
+-        Some(Self {
+-            registry: self.registry,
+-            data,
+-        })
++        let parent = self.registry.span(self.parent_id()?)?;
++        #[cfg(feature = "registry")]
++        let parent = parent.with_filter(&self.filters);
++        Some(parent)
+     }
+ 
+     /// Returns an iterator over all parents of this span, starting with this span,
+@@ -419,6 +452,8 @@ where
+         Scope {
+             registry: self.registry,
+             next: Some(self.id()),
++            #[cfg(feature = "registry")]
++            filters: self.filters.clone(),
+         }
+     }
+ 
+@@ -436,6 +471,8 @@ where
+         Parents(Scope {
+             registry: self.registry,
+             next: self.parent_id().cloned(),
++            #[cfg(feature = "registry")]
++            filters: self.filters.clone(),
+         })
+     }
+ 
+@@ -472,6 +509,32 @@ where
+     pub fn extensions_mut(&self) -> ExtensionsMut<'_> {
+         self.data.extensions_mut()
+     }
++
++    #[cfg(feature = "registry")]
++    pub(crate) fn is_enabled(&self) -> bool {
++        self.filters.iter().all(|id| self.data.is_enabled_for(*id))
++    }
++
++    #[cfg(feature = "registry")]
++    pub(crate) fn with_filter(mut self, filters: &[FilterId]) -> Self {
++        self.filters = filters.to_vec();
++        let mut next = self.data.parent().cloned();
++        self.filtered_parent = None;
++        if !filters.is_empty() {
++            while let Some(id) = next {
++                let data = match self.registry.span_data(&id) {
++                    Some(data) => data,
++                    None => break,
++                };
++                if filters.iter().all(|filter| data.is_enabled_for(*filter)) {
++                    self.filtered_parent = Some(id);
++                    break;
++                }
++                next = data.parent().cloned();
++            }
++        }
++        self
++    }
+ }
+ 
+ #[cfg(all(test, feature = "registry"))]
+diff --git a/tracing-subscriber/src/registry/sharded.rs b/tracing-subscriber/src/registry/sharded.rs
+index 1c77c0a..ee7ee9e 100644
+--- a/tracing-subscriber/src/registry/sharded.rs
++++ b/tracing-subscriber/src/registry/sharded.rs
+@@ -3,6 +3,7 @@ use thread_local::ThreadLocal;
+ 
+ use super::stack::SpanStack;
+ use crate::{
++    filter::{layer_filters, FilterId, FilterMap},
+     registry::{
+         extensions::{Extensions, ExtensionsInner, ExtensionsMut},
+         LookupSpan, SpanData,
+@@ -120,6 +121,7 @@ pub struct Data<'a> {
+ #[derive(Debug)]
+ struct DataInner {
+     metadata: &'static Metadata<'static>,
++    filters: FilterMap,
+     parent: Option<Id>,
+     ref_count: AtomicUsize,
+     // The span's `Extensions` typemap. Allocations for the `HashMap` backing
+@@ -235,6 +237,7 @@ impl Subscriber for Registry {
+             // allocated and added to the pool.
+             .create_with(|data| {
+                 data.metadata = attrs.metadata();
++                data.filters = layer_filters::current_filters();
+                 data.parent = parent;
+                 let refs = data.ref_count.get_mut();
+                 debug_assert_eq!(*refs, 0);
+@@ -380,6 +383,9 @@ impl<'a> Drop for CloseGuard<'a> {
+ // === impl Data ===
+ 
+ impl<'a> SpanData<'a> for Data<'a> {
++    fn is_enabled_for(&self, filter: FilterId) -> bool {
++        self.inner.filters.is_enabled(filter)
++    }
+     fn id(&self) -> Id {
+         idx_to_id(self.inner.key())
+     }
+@@ -440,6 +446,7 @@ impl Default for DataInner {
+ 
+         Self {
+             metadata: &NULL_METADATA,
++            filters: FilterMap::default(),
+             parent: None,
+             ref_count: AtomicUsize::new(0),
+             extensions: RwLock::new(ExtensionsInner::new()),
+diff --git a/tracing-subscriber/src/reload.rs b/tracing-subscriber/src/reload.rs
+index 14a069d..f4de5c2 100644
+--- a/tracing-subscriber/src/reload.rs
++++ b/tracing-subscriber/src/reload.rs
+@@ -62,6 +62,43 @@ where
+     L: crate::Layer<S> + 'static,
+     S: Subscriber,
+ {
++    #[cfg(feature = "registry")]
++    fn __enabled(
++        &self,
++        metadata: &Metadata<'_>,
++        ctx: layer::Context<'_, S>,
++        filters: &mut crate::filter::FilterMap,
++    ) -> crate::filter::FilterResult<bool> {
++        try_lock!(self.inner.read(), else return crate::filter::FilterResult::global(false))
++            .__enabled(metadata, ctx, filters)
++    }
++    #[cfg(feature = "registry")]
++    fn __callsite(
++        &self,
++        metadata: &'static Metadata<'static>,
++    ) -> crate::filter::FilterResult<Interest> {
++        try_lock!(self.inner.read(), else return crate::filter::FilterResult::global(Interest::sometimes())).__callsite(metadata)
++    }
++    #[cfg(feature = "registry")]
++    fn __max_level_hint(&self) -> crate::filter::FilterResult<Option<tracing_core::LevelFilter>> {
++        try_lock!(self.inner.read(), else return crate::filter::FilterResult::global(None))
++            .__max_level_hint()
++    }
++    fn max_level_hint(&self) -> Option<tracing_core::LevelFilter> {
++        try_lock!(self.inner.read(), else return None).max_level_hint()
++    }
++    #[cfg(feature = "registry")]
++    unsafe fn downcast_raw(&self, id: std::any::TypeId) -> Option<*const ()> {
++        if id == std::any::TypeId::of::<Self>() {
++            return Some(self as *const _ as *const ());
++        }
++        // Only the static marker may outlive this lock; never expose a pointer
++        // to a value that a concurrent reload can replace.
++        if id == std::any::TypeId::of::<crate::filter::layer_filters::FilterMarker>() {
++            return try_lock!(self.inner.read(), else return None).downcast_raw(id);
++        }
++        None
++    }
+     #[inline]
+     fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
+         try_lock!(self.inner.read(), else return Interest::sometimes()).register_callsite(metadata)
+@@ -113,11 +150,7 @@ where
+     }
+ }
+ 
+-impl<L, S> Layer<L, S>
+-where
+-    L: crate::Layer<S> + 'static,
+-    S: Subscriber,
+-{
++impl<L, S> Layer<L, S> {
+     /// Wraps the given `Layer`, returning a `Layer` and a `Handle` that allows
+     /// the inner type to be modified at runtime.
+     pub fn new(inner: L) -> (Self, Handle<L, S>) {
+@@ -140,11 +173,7 @@ where
+ 
+ // ===== impl Handle =====
+ 
+-impl<L, S> Handle<L, S>
+-where
+-    L: crate::Layer<S> + 'static,
+-    S: Subscriber,
+-{
++impl<L, S> Handle<L, S> {
+     /// Replace the current layer with the provided `new_layer`.
+     pub fn reload(&self, new_layer: impl Into<L>) -> Result<(), Error> {
+         self.modify(|layer| {
+@@ -198,6 +227,22 @@ impl<L, S> Clone for Handle<L, S> {
+     }
+ }
+ 
++#[cfg(feature = "registry")]
++impl<F, S> layer::Filter<S> for Layer<F, S>
++where
++    F: layer::Filter<S>,
++{
++    fn enabled(&self, metadata: &Metadata<'_>, ctx: &layer::Context<'_, S>) -> bool {
++        try_lock!(self.inner.read(), else return false).enabled(metadata, ctx)
++    }
++    fn callsite_enabled(&self, metadata: &'static Metadata<'static>) -> Interest {
++        try_lock!(self.inner.read(), else return Interest::sometimes()).callsite_enabled(metadata)
++    }
++    fn max_level_hint(&self) -> Option<tracing_core::LevelFilter> {
++        try_lock!(self.inner.read(), else return None).max_level_hint()
++    }
++}
++
+ // ===== impl Error =====
+ 
+ impl Error {
+diff --git a/tracing-subscriber/tests/per_layer_filters.rs b/tracing-subscriber/tests/per_layer_filters.rs
+new file mode 100644
+index 0000000..cc2418a
+--- /dev/null
++++ b/tracing-subscriber/tests/per_layer_filters.rs
+@@ -0,0 +1,632 @@
++#![cfg(feature = "registry")]
++
++use std::sync::{
++    atomic::{AtomicBool, AtomicUsize, Ordering},
++    Arc, Mutex,
++};
++use tracing::{span, Event, Metadata, Subscriber};
++use tracing_core::subscriber::Interest;
++use tracing_subscriber::{
++    filter::{dynamic_filter_fn, filter_fn, DynFilterFn, FilterFn, LevelFilter},
++    layer::{Context, Filter, Layer},
++    prelude::*,
++    registry::{LookupSpan, Registry},
++};
++
++#[derive(Clone, Default)]
++struct Recorder(Arc<Mutex<Vec<String>>>);
++
++impl Recorder {
++    fn entries(&self) -> Vec<String> {
++        self.0.lock().unwrap().clone()
++    }
++}
++
++impl<S> Layer<S> for Recorder
++where
++    S: Subscriber + for<'a> LookupSpan<'a>,
++{
++    fn new_span(&self, _: &span::Attributes<'_>, id: &span::Id, ctx: Context<'_, S>) {
++        let span = ctx.span(id).unwrap();
++        let parent = span.parent().map(|p| p.id());
++        assert_eq!(span.parent_id(), parent.as_ref());
++        self.0.lock().unwrap().push(format!("new:{}", span.name()));
++    }
++
++    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
++        let scope = ctx
++            .event_scope(event)
++            .into_iter()
++            .flatten()
++            .map(|s| s.name())
++            .collect::<Vec<_>>()
++            .join("/");
++        let current = ctx.lookup_current();
++        assert_eq!(
++            ctx.current_span().id(),
++            current.as_ref().map(|s| s.id()).as_ref()
++        );
++        if let Some(span) = current {
++            assert!(ctx.exists(&span.id()));
++            assert_eq!(ctx.metadata(&span.id()).unwrap().name(), span.name());
++            if let Some(parent) = span.parent() {
++                assert_eq!(
++                    parent.scope().map(|s| s.name()).collect::<Vec<_>>(),
++                    span.scope().skip(1).map(|s| s.name()).collect::<Vec<_>>()
++                );
++            }
++        }
++        self.0
++            .lock()
++            .unwrap()
++            .push(format!("event:{}:{}", event.metadata().target(), scope));
++    }
++
++    fn on_record(&self, id: &span::Id, _: &span::Record<'_>, ctx: Context<'_, S>) {
++        self.0
++            .lock()
++            .unwrap()
++            .push(format!("record:{}", ctx.span(id).unwrap().name()));
++    }
++
++    fn on_enter(&self, id: &span::Id, ctx: Context<'_, S>) {
++        self.0
++            .lock()
++            .unwrap()
++            .push(format!("enter:{}", ctx.span(id).unwrap().name()));
++    }
++
++    fn on_exit(&self, id: &span::Id, ctx: Context<'_, S>) {
++        self.0
++            .lock()
++            .unwrap()
++            .push(format!("exit:{}", ctx.span(id).unwrap().name()));
++    }
++
++    fn on_close(&self, id: span::Id, ctx: Context<'_, S>) {
++        self.0
++            .lock()
++            .unwrap()
++            .push(format!("close:{}", ctx.span(&id).unwrap().name()));
++    }
++}
++
++fn emit_targets() {
++    tracing::info!(target: "a", "a");
++    tracing::info!(target: "b", "b");
++    tracing::info!(target: "neither", "neither");
++}
++
++#[test]
++fn static_filters_are_independent_at_repeated_callsites() {
++    let a = Recorder::default();
++    let b = Recorder::default();
++    let subscriber = Registry::default()
++        .with(a.clone().with_filter(filter_fn(|m| m.target() == "a")))
++        .with(b.clone().with_filter(FilterFn::new(|m| m.target() == "b")));
++    tracing::subscriber::with_default(subscriber, || {
++        for _ in 0..3 {
++            emit_targets();
++        }
++        assert!(tracing::info_span!(target: "neither", "rejected").is_disabled());
++    });
++    assert_eq!(a.entries(), vec!["event:a:"; 3]);
++    assert_eq!(b.entries(), vec!["event:b:"; 3]);
++}
++
++#[test]
++fn unfiltered_siblings_and_global_filters_keep_their_semantics() {
++    for filtered_outer in [true, false].iter().copied() {
++        let all = Recorder::default();
++        let filtered = Recorder::default();
++        let subscriber: Box<dyn Subscriber + Send + Sync> = if filtered_outer {
++            Box::new(
++                Registry::default()
++                    .with(all.clone())
++                    .with(filtered.with_filter(LevelFilter::OFF))
++                    .with(LevelFilter::INFO),
++            )
++        } else {
++            Box::new(
++                Registry::default()
++                    .with(filtered.with_filter(LevelFilter::OFF))
++                    .with(all.clone())
++                    .with(LevelFilter::INFO),
++            )
++        };
++        tracing::subscriber::with_default(subscriber, || {
++            tracing::debug!(target: "hidden", "globally disabled");
++            for _ in 0..3 {
++                emit_targets();
++            }
++        });
++        assert_eq!(all.entries().len(), 9);
++    }
++}
++
++#[test]
++fn dynamic_filters_follow_context_and_changing_state() {
++    let output = Recorder::default();
++    let active = Arc::new(AtomicBool::new(false));
++    let enabled = active.clone();
++    let subscriber = Registry::default().with(output.clone().with_filter(dynamic_filter_fn(
++        move |m, ctx: &Context<'_, Registry>| {
++            m.is_span() || (enabled.load(Ordering::SeqCst) && ctx.lookup_current().is_some())
++        },
++    )));
++    tracing::subscriber::with_default(subscriber, || {
++        for in_span in [false, true, false].iter().copied() {
++            let span = tracing::info_span!("context");
++            let _entered = if in_span { Some(span.enter()) } else { None };
++            for on in [false, true, false].iter().copied() {
++                active.store(on, Ordering::SeqCst);
++                tracing::info!(target: "dynamic", "reevaluate");
++            }
++        }
++    });
++    assert_eq!(
++        output
++            .entries()
++            .iter()
++            .filter(|s| s.starts_with("event:"))
++            .collect::<Vec<_>>(),
++        vec!["event:dynamic:context"]
++    );
++}
++
++#[test]
++fn nested_filters_restrict_subtrees_and_preserve_ancestor_views() {
++    let left = Recorder::default();
++    let right = Recorder::default();
++    let all = Recorder::default();
++    let subtree = left
++        .clone()
++        .with_filter(filter_fn(|m| m.name() != "middle"))
++        .and_then(right.clone())
++        .with_filter(filter_fn(|m| {
++            m.name() != "outer_hidden" && m.target() != "blocked"
++        }));
++    let subscriber = Registry::default().with(subtree).with(all.clone());
++    tracing::subscriber::with_default(subscriber, || {
++        let root = tracing::info_span!("root");
++        let _root = root.enter();
++        let outer = tracing::info_span!("outer_hidden");
++        let _outer = outer.enter();
++        let middle = tracing::info_span!("middle", field = tracing::field::Empty);
++        let _middle = middle.enter();
++        middle.record("field", &1);
++        tracing::info!(target: "contextual", "contextual");
++        tracing::info!(target: "explicit", parent: &middle, "explicit");
++        let leaf = tracing::info_span!("leaf");
++        let _leaf = leaf.enter();
++        tracing::info!(target: "leaf_event", "leaf");
++        tracing::info!(target: "blocked", "only unfiltered");
++    });
++    let events = |recorder: &Recorder| {
++        recorder
++            .entries()
++            .into_iter()
++            .filter(|s| s.starts_with("event:"))
++            .collect::<Vec<_>>()
++    };
++    assert_eq!(
++        events(&left),
++        vec![
++            "event:contextual:root",
++            "event:explicit:root",
++            "event:leaf_event:leaf/root"
++        ]
++    );
++    assert_eq!(
++        events(&right),
++        vec![
++            "event:contextual:middle/root",
++            "event:explicit:middle/root",
++            "event:leaf_event:leaf/middle/root"
++        ]
++    );
++    assert_eq!(events(&all).len(), 4);
++    assert!(!left
++        .entries()
++        .iter()
++        .any(|s| s.ends_with(":middle") || s.ends_with(":outer_hidden")));
++    assert!(!right.entries().iter().any(|s| s.ends_with(":outer_hidden")));
++    assert!(left.entries().contains(&"close:root".to_owned()));
++}
++
++#[test]
++fn nested_rejection_disables_items_when_no_consumer_accepts() {
++    let subscriber = Registry::default().with(
++        Recorder::default()
++            .with_filter(LevelFilter::TRACE)
++            .and_then(Recorder::default().with_filter(LevelFilter::TRACE))
++            .with_filter(LevelFilter::OFF),
++    );
++    tracing::subscriber::with_default(subscriber, || {
++        assert!(tracing::info_span!("disabled").is_disabled());
++        assert!(tracing::error_span!("also_disabled").is_disabled());
++    });
++}
++
++#[test]
++fn max_level_hints_combine_branches_and_enclosing_bounds() {
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(LevelFilter::INFO))
++        .with(Recorder::default().with_filter(LevelFilter::DEBUG));
++    assert_eq!(subscriber.max_level_hint(), Some(LevelFilter::DEBUG));
++    assert_eq!(subscriber.with(Recorder::default()).max_level_hint(), None);
++    let subscriber = Registry::default()
++        .with(Recorder::default())
++        .with(Recorder::default().with_filter(LevelFilter::INFO));
++    assert_eq!(subscriber.max_level_hint(), None);
++    assert_eq!(
++        subscriber.with(LevelFilter::WARN).max_level_hint(),
++        Some(LevelFilter::WARN)
++    );
++    let subtree = Recorder::default()
++        .with_filter(LevelFilter::TRACE)
++        .and_then(Recorder::default())
++        .with_filter(LevelFilter::INFO);
++    assert_eq!(
++        Registry::default().with(subtree).max_level_hint(),
++        Some(LevelFilter::INFO)
++    );
++    let subscriber = Registry::default()
++        .with(LevelFilter::WARN)
++        .with(Recorder::default().with_filter(LevelFilter::TRACE));
++    assert_eq!(subscriber.max_level_hint(), Some(LevelFilter::WARN));
++    let filter = FilterFn::new(|_| true).with_max_level_hint(tracing::Level::TRACE);
++    assert_eq!(
++        Filter::<Registry>::max_level_hint(&filter),
++        Some(LevelFilter::TRACE)
++    );
++    let filter =
++        DynFilterFn::<Registry, _>::new(|_, _| true).with_max_level_hint(tracing::Level::DEBUG);
++    assert_eq!(
++        Filter::<Registry>::max_level_hint(&filter),
++        Some(LevelFilter::DEBUG)
++    );
++}
++
++#[test]
++fn explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic() {
++    let calls = Arc::new(AtomicUsize::new(0));
++    let calls2 = calls.clone();
++    let filter = DynFilterFn::new(move |_: &Metadata<'_>, _: &Context<'_, Registry>| {
++        calls2.fetch_add(1, Ordering::SeqCst);
++        true
++    })
++    .with_callsite_filter(|m| match m.target() {
++        "a" => Interest::always(),
++        "b" => Interest::never(),
++        _ => Interest::sometimes(),
++    });
++    let output = Recorder::default();
++    tracing::subscriber::with_default(
++        Registry::default().with(output.clone().with_filter(filter)),
++        || {
++            for _ in 0..3 {
++                emit_targets();
++            }
++        },
++    );
++    assert_eq!(calls.load(Ordering::SeqCst), 3);
++    assert_eq!(
++        output.entries(),
++        vec![
++            "event:a:",
++            "event:neither:",
++            "event:a:",
++            "event:neither:",
++            "event:a:",
++            "event:neither:"
++        ]
++    );
++}
++
++#[test]
++fn boxed_layers_downcast_and_reload_filters() {
++    let output = Recorder::default();
++    let boxed: Box<dyn Layer<Registry> + Send + Sync> =
++        Box::new(output.clone().with_filter(LevelFilter::INFO));
++    let dispatch = tracing::Dispatch::new(Registry::default().with(boxed));
++    assert!(dispatch.downcast_ref::<Recorder>().is_some());
++    assert!(dispatch.downcast_ref::<Registry>().is_some());
++    let (filter, handle) = tracing_subscriber::reload::Layer::new(LevelFilter::INFO);
++    let subscriber = Registry::default().with(output.clone().with_filter(filter));
++    tracing::subscriber::with_default(subscriber, || {
++        for level in [LevelFilter::INFO, LevelFilter::DEBUG, LevelFilter::OFF]
++            .iter()
++            .copied()
++        {
++            handle.reload(level).unwrap();
++            tracing::debug!(target: "reloaded", "debug");
++        }
++    });
++    assert_eq!(output.entries(), vec!["event:reloaded:"]);
++}
++
++struct ManualCallsite;
++static MANUAL_CALLSITE: ManualCallsite = ManualCallsite;
++static MANUAL_META: Metadata<'static> = tracing_core::metadata! {
++    name: "manual", target: "manual", level: tracing::Level::INFO,
++    fields: &[], callsite: &MANUAL_CALLSITE, kind: tracing_core::metadata::Kind::EVENT,
++};
++impl tracing_core::callsite::Callsite for ManualCallsite {
++    fn set_interest(&self, _: Interest) {}
++    fn metadata(&self) -> &Metadata<'_> {
++        &MANUAL_META
++    }
++}
++
++#[test]
++fn reload_invalidates_pending_decisions_for_the_first_event() {
++    let output = Recorder::default();
++    let (filter, handle) = tracing_subscriber::reload::Layer::new(LevelFilter::OFF);
++    let subscriber = Registry::default().with(output.clone().with_filter(filter));
++    let dispatch = tracing::Dispatch::new(subscriber);
++    tracing_core::callsite::register(&MANUAL_CALLSITE);
++    assert!(!dispatch.enabled(&MANUAL_META));
++    handle.reload(LevelFilter::INFO).unwrap();
++    let values = MANUAL_META.fields().value_set(&[]);
++    dispatch.event(&Event::new(&MANUAL_META, &values));
++    assert_eq!(output.entries(), vec!["event:manual:"]);
++}
++
++#[test]
++fn absent_layers_do_not_enable_rejected_items() {
++    let absent: Option<Recorder> = None;
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(dynamic_filter_fn(|_, _| false)))
++        .with(absent);
++    tracing::subscriber::with_default(subscriber, || {
++        tracing::dispatcher::get_default(|dispatch| assert!(!dispatch.enabled(&MANUAL_META)));
++        assert!(tracing::info_span!("all_rejected").is_disabled());
++    });
++}
++
++#[test]
++fn global_filters_do_not_count_as_consumers() {
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(dynamic_filter_fn(|_, _| false)))
++        .with(LevelFilter::INFO);
++    assert!(!subscriber.enabled(&MANUAL_META));
++    let subscriber = Registry::default()
++        .with(LevelFilter::INFO)
++        .with(Recorder::default().with_filter(dynamic_filter_fn(|_, _| false)));
++    assert!(!subscriber.enabled(&MANUAL_META));
++    // A registry with only a global filter keeps its original behavior.
++    assert!(Registry::default()
++        .with(LevelFilter::INFO)
++        .enabled(&MANUAL_META));
++}
++
++#[derive(Clone, Default)]
++struct LookupProbe(Arc<Mutex<Option<span::Id>>>);
++impl<S> Layer<S> for LookupProbe
++where
++    S: Subscriber + for<'a> LookupSpan<'a>,
++{
++    fn on_event(&self, _: &Event<'_>, ctx: Context<'_, S>) {
++        let id = self.0.lock().unwrap().clone().unwrap();
++        assert!(ctx.span(&id).is_none());
++        assert!(ctx.metadata(&id).is_none());
++        assert!(!ctx.exists(&id));
++        assert_eq!(
++            ctx.span_scope(&id)
++                .unwrap()
++                .map(|s| s.name())
++                .collect::<Vec<_>>(),
++            vec!["visible_root"]
++        );
++    }
++}
++
++#[test]
++fn explicit_lookup_hides_a_span_but_scope_keeps_its_visible_ancestors() {
++    let probe = LookupProbe::default();
++    let subscriber = Registry::default()
++        .with(
++            probe
++                .clone()
++                .with_filter(filter_fn(|m| m.name() != "hidden")),
++        )
++        .with(Recorder::default());
++    tracing::subscriber::with_default(subscriber, || {
++        let _root = tracing::info_span!("visible_root").entered();
++        let hidden = tracing::info_span!("hidden");
++        *probe.0.lock().unwrap() = hidden.id();
++        let _hidden = hidden.enter();
++        tracing::info!("probe");
++    });
++}
++
++struct GlobalVeto<S>(S);
++impl<S: Subscriber> Subscriber for GlobalVeto<S> {
++    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
++        self.0.enabled(metadata);
++        false
++    }
++    fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
++        self.0.register_callsite(metadata);
++        Interest::never()
++    }
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        self.0.max_level_hint();
++        Some(LevelFilter::OFF)
++    }
++    fn new_span(&self, attrs: &span::Attributes<'_>) -> span::Id {
++        self.0.new_span(attrs)
++    }
++    fn record(&self, id: &span::Id, values: &span::Record<'_>) {
++        self.0.record(id, values);
++    }
++    fn record_follows_from(&self, id: &span::Id, follows: &span::Id) {
++        self.0.record_follows_from(id, follows);
++    }
++    fn event(&self, event: &Event<'_>) {
++        self.0.event(event);
++    }
++    fn enter(&self, id: &span::Id) {
++        self.0.enter(id);
++    }
++    fn exit(&self, id: &span::Id) {
++        self.0.exit(id);
++    }
++}
++impl<'a, S: Subscriber + LookupSpan<'a>> LookupSpan<'a> for GlobalVeto<S> {
++    type Data = S::Data;
++    fn span_data(&'a self, id: &span::Id) -> Option<Self::Data> {
++        self.0.span_data(id)
++    }
++}
++
++#[test]
++fn a_subscriber_wrapper_can_still_veto_its_layered_inner_subscriber() {
++    let subscriber = GlobalVeto(Registry::default().with(Recorder::default()))
++        .with(Recorder::default().with_filter(LevelFilter::TRACE));
++    assert!(!subscriber.enabled(&MANUAL_META));
++    assert!(subscriber.register_callsite(&MANUAL_META).is_never());
++    assert_eq!(subscriber.max_level_hint(), Some(LevelFilter::OFF));
++}
++
++#[cfg(feature = "env-filter")]
++#[test]
++fn global_env_filter_is_not_an_event_consumer() {
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(dynamic_filter_fn(|_, _| false)))
++        .with(tracing_subscriber::EnvFilter::new("info"));
++    assert!(!subscriber.enabled(&MANUAL_META));
++}
++
++#[cfg(feature = "env-filter")]
++#[test]
++fn dynamic_global_filters_keep_the_spans_needed_to_enable_events() {
++    let output = Recorder::default();
++    let subscriber = Registry::default()
++        .with(output.clone().with_filter(filter_fn(|m| m.is_event())))
++        .with(tracing_subscriber::EnvFilter::new("[context]=info"));
++    tracing::subscriber::with_default(subscriber, || {
++        tracing::info!(target: "outside", "disabled");
++        {
++            let _span = tracing::info_span!("context").entered();
++            tracing::info!(target: "inside", "enabled");
++        }
++        tracing::info!(target: "outside", "disabled again");
++    });
++    assert_eq!(output.entries(), vec!["event:inside:"]);
++}
++
++struct CustomRegistry(Registry);
++struct CustomData<'a>(tracing_subscriber::registry::Data<'a>);
++impl<'a> tracing_subscriber::registry::SpanData<'a> for CustomData<'a> {
++    fn id(&self) -> span::Id {
++        self.0.id()
++    }
++    fn metadata(&self) -> &'static Metadata<'static> {
++        self.0.metadata()
++    }
++    fn parent(&self) -> Option<&span::Id> {
++        self.0.parent()
++    }
++    fn extensions(&self) -> tracing_subscriber::registry::Extensions<'_> {
++        self.0.extensions()
++    }
++    fn extensions_mut(&self) -> tracing_subscriber::registry::ExtensionsMut<'_> {
++        self.0.extensions_mut()
++    }
++}
++impl<'a> LookupSpan<'a> for CustomRegistry {
++    type Data = CustomData<'a>;
++    fn span_data(&'a self, id: &span::Id) -> Option<Self::Data> {
++        self.0.span_data(id).map(CustomData)
++    }
++}
++impl Subscriber for CustomRegistry {
++    fn enabled(&self, _: &Metadata<'_>) -> bool {
++        true
++    }
++    fn new_span(&self, attrs: &span::Attributes<'_>) -> span::Id {
++        self.0.new_span(attrs)
++    }
++    fn record(&self, id: &span::Id, values: &span::Record<'_>) {
++        self.0.record(id, values);
++    }
++    fn record_follows_from(&self, id: &span::Id, follows: &span::Id) {
++        self.0.record_follows_from(id, follows);
++    }
++    fn event(&self, event: &Event<'_>) {
++        self.0.event(event);
++    }
++    fn enter(&self, id: &span::Id) {
++        self.0.enter(id);
++    }
++    fn exit(&self, id: &span::Id) {
++        self.0.exit(id);
++    }
++    fn current_span(&self) -> tracing_core::span::Current {
++        self.0.current_span()
++    }
++    fn clone_span(&self, id: &span::Id) -> span::Id {
++        self.0.clone_span(id)
++    }
++    fn try_close(&self, id: span::Id) -> bool {
++        self.0.try_close(id)
++    }
++    unsafe fn downcast_raw(&self, id: std::any::TypeId) -> Option<*const ()> {
++        self.0.downcast_raw(id)
++    }
++}
++
++#[test]
++fn existing_custom_span_data_gets_the_same_filtered_view() {
++    let output = Recorder::default();
++    let subscriber = CustomRegistry(Registry::default()).with(
++        output
++            .clone()
++            .with_filter(filter_fn(|m| m.name() != "hidden")),
++    );
++    tracing::subscriber::with_default(subscriber, || {
++        let _root = tracing::info_span!("visible_root").entered();
++        let _hidden = tracing::info_span!("hidden").entered();
++        tracing::info!(target: "custom", "event");
++    });
++    assert!(!output
++        .entries()
++        .iter()
++        .any(|entry| entry.ends_with(":hidden")));
++    assert!(output
++        .entries()
++        .contains(&"event:custom:visible_root".to_owned()));
++}
++
++#[test]
++fn replacing_a_whole_filtered_layer_invalidates_its_pending_decision() {
++    let output = Recorder::default();
++    let (layer, handle) =
++        tracing_subscriber::reload::Layer::new(output.clone().with_filter(LevelFilter::OFF));
++    let dispatch = tracing::Dispatch::new(Registry::default().with(layer));
++    assert!(!dispatch.enabled(&MANUAL_META));
++    handle
++        .reload(output.clone().with_filter(LevelFilter::INFO))
++        .unwrap();
++    let values = MANUAL_META.fields().value_set(&[]);
++    dispatch.event(&Event::new(&MANUAL_META, &values));
++    assert_eq!(output.entries(), vec!["event:manual:"]);
++}
++
++#[test]
++fn static_callsite_interests_cache_only_agreeing_branches() {
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(LevelFilter::TRACE))
++        .with(Recorder::default().with_filter(LevelFilter::INFO));
++    assert!(subscriber.register_callsite(&MANUAL_META).is_always());
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(LevelFilter::ERROR))
++        .with(Recorder::default().with_filter(LevelFilter::OFF));
++    assert!(subscriber.register_callsite(&MANUAL_META).is_never());
++    let subscriber = Registry::default()
++        .with(Recorder::default().with_filter(LevelFilter::INFO))
++        .with(Recorder::default().with_filter(LevelFilter::OFF));
++    assert!(subscriber.register_callsite(&MANUAL_META).is_sometimes());
++}

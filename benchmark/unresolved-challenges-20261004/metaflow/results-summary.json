@@ -1,0 +1,136 @@
+{
+  "case": "fb-metaflow-stubs",
+  "trials": [
+    {
+      "arm": "K1",
+      "task_completed": false,
+      "functional_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "metaflow_members_input.py",
+        "metaflow_review_members_input.py"
+      ],
+      "fixed_checks": {
+        "reserved": "pass",
+        "annotation-api": "pass",
+        "class-api": "pass",
+        "function-api": "pass",
+        "metaflow_docquotes_input.py": "pass",
+        "metaflow_members_input.py": "fail",
+        "metaflow_review_members_input.py": "fail",
+        "metaflow_typed_dict_keys_input.py": "pass",
+        "reset-api": "pass"
+      },
+      "actor_seconds": 2103.859,
+      "actor_usage": {
+        "input_tokens": 3623510,
+        "cached_input_tokens": 3388416,
+        "output_tokens": 43878
+      },
+      "provider_usage": {
+        "input_tokens": 225425,
+        "cached_input_tokens": 177024,
+        "output_tokens": 6145
+      },
+      "provider_attempts": 3,
+      "provider_feedback": 3,
+      "provider_delivered": 3,
+      "provider_silence": 0,
+      "provider_faults": 0,
+      "execution_fault": "",
+      "code_review": {
+        "quality": "局部結構有改善；整體交付仍不完整，不能評為高品味的完成答案。",
+        "structure": "以同一成員的 annotation 與 descriptor 組成一筆資料，讓 descriptor 決定 property/setter 宣告，annotation 只補缺少的型別；所有一般函式、property accessor 與 Metaflow 補充共用簽章集合。這兩項直接減少資訊被不同路徑覆蓋的責任，沒有另建大型框架。但 None 在函式參數的呼叫端仍與「沒有型別」混同，Annotated 的 opaque metadata 直接 repr 也未保證可生成合法程式。",
+        "findings": [
+          "固定保留測試45項通過；annotation/class/function/reset介面與文件引號、TypedDict鍵檢查通過。完整完成仍失敗，metaflow_members_input.py 與 metaflow_review_members_input.py 未通過。",
+          "def f(x: None) -> None 的參數產生成 def f(x) -> None；_exploit_annotation(None) 按介面應回傳空字串，但函式產生器未先將明確 None 型別轉為 type(None)，遺失原任務要求的參數註記。",
+          "typing.Annotated[int, object()] 的 metadata 直接 repr 產生 <object object at ...>，不是合法 Python 表達式，固定檢查得到 SyntaxError。這不是只有字串格式不同，而是描述檔無法解析。",
+          "多載擷取、預設值與文件格式的小 helper 共用同一輸出流程；新增部署器特定分支有既有動態 API 依據，不因分支多就判高品味或過度設計。局部成功不能抵銷失效輸出。"
+        ],
+        "adoption": {
+          "classification": "3/3送達提醒實際採納",
+          "explanation": "三則分別要求 annotation+descriptor 同筆保留、accessor 多載集合、Metaflow 補充逐一套在完整簽章集合。最終 members 配對資料、_function_signatures 及 documented_signatures 均落實；不是只跑檢查。事件47、58、63及後續修改確認方向，不能因此宣稱整題完成。"
+        },
+        "evidence": [
+          "runs/fb-metaflow-stubs/K1/actor-events.jsonl:47,58,63,65,67,105",
+          "runs/fb-metaflow-stubs/K1/review-source.py.txt:676,760,820,908,1022,1032,1358",
+          "evaluation/fb-metaflow-stubs/K1/reserved.txt",
+          "evaluation/fb-metaflow-stubs/K1/metaflow_members_input.py.txt",
+          "evaluation/fb-metaflow-stubs/K1/metaflow_review_members_input.py.txt",
+          "runs/fb-metaflow-stubs/K1/provider-attempts.json"
+        ]
+      }
+    },
+    {
+      "arm": "K2",
+      "task_completed": false,
+      "functional_status": "fail",
+      "execution_status": "pass",
+      "failed_checks": [
+        "reserved",
+        "metaflow_members_input.py",
+        "metaflow_review_members_input.py"
+      ],
+      "fixed_checks": {
+        "reserved": "fail",
+        "annotation-api": "pass",
+        "class-api": "pass",
+        "function-api": "pass",
+        "metaflow_docquotes_input.py": "pass",
+        "metaflow_members_input.py": "fail",
+        "metaflow_review_members_input.py": "fail",
+        "metaflow_typed_dict_keys_input.py": "pass",
+        "reset-api": "pass"
+      },
+      "actor_seconds": 2169.156,
+      "actor_usage": {
+        "input_tokens": 3658002,
+        "cached_input_tokens": 3504384,
+        "output_tokens": 43504
+      },
+      "provider_usage": {
+        "input_tokens": 403091,
+        "cached_input_tokens": 264448,
+        "output_tokens": 7789
+      },
+      "provider_attempts": 4,
+      "provider_feedback": 3,
+      "provider_delivered": 3,
+      "provider_silence": 1,
+      "provider_faults": 0,
+      "execution_fault": "",
+      "code_review": {
+        "quality": "局部結構有改善；整體仍會遺漏成員或無限遞迴，未完成交付。",
+        "structure": "TypedDict欄位明確拆成型別與Required/NotRequired/未標記三態，再以鍵集合補未標記欄位，避免延後註記被反轉；部署器先探索provider、flow及trigger回傳型別才渲染，去除原本依賴走訪順序的補救。兩者都是可檢查且有承重的局部關係。類別輸出卻仍將annotation名單當成已完成名單，遮掉描述器；又將所有class-valued attribute當巢狀類別，未區分引用與所有權。",
+        "findings": [
+          "固定保留測試44通過1失敗：既有 _get_element_name_with_module 的 nested-class 命名行為改為包含OuterClass，違反封存相容性測試。此處記實際測試結果，不把較長名稱本身當成品味退步的證明。",
+          "同名 annotation+property 的成員因 member_name in annotations 被跳過，只留下 value: int，失去property與setter；NamedTuple annotations重建為_fields時也丟掉額外註記。固定members檢查均確認。",
+          "Node.alias = Node 會被當成巢狀類別再次產生，固定review_members檢查觸發RecursionError。需要區分真正的巢狀定義與指向既有類別的值；這是結構關係混同。",
+          "明確None參數型別與Opaque Annotated metadata的合法語法已處理；TypedDict繼承及鍵檢查通過。但這些通過項不能消除另一條成員生成路徑的資訊遺失。"
+        ],
+        "adoption": {
+          "classification": "3/3送達提醒實際採納；另1次靜默",
+          "explanation": "第一則落實逐鍵Required/NotRequired；第二則用_typed_dict_annotation保留明示三態，未解析型別也保留限定符；第三則在_get_deployer_signatures先探索完整provider資料再生成簽章。事件51、64、81及新增相應行為測試支持實際改碼採納。提醒都集中在這些局部關係，沒有覆蓋剩餘property/self-alias失敗。"
+        },
+        "evidence": [
+          "runs/fb-metaflow-stubs/K2/actor-events.jsonl:51,64,81,110",
+          "runs/fb-metaflow-stubs/K2/review-source.py.txt:517,564,820,864,940,983",
+          "evaluation/fb-metaflow-stubs/K2/reserved.txt",
+          "evaluation/fb-metaflow-stubs/K2/metaflow_members_input.py.txt",
+          "evaluation/fb-metaflow-stubs/K2/metaflow_review_members_input.py.txt",
+          "runs/fb-metaflow-stubs/K2/provider-attempts.json"
+        ]
+      }
+    }
+  ],
+  "completed": 0,
+  "expected": 2,
+  "baseline_completed": 0,
+  "baseline_attempts": 14,
+  "actor_model": "gpt-6-astra",
+  "actor_reasoning": "max",
+  "provider_model": "gpt-6-astra",
+  "provider_reasoning": "max",
+  "actor_deadline_seconds": null,
+  "scope": "Exploration; not comparable deadline conditions; original seven arms unchanged"
+}

@@ -1,0 +1,3 @@
+已完成 [stub_generator.py](<RESEARCH_D>/masters-nudge-benchmark/round-10-calibration/cases/fb-metaflow-stubs/metaflow/cmd/develop/stub_generator.py) 的四個方法，涵蓋型別與前向參照、簽名與多載、類別及動態成員、模組狀態重設。
+
+指定既有檢查與新增回歸測試共 **50 項全部通過**，包含完整 stub 生成與語法驗證。已檢查最終差異，既有測試未修改。

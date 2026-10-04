@@ -1,0 +1,224 @@
+{
+  "method": "Post-study classification, not preregistered; original 12-task records retained.",
+  "included_cases": [
+    "nodebb-images",
+    "ansible-type-tags",
+    "element-sessions",
+    "flipt-segments",
+    "openlibrary-index-state",
+    "proton-mailbox-retry",
+    "flipt-storage-cache",
+    "proton-untrusted-keys",
+    "clap-2297"
+  ],
+  "excluded_unresolved_cases": [
+    "fb-metaflow-stubs",
+    "tracing-1523",
+    "regexp-404"
+  ],
+  "deliveries": 126,
+  "attempts_per_arm": 18,
+  "arms": {
+    "A": {
+      "name": "Sol medium 直接做",
+      "recorded": 18,
+      "completed": 6,
+      "seconds": 9087.232,
+      "minutes_per_completion_including_failures": 25.24231111111111,
+      "tokens": {
+        "uncached_input_tokens": 988933,
+        "cached_input_tokens": 11063552,
+        "output_tokens": 130835
+      }
+    },
+    "B": {
+      "name": "Sol medium＋Sol medium",
+      "recorded": 18,
+      "completed": 8,
+      "seconds": 11294.905,
+      "minutes_per_completion_including_failures": 23.531052083333336,
+      "tokens": {
+        "uncached_input_tokens": 1821304,
+        "cached_input_tokens": 22614528,
+        "output_tokens": 208393
+      }
+    },
+    "C": {
+      "name": "Sol xhigh 直接做",
+      "recorded": 18,
+      "completed": 13,
+      "seconds": 14244.858,
+      "minutes_per_completion_including_failures": 18.26263846153846,
+      "tokens": {
+        "uncached_input_tokens": 1612800,
+        "cached_input_tokens": 22425728,
+        "output_tokens": 290360
+      }
+    },
+    "D": {
+      "name": "Sol medium＋Astra medium",
+      "recorded": 18,
+      "completed": 8,
+      "seconds": 10160.019,
+      "minutes_per_completion_including_failures": 21.16670625,
+      "tokens": {
+        "uncached_input_tokens": 1730226,
+        "cached_input_tokens": 18226944,
+        "output_tokens": 172720
+      }
+    },
+    "E": {
+      "name": "Sol xhigh＋Astra medium",
+      "recorded": 18,
+      "completed": 10,
+      "seconds": 14471.42,
+      "minutes_per_completion_including_failures": 24.119033333333334,
+      "tokens": {
+        "uncached_input_tokens": 2159622,
+        "cached_input_tokens": 27855360,
+        "output_tokens": 326010
+      }
+    },
+    "F": {
+      "name": "Sol xhigh＋Sol medium",
+      "recorded": 18,
+      "completed": 11,
+      "seconds": 20456.985,
+      "minutes_per_completion_including_failures": 30.995431818181817,
+      "tokens": {
+        "uncached_input_tokens": 2430186,
+        "cached_input_tokens": 34661760,
+        "output_tokens": 375392
+      }
+    },
+    "I": {
+      "name": "Sol xhigh＋Sol xhigh",
+      "recorded": 18,
+      "completed": 13,
+      "seconds": 21208.689000000002,
+      "minutes_per_completion_including_failures": 27.190626923076927,
+      "tokens": {
+        "uncached_input_tokens": 2811858,
+        "cached_input_tokens": 43184896,
+        "output_tokens": 451496
+      }
+    }
+  },
+  "common_usage_slots": [
+    [
+      "nodebb-images",
+      2
+    ],
+    [
+      "ansible-type-tags",
+      1
+    ],
+    [
+      "ansible-type-tags",
+      2
+    ],
+    [
+      "element-sessions",
+      1
+    ],
+    [
+      "element-sessions",
+      2
+    ],
+    [
+      "flipt-segments",
+      1
+    ],
+    [
+      "flipt-segments",
+      2
+    ],
+    [
+      "openlibrary-index-state",
+      1
+    ],
+    [
+      "openlibrary-index-state",
+      2
+    ],
+    [
+      "proton-mailbox-retry",
+      1
+    ],
+    [
+      "proton-mailbox-retry",
+      2
+    ],
+    [
+      "flipt-storage-cache",
+      1
+    ],
+    [
+      "flipt-storage-cache",
+      2
+    ],
+    [
+      "proton-untrusted-keys",
+      1
+    ],
+    [
+      "proton-untrusted-keys",
+      2
+    ],
+    [
+      "clap-2297",
+      2
+    ]
+  ],
+  "excluded_usage_slots": [
+    [
+      "nodebb-images",
+      1
+    ],
+    [
+      "clap-2297",
+      1
+    ]
+  ],
+  "comparisons": {
+    "B-A": {
+      "time_change_percent": 24.294229529960276,
+      "token_change_percent": {
+        "uncached_input_tokens": 84.1685938278933,
+        "cached_input_tokens": 104.40567369322258,
+        "output_tokens": 59.279244850384075
+      }
+    },
+    "F-C": {
+      "time_change_percent": 43.609609867644885,
+      "token_change_percent": {
+        "uncached_input_tokens": 50.6811755952381,
+        "cached_input_tokens": 54.562473958481974,
+        "output_tokens": 29.285025485604077
+      }
+    },
+    "I-C": {
+      "time_change_percent": 48.88662982811063,
+      "token_change_percent": {
+        "uncached_input_tokens": 74.34635416666666,
+        "cached_input_tokens": 92.56853556771935,
+        "output_tokens": 55.49524727923956
+      }
+    },
+    "I-F": {
+      "time_change_percent": 3.674559080920292,
+      "token_change_percent": {
+        "uncached_input_tokens": 15.705464519999701,
+        "cached_input_tokens": 24.58944958363338,
+        "output_tokens": 20.273207740175604
+      }
+    }
+  },
+  "taste_pairs_unchanged": 71,
+  "source_sha256": {
+    "results-summary.json": "4b0d087ab96348701f5bd82f75875c317be703312da00b6abdebcb3e9184de30",
+    "taste-review/reassessment.json": "34a7064cc5bdd32313b19466d2e2e88b4f6a1040ad5e3923e546b1b93ee24b69"
+  },
+  "new_actors": 0,
+  "new_judges": 0
+}
