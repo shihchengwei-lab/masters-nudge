@@ -2,6 +2,8 @@
 
 English | [繁體中文](README.zh-TW.md)
 
+**Experimental branch:** An opt-in [Carmack performance prototype](experiments/carmack-performance/README.zh-TW.md) adds an explicit diagnostic checkpoint. The default Linus workflow below is unchanged. Offline synthetic checks pass. A live CLI attempt verified Actor startup and native task-start journaling, then hit a sandbox compatibility blocker before any measurements or diagnostic checkpoint. Real Provider delivery, Windows diagnosis and model A/B remain unverified.
+
 > **Passing tests settles behavior, not design.**
 >
 > Green light means it passes now. What about six months later?

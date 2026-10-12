@@ -1,8 +1,8 @@
 """The source inventory is the only owner of packaged runtime membership."""
 GENERATED_FILES = (
-    "LICENSE", "buddy-prompt.txt", "launch.py", "hook_entry.py", "mcp_entry.py", "masters_nudge_cli.py", "nudge-schema.json",
+    "LICENSE", "buddy-prompt.txt", "performance-prompt.txt", "diagnostic_checkpoint.py", "launch.py", "hook_entry.py", "mcp_entry.py", "masters_nudge_cli.py", "nudge-schema.json",
     "masters_nudge/__init__.py", "masters_nudge/codex_adapter.py", "masters_nudge/contracts.py",
-    "masters_nudge/core.py", "masters_nudge/evidence.py", "masters_nudge/management.py",
+    "masters_nudge/core.py", "masters_nudge/diagnostics.py", "masters_nudge/evidence.py", "masters_nudge/management.py",
     "masters_nudge/plugin_inventory.py", "masters_nudge/provider_contract.py",
     "masters_nudge/prompting.py", "masters_nudge/providers.py", "masters_nudge/read_only_repo_mcp.py",
     "masters_nudge/runtime.py", "masters_nudge/settings.py", "masters_nudge/storage.py",

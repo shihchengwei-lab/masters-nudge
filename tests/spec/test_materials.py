@@ -230,6 +230,25 @@ class RepositoryTests(unittest.TestCase):
         (self.repo / "secret.txt").write_text("hidden", encoding="utf-8")
         self.tools = RepositoryTools(self.repo, 1000, self.root / "reads.jsonl")
 
+    def test_search_cannot_follow_symlinks_outside_repo_or_into_ignored_data(self):
+        marker = "SYNTHETIC_PRIVATE_MARKER"
+        outside = self.root / "outside.txt"
+        outside.write_text(marker, encoding="utf-8")
+        (self.repo / "secret.txt").write_text(marker, encoding="utf-8")
+        link = self.repo / "linked.txt"
+        for target in (outside, self.repo / "secret.txt", self.repo / ".git" / "config"):
+            with self.subTest(target=target.name):
+                try:
+                    link.symlink_to(target)
+                except (OSError, NotImplementedError) as exc:
+                    self.skipTest(f"symlink unavailable: {exc}")
+                try:
+                    result = self.tools.call("search_repo", {"query": marker})
+                    self.assertTrue(result["isError"])
+                    self.assertNotIn(marker, result["content"][0]["text"])
+                finally:
+                    link.unlink()
+
     def test_read_returns_exact_file_line_and_original_text(self):
         result = self.tools.call("read_file", {"path": "job.py", "start_line": 2, "end_line": 2})
         payload = json.loads(result["content"][0]["text"])

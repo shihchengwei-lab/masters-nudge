@@ -1,0 +1,644 @@
+{
+  "status": "PASS_OFFLINE_SYNTHETIC_SMOKE_ONLY",
+  "started_at_utc": "2026-10-12T08:30:23.971986+00:00",
+  "execution_platform": "Linux",
+  "python_version": "3.12.14",
+  "provenance": {
+    "evidence": "SYNTHETIC_NOT_WINDOWS_MEASUREMENTS",
+    "provider_outputs": "PREWRITTEN_STUB_NOT_MODEL_GENERATED",
+    "actor_followup": "PREWRITTEN_FIXTURE_NOT_MODEL_GENERATED",
+    "host_hook_delivery": "NOT_RUN",
+    "real_windows_diagnosis": "NOT_RUN",
+    "live_actor_or_provider": "NOT_RUN",
+    "matched_ab": "NOT_RUN",
+    "system_configuration_changes": "NONE"
+  },
+  "profile": "performance",
+  "fixture_sha256": {
+    "windows-ram-only.synthetic.json": "fd7136f63f28f6f24280d2afa5eadcd71fae2232a79feb6ed70ed7ba033dcc7a",
+    "windows-pressure-window.synthetic.json": "8f37f6df2edfac41af01f07a02cd4831745b6a18c85d8bd4215d894dc8564dfa",
+    "provider-replies.scripted.json": "b520a23b28569949583e7cc241072408740a437ff18bfcbc802f38fbe766e034"
+  },
+  "checks": [
+    "performance profile and isolated journal",
+    "adapter task-start without Provider",
+    "ordinary shell event ignored",
+    "four-field schema and character limits",
+    "RAM-only scripted feedback",
+    "renamed IDs/reason/progress deduplicate",
+    "new evidence produces scripted silence",
+    "reordered evidence deduplicates",
+    "successful diagnostic output is preserved",
+    "performance prompt is selected",
+    "one feedback and one silence journaled",
+    "journal preserves reason/progress/provenance/fingerprint",
+    "batch payload does not duplicate task request",
+    "no unresolved judgment"
+  ],
+  "checkpoints": [
+    {
+      "name": "ram_only",
+      "trigger": "explicit_diagnostic_checkpoint_in_process",
+      "reason": "準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。",
+      "progress": "固定測試腳本的第一步；尚未蒐集壓力與延遲指標。",
+      "submitted_materials": {
+        "cwd": "$SMOKE_TMP/git-evidence-workspace",
+        "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+        "batch_id": "synthetic-ram-only-001",
+        "reason": "準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。",
+        "progress": "固定測試腳本的第一步；尚未蒐集壓力與延遲指標。",
+        "evidence": [
+          {
+            "tool_use_id": "synthetic-tool-ram-001",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "ram-percentage-only",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "exit_code": 0,
+              "observation_time": "2026-01-01T00:00:00Z",
+              "reported_state": "idle",
+              "reported_memory_percent": 75,
+              "missing_measurements": [
+                "available_memory",
+                "commit_and_limit",
+                "paging_over_time",
+                "latency",
+                "process_private_bytes_trend"
+              ]
+            }
+          }
+        ]
+      },
+      "provider_dispatches_total": 1,
+      "returned_attempt": "1eba7eadf969419793368e0cfc9afbec",
+      "nudge": {
+        "observed": "僅有待機 RAM 75%，未提供壓力指標",
+        "why": "占用比例無法單獨證明記憶體壓力",
+        "structure": "先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗",
+        "required": "補同一時間窗量測；先別清快取或停服務"
+      },
+      "rendered_actor_text": "Masters’ Nudge\nOBSERVED: 僅有待機 RAM 75%，未提供壓力指標\nWHY: 占用比例無法單獨證明記憶體壓力\nSTRUCTURE: 先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\nREQUIRED: 補同一時間窗量測；先別清快取或停服務\nCheck REQUIRED against the latest task contract. Use STRUCTURE as a testable measurement distinction or data/work relation; decide whether further measurement or a change is warranted. Preserve correctness and stability, verify any improvement end-to-end, and stop when no actionable problem is supported.",
+      "outcome": "scripted_feedback",
+      "offline_plumbing_elapsed_seconds": 0.004106624000996817,
+      "actual_model_tokens": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    },
+    {
+      "name": "ram_only_duplicate_rewrapped",
+      "trigger": "explicit_diagnostic_checkpoint_in_process",
+      "reason": "相同量測重新包裝，不應再次呼叫 Provider。",
+      "progress": "僅更換 batch 與 tool call ID；没有新量測。",
+      "submitted_materials": {
+        "cwd": "$SMOKE_TMP/git-evidence-workspace",
+        "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+        "batch_id": "renamed-batch-same-ram-evidence",
+        "reason": "相同量測重新包裝，不應再次呼叫 Provider。",
+        "progress": "僅更換 batch 與 tool call ID；没有新量測。",
+        "evidence": [
+          {
+            "tool_use_id": "renamed-tool-call",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "ram-percentage-only",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "exit_code": 0,
+              "observation_time": "2026-01-01T00:00:00Z",
+              "reported_state": "idle",
+              "reported_memory_percent": 75,
+              "missing_measurements": [
+                "available_memory",
+                "commit_and_limit",
+                "paging_over_time",
+                "latency",
+                "process_private_bytes_trend"
+              ]
+            }
+          }
+        ]
+      },
+      "provider_dispatches_total": 1,
+      "returned_attempt": null,
+      "nudge": null,
+      "rendered_actor_text": null,
+      "outcome": "deduplicated_no_dispatch",
+      "offline_plumbing_elapsed_seconds": 0.0005844010011060163,
+      "actual_model_tokens": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    },
+    {
+      "name": "new_pressure_window",
+      "trigger": "explicit_diagnostic_checkpoint_in_process",
+      "reason": "固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。",
+      "progress": "這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。",
+      "submitted_materials": {
+        "cwd": "$SMOKE_TMP/git-evidence-workspace",
+        "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+        "batch_id": "synthetic-pressure-window-002",
+        "reason": "固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。",
+        "progress": "這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。",
+        "evidence": [
+          {
+            "tool_use_id": "synthetic-tool-pressure-002",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "memory-pressure-time-window",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "exit_code": 0,
+              "window_start": "2026-01-01T00:00:10Z",
+              "window_end": "2026-01-01T00:01:10Z",
+              "sample_interval_seconds": 15,
+              "total_physical_mib": 16384,
+              "available_mib": [
+                4096,
+                4072,
+                4100,
+                4088,
+                4092
+              ],
+              "committed_mib": [
+                10000,
+                10008,
+                10002,
+                10006,
+                10004
+              ],
+              "commit_limit_mib": [
+                24576,
+                24576,
+                24576,
+                24576,
+                24576
+              ],
+              "page_reads_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pages_input_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pages_output_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pool_nonpaged_mib": [
+                384,
+                384,
+                384,
+                384,
+                384
+              ],
+              "pool_paged_mib": [
+                512,
+                512,
+                512,
+                512,
+                512
+              ],
+              "standby_mib": [
+                3000,
+                2976,
+                3004,
+                2992,
+                2996
+              ],
+              "standby_note": "A subset of available memory in this synthetic fixture; do not add it to available again",
+              "latency_probe": {
+                "operation": "fixed_synthetic_ui_probe",
+                "baseline_p95_ms": 120,
+                "window_p95_ms": [
+                  119,
+                  120,
+                  118,
+                  121,
+                  120
+                ]
+              },
+              "process_private_mib": {
+                "synthetic_process_A": [
+                  900,
+                  900,
+                  901,
+                  900,
+                  900
+                ],
+                "synthetic_process_B": [
+                  512,
+                  512,
+                  512,
+                  512,
+                  512
+                ]
+              },
+              "interpretation_limit": "This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change"
+            }
+          },
+          {
+            "tool_use_id": "synthetic-tool-context-003",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "bounded-observation-context",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "window_start": "2026-01-01T00:00:10Z",
+              "window_end": "2026-01-01T00:01:10Z",
+              "responsiveness_regression_reported": false,
+              "memory_allocation_failure_reported": false,
+              "system_changes_performed": []
+            }
+          }
+        ]
+      },
+      "provider_dispatches_total": 2,
+      "returned_attempt": null,
+      "nudge": null,
+      "rendered_actor_text": null,
+      "outcome": "scripted_silence",
+      "offline_plumbing_elapsed_seconds": 0.0038307779977913015,
+      "actual_model_tokens": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    },
+    {
+      "name": "pressure_window_duplicate_reordered",
+      "trigger": "explicit_diagnostic_checkpoint_in_process",
+      "reason": "相同材料反轉順序並改 ID，不是新時間窗。",
+      "progress": "固定重複輸入測試。",
+      "submitted_materials": {
+        "cwd": "$SMOKE_TMP/git-evidence-workspace",
+        "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+        "batch_id": "renamed-batch-same-pressure-evidence",
+        "reason": "相同材料反轉順序並改 ID，不是新時間窗。",
+        "progress": "固定重複輸入測試。",
+        "evidence": [
+          {
+            "tool_use_id": "reordered-renamed-call-0",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "bounded-observation-context",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "window_start": "2026-01-01T00:00:10Z",
+              "window_end": "2026-01-01T00:01:10Z",
+              "responsiveness_regression_reported": false,
+              "memory_allocation_failure_reported": false,
+              "system_changes_performed": []
+            }
+          },
+          {
+            "tool_use_id": "reordered-renamed-call-1",
+            "tool_name": "synthetic_fixture_reader",
+            "tool_input": {
+              "fixture": "memory-pressure-time-window",
+              "operation": "read_fixed_test_data"
+            },
+            "tool_response": {
+              "synthetic": true,
+              "not_a_real_tool_execution": true,
+              "exit_code": 0,
+              "window_start": "2026-01-01T00:00:10Z",
+              "window_end": "2026-01-01T00:01:10Z",
+              "sample_interval_seconds": 15,
+              "total_physical_mib": 16384,
+              "available_mib": [
+                4096,
+                4072,
+                4100,
+                4088,
+                4092
+              ],
+              "committed_mib": [
+                10000,
+                10008,
+                10002,
+                10006,
+                10004
+              ],
+              "commit_limit_mib": [
+                24576,
+                24576,
+                24576,
+                24576,
+                24576
+              ],
+              "page_reads_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pages_input_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pages_output_per_second": [
+                0,
+                0,
+                0,
+                0,
+                0
+              ],
+              "pool_nonpaged_mib": [
+                384,
+                384,
+                384,
+                384,
+                384
+              ],
+              "pool_paged_mib": [
+                512,
+                512,
+                512,
+                512,
+                512
+              ],
+              "standby_mib": [
+                3000,
+                2976,
+                3004,
+                2992,
+                2996
+              ],
+              "standby_note": "A subset of available memory in this synthetic fixture; do not add it to available again",
+              "latency_probe": {
+                "operation": "fixed_synthetic_ui_probe",
+                "baseline_p95_ms": 120,
+                "window_p95_ms": [
+                  119,
+                  120,
+                  118,
+                  121,
+                  120
+                ]
+              },
+              "process_private_mib": {
+                "synthetic_process_A": [
+                  900,
+                  900,
+                  901,
+                  900,
+                  900
+                ],
+                "synthetic_process_B": [
+                  512,
+                  512,
+                  512,
+                  512,
+                  512
+                ]
+              },
+              "interpretation_limit": "This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change"
+            }
+          }
+        ]
+      },
+      "provider_dispatches_total": 2,
+      "returned_attempt": null,
+      "nudge": null,
+      "rendered_actor_text": null,
+      "outcome": "deduplicated_no_dispatch",
+      "offline_plumbing_elapsed_seconds": 0.0006507799989776686,
+      "actual_model_tokens": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    }
+  ],
+  "provider_stub_dispatches": [
+    {
+      "dispatch_index": 1,
+      "kind": "SCRIPTED_STUB_NOT_A_MODEL_CALL",
+      "system_prompt_sha256": "5a79f78b5768aa25647df5e0f4a7f08ff8d3f138e4268dbcfd462e7ccb098f84",
+      "nudge_input": "{\"task_contract\":[{\"path\":\"task/latest\",\"start\":1,\"lines\":[\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\"]}],\"before_structure\":[],\"batch_change\":[],\"current_structure\":[],\"tool_result\":[{\"path\":\"diagnostic/trigger\",\"start\":1,\"lines\":[\"{\\\"kind\\\":\\\"explicit_diagnostic_checkpoint\\\",\\\"profile\\\":\\\"performance\\\",\\\"evidence_origin\\\":\\\"actor_supplied\\\",\\\"batch_id\\\":\\\"synthetic-ram-only-001\\\",\\\"reason\\\":\\\"準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。\\\",\\\"progress\\\":\\\"固定測試腳本的第一步；尚未蒐集壓力與延遲指標。\\\",\\\"evidence_sha256\\\":\\\"3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15\\\"}\"]},{\"path\":\"tool/synthetic-tool-ram-001/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-ram-001/input/fixture\",\"start\":1,\"lines\":[\"ram-percentage-only\"]},{\"path\":\"tool/synthetic-tool-ram-001/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/exit_code\",\"start\":1,\"lines\":[\"0\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/observation_time\",\"start\":1,\"lines\":[\"2026-01-01T00:00:00Z\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/reported_state\",\"start\":1,\"lines\":[\"idle\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/reported_memory_percent\",\"start\":1,\"lines\":[\"75\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/missing_measurements\",\"start\":1,\"lines\":[\"[\\\"available_memory\\\",\\\"commit_and_limit\\\",\\\"paging_over_time\\\",\\\"latency\\\",\\\"process_private_bytes_trend\\\"]\"]}],\"file_origin\":[],\"workspace\":\"$SMOKE_TMP/git-evidence-workspace\",\"transcript_path\":\"\",\"previous_nudges\":[]}",
+      "configured_model_not_executed": "gpt-5.6-sol",
+      "schema_path": "$REPO/nudge-schema.json",
+      "workspace_root": "$SMOKE_TMP/git-evidence-workspace",
+      "timeout_sec": 1200,
+      "remaining_chars": 18328,
+      "raw_output": "{\"feedback\": {\"observed\": \"僅有待機 RAM 75%，未提供壓力指標\", \"why\": \"占用比例無法單獨證明記憶體壓力\", \"structure\": \"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\", \"required\": \"補同一時間窗量測；先別清快取或停服務\"}}",
+      "actual_model_usage": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    },
+    {
+      "dispatch_index": 2,
+      "kind": "SCRIPTED_STUB_NOT_A_MODEL_CALL",
+      "system_prompt_sha256": "5a79f78b5768aa25647df5e0f4a7f08ff8d3f138e4268dbcfd462e7ccb098f84",
+      "nudge_input": "{\"task_contract\":[{\"path\":\"task/latest\",\"start\":1,\"lines\":[\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\"]}],\"before_structure\":[],\"batch_change\":[],\"current_structure\":[],\"tool_result\":[{\"path\":\"diagnostic/trigger\",\"start\":1,\"lines\":[\"{\\\"kind\\\":\\\"explicit_diagnostic_checkpoint\\\",\\\"profile\\\":\\\"performance\\\",\\\"evidence_origin\\\":\\\"actor_supplied\\\",\\\"batch_id\\\":\\\"synthetic-pressure-window-002\\\",\\\"reason\\\":\\\"固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。\\\",\\\"progress\\\":\\\"這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。\\\",\\\"evidence_sha256\\\":\\\"4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f\\\"}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-pressure-002/input/fixture\",\"start\":1,\"lines\":[\"memory-pressure-time-window\"]},{\"path\":\"tool/synthetic-tool-pressure-002/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/exit_code\",\"start\":1,\"lines\":[\"0\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/window_start\",\"start\":1,\"lines\":[\"2026-01-01T00:00:10Z\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/window_end\",\"start\":1,\"lines\":[\"2026-01-01T00:01:10Z\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/sample_interval_seconds\",\"start\":1,\"lines\":[\"15\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/total_physical_mib\",\"start\":1,\"lines\":[\"16384\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/available_mib\",\"start\":1,\"lines\":[\"[4096,4072,4100,4088,4092]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/committed_mib\",\"start\":1,\"lines\":[\"[10000,10008,10002,10006,10004]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/commit_limit_mib\",\"start\":1,\"lines\":[\"[24576,24576,24576,24576,24576]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/page_reads_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pages_input_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pages_output_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pool_nonpaged_mib\",\"start\":1,\"lines\":[\"[384,384,384,384,384]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pool_paged_mib\",\"start\":1,\"lines\":[\"[512,512,512,512,512]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/standby_mib\",\"start\":1,\"lines\":[\"[3000,2976,3004,2992,2996]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/standby_note\",\"start\":1,\"lines\":[\"A subset of available memory in this synthetic fixture; do not add it to available again\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/latency_probe\",\"start\":1,\"lines\":[\"{\\\"operation\\\":\\\"fixed_synthetic_ui_probe\\\",\\\"baseline_p95_ms\\\":120,\\\"window_p95_ms\\\":[119,120,118,121,120]}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/process_private_mib\",\"start\":1,\"lines\":[\"{\\\"synthetic_process_A\\\":[900,900,901,900,900],\\\"synthetic_process_B\\\":[512,512,512,512,512]}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/interpretation_limit\",\"start\":1,\"lines\":[\"This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change\"]},{\"path\":\"tool/synthetic-tool-context-003/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-context-003/input/fixture\",\"start\":1,\"lines\":[\"bounded-observation-context\"]},{\"path\":\"tool/synthetic-tool-context-003/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-context-003/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-context-003/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-context-003/output/window_start\",\"start\":1,\"lines\":[\"2026-01-01T00:00:10Z\"]},{\"path\":\"tool/synthetic-tool-context-003/output/window_end\",\"start\":1,\"lines\":[\"2026-01-01T00:01:10Z\"]},{\"path\":\"tool/synthetic-tool-context-003/output/responsiveness_regression_reported\",\"start\":1,\"lines\":[\"false\"]},{\"path\":\"tool/synthetic-tool-context-003/output/memory_allocation_failure_reported\",\"start\":1,\"lines\":[\"false\"]},{\"path\":\"tool/synthetic-tool-context-003/output/system_changes_performed\",\"start\":1,\"lines\":[\"[]\"]}],\"file_origin\":[],\"workspace\":\"$SMOKE_TMP/git-evidence-workspace\",\"transcript_path\":\"\",\"previous_nudges\":[{\"observed\":\"僅有待機 RAM 75%，未提供壓力指標\",\"why\":\"占用比例無法單獨證明記憶體壓力\",\"structure\":\"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\",\"required\":\"補同一時間窗量測；先別清快取或停服務\"}]}",
+      "configured_model_not_executed": "gpt-5.6-sol",
+      "schema_path": "$REPO/nudge-schema.json",
+      "workspace_root": "$SMOKE_TMP/git-evidence-workspace",
+      "timeout_sec": 1200,
+      "remaining_chars": 15320,
+      "raw_output": "{\"feedback\": null}",
+      "actual_model_usage": null,
+      "actual_model_latency_seconds": null,
+      "actual_model_cost": null
+    }
+  ],
+  "journal": {
+    "path": "$SMOKE_TMP/isolated-data/performance/feedback.sqlite3",
+    "attempts": [
+      {
+        "id": "6200ac51a9a94fdab44e3aeeb8ff5dab",
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "started": 1791793823.9865694,
+        "finished": 1791793823.9893725,
+        "outcome": "silence",
+        "delivered": 0,
+        "detail": {
+          "trigger": {
+            "kind": "explicit_diagnostic_checkpoint",
+            "profile": "performance",
+            "evidence_origin": "actor_supplied",
+            "batch_id": "synthetic-pressure-window-002",
+            "reason": "固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。",
+            "progress": "這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。",
+            "evidence_sha256": "4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f"
+          },
+          "packet": "{\"task_contract\":[{\"path\":\"task/latest\",\"start\":1,\"lines\":[\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\"]}],\"before_structure\":[],\"batch_change\":[],\"current_structure\":[],\"tool_result\":[{\"path\":\"diagnostic/trigger\",\"start\":1,\"lines\":[\"{\\\"kind\\\":\\\"explicit_diagnostic_checkpoint\\\",\\\"profile\\\":\\\"performance\\\",\\\"evidence_origin\\\":\\\"actor_supplied\\\",\\\"batch_id\\\":\\\"synthetic-pressure-window-002\\\",\\\"reason\\\":\\\"固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。\\\",\\\"progress\\\":\\\"這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。\\\",\\\"evidence_sha256\\\":\\\"4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f\\\"}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-pressure-002/input/fixture\",\"start\":1,\"lines\":[\"memory-pressure-time-window\"]},{\"path\":\"tool/synthetic-tool-pressure-002/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/exit_code\",\"start\":1,\"lines\":[\"0\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/window_start\",\"start\":1,\"lines\":[\"2026-01-01T00:00:10Z\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/window_end\",\"start\":1,\"lines\":[\"2026-01-01T00:01:10Z\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/sample_interval_seconds\",\"start\":1,\"lines\":[\"15\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/total_physical_mib\",\"start\":1,\"lines\":[\"16384\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/available_mib\",\"start\":1,\"lines\":[\"[4096,4072,4100,4088,4092]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/committed_mib\",\"start\":1,\"lines\":[\"[10000,10008,10002,10006,10004]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/commit_limit_mib\",\"start\":1,\"lines\":[\"[24576,24576,24576,24576,24576]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/page_reads_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pages_input_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pages_output_per_second\",\"start\":1,\"lines\":[\"[0,0,0,0,0]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pool_nonpaged_mib\",\"start\":1,\"lines\":[\"[384,384,384,384,384]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/pool_paged_mib\",\"start\":1,\"lines\":[\"[512,512,512,512,512]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/standby_mib\",\"start\":1,\"lines\":[\"[3000,2976,3004,2992,2996]\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/standby_note\",\"start\":1,\"lines\":[\"A subset of available memory in this synthetic fixture; do not add it to available again\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/latency_probe\",\"start\":1,\"lines\":[\"{\\\"operation\\\":\\\"fixed_synthetic_ui_probe\\\",\\\"baseline_p95_ms\\\":120,\\\"window_p95_ms\\\":[119,120,118,121,120]}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/process_private_mib\",\"start\":1,\"lines\":[\"{\\\"synthetic_process_A\\\":[900,900,901,900,900],\\\"synthetic_process_B\\\":[512,512,512,512,512]}\"]},{\"path\":\"tool/synthetic-tool-pressure-002/output/interpretation_limit\",\"start\":1,\"lines\":[\"This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change\"]},{\"path\":\"tool/synthetic-tool-context-003/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-context-003/input/fixture\",\"start\":1,\"lines\":[\"bounded-observation-context\"]},{\"path\":\"tool/synthetic-tool-context-003/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-context-003/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-context-003/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-context-003/output/window_start\",\"start\":1,\"lines\":[\"2026-01-01T00:00:10Z\"]},{\"path\":\"tool/synthetic-tool-context-003/output/window_end\",\"start\":1,\"lines\":[\"2026-01-01T00:01:10Z\"]},{\"path\":\"tool/synthetic-tool-context-003/output/responsiveness_regression_reported\",\"start\":1,\"lines\":[\"false\"]},{\"path\":\"tool/synthetic-tool-context-003/output/memory_allocation_failure_reported\",\"start\":1,\"lines\":[\"false\"]},{\"path\":\"tool/synthetic-tool-context-003/output/system_changes_performed\",\"start\":1,\"lines\":[\"[]\"]}],\"file_origin\":[],\"workspace\":\"$SMOKE_TMP/git-evidence-workspace\",\"transcript_path\":\"\",\"previous_nudges\":[{\"observed\":\"僅有待機 RAM 75%，未提供壓力指標\",\"why\":\"占用比例無法單獨證明記憶體壓力\",\"structure\":\"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\",\"required\":\"補同一時間窗量測；先別清快取或停服務\"}]}",
+          "raw_output": "{\"feedback\": null}",
+          "usage": {},
+          "trace": [
+            {
+              "kind": "offline_scripted_stub",
+              "dispatch_index": 2,
+              "not_model_generated": true
+            }
+          ],
+          "materials": [],
+          "elapsed_seconds": 0.00011685200297506526
+        },
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "batch_id": "598e9aadbf274a8cb1e30b83de8e6446"
+      },
+      {
+        "id": "1eba7eadf969419793368e0cfc9afbec",
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "started": 1791793823.9824553,
+        "finished": 1791793823.9846706,
+        "outcome": "feedback",
+        "delivered": 1,
+        "detail": {
+          "trigger": {
+            "kind": "explicit_diagnostic_checkpoint",
+            "profile": "performance",
+            "evidence_origin": "actor_supplied",
+            "batch_id": "synthetic-ram-only-001",
+            "reason": "準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。",
+            "progress": "固定測試腳本的第一步；尚未蒐集壓力與延遲指標。",
+            "evidence_sha256": "3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15"
+          },
+          "packet": "{\"task_contract\":[{\"path\":\"task/latest\",\"start\":1,\"lines\":[\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\"]}],\"before_structure\":[],\"batch_change\":[],\"current_structure\":[],\"tool_result\":[{\"path\":\"diagnostic/trigger\",\"start\":1,\"lines\":[\"{\\\"kind\\\":\\\"explicit_diagnostic_checkpoint\\\",\\\"profile\\\":\\\"performance\\\",\\\"evidence_origin\\\":\\\"actor_supplied\\\",\\\"batch_id\\\":\\\"synthetic-ram-only-001\\\",\\\"reason\\\":\\\"準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。\\\",\\\"progress\\\":\\\"固定測試腳本的第一步；尚未蒐集壓力與延遲指標。\\\",\\\"evidence_sha256\\\":\\\"3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15\\\"}\"]},{\"path\":\"tool/synthetic-tool-ram-001/name\",\"start\":1,\"lines\":[\"synthetic_fixture_reader\"]},{\"path\":\"tool/synthetic-tool-ram-001/input/fixture\",\"start\":1,\"lines\":[\"ram-percentage-only\"]},{\"path\":\"tool/synthetic-tool-ram-001/input/operation\",\"start\":1,\"lines\":[\"read_fixed_test_data\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/synthetic\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/not_a_real_tool_execution\",\"start\":1,\"lines\":[\"true\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/exit_code\",\"start\":1,\"lines\":[\"0\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/observation_time\",\"start\":1,\"lines\":[\"2026-01-01T00:00:00Z\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/reported_state\",\"start\":1,\"lines\":[\"idle\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/reported_memory_percent\",\"start\":1,\"lines\":[\"75\"]},{\"path\":\"tool/synthetic-tool-ram-001/output/missing_measurements\",\"start\":1,\"lines\":[\"[\\\"available_memory\\\",\\\"commit_and_limit\\\",\\\"paging_over_time\\\",\\\"latency\\\",\\\"process_private_bytes_trend\\\"]\"]}],\"file_origin\":[],\"workspace\":\"$SMOKE_TMP/git-evidence-workspace\",\"transcript_path\":\"\",\"previous_nudges\":[]}",
+          "raw_output": "{\"feedback\": {\"observed\": \"僅有待機 RAM 75%，未提供壓力指標\", \"why\": \"占用比例無法單獨證明記憶體壓力\", \"structure\": \"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\", \"required\": \"補同一時間窗量測；先別清快取或停服務\"}}",
+          "usage": {},
+          "trace": [
+            {
+              "kind": "offline_scripted_stub",
+              "dispatch_index": 1,
+              "not_model_generated": true
+            }
+          ],
+          "materials": [],
+          "elapsed_seconds": 0.00012372199853416532
+        },
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "batch_id": "60813570b901445f8f1f544370e5c148"
+      }
+    ],
+    "batches": [
+      {
+        "id": "60813570b901445f8f1f544370e5c148",
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "received": 1791793823.982182,
+        "payload": "{\"trigger\":{\"kind\":\"explicit_diagnostic_checkpoint\",\"profile\":\"performance\",\"evidence_origin\":\"actor_supplied\",\"batch_id\":\"synthetic-ram-only-001\",\"reason\":\"準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。\",\"progress\":\"固定測試腳本的第一步；尚未蒐集壓力與延遲指標。\",\"evidence_sha256\":\"3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15\"},\"events\":[{\"tool_use_id\":\"synthetic-tool-ram-001\",\"tool_name\":\"synthetic_fixture_reader\",\"tool_input\":{\"fixture\":\"ram-percentage-only\",\"operation\":\"read_fixed_test_data\"},\"tool_response\":{\"synthetic\":true,\"not_a_real_tool_execution\":true,\"exit_code\":0,\"observation_time\":\"2026-01-01T00:00:00Z\",\"reported_state\":\"idle\",\"reported_memory_percent\":75,\"missing_measurements\":[\"available_memory\",\"commit_and_limit\",\"paging_over_time\",\"latency\",\"process_private_bytes_trend\"]}}]}",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df"
+      },
+      {
+        "id": "598e9aadbf274a8cb1e30b83de8e6446",
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "received": 1791793823.9862413,
+        "payload": "{\"trigger\":{\"kind\":\"explicit_diagnostic_checkpoint\",\"profile\":\"performance\",\"evidence_origin\":\"actor_supplied\",\"batch_id\":\"synthetic-pressure-window-002\",\"reason\":\"固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。\",\"progress\":\"這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。\",\"evidence_sha256\":\"4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f\"},\"events\":[{\"tool_use_id\":\"synthetic-tool-pressure-002\",\"tool_name\":\"synthetic_fixture_reader\",\"tool_input\":{\"fixture\":\"memory-pressure-time-window\",\"operation\":\"read_fixed_test_data\"},\"tool_response\":{\"synthetic\":true,\"not_a_real_tool_execution\":true,\"exit_code\":0,\"window_start\":\"2026-01-01T00:00:10Z\",\"window_end\":\"2026-01-01T00:01:10Z\",\"sample_interval_seconds\":15,\"total_physical_mib\":16384,\"available_mib\":[4096,4072,4100,4088,4092],\"committed_mib\":[10000,10008,10002,10006,10004],\"commit_limit_mib\":[24576,24576,24576,24576,24576],\"page_reads_per_second\":[0,0,0,0,0],\"pages_input_per_second\":[0,0,0,0,0],\"pages_output_per_second\":[0,0,0,0,0],\"pool_nonpaged_mib\":[384,384,384,384,384],\"pool_paged_mib\":[512,512,512,512,512],\"standby_mib\":[3000,2976,3004,2992,2996],\"standby_note\":\"A subset of available memory in this synthetic fixture; do not add it to available again\",\"latency_probe\":{\"operation\":\"fixed_synthetic_ui_probe\",\"baseline_p95_ms\":120,\"window_p95_ms\":[119,120,118,121,120]},\"process_private_mib\":{\"synthetic_process_A\":[900,900,901,900,900],\"synthetic_process_B\":[512,512,512,512,512]},\"interpretation_limit\":\"This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change\"}},{\"tool_use_id\":\"synthetic-tool-context-003\",\"tool_name\":\"synthetic_fixture_reader\",\"tool_input\":{\"fixture\":\"bounded-observation-context\",\"operation\":\"read_fixed_test_data\"},\"tool_response\":{\"synthetic\":true,\"not_a_real_tool_execution\":true,\"window_start\":\"2026-01-01T00:00:10Z\",\"window_end\":\"2026-01-01T00:01:10Z\",\"responsiveness_regression_reported\":false,\"memory_allocation_failure_reported\":false,\"system_changes_performed\":[]}}]}",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df"
+      }
+    ],
+    "events": [
+      {
+        "seq": 1,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.982182,
+        "kind": "queued",
+        "attempt": "1eba7eadf969419793368e0cfc9afbec",
+        "batch_id": "60813570b901445f8f1f544370e5c148",
+        "payload": "{}"
+      },
+      {
+        "seq": 2,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.9824553,
+        "kind": "started",
+        "attempt": "1eba7eadf969419793368e0cfc9afbec",
+        "batch_id": "60813570b901445f8f1f544370e5c148",
+        "payload": "{}"
+      },
+      {
+        "seq": 3,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.9846706,
+        "kind": "finished",
+        "attempt": "1eba7eadf969419793368e0cfc9afbec",
+        "batch_id": "60813570b901445f8f1f544370e5c148",
+        "payload": "{\"outcome\":\"feedback\",\"detail\":{\"trigger\":{\"kind\":\"explicit_diagnostic_checkpoint\",\"profile\":\"performance\",\"evidence_origin\":\"actor_supplied\",\"batch_id\":\"synthetic-ram-only-001\",\"reason\":\"準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。\",\"progress\":\"固定測試腳本的第一步；尚未蒐集壓力與延遲指標。\",\"evidence_sha256\":\"3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15\"},\"packet\":\"{\\\"task_contract\\\":[{\\\"path\\\":\\\"task/latest\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\\\"]}],\\\"before_structure\\\":[],\\\"batch_change\\\":[],\\\"current_structure\\\":[],\\\"tool_result\\\":[{\\\"path\\\":\\\"diagnostic/trigger\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"{\\\\\\\"kind\\\\\\\":\\\\\\\"explicit_diagnostic_checkpoint\\\\\\\",\\\\\\\"profile\\\\\\\":\\\\\\\"performance\\\\\\\",\\\\\\\"evidence_origin\\\\\\\":\\\\\\\"actor_supplied\\\\\\\",\\\\\\\"batch_id\\\\\\\":\\\\\\\"synthetic-ram-only-001\\\\\\\",\\\\\\\"reason\\\\\\\":\\\\\\\"準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。\\\\\\\",\\\\\\\"progress\\\\\\\":\\\\\\\"固定測試腳本的第一步；尚未蒐集壓力與延遲指標。\\\\\\\",\\\\\\\"evidence_sha256\\\\\\\":\\\\\\\"3e639d499439bb25132593cdc9efc9d61401d2cbbb96bc718f51bc5bda942e15\\\\\\\"}\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/name\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"synthetic_fixture_reader\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/input/fixture\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"ram-percentage-only\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/input/operation\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"read_fixed_test_data\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/synthetic\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/not_a_real_tool_execution\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/exit_code\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"0\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/observation_time\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"2026-01-01T00:00:00Z\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/reported_state\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"idle\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/reported_memory_percent\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"75\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-ram-001/output/missing_measurements\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[\\\\\\\"available_memory\\\\\\\",\\\\\\\"commit_and_limit\\\\\\\",\\\\\\\"paging_over_time\\\\\\\",\\\\\\\"latency\\\\\\\",\\\\\\\"process_private_bytes_trend\\\\\\\"]\\\"]}],\\\"file_origin\\\":[],\\\"workspace\\\":\\\"$SMOKE_TMP/git-evidence-workspace\\\",\\\"transcript_path\\\":\\\"\\\",\\\"previous_nudges\\\":[]}\",\"raw_output\":\"{\\\"feedback\\\": {\\\"observed\\\": \\\"僅有待機 RAM 75%，未提供壓力指標\\\", \\\"why\\\": \\\"占用比例無法單獨證明記憶體壓力\\\", \\\"structure\\\": \\\"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\\\", \\\"required\\\": \\\"補同一時間窗量測；先別清快取或停服務\\\"}}\",\"usage\":{},\"trace\":[{\"kind\":\"offline_scripted_stub\",\"dispatch_index\":1,\"not_model_generated\":true}],\"materials\":[],\"elapsed_seconds\":0.00012372199853416532}}"
+      },
+      {
+        "seq": 4,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.9862413,
+        "kind": "queued",
+        "attempt": "6200ac51a9a94fdab44e3aeeb8ff5dab",
+        "batch_id": "598e9aadbf274a8cb1e30b83de8e6446",
+        "payload": "{}"
+      },
+      {
+        "seq": 5,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.9865694,
+        "kind": "started",
+        "attempt": "6200ac51a9a94fdab44e3aeeb8ff5dab",
+        "batch_id": "598e9aadbf274a8cb1e30b83de8e6446",
+        "payload": "{}"
+      },
+      {
+        "seq": 6,
+        "session": "synthetic-smoke-session",
+        "turn": "synthetic-smoke-turn",
+        "round_id": "e2b023b6e8ce468dbaa7f3cd0d2181df",
+        "happened": 1791793823.9893725,
+        "kind": "finished",
+        "attempt": "6200ac51a9a94fdab44e3aeeb8ff5dab",
+        "batch_id": "598e9aadbf274a8cb1e30b83de8e6446",
+        "payload": "{\"outcome\":\"silence\",\"detail\":{\"trigger\":{\"kind\":\"explicit_diagnostic_checkpoint\",\"profile\":\"performance\",\"evidence_origin\":\"actor_supplied\",\"batch_id\":\"synthetic-pressure-window-002\",\"reason\":\"固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。\",\"progress\":\"這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。\",\"evidence_sha256\":\"4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f\"},\"packet\":\"{\\\"task_contract\\\":[{\\\"path\\\":\\\"task/latest\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。\\\"]}],\\\"before_structure\\\":[],\\\"batch_change\\\":[],\\\"current_structure\\\":[],\\\"tool_result\\\":[{\\\"path\\\":\\\"diagnostic/trigger\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"{\\\\\\\"kind\\\\\\\":\\\\\\\"explicit_diagnostic_checkpoint\\\\\\\",\\\\\\\"profile\\\\\\\":\\\\\\\"performance\\\\\\\",\\\\\\\"evidence_origin\\\\\\\":\\\\\\\"actor_supplied\\\\\\\",\\\\\\\"batch_id\\\\\\\":\\\\\\\"synthetic-pressure-window-002\\\\\\\",\\\\\\\"reason\\\\\\\":\\\\\\\"固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。\\\\\\\",\\\\\\\"progress\\\\\\\":\\\\\\\"這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。\\\\\\\",\\\\\\\"evidence_sha256\\\\\\\":\\\\\\\"4335c8cc24c00199d1a325fa276c11ec51786384856be13461fe4ecd47be019f\\\\\\\"}\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/name\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"synthetic_fixture_reader\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/input/fixture\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"memory-pressure-time-window\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/input/operation\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"read_fixed_test_data\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/synthetic\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/not_a_real_tool_execution\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/exit_code\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"0\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/window_start\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"2026-01-01T00:00:10Z\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/window_end\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"2026-01-01T00:01:10Z\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/sample_interval_seconds\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"15\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/total_physical_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"16384\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/available_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[4096,4072,4100,4088,4092]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/committed_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[10000,10008,10002,10006,10004]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/commit_limit_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[24576,24576,24576,24576,24576]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/page_reads_per_second\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[0,0,0,0,0]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/pages_input_per_second\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[0,0,0,0,0]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/pages_output_per_second\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[0,0,0,0,0]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/pool_nonpaged_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[384,384,384,384,384]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/pool_paged_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[512,512,512,512,512]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/standby_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[3000,2976,3004,2992,2996]\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/standby_note\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"A subset of available memory in this synthetic fixture; do not add it to available again\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/latency_probe\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"{\\\\\\\"operation\\\\\\\":\\\\\\\"fixed_synthetic_ui_probe\\\\\\\",\\\\\\\"baseline_p95_ms\\\\\\\":120,\\\\\\\"window_p95_ms\\\\\\\":[119,120,118,121,120]}\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/process_private_mib\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"{\\\\\\\"synthetic_process_A\\\\\\\":[900,900,901,900,900],\\\\\\\"synthetic_process_B\\\\\\\":[512,512,512,512,512]}\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-pressure-002/output/interpretation_limit\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/name\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"synthetic_fixture_reader\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/input/fixture\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"bounded-observation-context\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/input/operation\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"read_fixed_test_data\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/synthetic\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/not_a_real_tool_execution\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"true\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/window_start\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"2026-01-01T00:00:10Z\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/window_end\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"2026-01-01T00:01:10Z\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/responsiveness_regression_reported\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"false\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/memory_allocation_failure_reported\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"false\\\"]},{\\\"path\\\":\\\"tool/synthetic-tool-context-003/output/system_changes_performed\\\",\\\"start\\\":1,\\\"lines\\\":[\\\"[]\\\"]}],\\\"file_origin\\\":[],\\\"workspace\\\":\\\"$SMOKE_TMP/git-evidence-workspace\\\",\\\"transcript_path\\\":\\\"\\\",\\\"previous_nudges\\\":[{\\\"observed\\\":\\\"僅有待機 RAM 75%，未提供壓力指標\\\",\\\"why\\\":\\\"占用比例無法單獨證明記憶體壓力\\\",\\\"structure\\\":\\\"先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗\\\",\\\"required\\\":\\\"補同一時間窗量測；先別清快取或停服務\\\"}]}\",\"raw_output\":\"{\\\"feedback\\\": null}\",\"usage\":{},\"trace\":[{\"kind\":\"offline_scripted_stub\",\"dispatch_index\":2,\"not_model_generated\":true}],\"materials\":[],\"elapsed_seconds\":0.00011685200297506526}}"
+      }
+    ]
+  },
+  "actual_live_model_metrics": {
+    "status": "NOT_RUN",
+    "tokens": null,
+    "elapsed_seconds": null,
+    "cost": null
+  },
+  "offline_total_elapsed_seconds": 0.019631312003184576,
+  "allowed_conclusion": "The tested offline profile/checkpoint/evidence/deduplication/schema/journal plumbing works with a fixed stub",
+  "forbidden_conclusions": [
+    "Carmack improved Actor diagnosis",
+    "Carmack won an A/B test",
+    "the user's Windows device has or lacks memory pressure",
+    "a real model emitted these nudges or chose these measurements"
+  ]
+}

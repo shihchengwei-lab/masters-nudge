@@ -41,15 +41,34 @@ class NudgeCore:
         if reserved is None:
             return None
         attempt, task = reserved
-        detail = {}
+        return self._judge(session, attempt, task, lambda: build_packet(session, task, events))
+
+    def process_diagnostic(self, payload):
+        from .diagnostics import DiagnosticBatch, build_diagnostic_packet
+        if self.settings.profile != "performance":
+            raise ToolFault("configuration", "diagnostic checkpoint 僅限 performance profile")
+        batch = DiagnosticBatch.parse(payload)
+        session, round_id = self.journal.diagnostic_session(batch.cwd, batch.task_request)
+        payload = {"trigger": batch.trigger, "events": [asdict(event) for event in batch.events]}
+        reserved = self.journal.begin(session, payload, diagnostic=batch,
+                                      expected_round_id=round_id)
+        if reserved is None:
+            return None
+        attempt, task = reserved
+        return self._judge(session, attempt, task,
+                           lambda: build_diagnostic_packet(session, task, batch),
+                           detail={"trigger": batch.trigger})
+
+    def _judge(self, session, attempt, task, packet_builder, *, detail=None):
+        detail = {} if detail is None else detail
         try:
             if self.settings.configuration_error or self.settings.provider not in ("openai", "codex"):
                 raise ToolFault("configuration", self.settings.configuration_error or "僅支援 OpenAI／Codex")
-            packet = build_packet(session, task, events)
+            packet = packet_builder()
             detail["packet"] = packet.render()
             started = time.monotonic()
             run = self.dispatch(
-                system_prompt=load_system_prompt(prompt_file=self.settings.paths.runtime_dir / "buddy-prompt.txt"),
+                system_prompt=load_system_prompt(prompt_file=self.settings.prompt_file),
                 nudge_input=detail["packet"], model=self.settings.model,
                 schema_path=self.settings.paths.runtime_dir / "nudge-schema.json",
                 timeout_sec=task.get("provider_timeout_sec", PROVIDER_TIMEOUT_SEC),

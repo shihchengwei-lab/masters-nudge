@@ -6,6 +6,7 @@
 
 | 位置 | 責任 |
 |---|---|
+| `performance-prompt.txt`、`diagnostic_checkpoint.py`、`masters_nudge/diagnostics.py` | opt-in performance 實驗的提示、明確 CLI checkpoint 及有界材料；見[實驗設計](../experiments/carmack-performance/DESIGN.zh-TW.md) |
 | `buddy-prompt.txt` | 現行兩步選題、五條品味準則與欄位語意 |
 | `nudge-schema.json`、`masters_nudge/provider_contract.py` | 四欄 JSON 與字元限制 |
 | `masters_nudge/contracts.py` | 共用材料、結果形狀與額度常數 |
@@ -32,6 +33,7 @@
 | `MASTERS_NUDGE_DATA_DIR` | 覆蓋設定與資料目錄；指定後兩者都直接位於該目錄 |
 | `MASTERS_NUDGE_RUNTIME_DIR` | 覆蓋提示、schema 等執行檔案所在目錄 |
 | `MASTERS_NUDGE_TEST_MODE=1` | 將故障向測試執行器拋出；一般使用只回故障狀態並讓 Actor 繼續 |
+| `MASTERS_NUDGE_PROFILE=performance` | opt-in 實驗提示與 CLI checkpoint；data_dir 下另用 performance 子目錄。未設定仍是 software-engineering；不要在一次 Host session 中途換 profile |
 | `MASTERS_NUDGE_ACTIVE=1` | Provider 子程序的重入防護，避免自己的工具動作再次觸發 Nudge |
 
 模型設定只改 Provider。未設定時是 `gpt-5.6-sol`，Provider 深度固定 medium；七臂研究顯式指定自己的配置；I 的 xhigh Provider 使用實驗工具覆寫，沒有改動正式預設。`provider reset` 移除儲存選擇並恢復程式預設，沒有更換 Actor。

@@ -1,0 +1,15 @@
+{
+  "provenance": "SCRIPTED_STUB_OUTPUT_NOT_MODEL_GENERATED",
+  "selection": "Consumed in fixed order; the stub does not reason about input",
+  "replies": [
+    {
+      "feedback": {
+        "observed": "僅有待機 RAM 75%，未提供壓力指標",
+        "why": "占用比例無法單獨證明記憶體壓力",
+        "structure": "先對齊可用量、提交量／上限、硬錯頁讀取、延遲及程序私用量的時間窗",
+        "required": "補同一時間窗量測；先別清快取或停服務"
+      }
+    },
+    {"feedback": null}
+  ]
+}

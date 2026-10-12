@@ -3,7 +3,12 @@ from pathlib import Path
 from .contracts import Feedback, ToolFault
 
 
-def delivery_text(feedback: Feedback) -> str:
+def delivery_text(feedback: Feedback, *, profile: str = "software-engineering") -> str:
+    if profile == "performance":
+        return (
+            f"Masters’ Nudge\n{feedback.message}\n"
+            "Check REQUIRED against the latest task contract. Use STRUCTURE as a testable measurement distinction or data/work relation; decide whether further measurement or a change is warranted. Preserve correctness and stability, verify any improvement end-to-end, and stop when no actionable problem is supported."
+        )
     return (
         f"Masters’ Nudge\n{feedback.message}\n"
         "First check REQUIRED against the latest task contract and use it to determine the delivered behavior. When adopting STRUCTURE, implement the stated data and responsibility relation and address its affected uses; verify that the actual results satisfy the task requirements."

@@ -1,0 +1,55 @@
+{
+  "fixture_id": "windows-pressure-window-v1",
+  "provenance": "SYNTHETIC_TEST_DATA_NOT_COLLECTED_FROM_ANY_WINDOWS_DEVICE",
+  "purpose": "Fixed follow-up input for scripted silence; not a model-generated investigation or a Windows diagnosis",
+  "payload": {
+    "cwd": "__SMOKE_GIT_WORKSPACE__",
+    "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+    "batch_id": "synthetic-pressure-window-002",
+    "reason": "固定後續腳本補入同一時間窗的區分指標，檢查新的材料可觸發第二次判斷。",
+    "progress": "這是事先編寫的 Actor 後續步驟，不是模型因 Nudge 而產生的行為；未變更服務、快取、pagefile、啟動項或安全設定。",
+    "evidence": [
+      {
+        "tool_use_id": "synthetic-tool-pressure-002",
+        "tool_name": "synthetic_fixture_reader",
+        "tool_input": {"fixture": "memory-pressure-time-window", "operation": "read_fixed_test_data"},
+        "tool_response": {
+          "synthetic": true,
+          "not_a_real_tool_execution": true,
+          "exit_code": 0,
+          "window_start": "2026-01-01T00:00:10Z",
+          "window_end": "2026-01-01T00:01:10Z",
+          "sample_interval_seconds": 15,
+          "total_physical_mib": 16384,
+          "available_mib": [4096, 4072, 4100, 4088, 4092],
+          "committed_mib": [10000, 10008, 10002, 10006, 10004],
+          "commit_limit_mib": [24576, 24576, 24576, 24576, 24576],
+          "page_reads_per_second": [0, 0, 0, 0, 0],
+          "pages_input_per_second": [0, 0, 0, 0, 0],
+          "pages_output_per_second": [0, 0, 0, 0, 0],
+          "pool_nonpaged_mib": [384, 384, 384, 384, 384],
+          "pool_paged_mib": [512, 512, 512, 512, 512],
+          "standby_mib": [3000, 2976, 3004, 2992, 2996],
+          "standby_note": "A subset of available memory in this synthetic fixture; do not add it to available again",
+          "latency_probe": {"operation": "fixed_synthetic_ui_probe", "baseline_p95_ms": 120, "window_p95_ms": [119, 120, 118, 121, 120]},
+          "process_private_mib": {"synthetic_process_A": [900, 900, 901, 900, 900], "synthetic_process_B": [512, 512, 512, 512, 512]},
+          "interpretation_limit": "This short fabricated window cannot establish a real machine's health, explain all physical allocation, exclude an intermittent leak, or justify a system change"
+        }
+      },
+      {
+        "tool_use_id": "synthetic-tool-context-003",
+        "tool_name": "synthetic_fixture_reader",
+        "tool_input": {"fixture": "bounded-observation-context", "operation": "read_fixed_test_data"},
+        "tool_response": {
+          "synthetic": true,
+          "not_a_real_tool_execution": true,
+          "window_start": "2026-01-01T00:00:10Z",
+          "window_end": "2026-01-01T00:01:10Z",
+          "responsiveness_regression_reported": false,
+          "memory_allocation_failure_reported": false,
+          "system_changes_performed": []
+        }
+      }
+    ]
+  }
+}

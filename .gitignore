@@ -14,6 +14,7 @@ HANDOFF.md
 # Local experiment history. Keep current champion experiment code in Git.
 /experiments/*
 !/experiments/champion-vs-preserved-result-20260920/
+!/experiments/carmack-performance/
 /experiments/champion-vs-preserved-result-20260920/PARTIAL.zh-TW.md
 
 # Local benchmark history and superseded study directories.

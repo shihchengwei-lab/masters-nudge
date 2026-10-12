@@ -124,7 +124,13 @@ class RepositoryTools:
             if not raw_path:
                 continue
             relative = raw_path.decode("utf-8", errors="surrogateescape")
-            path = self.root / relative
+            # Resolve each candidate, not only the search prefix: Git can list
+            # symlinks whose targets escape the workspace or point at ignored data.
+            path = self._path(relative)
+            if path != self.root / relative:
+                # Only redirected targets need extra Git checks; ordinary search
+                # must keep its one-listing cost instead of spawning per-file Git.
+                self._allowed(path)
             with path.open(encoding="utf-8", errors="replace") as stream:
                 for line_number, text in enumerate(stream, 1):
                     if query not in text:

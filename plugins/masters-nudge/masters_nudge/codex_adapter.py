@@ -50,7 +50,7 @@ class CodexAdapter:
             return {
                 "hookSpecificOutput": {
                     "hookEventName": "PostToolUse",
-                    "additionalContext": delivery_text(feedback),
+                    "additionalContext": delivery_text(feedback, profile=self.core.settings.profile),
                 },
                 AUDIT_MARKER_KEY: attempt,
             }

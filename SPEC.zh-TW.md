@@ -2,6 +2,8 @@
 
 狀態：2026-10-03 核對的工具規格。外掛清單版本為 `0.6.1+codex.20261004190000`。現行提示採 2026-10-01 定稿。
 
+本實驗分支另提供 opt-in performance profile，與下述預設 software-engineering 規格分開。觸發與限制見[實驗設計](experiments/carmack-performance/DESIGN.zh-TW.md)及[操作說明](experiments/carmack-performance/README.zh-TW.md)。它只增加明確 CLI 診斷 checkpoint，不宣稱自動偵測收斂、真實 Windows 診斷或已驗證的 hosted additionalContext 診斷送達。
+
 本檔定義工具責任與行為。實際模型判斷、契約完成、程式碼品味與成本另見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)及[測試方法與原始數據](benchmark/README.zh-TW.md)。固定 Provider 提示在 [buddy-prompt.txt](buddy-prompt.txt)，輸出形狀在 [nudge-schema.json](nudge-schema.json)；修改規格時須一起核對實作，不能把未實現的草案寫成現況。
 
 ## 1. `PostToolUse` 的用途

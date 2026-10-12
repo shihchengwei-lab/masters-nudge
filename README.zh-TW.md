@@ -2,6 +2,8 @@
 
 繁體中文 | [English](README.md)
 
+**本實驗分支：** 可選用 [Carmack performance prototype](experiments/carmack-performance/README.zh-TW.md) 的明確診斷 checkpoint。下述預設 Linus 流程維持原樣；合成資料離線驗證已通過；另一次真實 CLI 嘗試驗證 Actor 啟動及原生 task-start journal，隨後在量測與 checkpoint 前遇到沙箱相容性阻擋。真實 Provider 送達、Windows 診斷及模型 A/B 均未驗證。
+
 > **測試通過，只證明行為；不能證明設計。**
 >
 > 綠燈代表現在能過。六個月後呢？

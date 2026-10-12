@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 import time
 import uuid
@@ -42,6 +43,11 @@ class Journal:
                     session TEXT NOT NULL, turn TEXT NOT NULL, round_id TEXT NOT NULL,
                     happened REAL NOT NULL, kind TEXT NOT NULL,
                     attempt TEXT NOT NULL, batch_id TEXT NOT NULL, payload TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS diagnostic_batches(
+                    scope TEXT NOT NULL, evidence_id TEXT NOT NULL, evidence_sha256 TEXT NOT NULL,
+                    batch_id TEXT NOT NULL, seen_count INTEGER NOT NULL DEFAULT 1,
+                    last_seen REAL NOT NULL, PRIMARY KEY(scope,evidence_id));
+                CREATE INDEX IF NOT EXISTS diagnostic_content ON diagnostic_batches(scope,evidence_sha256);
                 CREATE INDEX IF NOT EXISTS judgment_events_round_seq
                     ON judgment_events(round_id, seq);
                 CREATE INDEX IF NOT EXISTS judgment_events_attempt_seq
@@ -53,6 +59,8 @@ class Journal:
                 if "round_id" not in columns:
                     db.execute(f"ALTER TABLE {table} ADD COLUMN round_id TEXT NOT NULL DEFAULT ''")
                 if table == "rounds":
+                    if "cwd" not in columns:
+                        db.execute("ALTER TABLE rounds ADD COLUMN cwd TEXT NOT NULL DEFAULT ''")
                     if "file_baseline" not in columns:
                         db.execute("ALTER TABLE rounds ADD COLUMN file_baseline TEXT NOT NULL DEFAULT '{}'")
                     if "skipped_test_patches" not in columns:
@@ -102,9 +110,33 @@ class Journal:
             baseline = (old["file_baseline"] if old and old["goal"] == original
                         else json_text(capture_file_baseline(session)))
             db.execute(
-                "INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id,file_baseline) VALUES(?,?,?,?,?,?)",
-                (session.session_id, session.turn_id, original, request, uuid.uuid4().hex, baseline),
+                "INSERT OR REPLACE INTO rounds(session,turn,goal,request,round_id,file_baseline,cwd) VALUES(?,?,?,?,?,?,?)",
+                (session.session_id, session.turn_id, original, request, uuid.uuid4().hex, baseline, str(Path(session.cwd).resolve())),
             )
+
+    def diagnostic_session(self, cwd: str, request: str) -> tuple[SessionRef, str]:
+        """Select an exact registered request, never guess which Host session is live."""
+        cwd = str(Path(cwd).resolve())
+        with self.connect() as db:
+            rows = db.execute("SELECT * FROM rounds WHERE cwd=? AND request=?", (cwd, request)).fetchall()
+        if len(rows) != 1:
+            raise ToolFault("input", "cwd 與最新要求未唯一匹配已登記輪次；請使用獨立資料目錄並重新接收 UserPromptSubmit")
+        row = rows[0]
+        return SessionRef(row["session"], row["turn"], cwd), row["round_id"]
+
+    def _expire_diagnostic_pending(self, db, items):
+        """Recovery never reruns an uncertain Provider call, including a duplicate retry."""
+        for item in items:
+            if item["finished"] is not None:
+                continue
+            deadline = ((item["started"] + self.provider_timeout_sec + FINALIZATION_RESERVE_SEC)
+                        if item["started"] is not None else
+                        (item["queued"] + self.hook_timeout_sec) if item["queued"] is not None else None)
+            if deadline is not None and time.time() >= deadline:
+                detail = {"fault": {"kind": "timeout", "detail": "diagnostic 等候或判斷已逾時；不重跑未確認完成的呼叫"}}
+                self._finish_event(db, item, "fault", detail)
+                self._skip_queued(db, items, item["id"])
+                return
 
     @staticmethod
     def _append_event(db, *, session: str, turn: str, round_id: str, kind: str,
@@ -208,7 +240,8 @@ class Journal:
         return counts.get("feedback", 0) >= FEEDBACK_LIMIT or counts.get("silence", 0) >= SILENCE_LIMIT
 
     def begin(self, session: SessionRef, payload: object, *,
-              skip_provider: bool = False) -> tuple[str, dict] | None:
+              skip_provider: bool = False, diagnostic=None,
+              expected_round_id: str | None = None) -> tuple[str, dict] | None:
         """Queue one patch and claim it only after every earlier judgment is terminal."""
         wait_started = time.monotonic()
         with self.connect() as db:
@@ -216,11 +249,48 @@ class Journal:
             row = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
             if row is None:
                 raise ToolFault("input", "缺少本輪使用者要求事件")
+            if expected_round_id is not None and row["round_id"] != expected_round_id:
+                raise ToolFault("input", "diagnostic checkpoint 輪次已變更")
             if row["turn"] != session.turn_id:
                 return None
+            if diagnostic is not None:
+                self._expire_diagnostic_pending(db, self._round_events(db, row["round_id"]))
             fault = self._fault(self._round_events(db, row["round_id"]))
             if fault is not None:
+                db.commit()
                 raise self._tool_fault(fault)
+            scope = None
+            reusable_batch_id = None
+            if diagnostic is not None:
+                scope = hashlib.sha256(json_text([session.session_id, row["goal"], row["file_baseline"],
+                                                  row["cwd"]]).encode("utf-8")).hexdigest()
+                alias = db.execute("SELECT * FROM diagnostic_batches WHERE scope=? AND evidence_id=?",
+                                   (scope, diagnostic.batch_id)).fetchone()
+                if alias and alias["evidence_sha256"] != diagnostic.fingerprint:
+                    raise ToolFault("input", "同一 diagnostic batch_id 不可換用不同 evidence")
+                same = alias or db.execute(
+                    "SELECT * FROM diagnostic_batches WHERE scope=? AND evidence_sha256=? LIMIT 1",
+                    (scope, diagnostic.fingerprint)).fetchone()
+                if same:
+                    prior = self._fold_events(db.execute(
+                        "SELECT * FROM judgment_events WHERE batch_id=? ORDER BY seq", (same["batch_id"],)))
+                    unclaimed_old = (prior and prior[0]["started"] is None
+                                     and prior[0]["round_id"] != row["round_id"]
+                                     and prior[0]["finished"] is None)
+                    if unclaimed_old:
+                        self._skip_queued(db, prior, "superseded_round")
+                    reusable = (prior and prior[0]["started"] is None
+                                and (prior[0]["outcome"] == "skipped" or unclaimed_old))
+                    if reusable:
+                        # Preserve every ID->content binding; only an unclaimed skipped
+                        # reservation may point to a new attempt. Never retry a started call.
+                        reusable_batch_id = same["batch_id"]
+                    else:
+                        db.execute("INSERT INTO diagnostic_batches VALUES(?,?,?,?,1,?) "
+                                   "ON CONFLICT(scope,evidence_id) DO UPDATE SET "
+                                   "seen_count=seen_count+1,last_seen=excluded.last_seen",
+                                   (scope, diagnostic.batch_id, diagnostic.fingerprint, same["batch_id"], time.time()))
+                        return None
             if not skip_provider and self._budget_exhausted(db, row["round_id"]):
                 return None
             batch_id = uuid.uuid4().hex
@@ -230,6 +300,14 @@ class Journal:
                 "INSERT INTO batches(id,session,turn,received,payload,round_id) VALUES(?,?,?,?,?,?)",
                 (batch_id, session.session_id, session.turn_id, started, json_text(payload), row["round_id"]),
             )
+            if diagnostic is not None:
+                if reusable_batch_id:
+                    db.execute("UPDATE diagnostic_batches SET batch_id=? WHERE scope=? AND batch_id=?",
+                               (batch_id, scope, reusable_batch_id))
+                db.execute("INSERT INTO diagnostic_batches VALUES(?,?,?,?,1,?) "
+                           "ON CONFLICT(scope,evidence_id) DO UPDATE SET "
+                           "batch_id=excluded.batch_id,seen_count=seen_count+1,last_seen=excluded.last_seen",
+                           (scope, diagnostic.batch_id, diagnostic.fingerprint, batch_id, started))
             if skip_provider:
                 db.execute("UPDATE rounds SET skipped_test_patches=skipped_test_patches+1 "
                            "WHERE session=?", (session.session_id,))
@@ -250,13 +328,23 @@ class Journal:
             with self.connect() as db:
                 db.execute("BEGIN IMMEDIATE")
                 current = db.execute("SELECT * FROM rounds WHERE session=?", (session.session_id,)).fetchone()
-                if current is None or current["turn"] != session.turn_id:
+                if current is None or current["round_id"] != row["round_id"]:
+                    old_items = self._round_events(db, row["round_id"])
+                    self._skip_queued(db, old_items, "superseded_round")
                     return None
+                if diagnostic is not None:
+                    self._expire_diagnostic_pending(db, self._round_events(db, current["round_id"]))
                 items = self._round_events(db, current["round_id"])
                 fault = self._fault(items)
                 if fault is not None:
                     self._skip_queued(db, items, fault["id"])
                     fault_to_raise = self._tool_fault(fault)
+                elif time.monotonic() - wait_started >= self.hook_timeout_sec - FINALIZATION_RESERVE_SEC:
+                    own = next(item for item in items if item["id"] == attempt)
+                    detail = {"fault": {"kind": "timeout", "detail": "等待前一個 Provider 判斷後已無執行時間"}}
+                    self._finish_event(db, own, "fault", detail)
+                    self._skip_queued(db, items, own["id"])
+                    fault_to_raise = ToolFault("timeout", detail["fault"]["detail"])
                 else:
                     active = next((item for item in items if item["started"] is not None
                                    and item["finished"] is None), None)

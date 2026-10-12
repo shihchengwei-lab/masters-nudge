@@ -1,0 +1,28 @@
+{
+  "fixture_id": "windows-ram-only-v1",
+  "provenance": "SYNTHETIC_TEST_DATA_NOT_COLLECTED_FROM_ANY_WINDOWS_DEVICE",
+  "purpose": "Insufficient-evidence checkpoint; all Actor steps and Provider replies are scripted",
+  "payload": {
+    "cwd": "__SMOKE_GIT_WORKSPACE__",
+    "task_request": "合成離線測試：Windows 待機 RAM 顯示 70–80%；先判斷是否真的有記憶體壓力，不改系統設定。所有數值為測試作者虛構，並非使用者電腦量測。",
+    "batch_id": "synthetic-ram-only-001",
+    "reason": "準備從 RAM 百分比直接選擇處理方向，先檢查是否有足夠證據。",
+    "progress": "固定測試腳本的第一步；尚未蒐集壓力與延遲指標。",
+    "evidence": [
+      {
+        "tool_use_id": "synthetic-tool-ram-001",
+        "tool_name": "synthetic_fixture_reader",
+        "tool_input": {"fixture": "ram-percentage-only", "operation": "read_fixed_test_data"},
+        "tool_response": {
+          "synthetic": true,
+          "not_a_real_tool_execution": true,
+          "exit_code": 0,
+          "observation_time": "2026-01-01T00:00:00Z",
+          "reported_state": "idle",
+          "reported_memory_percent": 75,
+          "missing_measurements": ["available_memory", "commit_and_limit", "paging_over_time", "latency", "process_private_bytes_trend"]
+        }
+      }
+    ]
+  }
+}
