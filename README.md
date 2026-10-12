@@ -20,11 +20,11 @@ In Element’s device selection and bulk sign-out task, **both implementations p
 
 ## Results and costs
 
-We compared direct implementation with structural feedback across **12 code-change tasks and seven model configurations**, measuring complete delivery, code structure, and cost. Each task was attempted twice per configuration, totaling 168 deliveries, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
+The core benchmark compares direct implementation with structural feedback across **nine code-change tasks and seven model configurations**, measuring complete delivery, code structure and cost. Each task was attempted twice per configuration: 18 attempts per configuration, 126 total, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
 
-**The primary comparison covers nine tasks: 18 attempts per configuration, 126 total.** No implementation in the seven configurations completed the full Regexp, Metaflow or Tracing contract. These three tasks are published as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md), with their six attempts per configuration excluded from primary completion and cost statistics. This classification was made after the study; all original twelve-task results remain available.
+The remaining three tasks—Regexp, Metaflow and Tracing—are published separately as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md), as none of the seven configurations completed their full contracts.
 
-**A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with approximately 3.7% more total time. The observed comparisons are:
+**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/18 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Initial judgments used anonymous comparisons; final results came from whole-flow code review. The trade-off for this structural gain was +48.9% total time and +74.3% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with +3.7% total time. The comparisons are:
 
 | Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
 |---|---|---|---|
@@ -33,7 +33,7 @@ We compared direct implementation with structural feedback across **12 code-chan
 | I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +48.9% | +74.3% |
 | I vs F: Provider medium → xhigh | 5 / 0 / 4 | +3.7% | +15.7% |
 
-Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 18 attempts per arm on the nine tasks; tokens include Actor and Provider usage at the same 16 positions with complete records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. Detailed usage records and accounting are in the report.
+The initial taste assessment used anonymous X/Y comparisons with their order swapped between judgments. Code review then examined the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across 71 jointly completed task/attempt pairs. Time covers all 18 core attempts per configuration; tokens include Actor and Provider usage at the 16 positions with complete records across all seven configurations.
 
 Complete deliveries were:
 
@@ -47,11 +47,11 @@ Complete deliveries were:
 | F | Sol xhigh | Sol medium | 11/18 |
 | I | Sol xhigh | Sol xhigh | 13/18 |
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves reviewed taste without increasing the total completed count over C. The jointly completed sample differs between taste comparisons.
+Complete delivery includes functionality, execution rules, the 30-minute deadline and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the lowest time per completed delivery; I pairs the same 13/18 delivery count with stronger reviewed structure. The jointly completed sample differs between taste comparisons.
 
-See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [nine-task primary report](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) for task results, costs, and CLI version differences. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
+See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [nine-task primary report](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) for task results, costs and detailed methods. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
 
-The [original twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) contains all individual results and statistics.
+The [full twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) contains all 168 attempts, individual results and experimental details.
 
 ## What the tool does
 

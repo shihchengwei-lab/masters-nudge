@@ -20,11 +20,11 @@ Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗�
 
 ## 效果與代價
 
-我們用 **12 道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完成度、程式結構及成本。每題每配置各跑兩次，共 168 份交付；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
+核心基準使用 **九道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完整交付、程式結構及成本。每題每配置各跑兩次，每配置18次，共126次；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
-**主要比較採九題，每配置18次，共126次。** Regexp、Metaflow、Tracing 在七種配置中皆無實作通過完整驗收契約，因此另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)，其六次不計入主要完成率與成本。這項分類在測試後調整；原始十二題結果全部保留。
+其餘三題 Regexp、Metaflow、Tracing 在七種配置中皆無實作通過完整驗收契約，另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)。
 
-**Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，累計時間增加約3.7%。各組結果如下：
+**Sol xhigh 搭配 Sol xhigh Provider，維持直接實作的 13/18 完整交付，並在共同完成的11組程式碼比較中取得7勝、0敗、4平。** 初評採匿名比較，最終結果經完整流程的程式碼覆核。這項結構收益的代價是累計時間增加48.9%、未快取輸入 Token 增加74.3%。相對 Sol medium Provider，完整交付與結構覆核結果也改善，累計時間增加3.7%。各組結果如下：
 
 | 比較條件 | 前者品味：勝／敗／持平 | 累計時間 | 未快取輸入 Token |
 |---|---|---|---|
@@ -33,7 +33,7 @@ Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗�
 | I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +48.9% | +74.3% |
 | I 對 F：Provider medium→xhigh | 5／0／4 | +3.7% | +15.7% |
 
-品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋九題每臂全部18次嘗試，Token 使用七臂共同16個有完整用量的位置，包含 Actor 與 Provider。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；完整用量紀錄與統計口徑見報告。
+品味初評匿名比較 X/Y，並交換呈現順序；接著已知配置，覆核同一批程式，將新增狀態、轉接、同步與相容處理納入完整流程的維護成本。I 對 C 的兩場初評勝利改為持平，得到最終7／0／4。表格採用全部71組共同完整交付的同題／同次序複評結果。時間涵蓋核心九題每配置全部18次嘗試，Token 使用七種配置共同16個有完整用量的位置，包含 Actor 與 Provider。
 
 完整交付結果如下：
 
@@ -47,11 +47,11 @@ Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗�
 | F | Sol xhigh | Sol medium | 11/18 |
 | I | Sol xhigh | Sol xhigh | 13/18 |
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 的結構品味較好，沒有再提高相對 C 的完成總數。各組品味比較的共同完成樣本不同。
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。C 的每份完整交付耗時最低；I 在同樣13/18的完整交付下，取得更好的結構覆核結果。各組品味比較的共同完成樣本不同。
 
-最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與執行檔版本差異見[九題主要報告](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
+最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與詳細方法見[九題主要報告](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
 
-[十二題原始報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留完整逐題結果與統計。
+[十二題完整報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留全部168次嘗試、逐題結果與實驗細節。
 
 ## 工具做了什麼
 
