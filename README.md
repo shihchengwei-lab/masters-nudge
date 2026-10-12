@@ -12,19 +12,17 @@ Masters’ Nudge aims to improve this: it adds a short structural suggestion whi
 
 ## Watch the Actor receive a nudge and make its next edit
 
-On October 12, 2026, we reran one with/without-Nudge pair for Element’s device selection and bulk sign-out task, recording the actual Codex CLI windows. **Both passed the fixed acceptance checks.** After the first nudge, the right-hand Actor’s next product edit required the selection list and updater as a pair and chose their source together.
+In Element’s device selection and bulk sign-out task, **both implementations passed the fixed acceptance checks.** After a nudge, the right-hand AI’s next edit required the selection list and updater as a pair and chose their source together.
 
 ![14-second side-by-side chat reconstruction: without a nudge on the left, with a nudge and subsequent structural edit on the right.](docs/images/element-chat-replay.en.gif)
 
-[Watch the 14-second replay](docs/images/element-chat-replay.en.mp4) · [Feedback, tool calls, final patches and acceptance evidence](docs/examples/element-live-recording.zh-TW.md)
-
-*Both chat columns are reconstructed from their own actual records, not the original Codex UI or footage. AI messages are translated excerpts; feedback is paraphrased in plain English. Changes are labeled as record summaries, not AI speech. Work and waiting are condensed independently; original messages and edits are linked.*
+*Chat reconstructed from actual records, with translated excerpts, paraphrased feedback and summarized edits. Work and waiting are condensed. [Source records and acceptance checks](docs/examples/element-live-recording.zh-TW.md).*
 
 ## Results and costs
 
 We compared direct implementation with structural feedback across **12 code-change tasks and seven model configurations**, measuring complete delivery, code structure, and cost. Each task was attempted twice per configuration, totaling 168 deliveries, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
 
-**The primary comparison covers nine tasks: 18 attempts per configuration, 126 total.** No implementation tested in the seven arms or subsequent dual-Astra-max explorations completed the full Regexp, Metaflow, or Tracing contract. The maintainer also confirmed that prior checks of the authors’ implementations did not satisfy the full contracts. These three tasks are published as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md); their six attempts per arm are excluded from primary completion and cost statistics. This is a post-study classification, not a preregistered exclusion. All original twelve-task results remain available. “Unresolved” does not establish impossibility or mean nobody elsewhere has solved them.
+**The primary comparison covers nine tasks: 18 attempts per configuration, 126 total.** No implementation in the seven configurations completed the full Regexp, Metaflow or Tracing contract. These three tasks are published as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md), with their six attempts per configuration excluded from primary completion and cost statistics. This classification was made after the study; all original twelve-task results remain available.
 
 **A Sol xhigh Actor with a Sol xhigh Provider matched direct implementation on complete deliveries and improved structural taste, at a higher time and token cost.** It also improved completion and taste over the Sol medium Provider, with approximately 3.7% more total time. The observed comparisons are:
 
@@ -35,7 +33,7 @@ We compared direct implementation with structural feedback across **12 code-chan
 | I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +48.9% | +74.3% |
 | I vs F: Provider medium → xhigh | 5 / 0 / 4 | +3.7% | +15.7% |
 
-Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 18 attempts per arm on the nine tasks; tokens include Actor and Provider usage at the same 16 positions with complete records across all seven arms. The unresolved tasks had no eligible taste pairs, so all 71 final comparisons are unchanged. I–F shares the same CLI; F/I versus C includes a CLI version difference. The report documents I's timeout and verification repairs, missing usage, and separately recorded overhead. These are structure, time, and usage measurements, not monetary bills.
+Taste numbers are the final code-review assessments of 71 comparisons where both implementations completely delivered the same task and attempt position. The review weighed whole-flow maintenance cost, including added state, adapters, synchronization, and compatibility work; it was aware of the configurations. Time covers all 18 attempts per arm on the nine tasks; tokens include Actor and Provider usage at the same 16 positions with complete records across all seven arms. I–F shares the same CLI; F/I versus C includes a CLI version difference. Detailed usage records and accounting are in the report.
 
 Complete deliveries were:
 
@@ -49,11 +47,11 @@ Complete deliveries were:
 | F | Sol xhigh | Sol medium | 11/18 |
 | I | Sol xhigh | Sol xhigh | 13/18 |
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves reviewed taste without increasing the total completed count over C. No arm completed Metaflow, Tracing, or Regexp. Taste results cover direct comparisons with different jointly completed populations, so they cannot form an overall ranking.
+Complete delivery includes functionality, execution rules, the 30-minute deadline, and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the best time per completed delivery; I improves reviewed taste without increasing the total completed count over C. The jointly completed sample differs between taste comparisons.
 
 See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [nine-task primary report](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) for task results, costs, and CLI version differences. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
 
-The [original twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) preserves historical statistics, individual results, and CLI differences.
+The [original twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) contains all individual results and statistics.
 
 ## What the tool does
 
@@ -78,7 +76,7 @@ The Provider uses five taste criteria to find that direction: make invalid state
 
 ## Limitations
 
-- The Actor owns complete delivery, evaluation of feedback, implementation, and verification. The tool does not take over acceptance.
+- The Actor evaluates feedback, implements changes and verifies complete delivery.
 - A turn stops after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use.
 - The Provider supports OpenAI/Codex only. Edits must arrive as explicit `apply_patch` content; opaque shell writes are unsupported.
 - A recorded Windows interruption during synchronous `PostToolUse` lacked a matching `hook/completed` event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
@@ -87,20 +85,20 @@ The Provider uses five taste criteria to find that direction: make invalid state
 
 Requires the `python` command in the Codex launch environment to run Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
 
-Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH. The doctor probes initialization and tool discovery using Codex's resolved MCP transport without calling the Provider. A successful `mcp_ready` check still requires the first-use hook delivery check below.
+Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH.
 
 On Windows, the coding chat requires an enabled, supported [Windows sandbox implementation](https://learn.chatgpt.com/docs/windows/windows-sandbox).
 
-The repo plugin manifest version is `0.6.2+codex.20261012`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+The repo plugin manifest version is `0.6.2+codex.20261012`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
 
 ## Install, enable, and try it
 
 1. Make sure Python, Git, and Codex CLI are installed. If the CLI is not signed in, run `codex login` in PowerShell.
 2. In the Codex desktop Plugins page, choose **Add → Add Marketplace → Add from a repository**, enter `https://github.com/shihchengwei-lab/masters-nudge`, and select **Sync**. The repo's [marketplace](.agents/plugins/marketplace.json) exposes Masters’ Nudge; open it, install it, and enable it. See the [official installation steps](https://developers.openai.com/learn/developers-codex-plugin).
-3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit` and `PostToolUse` hooks. Installation and enablement do not automatically trust hooks; see the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
+3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit` and `PostToolUse` hooks. See the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
 After updating an installed version, restart Codex. If a hook is marked modified, review and trust its new command before starting a new chat.
 
-4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness reports dependencies, login, and enablement.
+4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness checks dependencies, login, enablement and MCP tool discovery without calling the Provider.
 5. Start a new chat in your own Git project and give the Actor a normal code change. After a product-code `apply_patch`, ask Codex: “Show recent Masters’ Nudge attempts.” `feedback` means a suggestion was produced; `silence` means a successful judgment found no suggestion. Faults have separate reasons. For feedback, inspect the four-field suggestion in the Actor context and the subsequent code changes.
 
 If you downloaded this repo, you can also configure and inspect the tool manually from its root in PowerShell:
@@ -113,9 +111,9 @@ python masters_nudge_cli.py recent-nudges --limit 10
 
 ## Privacy
 
-Task text, edits, tool results, complete changed files that fit the shared material allowance, and file-origin facts are sent to OpenAI. The Provider may read non-ignored files in the Git workspace; it cannot edit the Actor's files. The full task-start file list stays local; only existence facts for paths in the current patch are sent. Unknown provenance remains unknown.
+Task text, edits, tool results, complete changed files that fit the shared material allowance, and file-origin facts are sent to OpenAI. The Provider has read-only access to non-ignored files in the Git workspace. The full task-start file list stays local; existence facts for paths in the current patch are sent.
 
-Records default to `.masters-nudge/data/feedback.sqlite3` and settings to `.masters-nudge/config.json` under the user directory. `MASTERS_NUDGE_DATA_DIR` can override these locations. Delivery receipts do not establish Actor adoption or task completion.
+Records default to `.masters-nudge/data/feedback.sqlite3` and settings to `.masters-nudge/config.json` under the user directory. `MASTERS_NUDGE_DATA_DIR` can override these locations.
 
 ## Development
 

@@ -12,19 +12,17 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 
 ## 看 Actor 真正收到提醒，再修改程式
 
-2026-10-12，我們把 Element 的多裝置勾選與批次登出任務重新做了一組有／無 Nudge 對照，錄下真實 Codex CLI 畫面。**兩份都通過本次固定驗收。** 右邊收到提醒後，下一次修改把「顯示勾選結果」和「處理點選」綁在一起，避免畫面看一份紀錄、點選卻改另一份。
+Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗收。** 右邊的 AI 收到提醒後，下一次修改把「顯示勾選結果」和「處理點選」綁在一起，讓兩者使用同一份紀錄。
 
 ![14 秒左右聊天對照：左邊沒有提醒；右邊收到提醒後，把顯示和點選改為使用同一份紀錄。](docs/images/element-chat-replay.gif)
 
-[觀看 14 秒重播](docs/images/element-chat-replay.mp4) · [提醒、工具呼叫、最終 Patch 與驗收證據](docs/examples/element-live-recording.zh-TW.md)
-
-*左右兩邊皆依各自的真實紀錄重建，非 Codex 原始介面或錄影。AI 訊息採中文節譯，提醒採白話轉述；「它實際改了什麼」是修改紀錄摘要，不是 AI 發言。中間操作與等待省略，完整原文另附。*
+*聊天畫面依真實紀錄重建，訊息採節譯、提醒採白話轉述，修改以摘要呈現；中間操作與等待省略。[原始紀錄與驗收](docs/examples/element-live-recording.zh-TW.md)。*
 
 ## 效果與代價
 
 我們用 **12 道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完成度、程式結構及成本。每題每配置各跑兩次，共 168 份交付；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
-**主要比較採九題，每配置18次，共126次。** Regexp、Metaflow、Tracing 在七臂及後續雙 Astra max 不限時探索中，尚無實作通過完整驗收契約；維護者確認先前原作者實作的完整契約檢查也未全數通過。因此三題另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)，其六次不計入主要完成率與成本。這是測試後的分類調整，並非預先設定；原始十二題結果全部保留。「未解」不表示不可能，也不表示其他人尚未解決。
+**主要比較採九題，每配置18次，共126次。** Regexp、Metaflow、Tracing 在七種配置中皆無實作通過完整驗收契約，因此另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)，其六次不計入主要完成率與成本。這項分類在測試後調整；原始十二題結果全部保留。
 
 **Sol xhigh Actor 搭配 Sol xhigh Provider，完成率與直接做持平、結構品味提高，代價是更多時間與 Token。** 相對 Sol medium Provider，完成與品味也改善，累計時間增加約3.7%。各組結果如下：
 
@@ -35,7 +33,7 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 | I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +48.9% | +74.3% |
 | I 對 F：Provider medium→xhigh | 5／0／4 | +3.7% | +15.7% |
 
-品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋九題每臂全部18次嘗試，Token 使用七臂共同16個有完整用量的位置，包含 Actor 與 Provider。三題原本沒有合格品味配對，因此71組最終複評不變。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；I 的逾時與驗收修復、缺失用量及另列耗時見報告。這裡呈現的是結構品質、時間與用量，並非金額帳單。
+品味採用程式碼覆核的最終結果，範圍為雙方完整交付的同題／同次序，共 71 組比較。覆核已知配置，將新增狀態、轉接、同步與相容處理一起納入完整流程的維護成本。時間涵蓋九題每臂全部18次嘗試，Token 使用七臂共同16個有完整用量的位置，包含 Actor 與 Provider。I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異；完整用量紀錄與統計口徑見報告。
 
 完整交付結果如下：
 
@@ -49,11 +47,11 @@ Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入�
 | F | Sol xhigh | Sol medium | 11/18 |
 | I | Sol xhigh | Sol xhigh | 13/18 |
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 的結構品味較好，沒有再提高相對 C 的完成總數。Metaflow、Tracing、Regexp 仍沒有任何一臂完成。品味只列直接比較，各組共同完成樣本不同，不能串成總排名。
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。時間效率以 C 最佳；I 的結構品味較好，沒有再提高相對 C 的完成總數。各組品味比較的共同完成樣本不同。
 
 最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與執行檔版本差異見[九題主要報告](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
 
-[十二題原始報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留原始統計、完整逐題結果與 CLI 差異。
+[十二題原始報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留完整逐題結果與統計。
 
 ## 工具做了什麼
 
@@ -78,7 +76,7 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 
 ## 限制
 
-- Actor 負責完成任務、判斷提醒、實作與驗證；工具不接管驗收。
+- Actor 負責判斷提醒、實作與驗證完整交付。
 - 每輪最多三則建議或兩次沉默，先到任一上限就停止。可辨識的純測試修改直接略過，不呼叫 Provider、不耗額度。
 - Provider 只支援 OpenAI／Codex。只觀察明確的 `apply_patch` 修改，無法觀察沒有提供修改內容的命令列寫檔。
 - Windows 同步 `PostToolUse` 期間中斷該輪，既有重現曾缺少對應的 `hook/completed`；詳見[重現與追蹤](https://github.com/openai/codex/issues/46765)。
@@ -91,16 +89,16 @@ Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要
 
 Windows 的寫程式聊天還需要已啟用、受支援的 [Windows 沙箱執行方式](https://learn.chatgpt.com/docs/windows/windows-sandbox)。
 
-本 repo 外掛清單版本為 `0.6.2+codex.20261012`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+本 repo 外掛清單版本為 `0.6.2+codex.20261012`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
 
 ## 安裝、啟用與第一次使用
 
 1. 確認 Python、Git 與 Codex CLI 已安裝；若 CLI 尚未登入，在 PowerShell 執行 `codex login`。
 2. 在 Codex 桌面版的外掛頁，選 **Add → Add Marketplace → Add from a repository**，填入 `https://github.com/shihchengwei-lab/masters-nudge`，按 **Sync**。repo 的[外掛目錄](.agents/plugins/marketplace.json)提供 Masters’ Nudge；開啟它並安裝、啟用。來源與安裝介面可參照[官方步驟](https://developers.openai.com/learn/developers-codex-plugin)。
-3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit` 與 `PostToolUse`；安裝與啟用不會自動完成 Hook 信任，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
+3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit` 與 `PostToolUse`，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
 更新已安裝的版本後，重新開啟 Codex；若 hook 被標為「已修改」，檢查新命令後重新信任，再開始新對話。
 
-4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。`mcp_ready` 通過仍需第五步確認實際 hook 交付。
+4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。
 5. 在自己的 Git 專案開啟新對話，交給 Actor 一項正常的程式修改。完成一次產品程式的 `apply_patch` 後，請 Codex：「顯示 Masters’ Nudge 最近的提醒紀錄。」`feedback` 表示已產生建議，`silence` 表示正常判斷後沒有建議；工具故障會另列原因。若有建議，可核對 Actor 上下文中的四欄提醒與後續程式改動。
 
 如果已下載本 repo，也可在 repo 根目錄用 PowerShell 手動設定與查詢：
@@ -113,9 +111,9 @@ python masters_nudge_cli.py recent-nudges --limit 10
 
 ## 隱私
 
-任務原文、修改、工具結果、可完整放入共同材料額度的已修改檔案，以及檔案來源事實會傳給 OpenAI。Provider 可唯讀 Git 工作區中的未忽略檔案，不能修改 Actor 檔案。完整任務起點檔案清單只保存在本機，送出時只附本批路徑是否原本存在；未知來源保持未知。
+任務原文、修改、工具結果、可完整放入共同材料額度的已修改檔案，以及檔案來源事實會傳給 OpenAI。Provider 可唯讀 Git 工作區中的未忽略檔案。完整任務起點檔案清單只保存在本機，送出時附本批路徑是否原本存在。
 
-預設紀錄存於使用者目錄的 `.masters-nudge/data/feedback.sqlite3`，設定存於 `.masters-nudge/config.json`。`MASTERS_NUDGE_DATA_DIR` 可覆蓋位置。紀錄有送達資訊，但送達不等於 Actor 採納或完成任務。
+預設紀錄存於使用者目錄的 `.masters-nudge/data/feedback.sqlite3`，設定存於 `.masters-nudge/config.json`。`MASTERS_NUDGE_DATA_DIR` 可覆蓋位置。
 
 ## 開發
 
