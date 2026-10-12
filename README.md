@@ -24,7 +24,7 @@ The core benchmark compares direct implementation with structural feedback acros
 
 The remaining three tasks—Regexp, Metaflow and Tracing—are published separately as [unresolved challenges](benchmark/unresolved-challenges-20261004/README.zh-TW.md), as none of the seven configurations completed their full contracts.
 
-**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/18 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Initial judgments used anonymous comparisons; final results came from whole-flow code review. The trade-off for this structural gain was +48.9% total time and +74.3% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with +3.7% total time. The comparisons are:
+**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/18 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Taste assessment uses **Anonymous initial evaluation + whole-flow review**. The trade-off for this structural gain was +48.9% total time and +74.3% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with +3.7% total time. The comparisons are:
 
 | Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
 |---|---|---|---|
@@ -33,7 +33,7 @@ The remaining three tasks—Regexp, Metaflow and Tracing—are published separat
 | I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +48.9% | +74.3% |
 | I vs F: Provider medium → xhigh | 5 / 0 / 4 | +3.7% | +15.7% |
 
-The initial taste assessment used anonymous X/Y comparisons with their order swapped between judgments. Code review then examined the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across 71 jointly completed task/attempt pairs. Time covers all 18 core attempts per configuration; tokens include Actor and Provider usage at the 16 positions with complete records across all seven configurations.
+Anonymous initial evaluation compares X/Y implementations with their order swapped between judgments. Whole-flow review then examines the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across 71 jointly completed task/attempt pairs. Time covers all 18 core attempts per configuration; tokens include Actor and Provider usage at the 16 positions with complete records across all seven configurations.
 
 Complete deliveries were:
 
