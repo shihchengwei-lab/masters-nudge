@@ -89,7 +89,7 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 
 Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要先讓 Codex 的 `python` 命令指向 Python 3.10+；修改 PATH 後重新開啟 Codex。
 
-本 repo 外掛清單版本為 `0.6.1+codex.20261004190000`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
+本 repo 外掛清單版本為 `0.6.2+codex.20261012`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定，尚無日常深度設定介面。未設定模型時預設 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。Provider 設定不會更換 Actor 模型。
 
 ## 安裝、啟用與第一次使用
 

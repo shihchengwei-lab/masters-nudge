@@ -8,7 +8,7 @@ GENERATED_FILES = (
     "masters_nudge/runtime.py", "masters_nudge/settings.py", "masters_nudge/storage.py",
 )
 STATIC_FILES = (
-    ".codex-plugin/plugin.json", ".mcp.json", "hooks/hooks.json",
+    "README.md", ".codex-plugin/plugin.json", ".mcp.json", "hooks/hooks.json",
     "skills/doctor/SKILL.md", "skills/select-provider/SKILL.md", "skills/recent-nudges/SKILL.md",
 )
 RETIRED_FILES = (

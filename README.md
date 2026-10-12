@@ -89,7 +89,7 @@ Requires the `python` command in the Codex launch environment to run Python 3.10
 
 Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH. The doctor probes initialization and tool discovery using Codex's resolved MCP transport without calling the Provider. A successful `mcp_ready` check still requires the first-use hook delivery check below.
 
-The repo plugin manifest version is `0.6.1+codex.20261004190000`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
+The repo plugin manifest version is `0.6.2+codex.20261012`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting, and there is no everyday reasoning-depth setting. Without a saved model selection, the default is `gpt-5.6-sol`. Saved selections override that default and do not change the Actor model.
 
 ## Install, enable, and try it
 
