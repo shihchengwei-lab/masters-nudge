@@ -1,0 +1,89 @@
+{
+  "A": {
+    "arm": "A",
+    "exit_code": 0,
+    "fault": "",
+    "actor_seconds": 372.125,
+    "patch_sha256": "54d7cfd71a212e8b04ffbebe38a3586c8178f113100fd26d8b53b8925456dd49",
+    "patch_bytes": 21750,
+    "provider_attempts": 0,
+    "provider_feedback_delivered": 0,
+    "do_not_retry_on_outcome": true,
+    "fixed_checks": {
+      "reserved": "pass"
+    },
+    "fixed_test_records": 107,
+    "actor_usage": {
+      "input_tokens": 941498,
+      "cached_input_tokens": 878976,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 7648,
+      "reasoning_output_tokens": 1372,
+      "total_tokens": 949146
+    },
+    "provider_usage": {
+      "input_tokens": 0,
+      "cached_input_tokens": 0,
+      "output_tokens": 0
+    },
+    "provider_usage_records": []
+  },
+  "B": {
+    "arm": "B",
+    "exit_code": 0,
+    "fault": "",
+    "actor_seconds": 459.625,
+    "patch_sha256": "ad83fd74d99f6da29e7769686f6eb7efa37f3c81f884a3004e82ff3c7aca1000",
+    "patch_bytes": 21349,
+    "provider_attempts": 4,
+    "provider_feedback_delivered": 2,
+    "do_not_retry_on_outcome": true,
+    "fixed_checks": {
+      "reserved": "pass"
+    },
+    "fixed_test_records": 107,
+    "actor_usage": {
+      "input_tokens": 1014820,
+      "cached_input_tokens": 936960,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 8669,
+      "reasoning_output_tokens": 1729,
+      "total_tokens": 1023489
+    },
+    "provider_usage": {
+      "input_tokens": 280290,
+      "cached_input_tokens": 180608,
+      "output_tokens": 1930
+    },
+    "provider_usage_records": [
+      {
+        "input_tokens": 14586,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 466,
+        "reasoning_output_tokens": 410
+      },
+      {
+        "input_tokens": 95922,
+        "cached_input_tokens": 70656,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 786,
+        "reasoning_output_tokens": 516
+      },
+      {
+        "input_tokens": 57965,
+        "cached_input_tokens": 28032,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 258,
+        "reasoning_output_tokens": 52
+      },
+      {
+        "input_tokens": 111817,
+        "cached_input_tokens": 81920,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 420,
+        "reasoning_output_tokens": 72
+      }
+    ]
+  }
+}

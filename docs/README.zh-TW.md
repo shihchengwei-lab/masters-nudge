@@ -12,6 +12,7 @@
 | [測試方法與原始數據](../benchmark/README.zh-TW.md) | 模型配置對比的條件、結果與原始證據入口 |
 | [模型配置對比報告](../benchmark/model-comparison-20261004/REPORT.zh-TW.md) | 契約完成、品味、時間與 Token |
 | [測試 harness](../benchmark/model-comparison-20261004/HARNESS.zh-TW.md) | 執行流程、固定驗收、盲評與離線重建 |
+| [Element 真實紀錄聊天對照](examples/element-live-recording.zh-TW.md) | 新的一組有／無 Nudge 重跑，實際送達的提醒、下一次修改與完整原始紀錄 |
 | [Element 有／無工具案例](examples/element-sessions.zh-TW.md) | 同配置 A1／B1 的原始提醒、採納前後程式與匿名評審依據 |
 
 管理技能位於 `plugins/masters-nudge/skills/`：`doctor` 查安裝條件，`select-provider` 查詢或設定 Provider，`recent-nudges` 讀取已記錄嘗試。它們按使用者請求執行，沒有改變選題或接管 Actor。

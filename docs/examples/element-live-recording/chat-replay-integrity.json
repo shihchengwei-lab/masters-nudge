@@ -1,0 +1,10 @@
+{
+  "language": "zh-TW",
+  "duration_seconds": 14,
+  "source_sha256": "11d3a1f70930414623834141d55b5f4aaee118e5530a478dc54a32fd6663a355",
+  "media_sha256": {
+    "element-chat-replay.mp4": "1ea082fdd74ae1008a5e9050f0548c53f661f988048c690eb7188b89b0dc0039",
+    "element-chat-replay.gif": "8eb1fee36b4a88035b2da064a774a69ff40013b5bd46b61a1ac0940f40d1651a"
+  },
+  "display": "Side-by-side chat reconstruction of real A/B records. Actual AI message excerpts and delivered Nudge are paraphrased into the selected display language; saved edit summaries are explicitly separate from speech. Independently condensed timelines, no invented dialogue."
+}

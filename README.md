@@ -10,6 +10,16 @@ AI can implement a feature and pass its tests while the code still depends on sy
 
 Masters’ Nudge aims to improve this: it adds a short structural suggestion while AI writes code, bringing an alternative data and responsibility arrangement into the next generation and making a better structure more likely.
 
+## Watch the Actor receive a nudge and make its next edit
+
+On October 12, 2026, we reran one with/without-Nudge pair for Element’s device selection and bulk sign-out task, recording the actual Codex CLI windows. **Both passed the fixed acceptance checks.** After the first nudge, the right-hand Actor’s next product edit required the selection list and updater as a pair and chose their source together.
+
+![14-second side-by-side chat reconstruction: without a nudge on the left, with a nudge and subsequent structural edit on the right.](docs/images/element-chat-replay.en.gif)
+
+[Watch the 14-second replay](docs/images/element-chat-replay.en.mp4) · [Feedback, tool calls, final patches and acceptance evidence](docs/examples/element-live-recording.zh-TW.md)
+
+*Both chat columns are reconstructed from their own actual records, not the original Codex UI or footage. AI messages are translated excerpts; feedback is paraphrased in plain English. Changes are labeled as record summaries, not AI speech. Work and waiting are condensed independently; original messages and edits are linked.*
+
 ## Results and costs
 
 We compared direct implementation with structural feedback across **12 code-change tasks and seven model configurations**, measuring complete delivery, code structure, and cost. Each task was attempted twice per configuration, totaling 168 deliveries, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
@@ -57,29 +67,6 @@ flowchart LR
     C --> E["Actor judges, implements, and verifies"]
     D --> E
 ```
-
-### A real example
-
-The benchmark's Element task required multi-device selection, a selection count, cancellation, and bulk sign-out. Compare **A1, direct implementation**, with **B1, using the tool**: both Actors used GPT-6.1 Sol medium, the same CLI, task, and base commit.
-
-| | Without the tool: A1 | With the tool: B1 |
-|---|---|---|
-| Selection IDs and the method that updates them | Independently optional, with separate source selection | Both supplied or both omitted, with one source decision |
-| Supplying only one half | The interface permits displaying external IDs while clicks update local IDs | The type excludes this combination; runtime also keeps reads and writes together |
-| Complete-delivery judgment | Passed | Passed |
-
-B1's first edit also selected read and write sources separately. The Provider's actual feedback was:
-
-```text
-OBSERVED: FilteredDeviceList: ids??local,set??own
-WHY: 單邊 prop 可能使選取更新失效
-STRUCTURE: selection props 成對或皆省略；同源讀寫→checked/count/signOut
-REQUIRED: 選取、計數與批次登出使用同一組 IDs
-```
-
-The Actor then required both halves together and used one decision to choose their source. This makes a component call that displays one state but updates another invalid, without later synchronization or special-case repairs.
-
-The code review favored B1's structure: its component interface prevents split read/write ownership with a small constraint and no extra state or coordination. Both actual pages supplied the complete pair and both completed the contract. See the [case comparison](docs/examples/element-sessions.zh-TW.md) for feedback and code evidence; use the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) and [model configuration report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for overall benefits and costs.
 
 ## Why a nudge can help
 

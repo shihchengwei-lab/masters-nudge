@@ -10,6 +10,16 @@ AI 可以把功能做出來、讓測試通過，程式結構卻仍靠同步、�
 
 Masters’ Nudge 想改善這個問題：在 AI 寫程式的過程中，加入一則高品味結構的提醒，讓另一種資料與責任安排進入後續思考，增加產生更好結構的機會。
 
+## 看 Actor 真正收到提醒，再修改程式
+
+2026-10-12，我們把 Element 的多裝置勾選與批次登出任務重新做了一組有／無 Nudge 對照，錄下真實 Codex CLI 畫面。**兩份都通過本次固定驗收。** 右邊收到提醒後，下一次修改把「顯示勾選結果」和「處理點選」綁在一起，避免畫面看一份紀錄、點選卻改另一份。
+
+![14 秒左右聊天對照：左邊沒有提醒；右邊收到提醒後，把顯示和點選改為使用同一份紀錄。](docs/images/element-chat-replay.gif)
+
+[觀看 14 秒重播](docs/images/element-chat-replay.mp4) · [提醒、工具呼叫、最終 Patch 與驗收證據](docs/examples/element-live-recording.zh-TW.md)
+
+*左右兩邊皆依各自的真實紀錄重建，非 Codex 原始介面或錄影。AI 訊息採中文節譯，提醒採白話轉述；「它實際改了什麼」是修改紀錄摘要，不是 AI 發言。中間操作與等待省略，完整原文另附。*
+
 ## 效果與代價
 
 我們用 **12 道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完成度、程式結構及成本。每題每配置各跑兩次，共 168 份交付；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
@@ -57,29 +67,6 @@ flowchart LR
     C --> E["Actor 判斷、實作並驗證"]
     D --> E
 ```
-
-### 一個實際案例
-
-Benchmark 的 Element 題要求支援多裝置勾選、選取數量、取消與一次批次登出。以下比較 **A1 直接做**與 **B1 加工具**：Actor 都是 GPT-6.1 Sol medium，使用相同 CLI、任務與基底。
-
-| | 沒有工具：A1 | 加上工具：B1 |
-|---|---|---|
-| 勾選清單與修改清單的方法 | 各自可選，各自決定讀寫來源 | 必須成對提供或全部省略，一起決定讀寫來源 |
-| 只提供一半時 | 介面容許畫面讀外部清單，點擊卻修改本地清單 | 型別排除這種組合，執行時也讓讀寫同源 |
-| 完整交付判定 | 通過 | 通過 |
-
-B1 第一份修改也把讀寫來源分開選。Provider 提醒：
-
-```text
-OBSERVED: FilteredDeviceList: ids??local,set??own
-WHY: 單邊 prop 可能使選取更新失效
-STRUCTURE: selection props 成對或皆省略；同源讀寫→checked/count/signOut
-REQUIRED: 選取、計數與批次登出使用同一組 IDs
-```
-
-Actor 接著約束兩者成對，並用同一個判斷決定來源。這讓「畫面看一份、點擊改另一份」的組合無法合法傳入元件；不用等接錯後再補同步或特殊處理。
-
-程式碼覆核判定 B1 的結構較好：用很小的介面約束防止讀寫來源分離，沒有增加另一份狀態或協調流程。實際頁面兩份都成對傳入，也都完成契約。建議與前後程式見[案例對照](docs/examples/element-sessions.zh-TW.md)，整體收益與成本見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)與[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。
 
 ## 作用原理
 

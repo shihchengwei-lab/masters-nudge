@@ -1,0 +1,19 @@
+{
+  "movie_sha256": "695e2e8b32516f36c59c93ae6403fb7918296f55f75f2491c21d2a5b872f2e1f",
+  "gif_sha256": "82fd84b31c6532d233080c0114b892313070d8720186759c4bf7e9e23b9a8310",
+  "evidence_zip_sha256": "e7828260df43e915efe11384d679723497fbc150adfdb3f8e8c92e230dc18dc8",
+  "raw_video_sha256": {
+    "A": "60f9af4073295f6ef485e1b9ef4d9702fde6408b938ef86f72dda160cbf46378",
+    "B": "4b355a1f0a4afdba5ae7a80b0003a31611a7557a988bd0bffd80b85c2904acb4"
+  },
+  "raw_video_location": "E:\\masters-nudge-benchmark\\element-live-capture-20261012",
+  "execution_counts": {
+    "actor_runs": 2,
+    "provider_attempts": 4,
+    "new_judge_calls": 0
+  },
+  "no_retries": true,
+  "original_source_preserved": true,
+  "original_rankings_changed": false,
+  "private_auth_exported": false
+}
