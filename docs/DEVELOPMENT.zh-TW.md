@@ -12,14 +12,14 @@
 | `masters_nudge/prompting.py` | 唯一 Actor 回饋格式與固定尾端引導 |
 | `masters_nudge/codex_adapter.py`、`hook_entry.py`、`mcp_entry.py` | 原生事件、命令／MCP 接入與回覆 |
 | `masters_nudge/core.py`、`evidence.py`、`storage.py` | 組包、來源事實、呼叫順序、結果與計次 |
-| `masters_nudge/providers.py`、`read_only_repo_mcp.py` | 外部 Provider、期限與唯讀搜尋／讀取 |
+| `masters_nudge/providers.py`、`windows_process.py`、`read_only_repo_mcp.py` | 外部 Provider、期限與唯讀搜尋／讀取 |
 | `masters_nudge/runtime.py`、`settings.py`、`management.py`、`masters_nudge_cli.py` | 預設、設定、診斷與歷史查詢 |
 | `masters_nudge/plugin_inventory.py` | 外掛生成檔與靜態檔的唯一清單 |
 | `plugins/masters-nudge/` | 可分發外掛；生成程式不得另行手改成第二套實作 |
 | `tests/spec/` | 現行工程契約檢查 |
 | `tools/`、`benchmark/`、`experiments/` | 開發驗證、效果證據與 Host 問題重現；不在日常外掛執行路徑 |
 
-外掛清單在 `plugins/masters-nudge/.codex-plugin/plugin.json`；Hook 在 `hooks/hooks.json`，只接 `UserPromptSubmit` 與 `PostToolUse`。`.mcp.json` 宣告常駐 Nudge MCP。三個管理技能是靜態外掛文件，由技能自身說明使用時機。
+外掛清單在 `plugins/masters-nudge/.codex-plugin/plugin.json`；Hook 在 `hooks/hooks.json`，接入 `UserPromptSubmit`、`PostToolUse` 與 `Interrupt`。`.mcp.json` 宣告常駐 Nudge MCP。三個管理技能是靜態外掛文件，由技能自身說明使用時機。
 
 現行 Provider 提示採 2026-10-01 定稿；載入後去除首尾空白的 SHA-256 為 `e67172b2e0daa982139a2c99b1656b6e01982ec7ee54d96193395e3763eb0214`。四欄上限依顯示順序為 **40／25／61／35**，含標籤總上限 **200**；Provider 五條準則與盲評拆開的六項準則各有用途。
 

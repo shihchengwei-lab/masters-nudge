@@ -79,23 +79,25 @@ The Provider uses five taste criteria to find that direction: make invalid state
 - The Actor evaluates feedback, implements changes and verifies complete delivery.
 - A turn stops after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use.
 - The Provider supports OpenAI/Codex only. Edits must arrive as explicit `apply_patch` content; opaque shell writes are unsupported.
-- A recorded Windows interruption during synchronous `PostToolUse` lacked a matching `hook/completed` event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
+- On the qualified Windows platform, interruption stops the Provider and preserves an interrupted fault; see [qualification](docs/qualification/README.zh-TW.md). Codex can still omit the matching `PostToolUse` completion event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
 
 ## Requirements
 
-Requires the `python` command in the Codex launch environment to run Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, and `turn_id`.
+Supported installed platform: **Windows 11 x64**. Linux and macOS installed workflows are not qualified.
+
+Requires the `python` command in the Codex launch environment to run Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, `Interrupt`, and `turn_id`.
 
 Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH.
 
 On Windows, the coding chat requires an enabled, supported [Windows sandbox implementation](https://learn.chatgpt.com/docs/windows/windows-sandbox).
 
-The repo plugin manifest version is `0.6.2+codex.20261012`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
+The repo plugin manifest version is `0.6.3+codex.20261013`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
 
 ## Install, enable, and try it
 
 1. Make sure Python, Git, and Codex CLI are installed. If the CLI is not signed in, run `codex login` in PowerShell.
 2. In the Codex desktop Plugins page, choose **Add → Add Marketplace → Add from a repository**, enter `https://github.com/shihchengwei-lab/masters-nudge`, and select **Sync**. The repo's [marketplace](.agents/plugins/marketplace.json) exposes Masters’ Nudge; open it, install it, and enable it. See the [official installation steps](https://developers.openai.com/learn/developers-codex-plugin).
-3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit` and `PostToolUse` hooks. See the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
+3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit`, `PostToolUse`, and `Interrupt` hooks. See the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
 After updating an installed version, restart Codex. If a hook is marked modified, review and trust its new command before starting a new chat.
 
 4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness checks dependencies, login, enablement and MCP tool discovery without calling the Provider.

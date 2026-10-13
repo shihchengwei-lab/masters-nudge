@@ -125,7 +125,7 @@ First check REQUIRED against the latest task contract and use it to determine th
 | Provider 傳輸 | `providers.py` | 外部程序、期限、輸出與暫存目錄的完整收尾 |
 | Provider 唯讀 MCP | `read_only_repo_mcp.py` | 執行限定搜尋／讀檔，累計額度與讀取紀錄 |
 
-`UserPromptSubmit` 用命令記錄任務；`PostToolUse` 呼叫 Codex 已連線的常駐 Nudge MCP。Provider 的查庫 MCP 是另一個服務，不與 Actor 接入 MCP 混為一條路徑。
+`UserPromptSubmit` 用命令記錄任務；`PostToolUse` 呼叫 Codex 已連線的常駐 Nudge MCP。`Interrupt` 將該輪未完成的判斷記為中斷故障；Provider 等待流程讀取這項紀錄並清理程序，不交付中斷後的結果。MCP 取消通知或斷線也會停止進行中的判斷。Windows Provider 在建立時即歸屬 Job Object，呼叫端遭強制終止時由作業系統回收整個程序樹。Provider 的查庫 MCP 是另一個服務，不與 Actor 接入 MCP 混為一條路徑。
 
 Provider 預設判斷期限 **1,200 秒**；每個 Hook 上限 **1,320 秒**，保留最後 **20 秒**記錄結果。輪到等待批次時，Provider 可用期限取 1,200 秒與剩餘時間中的較小值。Windows 優先直接啟動原生 `codex.exe`，找不到時才使用命令包裝檔。傳輸層收尾後才交回結果或故障。
 

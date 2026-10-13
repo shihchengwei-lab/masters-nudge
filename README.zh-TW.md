@@ -79,23 +79,25 @@ Provider 用五條品味準則尋找這種方向：讓非法狀態無法表達�
 - Actor 負責判斷提醒、實作與驗證完整交付。
 - 每輪最多三則建議或兩次沉默，先到任一上限就停止。可辨識的純測試修改直接略過，不呼叫 Provider、不耗額度。
 - Provider 只支援 OpenAI／Codex。只觀察明確的 `apply_patch` 修改，無法觀察沒有提供修改內容的命令列寫檔。
-- Windows 同步 `PostToolUse` 期間中斷該輪，既有重現曾缺少對應的 `hook/completed`；詳見[重現與追蹤](https://github.com/openai/codex/issues/46765)。
+- 已驗證的 Windows 平台上，中斷會停止 Provider 並保留中斷故障紀錄，詳見[驗證紀錄](docs/qualification/README.zh-TW.md)。Codex 仍可能缺少對應的 `PostToolUse` 完成事件；詳見[重現與追蹤](https://github.com/openai/codex/issues/46765)。
 
 ## 環境需求
 
-需要 Codex 啟動環境的 `python` 命令指向 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse` 與 `turn_id` 的 Actor 執行環境。
+已驗證並支援的安裝平台為 **Windows 11 x64**；Linux 與 macOS 的安裝流程尚未完成驗證。
+
+需要 Codex 啟動環境的 `python` 命令指向 Python 3.10+、Git 工作區、可啟動且已登入的 Codex CLI，以及支援 `UserPromptSubmit`、同步 MCP `PostToolUse`、`Interrupt` 與 `turn_id` 的 Actor 執行環境。
 
 Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要先讓 Codex 的 `python` 命令指向 Python 3.10+；修改 PATH 後重新開啟 Codex。
 
 Windows 的寫程式聊天還需要已啟用、受支援的 [Windows 沙箱執行方式](https://learn.chatgpt.com/docs/windows/windows-sandbox)。
 
-本 repo 外掛清單版本為 `0.6.2+codex.20261012`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
+本 repo 外掛清單版本為 `0.6.3+codex.20261013`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
 
 ## 安裝、啟用與第一次使用
 
 1. 確認 Python、Git 與 Codex CLI 已安裝；若 CLI 尚未登入，在 PowerShell 執行 `codex login`。
 2. 在 Codex 桌面版的外掛頁，選 **Add → Add Marketplace → Add from a repository**，填入 `https://github.com/shihchengwei-lab/masters-nudge`，按 **Sync**。repo 的[外掛目錄](.agents/plugins/marketplace.json)提供 Masters’ Nudge；開啟它並安裝、啟用。來源與安裝介面可參照[官方步驟](https://developers.openai.com/learn/developers-codex-plugin)。
-3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit` 與 `PostToolUse`，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
+3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit`、`PostToolUse` 與 `Interrupt`，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
 更新已安裝的版本後，重新開啟 Codex；若 hook 被標為「已修改」，檢查新命令後重新信任，再開始新對話。
 
 4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。
