@@ -91,7 +91,7 @@ Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要
 
 Windows 的寫程式聊天還需要已啟用、受支援的 [Windows 沙箱執行方式](https://learn.chatgpt.com/docs/windows/windows-sandbox)。
 
-本 repo 外掛清單版本為 `0.6.3+codex.20261013`。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
+外掛版本記載於[外掛清單](plugins/masters-nudge/.codex-plugin/plugin.json)。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
 
 ## 安裝、啟用與第一次使用
 

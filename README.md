@@ -91,7 +91,7 @@ Hooks and MCP share one Python entry point. Environments with only `py` or `pyth
 
 On Windows, the coding chat requires an enabled, supported [Windows sandbox implementation](https://learn.chatgpt.com/docs/windows/windows-sandbox).
 
-The repo plugin manifest version is `0.6.3+codex.20261013`. Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
+The plugin version is declared in the [plugin manifest](plugins/masters-nudge/.codex-plugin/plugin.json). Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
 
 ## Install, enable, and try it
 
