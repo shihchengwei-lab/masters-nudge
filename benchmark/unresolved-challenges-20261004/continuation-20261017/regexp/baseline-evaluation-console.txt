@@ -1,0 +1,2 @@
+{"case": "regexp-404", "patch_sha256": "05894ccad14d198435bdf54bee7afbaaef3dbcf1626c76962cc5f10ac0c276fa", "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28", "checks": {"reserved": "pass", "regexp_contract.js": "pass", "regexp_direction.js": "fail", "regexp_judge_concerns.js": "fail"}, "delivery_test_paths_replaced_by_fixed_suite": ["tests/*"], "elapsed_seconds": 29.562}
+

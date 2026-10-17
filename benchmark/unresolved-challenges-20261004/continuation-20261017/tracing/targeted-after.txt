@@ -1,0 +1,61 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.19s
+     Running tests\contract_tracing_contract_v2_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_contract_v2_rs-38e3f0446145360a.exe)
+
+running 5 tests
+test all_observers_reject_under_global_filter ... PROBE_RESULT {"check":"all_observers_reject_under_global_filter","field_evaluations":0,"span_disabled":true,"passed":true}
+ok
+test boxed_reload_preserves_existing_filter_support ... PROBE_RESULT {"check":"boxed_reload_preserves_existing_filter_support","panicked":false,"passed":true}
+ok
+test current_view_retains_visible_entered_root ... PROBE_RESULT {"check":"current_view_retains_visible_entered_root","observations":[["visible", "visible"]],"passed":true}
+ok
+test same_filter_reload_keeps_existing_span_hidden ... PROBE_RESULT {"check":"same_filter_reload_keeps_existing_span_hidden","enters":0,"passed":true}
+ok
+test shared_arc_keeps_filter_rejection ... PROBE_RESULT {"check":"shared_arc_keeps_filter_rejection","events":0,"passed":true}
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_tracing_hint_bounds_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_hint_bounds_rs-17c04fff47026085.exe)
+
+running 1 test
+test global_filter_does_not_add_a_consumer ... PROBE_RESULT {"check":"global_filter_does_not_add_a_consumer","hint":"Some(LevelFilter::INFO)","passed":true}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_tracing_judge_concerns_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_judge_concerns_rs-2b1807cf3fa54abc.exe)
+
+running 4 tests
+test context_enabled_is_an_independent_query ... PROBE_RESULT {"check":"context_enabled_is_an_independent_query","events":0,"span_disabled":true,"passed":true}
+ok
+test field_nested_event_preserves_outer_decision ... PROBE_RESULT {"check":"field_nested_event_preserves_outer_decision","events":1,"passed":true}
+ok
+test pure_global_filter_does_not_enable_rejected_items ... PROBE_RESULT {"check":"pure_global_filter_does_not_enable_rejected_items","fields":0,"span_disabled":true,"passed":true}
+ok
+test wrapped_custom_global_veto_rejects_every_consumer ... PROBE_RESULT {"check":"wrapped_custom_global_veto_rejects_every_consumer","events":0,"passed":true}
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\filter_continuation_regressions.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-f775b03b8884b8bb.exe)
+
+running 6 tests
+test custom_subscriber_current_view_uses_entered_spans_instead_of_parents ... ok
+test custom_subscriber_updates_current_before_reentrant_callbacks ... ok
+test registry_current_view_uses_entered_spans_instead_of_parents ... ok
+test wrapped_global_hint_still_bounds_independent_consumers ... ok
+test wrapped_global_veto_survives_local_acceptance_and_rejection ... ok
+test wrapped_pure_global_filter_does_not_add_a_consumer ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

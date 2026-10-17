@@ -1,0 +1,2 @@
+lib/rules/no-dupe-disjunctions.ts(714,15): error TS2322: Type 'RegExpLiteral | Pattern | Alternative | Group | CapturingGroup | Quantifier | CharacterClass | LookaroundAssertion | CharacterClassRange | null' is not assignable to type 'Node'.
+  Type 'null' is not assignable to type 'Node'.

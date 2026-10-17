@@ -1,0 +1,27 @@
+{
+  "case": "tracing-1523",
+  "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+  "patch_matches_evaluated_candidate": true,
+  "fixed_checks": {
+    "reserved": "pass",
+    "tracing_contract_v2.rs": "pass",
+    "tracing_hint_bounds.rs": "pass",
+    "tracing_judge_concerns.rs": "pass"
+  },
+  "fixed_probe_count": 10,
+  "all_fixed_probes_pass": true,
+  "report_local_links_verified": 13,
+  "sha256": {
+    "final.patch": "03aa139826be0e426a5b6a52f368051bdbf899112e96fbe14468102b4f28b486",
+    "continuation-only.patch": "65421d0a98dfa85105655b9b1d03260d049ce7e410b1ffcd74758d9c636ad4c2",
+    "REPORT.zh-TW.md": "9da6138b622583d3af9f199f4433076b2cc13fa4aa30725cb0bae1b4dc63e1f9",
+    "audit-summary.json": "31da7842a105f8409f98c22a4e65ffa19e5cb3821203e3e8e78385b64d8849c6",
+    "actual-models.json": "66a9b4380e87ace70b101b92b44361642b132005ea93a6fa06a5959abba8c1b4",
+    "commands.json": "d4cefa4fcf752c33d9690d6e152b7e3bf33f22641fecd2dcd6884f25d355c6ed",
+    "nudge-attempts.json": "10cde8b1abba9349f157b29fc6af2fb9ae0f703b547c62208dc8eb49242309e5",
+    "run/actor-events.jsonl": "b3f33701a0ad86274d72c20215cbab58b608c67c0577f6eae23bb25f8578e483",
+    "run/launch.json": "67db81905e04182ad4303d038ad7ee417505c4fdba080866b99d1b93320730b7",
+    "run/result.json": "77d13f70c922f82947ca2bf999984cb1445da7b935affb38d53eeda1f490b01a",
+    "actor-evaluation-2/evidence.json": "462c8779cdca0e35d4e4cf93e7ca5aebe9c0a25afecfd5c7db529c029bd9e5c9"
+  }
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "event_line": 40,
+    "id": "item_20",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\calibration\\cases\\fb-metaflow-stubs\\test\\unit\\test_stub_generator_continuation.py",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 47,
+    "id": "item_24",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\calibration\\cases\\fb-metaflow-stubs\\metaflow\\cmd\\develop\\stub_generator.py",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\calibration\\cases\\fb-metaflow-stubs\\test\\unit\\test_stub_generator_continuation.py",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 71,
+    "id": "item_37",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\continuation-report.zh-TW.md",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 75,
+    "id": "item_39",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\continuation-report.zh-TW.md",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  }
+]

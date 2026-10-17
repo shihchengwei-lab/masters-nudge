@@ -1,0 +1,38 @@
+{
+  "existing_tests": {
+    "checked": 213,
+    "changed": []
+  },
+  "frozen_materials": {
+    "checked": 239,
+    "changed": []
+  },
+  "implementation_diff_from_K1": "--- K1\n+++ continuation\n@@ -677,7 +677,7 @@\n                     self._imports.add(\"typing\")\n                     return \"typing.Annotated[%s, %s]\" % (\n                         format_type(args[0]),\n-                        \", \".join(repr(arg) for arg in args[1:]),\n+                        \", \".join(self._format_default(arg) for arg in args[1:]),\n                     )\n \n                 typing_name = getattr(value, \"_name\", None)\n@@ -1355,7 +1355,11 @@\n                     keyword_separator = True\n                 elif kind is inspect.Parameter.VAR_KEYWORD:\n                     prefix = \"**\"\n-                annotation = self._exploit_annotation(parameter.annotation)\n+                # None is an explicit type here; the annotation helper also uses\n+                # None to mean \"no annotation\" for its other callers.\n+                annotation = self._exploit_annotation(\n+                    type(None) if parameter.annotation is None else parameter.annotation\n+                )\n                 text = prefix + parameter.name + annotation\n                 if parameter.default is not inspect.Parameter.empty:\n                     text += (\" = \" if annotation else \"=\") + self._format_default(\n",
+  "candidate_sha256": "5b618d896439cd9325505b399681dd85933bf7308ffb28603cc42005457babf4",
+  "delivery_paths": [
+    "diff --git a/metaflow/cmd/develop/stub_generator.py b/metaflow/cmd/develop/stub_generator.py",
+    "diff --git a/test/unit/test_stub_generator_continuation.py b/test/unit/test_stub_generator_continuation.py",
+    "diff --git a/test/unit/test_stub_generator_runtime.py b/test/unit/test_stub_generator_runtime.py"
+  ],
+  "canonical_checks": {
+    "reserved": "pass",
+    "annotation-api": "pass",
+    "class-api": "pass",
+    "function-api": "pass",
+    "metaflow_docquotes_input.py": "pass",
+    "metaflow_members_input.py": "pass",
+    "metaflow_review_members_input.py": "pass",
+    "metaflow_typed_dict_keys_input.py": "pass",
+    "reset-api": "pass"
+  },
+  "false_probe_flags": [],
+  "nudge_attempts": [
+    {
+      "id": "61a83b17abca458183b91aad2b6f9832",
+      "session": "01a147c3-2521-7ba3-9e72-a1432e32760c",
+      "outcome": "silence",
+      "delivered": 0,
+      "raw_output": "{\"feedback\":null}"
+    }
+  ]
+}

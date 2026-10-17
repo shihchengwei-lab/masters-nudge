@@ -1,0 +1,38 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.99s
+     Running unittests src\lib.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\tracing_subscriber-842a1576c5c1449b.exe)
+
+running 10 tests
+test field::delimited::test::delimited_visitor ... ok
+test field::delimited::test::delimited_new_visitor ... ok
+test layer::tests::downcasts_to_subscriber ... ok
+test layer::tests::two_layers_are_subscriber ... ok
+test registry::extensions::tests::clear_retains_capacity ... ok
+test layer::tests::three_layers_are_subscriber ... ok
+test registry::extensions::tests::test_extensions ... ok
+test layer::tests::downcasts_to_layer ... ok
+test layer::tests::layer_is_subscriber ... ok
+test registry::extensions::tests::clear_drops_elements ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\benchmark_public_layer_tests.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\benchmark_public_layer_tests-be00c6089197df2a.exe)
+
+running 5 tests
+test downcasts_to_layer ... ok
+test downcasts_to_subscriber ... ok
+test three_layers_are_subscriber ... ok
+test two_layers_are_subscriber ... ok
+test layer_is_subscriber ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

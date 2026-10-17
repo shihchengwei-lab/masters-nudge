@@ -1,0 +1,13 @@
+........................................................................ [ 78%]
+....................                                                     [100%]
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18
+  /usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18: DeprecationWarning: The _yaml extension module is now located at yaml._yaml and its location is subject to change.  To use the LibYAML-based parser and emitter, import from `yaml`: `from yaml import CLoader as Loader, CDumper as Dumper`.
+    warnings.warn(
+
+../usr/local/lib/python3.11/site-packages/requests/__init__.py:109
+  /usr/local/lib/python3.11/site-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.8.0) or chardet (None)/charset_normalizer (3.1.0) doesn't match a supported version!
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+92 passed, 2 warnings in 4.56s

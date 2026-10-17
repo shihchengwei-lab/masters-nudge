@@ -1,0 +1,166 @@
+{
+  "date": "2026-10-17",
+  "scope": "Informed continuations using historical failures and implementations; separate from original independent comparisons.",
+  "cases": {
+    "regexp": {
+      "case": "regexp-404",
+      "initial_arm": "J2",
+      "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+      "completion": "pass",
+      "final_patch_sha256": "8de6e0a1a944cfe07389bf69929f2ba1e0195641c036367c2389a9657ae1e8c5",
+      "continuation_patch_sha256": "bc2210caf4f9d3ae607a07c79d4787eff15cad3a3aac49dbca1b46dcb279e0c7",
+      "evaluation": "regexp/actor-evaluation-1/evidence.json",
+      "fixed_checks": {
+        "reserved": "pass",
+        "regexp_contract.js": "pass",
+        "regexp_direction.js": "pass",
+        "regexp_judge_concerns.js": "pass"
+      },
+      "baseline_checks_passed": 2,
+      "fixed_check_count": 4,
+      "probe_passed_flags": 4,
+      "reserved_tests_passed": 77,
+      "additional_test_summary": {
+        "passed": 1730
+      },
+      "actor_model": "gpt-6.1-sol",
+      "provider_model": "gpt-6.1-sol",
+      "actor_reasoning": "xhigh",
+      "provider_reasoning": "xhigh",
+      "actor_timeout_seconds": null,
+      "actor_seconds_including_provider": 771.578,
+      "provider_seconds_subset": 166.438,
+      "actor_plus_provider_tokens": {
+        "input_tokens": 5443951,
+        "cached_input_tokens": 5213056,
+        "output_tokens": 41332,
+        "reasoning_output_tokens": 20582,
+        "uncached_input_tokens": 230895
+      },
+      "nudges": {
+        "feedback": 1,
+        "silence": 2,
+        "delivered": 1,
+        "faults": 0
+      },
+      "actual_actors": 1,
+      "actual_providers": 3,
+      "existing_tests_unchanged": 109,
+      "historical_fixed_inputs_verified": 20,
+      "archived_files_verified": 299
+    },
+    "metaflow": {
+      "case": "fb-metaflow-stubs",
+      "initial_arm": "K1",
+      "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+      "completion": "pass",
+      "final_patch_sha256": "5b618d896439cd9325505b399681dd85933bf7308ffb28603cc42005457babf4",
+      "continuation_patch_sha256": "ce443dff1d6ab144490982856580c04af79edc7b334aae13389b1ae2d2bfa323",
+      "evaluation": "metaflow/actor-evaluation-1/evidence.json",
+      "fixed_checks": {
+        "reserved": "pass",
+        "annotation-api": "pass",
+        "class-api": "pass",
+        "function-api": "pass",
+        "metaflow_docquotes_input.py": "pass",
+        "metaflow_members_input.py": "pass",
+        "metaflow_review_members_input.py": "pass",
+        "metaflow_typed_dict_keys_input.py": "pass",
+        "reset-api": "pass"
+      },
+      "baseline_checks_passed": 7,
+      "fixed_check_count": 9,
+      "probe_passed_flags": 18,
+      "reserved_tests_passed": 45,
+      "additional_test_summary": {
+        "passed": 92
+      },
+      "actor_model": "gpt-6.1-sol",
+      "provider_model": "gpt-6.1-sol",
+      "actor_reasoning": "xhigh",
+      "provider_reasoning": "xhigh",
+      "actor_timeout_seconds": null,
+      "actor_seconds_including_provider": 440.343,
+      "provider_seconds_subset": 31.078,
+      "actor_plus_provider_tokens": {
+        "input_tokens": 2601140,
+        "cached_input_tokens": 2419968,
+        "output_tokens": 21376,
+        "reasoning_output_tokens": 8216,
+        "uncached_input_tokens": 181172
+      },
+      "nudges": {
+        "feedback": 0,
+        "silence": 2,
+        "delivered": 0,
+        "faults": 0
+      },
+      "actual_actors": 1,
+      "actual_providers": 2,
+      "existing_tests_unchanged": 213,
+      "historical_fixed_inputs_verified": 23,
+      "archived_files_verified": 300
+    },
+    "tracing": {
+      "case": "tracing-1523",
+      "initial_arm": "L2",
+      "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+      "completion": "pass",
+      "final_patch_sha256": "03aa139826be0e426a5b6a52f368051bdbf899112e96fbe14468102b4f28b486",
+      "continuation_patch_sha256": "65421d0a98dfa85105655b9b1d03260d049ce7e410b1ffcd74758d9c636ad4c2",
+      "evaluation": "tracing/actor-evaluation-2/evidence.json",
+      "fixed_checks": {
+        "reserved": "pass",
+        "tracing_contract_v2.rs": "pass",
+        "tracing_hint_bounds.rs": "pass",
+        "tracing_judge_concerns.rs": "pass"
+      },
+      "baseline_checks_passed": 2,
+      "fixed_check_count": 4,
+      "probe_passed_flags": 10,
+      "reserved_tests_passed": 148,
+      "additional_test_summary": {
+        "passed": 184,
+        "failed": 0,
+        "ignored": 3
+      },
+      "actor_model": "gpt-6.1-sol",
+      "provider_model": "gpt-6.1-sol",
+      "actor_reasoning": "xhigh",
+      "provider_reasoning": "xhigh",
+      "actor_timeout_seconds": null,
+      "actor_seconds_including_provider": 1047.297,
+      "provider_seconds_subset": 205.922,
+      "actor_plus_provider_tokens": {
+        "input_tokens": 7516468,
+        "cached_input_tokens": 7219712,
+        "output_tokens": 49325,
+        "reasoning_output_tokens": 24207,
+        "uncached_input_tokens": 296756
+      },
+      "nudges": {
+        "feedback": 3,
+        "silence": 1,
+        "delivered": 3,
+        "faults": 0
+      },
+      "actual_actors": 1,
+      "actual_providers": 4,
+      "existing_tests_unchanged": 69,
+      "historical_fixed_inputs_verified": 22,
+      "archived_files_verified": 299
+    }
+  },
+  "completed_cases": 3,
+  "actor_seconds_including_provider": 2259.218,
+  "actor_plus_provider_tokens": {
+    "input_tokens": 15561559,
+    "cached_input_tokens": 14852736,
+    "output_tokens": 112033,
+    "reasoning_output_tokens": 53005,
+    "uncached_input_tokens": 708823
+  },
+  "actual_actors": 3,
+  "actual_providers": 9,
+  "new_model_calls_during_verification": 0
+}

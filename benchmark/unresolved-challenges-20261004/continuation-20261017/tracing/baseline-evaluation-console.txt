@@ -1,0 +1,2 @@
+{"case": "tracing-1523", "patch_sha256": "171a9a4c89db04d5f80f0d9ce330392e0c7cfa0061e6a751993a318795120895", "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28", "checks": {"reserved": "pass", "tracing_contract_v2.rs": "fail", "tracing_hint_bounds.rs": "pass", "tracing_judge_concerns.rs": "fail"}, "delivery_test_paths_replaced_by_fixed_suite": ["tracing-subscriber/tests/*"], "reserved_detail": {"passed": 148, "failed": 0}, "elapsed_seconds": 143.938}
+

@@ -1,0 +1,761 @@
+diff --git a/tracing-subscriber/src/filter/layer_filters.rs b/tracing-subscriber/src/filter/layer_filters.rs
+index 44e636c..df92076 100644
+--- a/tracing-subscriber/src/filter/layer_filters.rs
++++ b/tracing-subscriber/src/filter/layer_filters.rs
+@@ -79,7 +79,7 @@ impl FilterMap {
+         }
+         self.revisions.extend(other.revisions);
+     }
+-    fn watch(&mut self, revision: &Arc<AtomicUsize>) {
++    pub(crate) fn watch(&mut self, revision: &Arc<AtomicUsize>) {
+         self.revisions
+             .push((Arc::downgrade(revision), revision.load(Ordering::Acquire)));
+     }
+@@ -217,15 +217,25 @@ where
+     }
+     fn __callsite(&self, metadata: &'static Metadata<'static>) -> FilterResult<Interest> {
+         let interest = self.filter.callsite_enabled(metadata);
+-        self.interests
++        let previous = self
++            .interests
+             .write()
+             .expect("lock poisoned")
+             .insert(metadata.callsite(), interest.clone());
+-        self.revision.fetch_add(1, Ordering::Release);
+-        let inner = self.layer.__callsite(metadata).result();
++        // An unrelated subscriber can trigger re-registration between enabled
++        // and dispatch. Unchanged interests preserve that pending decision;
++        // reloadable filters track their actual mutations separately.
++        if let Some(previous) = previous {
++            if previous.is_never() != interest.is_never()
++                || previous.is_always() != interest.is_always()
++            {
++                self.revision.fetch_add(1, Ordering::Release);
++            }
++        }
++        let inner = self.layer.__callsite(metadata);
+         FilterResult {
+-            global: Interest::always(),
+-            consumers: and_interest(interest, inner),
++            global: inner.global,
++            consumers: and_interest(interest, inner.consumers),
+         }
+     }
+     fn __enabled(
+@@ -235,6 +245,7 @@ where
+         filters: &mut FilterMap,
+     ) -> FilterResult<bool> {
+         filters.watch(&self.revision);
++        self.filter.__watch(filters);
+         let ctx = ctx.with_filter(self.id);
+         let interest = self
+             .interests
+@@ -247,25 +258,25 @@ where
+             Some(ref interest) if interest.is_never() => false,
+             _ => self.filter.enabled(metadata, &ctx),
+         };
+-        let enabled = enabled && self.layer.__enabled(metadata, ctx, filters).result();
+-        if enabled {
++        // Global restrictions remain global even when this local filter
++        // rejects the item, so the inner layer must still be queried.
++        let inner = self.layer.__enabled(metadata, ctx, filters);
++        if enabled && inner.result() {
+             filters.enable(self.id);
+         }
+         FilterResult {
+-            global: true,
+-            consumers: enabled,
++            global: inner.global,
++            consumers: enabled && inner.consumers,
+         }
+     }
+     fn max_level_hint(&self) -> Option<LevelFilter> {
+-        restrict(
+-            self.filter.max_level_hint(),
+-            self.layer.__max_level_hint().result(),
+-        )
++        self.__max_level_hint().result()
+     }
+     fn __max_level_hint(&self) -> FilterResult<Option<LevelFilter>> {
++        let inner = self.layer.__max_level_hint();
+         FilterResult {
+-            global: None,
+-            consumers: self.max_level_hint(),
++            global: inner.global,
++            consumers: restrict(self.filter.max_level_hint(), inner.consumers),
+         }
+     }
+     fn new_span(&self, attrs: &span::Attributes<'_>, id: &span::Id, ctx: Context<'_, S>) {
+diff --git a/tracing-subscriber/src/layer.rs b/tracing-subscriber/src/layer.rs
+index 3db94a0..3dcbc59 100644
+--- a/tracing-subscriber/src/layer.rs
++++ b/tracing-subscriber/src/layer.rs
+@@ -18,6 +18,8 @@ use std::{
+     ops::Deref,
+     sync::Arc,
+ };
++#[cfg(feature = "registry")]
++use {std::cell::RefCell, thread_local::ThreadLocal};
+ 
+ /// Determines which spans and events a particular layer observes.
+ ///
+@@ -40,6 +42,9 @@ pub trait Filter<S> {
+     fn max_level_hint(&self) -> Option<LevelFilter> {
+         None
+     }
++
++    #[doc(hidden)]
++    fn __watch(&self, _filters: &mut FilterMap) {}
+ }
+ 
+ /// A composable handler for `tracing` events.
+@@ -508,6 +513,8 @@ where
+         Layered {
+             layer,
+             inner: self,
++            #[cfg(feature = "registry")]
++            current_spans: None,
+             _s: PhantomData,
+         }
+     }
+@@ -559,9 +566,20 @@ where
+     where
+         Self: Sized,
+     {
++        #[cfg(feature = "registry")]
++        let current_spans = if (&inner as &dyn Subscriber)
++            .downcast_ref::<Registry>()
++            .is_some()
++        {
++            None
++        } else {
++            Some(Arc::new(ThreadLocal::new()))
++        };
+         Layered {
+             layer: self,
+             inner,
++            #[cfg(feature = "registry")]
++            current_spans,
+             _s: PhantomData,
+         }
+     }
+@@ -619,7 +637,9 @@ pub struct Context<'a, S> {
+     #[cfg(feature = "registry")]
+     filters: Vec<FilterId>,
+     #[cfg(feature = "registry")]
+-    filtered_current: Option<fn(&S, &[FilterId]) -> span::Current>,
++    filtered_current: Option<fn(&Context<'_, S>) -> span::Current>,
++    #[cfg(feature = "registry")]
++    current_spans: Option<&'a ThreadLocal<RefCell<registry::SpanStack>>>,
+ }
+ 
+ /// A [`Subscriber`] composed of a `Subscriber` wrapped by one or more
+@@ -631,6 +651,10 @@ pub struct Context<'a, S> {
+ pub struct Layered<L, I, S = I> {
+     layer: L,
+     inner: I,
++    // Registry owns its entered stack. Subscribers that do not expose it
++    // need one here, since entered spans need not belong to one parent chain.
++    #[cfg(feature = "registry")]
++    current_spans: Option<Arc<ThreadLocal<RefCell<registry::SpanStack>>>>,
+     _s: PhantomData<fn(S)>,
+ }
+ 
+@@ -799,11 +823,19 @@ where
+     }
+ 
+     fn enter(&self, span: &span::Id) {
++        #[cfg(feature = "registry")]
++        if let Some(spans) = &self.current_spans {
++            spans.get_or_default().borrow_mut().push(span.clone());
++        }
+         self.inner.enter(span);
+         self.layer.on_enter(span, self.ctx());
+     }
+ 
+     fn exit(&self, span: &span::Id) {
++        #[cfg(feature = "registry")]
++        if let Some(spans) = self.current_spans.as_ref().and_then(|spans| spans.get()) {
++            spans.borrow_mut().pop(span);
++        }
+         self.inner.exit(span);
+         self.layer.on_exit(span, self.ctx());
+     }
+@@ -1244,6 +1276,8 @@ where
+             filters: Vec::new(),
+             #[cfg(feature = "registry")]
+             filtered_current: None,
++            #[cfg(feature = "registry")]
++            current_spans: self.current_spans.as_deref(),
+         }
+     }
+ 
+@@ -1300,8 +1334,8 @@ where
+     #[inline]
+     pub fn current_span(&self) -> span::Current {
+         #[cfg(feature = "registry")]
+-        if let (Some(subscriber), Some(current)) = (self.subscriber, self.filtered_current) {
+-            return current(subscriber, &self.filters);
++        if let Some(current) = self.filtered_current {
++            return current(self);
+         }
+         self.subscriber
+             .map(Subscriber::current_span)
+@@ -1614,6 +1648,8 @@ impl<'a, S> Context<'a, S> {
+             filters: Vec::new(),
+             #[cfg(feature = "registry")]
+             filtered_current: None,
++            #[cfg(feature = "registry")]
++            current_spans: None,
+         }
+     }
+ }
+@@ -1631,15 +1667,38 @@ where
+ 
+     #[cfg(feature = "registry")]
+     pub(crate) fn with_filter(mut self, id: FilterId) -> Self {
+-        fn current<S>(subscriber: &S, filters: &[FilterId]) -> span::Current
++        fn current<S>(ctx: &Context<'_, S>) -> span::Current
+         where
+             S: Subscriber + for<'lookup> LookupSpan<'lookup>,
+         {
++            let subscriber = match ctx.subscriber {
++                Some(subscriber) => subscriber,
++                None => return span::Current::none(),
++            };
++            if let Some(spans) = ctx.current_spans {
++                return spans
++                    .get()
++                    .and_then(|spans| {
++                        spans.borrow().iter().find_map(|id| {
++                            let span = subscriber.span(id)?.with_filter(&ctx.filters);
++                            if span.is_enabled() {
++                                Some(span::Current::new(span.id(), span.metadata()))
++                            } else {
++                                None
++                            }
++                        })
++                    })
++                    .unwrap_or_else(span::Current::none);
++            }
++            if let Some(registry) = (subscriber as &dyn Subscriber).downcast_ref::<Registry>() {
++                return registry.current_span_filtered(&ctx.filters);
++            }
+             let current = subscriber.current_span();
+             let visible = current
+                 .id()
+                 .and_then(|id| subscriber.span(id))
+-                .and_then(|span| span.with_filter(filters).scope().next());
++                .map(|span| span.with_filter(&ctx.filters))
++                .filter(SpanRef::is_enabled);
+             visible
+                 .map(|span| span::Current::new(span.id(), span.metadata()))
+                 .unwrap_or_else(span::Current::none)
+@@ -1660,6 +1719,8 @@ impl<'a, S> Clone for Context<'a, S> {
+             filters: self.filters.clone(),
+             #[cfg(feature = "registry")]
+             filtered_current: self.filtered_current,
++            #[cfg(feature = "registry")]
++            current_spans: self.current_spans,
+         }
+     }
+ }
+diff --git a/tracing-subscriber/src/registry/mod.rs b/tracing-subscriber/src/registry/mod.rs
+index adc1cf1..bf74320 100644
+--- a/tracing-subscriber/src/registry/mod.rs
++++ b/tracing-subscriber/src/registry/mod.rs
+@@ -74,6 +74,8 @@ mod extensions;
+ mod sharded;
+ #[cfg(feature = "registry")]
+ mod stack;
++#[cfg(feature = "registry")]
++pub(crate) use stack::SpanStack;
+ 
+ pub use extensions::{Extensions, ExtensionsMut};
+ #[cfg(feature = "registry")]
+diff --git a/tracing-subscriber/src/registry/sharded.rs b/tracing-subscriber/src/registry/sharded.rs
+index ee7ee9e..14ed747 100644
+--- a/tracing-subscriber/src/registry/sharded.rs
++++ b/tracing-subscriber/src/registry/sharded.rs
+@@ -179,6 +179,22 @@ pub(crate) struct CloseGuard<'a> {
+ }
+ 
+ impl Registry {
++    pub(crate) fn current_span_filtered(&self, filters: &[FilterId]) -> Current {
++        self.current_spans
++            .get()
++            .and_then(|spans| {
++                spans.borrow().iter().find_map(|id| {
++                    let span = self.get(id)?;
++                    if filters.iter().all(|id| span.filters.is_enabled(*id)) {
++                        Some(Current::new(id.clone(), span.metadata))
++                    } else {
++                        None
++                    }
++                })
++            })
++            .unwrap_or_else(Current::none)
++    }
++
+     fn get(&self, id: &Id) -> Option<Ref<'_, DataInner>> {
+         self.spans.get(id_to_idx(id))
+     }
+diff --git a/tracing-subscriber/src/registry/stack.rs b/tracing-subscriber/src/registry/stack.rs
+index b0b372c..3f1210a 100644
+--- a/tracing-subscriber/src/registry/stack.rs
++++ b/tracing-subscriber/src/registry/stack.rs
+@@ -40,10 +40,14 @@ impl SpanStack {
+ 
+     #[inline]
+     pub(crate) fn current(&self) -> Option<&Id> {
++        self.iter().next()
++    }
++
++    pub(crate) fn iter(&self) -> impl Iterator<Item = &Id> {
+         self.stack
+             .iter()
+             .rev()
+-            .find(|context_id| !context_id.duplicate)
++            .filter(|context_id| !context_id.duplicate)
+             .map(|context_id| &context_id.id)
+     }
+ }
+diff --git a/tracing-subscriber/src/reload.rs b/tracing-subscriber/src/reload.rs
+index f4de5c2..a5696c9 100644
+--- a/tracing-subscriber/src/reload.rs
++++ b/tracing-subscriber/src/reload.rs
+@@ -13,6 +13,8 @@
+ //! [`Layer` trait]: ../layer/trait.Layer.html
+ use crate::layer;
+ use crate::sync::RwLock;
++#[cfg(feature = "registry")]
++use std::sync::atomic::{AtomicUsize, Ordering};
+ 
+ use std::{
+     error, fmt,
+@@ -33,6 +35,8 @@ pub struct Layer<L, S> {
+     // of our internal `RwLock` wrapper type. If possible, we should profile
+     // this first to determine if it's necessary.
+     inner: Arc<RwLock<L>>,
++    #[cfg(feature = "registry")]
++    revision: Arc<AtomicUsize>,
+     _s: PhantomData<fn(S)>,
+ }
+ 
+@@ -40,6 +44,8 @@ pub struct Layer<L, S> {
+ #[derive(Debug)]
+ pub struct Handle<L, S> {
+     inner: Weak<RwLock<L>>,
++    #[cfg(feature = "registry")]
++    revision: Arc<AtomicUsize>,
+     _s: PhantomData<fn(S)>,
+ }
+ 
+@@ -69,6 +75,7 @@ where
+         ctx: layer::Context<'_, S>,
+         filters: &mut crate::filter::FilterMap,
+     ) -> crate::filter::FilterResult<bool> {
++        filters.watch(&self.revision);
+         try_lock!(self.inner.read(), else return crate::filter::FilterResult::global(false))
+             .__enabled(metadata, ctx, filters)
+     }
+@@ -156,6 +163,8 @@ impl<L, S> Layer<L, S> {
+     pub fn new(inner: L) -> (Self, Handle<L, S>) {
+         let this = Self {
+             inner: Arc::new(RwLock::new(inner)),
++            #[cfg(feature = "registry")]
++            revision: Arc::new(AtomicUsize::new(0)),
+             _s: PhantomData,
+         };
+         let handle = this.handle();
+@@ -166,6 +175,8 @@ impl<L, S> Layer<L, S> {
+     pub fn handle(&self) -> Handle<L, S> {
+         Handle {
+             inner: Arc::downgrade(&self.inner),
++            #[cfg(feature = "registry")]
++            revision: self.revision.clone(),
+             _s: PhantomData,
+         }
+     }
+@@ -190,6 +201,8 @@ impl<L, S> Handle<L, S> {
+ 
+         let mut lock = try_lock!(inner.write(), else return Err(Error::poisoned()));
+         f(&mut *lock);
++        #[cfg(feature = "registry")]
++        self.revision.fetch_add(1, Ordering::Release);
+         // Release the lock before rebuilding the interest cache, as that
+         // function will lock the new layer.
+         drop(lock);
+@@ -222,6 +235,8 @@ impl<L, S> Clone for Handle<L, S> {
+     fn clone(&self) -> Self {
+         Handle {
+             inner: self.inner.clone(),
++            #[cfg(feature = "registry")]
++            revision: self.revision.clone(),
+             _s: PhantomData,
+         }
+     }
+@@ -232,6 +247,11 @@ impl<F, S> layer::Filter<S> for Layer<F, S>
+ where
+     F: layer::Filter<S>,
+ {
++    fn __watch(&self, filters: &mut crate::filter::FilterMap) {
++        filters.watch(&self.revision);
++        try_lock!(self.inner.read()).__watch(filters);
++    }
++
+     fn enabled(&self, metadata: &Metadata<'_>, ctx: &layer::Context<'_, S>) -> bool {
+         try_lock!(self.inner.read(), else return false).enabled(metadata, ctx)
+     }
+diff --git a/tracing-subscriber/tests/filter_continuation_regressions.rs b/tracing-subscriber/tests/filter_continuation_regressions.rs
+new file mode 100644
+index 0000000..97a89ef
+--- /dev/null
++++ b/tracing-subscriber/tests/filter_continuation_regressions.rs
+@@ -0,0 +1,346 @@
++#![cfg(feature = "registry")]
++
++use std::sync::{
++    atomic::{AtomicUsize, Ordering},
++    Arc, Mutex,
++};
++use tracing::{span, Event, Metadata, Subscriber};
++use tracing_core::{span::Current, Interest};
++use tracing_subscriber::{
++    filter::{dynamic_filter_fn, filter_fn, LevelFilter},
++    layer::{Context, Filter},
++    prelude::*,
++    registry::{LookupSpan, Registry},
++    Layer,
++};
++
++#[derive(Clone, Default)]
++struct Count(Arc<AtomicUsize>);
++
++impl<S: Subscriber> Layer<S> for Count {
++    fn on_event(&self, _: &Event<'_>, _: Context<'_, S>) {
++        self.0.fetch_add(1, Ordering::SeqCst);
++    }
++}
++
++struct GlobalGate {
++    cached: bool,
++    bound: LevelFilter,
++}
++
++impl GlobalGate {
++    fn allows(&self, metadata: &Metadata<'_>) -> bool {
++        metadata.target() != "blocked" && metadata.level() <= &self.bound
++    }
++}
++
++impl<S: Subscriber> Layer<S> for GlobalGate {
++    fn enabled(&self, metadata: &Metadata<'_>, _: Context<'_, S>) -> bool {
++        self.allows(metadata)
++    }
++
++    fn register_callsite(&self, metadata: &'static Metadata<'static>) -> Interest {
++        if !self.cached {
++            Interest::sometimes()
++        } else if self.allows(metadata) {
++            Interest::always()
++        } else {
++            Interest::never()
++        }
++    }
++
++    fn max_level_hint(&self) -> Option<LevelFilter> {
++        Some(self.bound)
++    }
++}
++
++#[test]
++fn wrapped_global_veto_survives_local_acceptance_and_rejection() {
++    for cached in [false, true].iter().copied() {
++        for local in [false, true].iter().copied() {
++            let inner = Count::default();
++            let outer = Count::default();
++            let fields = AtomicUsize::new(0);
++            let subscriber = Registry::default()
++                .with(inner.clone())
++                .with(
++                    GlobalGate {
++                        cached,
++                        bound: LevelFilter::TRACE,
++                    }
++                    .and_then(Count::default().with_filter(LevelFilter::TRACE))
++                    .with_filter(filter_fn(move |_| local))
++                    .with_filter(LevelFilter::TRACE),
++                )
++                .with(outer.clone());
++            tracing::subscriber::with_default(subscriber, || {
++                for _ in 0..3 {
++                    tracing::info!(target: "blocked", value = fields.fetch_add(1, Ordering::SeqCst));
++                    assert!(tracing::info_span!(target: "blocked", "blocked_span").is_disabled());
++                }
++            });
++            assert_eq!(
++                fields.load(Ordering::SeqCst),
++                0,
++                "cached={}, local={}",
++                cached,
++                local
++            );
++            assert_eq!(inner.0.load(Ordering::SeqCst), 0);
++            assert_eq!(outer.0.load(Ordering::SeqCst), 0);
++        }
++    }
++}
++
++#[test]
++fn wrapped_global_hint_still_bounds_independent_consumers() {
++    let subscriber = Registry::default().with(Count::default()).with(
++        GlobalGate {
++            cached: true,
++            bound: LevelFilter::INFO,
++        }
++        .with_filter(LevelFilter::OFF),
++    );
++    assert_eq!(subscriber.max_level_hint(), Some(LevelFilter::INFO));
++}
++
++#[test]
++fn wrapped_pure_global_filter_does_not_add_a_consumer() {
++    let subscriber = Registry::default()
++        .with(Count::default().with_filter(LevelFilter::OFF))
++        .with(LevelFilter::TRACE.with_filter(LevelFilter::TRACE));
++    assert_eq!(subscriber.max_level_hint(), Some(LevelFilter::OFF));
++    tracing::subscriber::with_default(subscriber, || {
++        assert!(tracing::info_span!("unobserved").is_disabled());
++    });
++}
++
++#[derive(Debug, PartialEq)]
++struct View {
++    current: Option<&'static str>,
++    lookup: Option<&'static str>,
++    scope: Vec<&'static str>,
++}
++
++#[derive(Clone, Default)]
++struct Observe(Arc<Mutex<Vec<View>>>);
++
++impl<S> Layer<S> for Observe
++where
++    S: Subscriber + for<'a> LookupSpan<'a>,
++{
++    fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
++        self.0.lock().unwrap().push(View {
++            current: ctx.current_span().metadata().map(|m| m.name()),
++            lookup: ctx.lookup_current().map(|span| span.name()),
++            scope: ctx
++                .event_scope(event)
++                .into_iter()
++                .flatten()
++                .map(|span| span.name())
++                .collect(),
++        });
++    }
++}
++
++fn check_entered_view<S>(subscriber: S)
++where
++    S: Subscriber + Send + Sync + for<'a> LookupSpan<'a>,
++{
++    let observed = Observe::default();
++    let subscriber = subscriber
++        .with(
++            observed
++                .clone()
++                .with_filter(filter_fn(|m| !m.name().starts_with("hidden")))
++                .with_filter(LevelFilter::INFO),
++        )
++        .with(Count::default());
++    tracing::subscriber::with_default(subscriber, || {
++        let visible = tracing::info_span!("visible");
++        let entered_visible = visible.enter();
++        let hidden = tracing::info_span!(parent: None, "hidden_root");
++        let entered_hidden = hidden.enter();
++        tracing::info!("independent roots");
++
++        let not_entered = tracing::info_span!(parent: None, "not_entered");
++        let child = tracing::info_span!(parent: &not_entered, "hidden_child");
++        let entered_child = child.enter();
++        tracing::info!("an unentered parent is not current");
++
++        let other = tracing::info_span!(parent: None, "other");
++        let entered_other = other.enter();
++        let duplicate_visible = visible.enter();
++        tracing::info!("duplicate entries preserve the subscriber's current ordering");
++        drop(duplicate_visible);
++        drop(entered_visible);
++        tracing::info!("exit an earlier root out of order");
++        drop(entered_other);
++        tracing::info!("only hidden spans remain entered");
++        drop(entered_child);
++        drop(entered_hidden);
++        tracing::info!("all spans exited");
++    });
++    let expected = [
++        Some("visible"),
++        Some("visible"),
++        Some("other"),
++        Some("other"),
++        None,
++        None,
++    ]
++    .iter()
++    .map(|name| View {
++        current: *name,
++        lookup: *name,
++        scope: name.iter().copied().collect(),
++    })
++    .collect::<Vec<_>>();
++    assert_eq!(*observed.0.lock().unwrap(), expected);
++}
++
++#[test]
++fn registry_current_view_uses_entered_spans_instead_of_parents() {
++    check_entered_view(Registry::default());
++}
++
++// Deliberately does not expose Registry by downcasting.
++struct OpaqueRegistry(Registry);
++
++impl Subscriber for OpaqueRegistry {
++    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
++        self.0.enabled(metadata)
++    }
++    fn new_span(&self, attrs: &span::Attributes<'_>) -> span::Id {
++        self.0.new_span(attrs)
++    }
++    fn record(&self, id: &span::Id, values: &span::Record<'_>) {
++        self.0.record(id, values)
++    }
++    fn record_follows_from(&self, id: &span::Id, follows: &span::Id) {
++        self.0.record_follows_from(id, follows)
++    }
++    fn event(&self, event: &Event<'_>) {
++        self.0.event(event)
++    }
++    fn enter(&self, id: &span::Id) {
++        self.0.enter(id)
++    }
++    fn exit(&self, id: &span::Id) {
++        self.0.exit(id)
++    }
++    fn clone_span(&self, id: &span::Id) -> span::Id {
++        self.0.clone_span(id)
++    }
++    fn try_close(&self, id: span::Id) -> bool {
++        self.0.try_close(id)
++    }
++    fn current_span(&self) -> Current {
++        self.0.current_span()
++    }
++}
++
++impl<'a> LookupSpan<'a> for OpaqueRegistry {
++    type Data = tracing_subscriber::registry::Data<'a>;
++
++    fn span_data(&'a self, id: &span::Id) -> Option<Self::Data> {
++        self.0.span_data(id)
++    }
++}
++
++#[test]
++fn custom_subscriber_current_view_uses_entered_spans_instead_of_parents() {
++    check_entered_view(OpaqueRegistry(Registry::default()));
++}
++
++struct EmitOnEnterAndExit;
++
++impl<S: Subscriber> Layer<S> for EmitOnEnterAndExit {
++    fn on_enter(&self, _: &span::Id, _: Context<'_, S>) {
++        tracing::info!("event from on_enter");
++    }
++
++    fn on_exit(&self, _: &span::Id, _: Context<'_, S>) {
++        tracing::info!("event from on_exit");
++    }
++}
++
++#[test]
++fn custom_subscriber_updates_current_before_reentrant_callbacks() {
++    let observed = Observe::default();
++    let subscriber = OpaqueRegistry(Registry::default())
++        .with(EmitOnEnterAndExit)
++        .with(
++            observed
++                .clone()
++                .with_filter(filter_fn(|m| m.name() != "hidden")),
++        );
++    tracing::subscriber::with_default(subscriber, || {
++        let visible = tracing::info_span!("visible").entered();
++        let hidden = tracing::info_span!(parent: None, "hidden").entered();
++        drop(hidden);
++        drop(visible);
++    });
++    let expected = [Some("visible"), Some("visible"), Some("visible"), None]
++        .iter()
++        .map(|name| View {
++            current: *name,
++            lookup: *name,
++            scope: name.iter().copied().collect(),
++        })
++        .collect::<Vec<_>>();
++    assert_eq!(*observed.0.lock().unwrap(), expected);
++}
++
++#[test]
++fn unrelated_cache_rebuilds_preserve_pending_dynamic_decisions() {
++    for new_subscriber in [false, true].iter().copied() {
++        let calls = Arc::new(AtomicUsize::new(0));
++        let filter_calls = calls.clone();
++        let observed = Count::default();
++        let subscriber = Registry::default().with(observed.clone().with_filter(dynamic_filter_fn(
++            move |_, _| {
++                filter_calls.fetch_add(1, Ordering::SeqCst);
++                true
++            },
++        )));
++        tracing::subscriber::with_default(subscriber, || {
++            tracing::info!(
++                value = {
++                    if new_subscriber {
++                        let _other = tracing::Dispatch::new(Registry::default());
++                    } else {
++                        tracing_core::callsite::rebuild_interest_cache();
++                    }
++                    1
++                }
++            );
++        });
++        assert_eq!(calls.load(Ordering::SeqCst), 1);
++        assert_eq!(observed.0.load(Ordering::SeqCst), 1);
++    }
++}
++
++struct Toggle(bool);
++
++impl<S> Filter<S> for Toggle {
++    fn enabled(&self, _: &Metadata<'_>, _: &Context<'_, S>) -> bool {
++        self.0
++    }
++}
++
++#[test]
++fn dynamic_reload_invalidates_pending_decisions_with_unchanged_interest() {
++    let observed = Count::default();
++    let (filter, handle) = tracing_subscriber::reload::Layer::new(Toggle(true));
++    let subscriber = Registry::default().with(observed.clone().with_filter(filter));
++    tracing::subscriber::with_default(subscriber, || {
++        tracing::info!(
++            value = {
++                handle.reload(Toggle(false)).unwrap();
++                1
++            }
++        );
++    });
++    assert_eq!(observed.0.load(Ordering::SeqCst), 0);
++}

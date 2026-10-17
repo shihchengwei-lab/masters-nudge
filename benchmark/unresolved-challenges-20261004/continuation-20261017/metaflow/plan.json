@@ -1,0 +1,17 @@
+{
+  "case": "fb-metaflow-stubs",
+  "kind": "metaflow",
+  "base_commit": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+  "initial_arm": "K1",
+  "initial_patch_sha256": "0d278a26d454568c0ac8d6fd7abf38bc6e2b6d43c19ef242ea6cc736e9ebfa5e",
+  "created_utc": "2026-10-17T02:33:43.277881+00:00",
+  "actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "xhigh",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "xhigh",
+  "actor_timeout_seconds": null,
+  "source_read_only": "<SOURCE_ROOT>\\round-10-calibration\\cases\\fb-metaflow-stubs",
+  "work": "<STUDY_ROOT>\\remaining-continuations-20261017\\metaflow\\calibration\\cases\\fb-metaflow-stubs",
+  "binary_sha256": "34549ded6e2aee87c911c62d025e52e26c488683d0f489cd68f756baef1a6df6",
+  "evaluator_manifest_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28"
+}

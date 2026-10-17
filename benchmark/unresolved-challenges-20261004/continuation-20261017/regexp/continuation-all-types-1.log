@@ -1,0 +1,1 @@
+node_modules/@jest/test-result/build/types.d.ts(12,27): error TS2307: Cannot find module 'jest-resolve' or its corresponding type declarations.

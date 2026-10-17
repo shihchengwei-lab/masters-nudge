@@ -1,0 +1,180 @@
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+   Compiling winapi v0.3.9
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling atty v0.2.14
+   Compiling regex v1.13.1
+   Compiling criterion v0.3.6
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 26.32s
+     Running unittests src\lib.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\tracing_subscriber-4be2f1ebafb1a718.exe)
+
+running 22 tests
+test field::delimited::test::delimited_new_visitor ... ok
+test field::delimited::test::delimited_visitor ... ok
+test layer::tests::downcasts_to_layer ... ok
+test layer::tests::layer_is_subscriber ... ok
+test layer::tests::two_layers_are_subscriber ... ok
+test registry::extensions::tests::clear_drops_elements ... ok
+test registry::extensions::tests::clear_retains_capacity ... ok
+test layer::tests::context_event_span ... ok
+test registry::sharded::tests::child_closes_grandparent ... ok
+test registry::sharded::tests::span_enter_guards_are_dropped_out_of_order ... ok
+test registry::sharded::tests::child_closes_parent ... ok
+test registry::sharded::tests::multiple_layers_can_access_closed_span ... ok
+test layer::tests::downcasts_to_subscriber ... ok
+test registry::sharded::tests::single_layer_can_access_closed_span ... ok
+test registry::sharded::tests::spans_are_only_closed_when_the_last_ref_drops ... ok
+test registry::sharded::tests::spans_are_removed_from_registry ... ok
+test registry::stack::tests::pop_first_span ... ok
+test registry::stack::tests::pop_last_span ... ok
+test registry::extensions::tests::test_extensions ... ok
+test layer::tests::three_layers_are_subscriber ... ok
+test registry::tests::spanref_scope_fromroot_iteration_order ... ok
+test registry::tests::spanref_scope_iteration_order ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\benchmark_public_layer_tests.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\benchmark_public_layer_tests-ee78641c9d11df33.exe)
+
+running 18 tests
+test downcasts_to_layer ... ok
+test layer_is_subscriber ... ok
+test downcasts_to_subscriber ... ok
+test registry_tests::max_level_hints::plf_only_unhinted_nested_inner ... ok
+test registry_tests::max_level_hints::mixed_with_unfiltered ... ok
+test registry_tests::max_level_hints::mixed_layered ... ok
+test registry_tests::max_level_hints::many_plf_only_picks_max ... ok
+test registry_tests::max_level_hints::nested_plf_only_picks_max ... ok
+test registry_tests::max_level_hints::plf_only_picks_max ... ok
+test registry_tests::max_level_hints::unhinted_nested_inner ... ok
+test registry_tests::max_level_hints::mixed_interleaved ... ok
+test registry_tests::max_level_hints::unhinted_nested_inner_mixed ... ok
+test registry_tests::context_event_span ... ok
+test two_layers_are_subscriber ... ok
+test registry_tests::max_level_hints::mixed_with_unfiltered_layered ... ok
+test registry_tests::max_level_hints::plf_only_unhinted_nested_outer ... ok
+test three_layers_are_subscriber ... ok
+test registry_tests::max_level_hints::plf_only_unhinted ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cached_layer_filters_dont_break_other_layers.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\cached_layer_filters_dont_break_other_layers-d636f764494e58df.exe)
+
+running 4 tests
+test out_of_order ... ok
+test layered_layer_filters ... ok
+test layer_filters ... ok
+test mixed_layered ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_tracing_contract_v2_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_contract_v2_rs-23e3b85cddf26131.exe)
+
+running 5 tests
+test all_observers_reject_under_global_filter ... ok
+test boxed_reload_preserves_existing_filter_support ... ok
+test shared_arc_keeps_filter_rejection ... ok
+test current_view_retains_visible_entered_root ... ok
+test same_filter_reload_keeps_existing_span_hidden ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_tracing_hint_bounds_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_hint_bounds_rs-b3128ec7ed09bdd8.exe)
+
+running 1 test
+test global_filter_does_not_add_a_consumer ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\contract_tracing_judge_concerns_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\contract_tracing_judge_concerns_rs-f009a5b6ded53599.exe)
+
+running 4 tests
+test pure_global_filter_does_not_enable_rejected_items ... ok
+test context_enabled_is_an_independent_query ... ok
+test wrapped_custom_global_veto_rejects_every_consumer ... ok
+test field_nested_event_preserves_outer_decision ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\filter_continuation_regressions.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-625f71938535e096.exe)
+
+running 6 tests
+test wrapped_global_hint_still_bounds_independent_consumers ... ok
+test wrapped_pure_global_filter_does_not_add_a_consumer ... ok
+test custom_subscriber_updates_current_before_reentrant_callbacks ... ok
+test wrapped_global_veto_survives_local_acceptance_and_rejection ... ok
+test custom_subscriber_current_view_uses_entered_spans_instead_of_parents ... ok
+test registry_current_view_uses_entered_spans_instead_of_parents ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\hinted_layer_filters_dont_break_other_layers.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\hinted_layer_filters_dont_break_other_layers-af04fea35369543f.exe)
+
+running 4 tests
+test out_of_order ... ok
+test mixed_layered ... ok
+test layer_filters ... ok
+test layered_layer_filters ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\layer_filter_interests_are_cached.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\layer_filter_interests_are_cached-8cebc73f20737ddd.exe)
+
+running 1 test
+test layer_filter_interests_are_cached ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\multiple_layer_filter_interests_cached.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\multiple_layer_filter_interests_cached-ca88abfd1e92cc68.exe)
+
+running 1 test
+test multiple_layer_filter_interests_are_cached ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\per_layer_filters.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\per_layer_filters-00bf2200dc7f2a00.exe)
+
+running 16 tests
+test a_subscriber_wrapper_can_still_veto_its_layered_inner_subscriber ... ok
+test reload_invalidates_pending_decisions_for_the_first_event ... ok
+test global_filters_do_not_count_as_consumers ... ok
+test dynamic_filters_follow_context_and_changing_state ... ok
+test existing_custom_span_data_gets_the_same_filtered_view ... ok
+test max_level_hints_combine_branches_and_enclosing_bounds ... ok
+test boxed_layers_downcast_and_reload_filters ... ok
+test static_callsite_interests_cache_only_agreeing_branches ... ok
+test absent_layers_do_not_enable_rejected_items ... ok
+test replacing_a_whole_filtered_layer_invalidates_its_pending_decision ... ok
+test explicit_lookup_hides_a_span_but_scope_keeps_its_visible_ancestors ... ok
+test nested_rejection_disables_items_when_no_consumer_accepts ... ok
+test explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic ... FAILED
+test unfiltered_siblings_and_global_filters_keep_their_semantics ... ok
+test static_filters_are_independent_at_repeated_callsites ... ok
+test nested_filters_restrict_subtrees_and_preserve_ancestor_views ... ok
+
+failures:
+
+---- explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic stdout ----
+
+thread 'explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic' (38256) panicked at tracing-subscriber\tests\per_layer_filters.rs:313:5:
+assertion `left == right` failed
+  left: 5
+ right: 3
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic
+
+test result: FAILED. 15 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p tracing-subscriber --test per_layer_filters`

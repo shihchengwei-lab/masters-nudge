@@ -1,0 +1,17 @@
+{
+  "case": "regexp-404",
+  "kind": "regexp",
+  "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+  "initial_arm": "J2",
+  "initial_patch_sha256": "05894ccad14d198435bdf54bee7afbaaef3dbcf1626c76962cc5f10ac0c276fa",
+  "created_utc": "2026-10-17T02:33:51.749259+00:00",
+  "actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "xhigh",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "xhigh",
+  "actor_timeout_seconds": null,
+  "source_read_only": "<SOURCE_ROOT>\\round-10-calibration\\cases\\regexp-404",
+  "work": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404",
+  "binary_sha256": "34549ded6e2aee87c911c62d025e52e26c488683d0f489cd68f756baef1a6df6",
+  "evaluator_manifest_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28"
+}

@@ -1,0 +1,174 @@
+[
+  {
+    "event_line": 31,
+    "id": "item_16",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 43,
+    "id": "item_22",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 51,
+    "id": "item_26",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\filter\\layer_filters.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\registry\\mod.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\registry\\sharded.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\registry\\stack.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 57,
+    "id": "item_30",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\layer.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 66,
+    "id": "item_35",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\registry\\sharded.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 69,
+    "id": "item_37",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 73,
+    "id": "item_39",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\layer.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 79,
+    "id": "item_42",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\layer.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 112,
+    "id": "item_60",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 118,
+    "id": "item_63",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\filter\\layer_filters.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\layer.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\reload.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 124,
+    "id": "item_66",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\src\\filter\\layer_filters.rs",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523\\tracing-subscriber\\tests\\filter_continuation_regressions.rs",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 156,
+    "id": "item_83",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\continuation-report.zh-TW.md",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  }
+]

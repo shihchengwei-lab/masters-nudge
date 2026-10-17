@@ -1,0 +1,71 @@
+{
+  "case": "tracing-1523",
+  "patch_sha256": "03aa139826be0e426a5b6a52f368051bdbf899112e96fbe14468102b4f28b486",
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "checks": {
+    "reserved": "pass",
+    "tracing_contract_v2.rs": "pass",
+    "tracing_hint_bounds.rs": "pass",
+    "tracing_judge_concerns.rs": "pass"
+  },
+  "logs": [
+    {
+      "file": "environment-cargo.txt",
+      "sha256": "d714113cc3ec2dc333bb7c62dcf9aaa7cd212d94f34ac87d8c6ffc238dd78196",
+      "exit_code": 0
+    },
+    {
+      "file": "environment-rustc.txt",
+      "sha256": "ce9c412a4f73825a192bce61ee0737f3f53710e7555d5828efdb07154759c846",
+      "exit_code": 0
+    },
+    {
+      "file": "checkout.txt",
+      "sha256": "1295ad9c06b510173f78c308fbc5370b63bc66cb2bffde4f91755bf4deed256f",
+      "exit_code": 0
+    },
+    {
+      "file": "apply.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "apply-tests.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "clean-package.txt",
+      "sha256": "95b0cccaf6c85b8dccce522ca35f4f57ec51befad8a8c2d5b30ecb85b62149b8",
+      "exit_code": 0
+    },
+    {
+      "file": "reserved.txt",
+      "sha256": "543614c4ee58f14b6560c5d184a844f81b52af2904a45e3fbc4bbc502f2546dc",
+      "exit_code": 0
+    },
+    {
+      "file": "contract_tracing_contract_v2_rs.txt",
+      "sha256": "4993bfa3c2762edf9459ff2146f9640b0c6f8b972a3f313c1beb6e2b0ad1fe9f",
+      "exit_code": 0
+    },
+    {
+      "file": "contract_tracing_hint_bounds_rs.txt",
+      "sha256": "b79ab7456702a9a2334801b058aceaa9e200062b868d520d84b894074597152a",
+      "exit_code": 0
+    },
+    {
+      "file": "contract_tracing_judge_concerns_rs.txt",
+      "sha256": "a938e63c2a5d6b9f4d622212f58ac60993976bd7a8ad082220f6e6176eb8d5e6",
+      "exit_code": 0
+    }
+  ],
+  "delivery_test_paths_replaced_by_fixed_suite": [
+    "tracing-subscriber/tests/*"
+  ],
+  "reserved_detail": {
+    "passed": 148,
+    "failed": 0
+  },
+  "elapsed_seconds": 86.875
+}

@@ -1,0 +1,110 @@
+F.F.FFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+_ test_none_parameters_keep_kinds_defaults_and_missing_annotations[False-False] _
+test/unit/test_stub_generator_continuation.py:54: in test_none_parameters_keep_kinds_defaults_and_missing_annotations
+    assert all(isinstance(arg.annotation, ast.Constant) for arg in annotated)
+E   assert False
+E    +  where False = all(<generator object test_none_parameters_keep_kinds_defaults_and_missing_annotations.<locals>.<genexpr> at 0x75d6fc310200>)
+_ test_none_parameters_keep_kinds_defaults_and_missing_annotations[True-False] _
+test/unit/test_stub_generator_continuation.py:54: in test_none_parameters_keep_kinds_defaults_and_missing_annotations
+    assert all(isinstance(arg.annotation, ast.Constant) for arg in annotated)
+E   assert False
+E    +  where False = all(<generator object test_none_parameters_keep_kinds_defaults_and_missing_annotations.<locals>.<genexpr> at 0x75d6fc3112a0>)
+___________ test_none_overload_keeps_decorators_and_other_signature ____________
+test/unit/test_stub_generator_continuation.py:80: in test_none_overload_keeps_decorators_and_other_signature
+    assert isinstance(first.args.args[0].annotation, ast.Constant)
+E   AssertionError: assert False
+E    +  where False = isinstance(None, <class 'ast.Constant'>)
+E    +    where None = <ast.arg object at 0x75d6fc65cb50>.annotation
+E    +    and   <class 'ast.Constant'> = ast.Constant
+_______ test_none_property_preserves_accessors_and_field_fallback[False] _______
+test/unit/test_stub_generator_continuation.py:118: in test_none_property_preserves_accessors_and_field_fallback
+    assert isinstance(setter.args.args[1].annotation, ast.Constant)
+E   AssertionError: assert False
+E    +  where False = isinstance(None, <class 'ast.Constant'>)
+E    +    where None = <ast.arg object at 0x75d6fd2bdc00>.annotation
+E    +    and   <class 'ast.Constant'> = ast.Constant
+_______ test_none_property_preserves_accessors_and_field_fallback[True] ________
+test/unit/test_stub_generator_continuation.py:118: in test_none_property_preserves_accessors_and_field_fallback
+    assert isinstance(setter.args.args[1].annotation, ast.Constant)
+E   AssertionError: assert False
+E    +  where False = isinstance(None, <class 'ast.Constant'>)
+E    +    where None = <ast.arg object at 0x75d6fd74b250>.annotation
+E    +    and   <class 'ast.Constant'> = ast.Constant
+__________ test_annotated_metadata_is_literal_or_placeholder[opaque0] __________
+test/unit/test_stub_generator_continuation.py:143: in test_annotated_metadata_is_literal_or_placeholder
+    expression = ast.parse(text, mode="eval").body
+/usr/local/lib/python3.11/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "<unknown>", line 1
+E       typing.Annotated[list[int], 'description', {'units': ['m', 1]}, None, <object object at 0x75d6fe340f50>]
+E                                                                             ^
+E   SyntaxError: invalid syntax
+__________ test_annotated_metadata_is_literal_or_placeholder[opaque1] __________
+test/unit/test_stub_generator_continuation.py:143: in test_annotated_metadata_is_literal_or_placeholder
+    expression = ast.parse(text, mode="eval").body
+/usr/local/lib/python3.11/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "<unknown>", line 1
+E       typing.Annotated[list[int], 'description', {'units': ['m', 1]}, None, <runtime-only metadata>]
+E                                                                             ^
+E   SyntaxError: invalid syntax
+__________ test_annotated_metadata_is_literal_or_placeholder[opaque2] __________
+test/unit/test_stub_generator_continuation.py:142: in test_annotated_metadata_is_literal_or_placeholder
+    text = generator._exploit_annotation(annotation, "")
+metaflow/cmd/develop/stub_generator.py:713: in _exploit_annotation
+    return starting + format_type(annotation)
+metaflow/cmd/develop/stub_generator.py:680: in format_type
+    ", ".join(repr(arg) for arg in args[1:]),
+metaflow/cmd/develop/stub_generator.py:680: in <genexpr>
+    ", ".join(repr(arg) for arg in args[1:]),
+test/unit/test_stub_generator_continuation.py:129: in __repr__
+    raise RuntimeError("cannot represent metadata")
+E   RuntimeError: cannot represent metadata
+__________ test_annotated_metadata_is_literal_or_placeholder[opaque3] __________
+test/unit/test_stub_generator_continuation.py:145: in test_annotated_metadata_is_literal_or_placeholder
+    assert [ast.literal_eval(arg) for arg in expression.slice.elts[1:]] == [
+test/unit/test_stub_generator_continuation.py:145: in <listcomp>
+    assert [ast.literal_eval(arg) for arg in expression.slice.elts[1:]] == [
+/usr/local/lib/python3.11/ast.py:110: in literal_eval
+    return _convert(node_or_string)
+/usr/local/lib/python3.11/ast.py:109: in _convert
+    return _convert_signed_num(node)
+/usr/local/lib/python3.11/ast.py:83: in _convert_signed_num
+    return _convert_num(node)
+/usr/local/lib/python3.11/ast.py:74: in _convert_num
+    _raise_malformed_node(node)
+/usr/local/lib/python3.11/ast.py:71: in _raise_malformed_node
+    raise ValueError(msg + f': {node!r}')
+E   ValueError: malformed node or string on line 1: <ast.Call object at 0x75d6fc88d9f0>
+_______________ test_write_out_preserves_none_and_valid_metadata _______________
+test/unit/test_stub_generator_continuation.py:165: in test_write_out_preserves_none_and_valid_metadata
+    node = next(node for node in ast.parse(text).body if isinstance(node, ast.FunctionDef))
+/usr/local/lib/python3.11/ast.py:50: in parse
+    return compile(source, filename, mode, flags,
+E     File "<unknown>", line 14
+E       def function(value, *, data: typing.Annotated[int, <object object at 0x75d6fc0d0d20>]) -> None:
+E                                                          ^
+E   SyntaxError: invalid syntax
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18
+  /usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18: DeprecationWarning: The _yaml extension module is now located at yaml._yaml and its location is subject to change.  To use the LibYAML-based parser and emitter, import from `yaml`: `from yaml import CLoader as Loader, CDumper as Dumper`.
+    warnings.warn(
+
+../usr/local/lib/python3.11/site-packages/requests/__init__.py:109
+  /usr/local/lib/python3.11/site-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.8.0) or chardet (None)/charset_normalizer (3.1.0) doesn't match a supported version!
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED test/unit/test_stub_generator_continuation.py::test_none_parameters_keep_kinds_defaults_and_missing_annotations[False-False]
+FAILED test/unit/test_stub_generator_continuation.py::test_none_parameters_keep_kinds_defaults_and_missing_annotations[True-False]
+FAILED test/unit/test_stub_generator_continuation.py::test_none_overload_keeps_decorators_and_other_signature
+FAILED test/unit/test_stub_generator_continuation.py::test_none_property_preserves_accessors_and_field_fallback[False]
+FAILED test/unit/test_stub_generator_continuation.py::test_none_property_preserves_accessors_and_field_fallback[True]
+FAILED test/unit/test_stub_generator_continuation.py::test_annotated_metadata_is_literal_or_placeholder[opaque0]
+FAILED test/unit/test_stub_generator_continuation.py::test_annotated_metadata_is_literal_or_placeholder[opaque1]
+FAILED test/unit/test_stub_generator_continuation.py::test_annotated_metadata_is_literal_or_placeholder[opaque2]
+FAILED test/unit/test_stub_generator_continuation.py::test_annotated_metadata_is_literal_or_placeholder[opaque3]
+FAILED test/unit/test_stub_generator_continuation.py::test_write_out_preserves_none_and_valid_metadata
+10 failed, 2 passed, 2 warnings in 8.22s

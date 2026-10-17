@@ -1,0 +1,488 @@
+diff --git a/lib/rules/no-dupe-disjunctions.ts b/lib/rules/no-dupe-disjunctions.ts
+index 013ee1d..3ed9c89 100644
+--- a/lib/rules/no-dupe-disjunctions.ts
++++ b/lib/rules/no-dupe-disjunctions.ts
+@@ -591,7 +591,7 @@ interface PrefixSubsetResult extends ResultBase {
+     type: "PrefixSubset"
+ }
+ interface NestedSubsetResult extends ResultBase {
+-    type: "NestedSubset" | "NestedPrefixSubset"
++    type: "NestedSubset" | "NestedDuplicate" | "NestedPrefixSubset"
+     nested: NestedElement
+ }
+ interface SupersetResult extends ResultBase {
+@@ -694,6 +694,83 @@ function* findDuplicationAst(
+     }
+ }
+ 
++/** Whether comparing only accepted words would lose a capture dependency. */
++function hasReferencedCapture(node: Node): boolean {
++    return hasSomeDescendant(
++        node,
++        (d) => d.type === "CapturingGroup" && d.references.length > 0,
++    )
++}
++
++/** Whether a path through the selected element can set a referenced capture. */
++function hasReferencedCaptureOnPath(
++    alternative: Alternative,
++    nested: NestedElement,
++): boolean {
++    if (hasReferencedCapture(nested)) {
++        return true
++    }
++    for (let current: Node = nested; current !== alternative; ) {
++        const parent: Node = current.parent!
++        if (
++            (parent.type === "CapturingGroup" &&
++                parent.references.length > 0) ||
++            (parent.type === "Alternative" &&
++                parent.elements.some(
++                    (e) => e !== current && hasReferencedCapture(e),
++                )) ||
++            (parent.type === "Quantifier" &&
++                parent.max > 1 &&
++                hasReferencedCapture(parent.element))
++        ) {
++            return true
++        }
++        current = parent
++    }
++    return false
++}
++
++/** An under-approximation of paths that do not set referenced captures. */
++function toCaptureFreeNFA(parser: JS.Parser, element: JS.ParsableElement): NFA {
++    if (!hasReferencedCapture(element)) {
++        return toNFA(parser, element).nfa
++    }
++    const options = { maxCharacter: parser.maxCharacter }
++    switch (element.type) {
++        case "Alternative": {
++            const nfa = NFA.fromWords([[]], options)
++            for (const child of element.elements) {
++                nfa.append(toCaptureFreeNFA(parser, child))
++            }
++            return nfa
++        }
++        case "Group":
++        case "CapturingGroup":
++        case "Pattern": {
++            if (
++                element.type === "CapturingGroup" &&
++                element.references.length > 0
++            ) {
++                return NFA.empty(options)
++            }
++            const nfa = NFA.empty(options)
++            for (const branch of element.alternatives) {
++                nfa.union(toCaptureFreeNFA(parser, branch))
++            }
++            return nfa
++        }
++        case "Quantifier": {
++            const nfa = toCaptureFreeNFA(parser, element.element)
++            nfa.quantify(element.min, element.max)
++            return nfa
++        }
++        default:
++            // In particular, do not use assertions containing captures as
++            // evidence that a capture-free path is covered.
++            return NFA.empty(options)
++    }
++}
++
+ /** Finds nested paths covered by earlier alternatives. */
+ function* findNestedDuplication(
+     alternative: Alternative,
+@@ -701,14 +778,34 @@ function* findNestedDuplication(
+     parser: JS.Parser,
+     prefix: boolean,
+ ): Iterable<NestedSubsetResult> {
+-    if (previous.length === 0) {
++    // Compare only paths with compatible capture effects. Referenced captures
++    // in mutually exclusive branches do not affect a capture-free candidate.
++    const safePrevious = previous.map(([nfa, , other]): [NFA, Alternative] => {
++        if (!hasReferencedCapture(other)) {
++            return [nfa, other]
++        }
++        const safe = toCaptureFreeNFA(parser, other)
++        if (prefix) {
++            const all = NFA.all({ maxCharacter: parser.maxCharacter })
++            if (getMatchingDirection(other) === "ltr") {
++                safe.append(all)
++            } else {
++                safe.prepend(all)
++            }
++        }
++        return [safe, other]
++    })
++    if (safePrevious.length === 0) {
+         return
+     }
+ 
+     const covered: NestedElement[] = []
+     for (const nested of getNestedElements(alternative)) {
+         if (
+-            covered.some((n) => n.start <= nested.start && nested.end <= n.end)
++            covered.some(
++                (n) => n.start <= nested.start && nested.end <= n.end,
++            ) ||
++            hasReferencedCaptureOnPath(alternative, nested)
+         ) {
+             continue
+         }
+@@ -723,20 +820,34 @@ function* findNestedDuplication(
+             continue
+         }
+ 
+-        const overlapping = previous.filter(
++        const overlapping = safePrevious.filter(
+             ([other]) => !nfa.isDisjointWith(other),
+         )
+-        if (
+-            overlapping.length > 0 &&
+-            isSubsetOf(unionAll(overlapping.map(([other]) => other)), nfa)
+-        ) {
+-            covered.push(nested)
+-            yield {
+-                type: prefix ? "NestedPrefixSubset" : "NestedSubset",
+-                alternative,
+-                nested,
+-                others: overlapping.map(([, , other]) => other),
++        if (overlapping.length === 0) {
++            continue
++        }
++        const othersNfa = unionAll(overlapping.map(([other]) => other))
++        let type: NestedSubsetResult["type"] = "NestedPrefixSubset"
++        if (prefix) {
++            if (!isSubsetOf(othersNfa, nfa)) {
++                continue
+             }
++        } else {
++            const relation = getSubsetRelation(nfa, othersNfa)
++            if (relation === SubsetRelation.leftEqualRight) {
++                type = "NestedDuplicate"
++            } else if (relation === SubsetRelation.leftSubsetOfRight) {
++                type = "NestedSubset"
++            } else {
++                continue
++            }
++        }
++        covered.push(nested)
++        yield {
++            type,
++            alternative,
++            nested,
++            others: overlapping.map(([, other]) => other),
+         }
+     }
+ }
+@@ -931,6 +1042,7 @@ const RESULT_TYPE_ORDER: Result["type"][] = [
+     "Subset",
+     "PrefixSubset",
+     "NestedSubset",
++    "NestedDuplicate",
+     "NestedPrefixSubset",
+     "Superset",
+     "Overlap",
+@@ -950,17 +1062,15 @@ function deduplicateResults(
+             RESULT_TYPE_ORDER.indexOf(b.type),
+     )
+ 
+-    const seen = new Map<Alternative, Result["type"]>()
++    const seen = new Map<Alternative, Result>()
+     const nestedSeen = new Map<Alternative, NestedElement[]>()
+     return results.filter((result) => {
+         const { alternative, type } = result
+         const firstSeen = seen.get(alternative)
+ 
+         if (
+-            (type === "NestedSubset" || type === "NestedPrefixSubset") &&
+-            (firstSeen === undefined ||
+-                firstSeen === "NestedSubset" ||
+-                firstSeen === "NestedPrefixSubset")
++            "nested" in result &&
++            (firstSeen === undefined || "nested" in firstSeen)
+         ) {
+             const elements = nestedSeen.get(alternative) || []
+             if (
+@@ -974,26 +1084,23 @@ function deduplicateResults(
+             }
+             elements.push(result.nested)
+             nestedSeen.set(alternative, elements)
+-            seen.set(alternative, firstSeen || type)
++            seen.set(alternative, firstSeen || result)
+             return true
+         }
+ 
+         if (firstSeen === undefined) {
+-            seen.set(alternative, type)
++            seen.set(alternative, result)
+             return true
+         }
+ 
+         if (
+             reportExp &&
+-            (firstSeen === "PrefixSubset" ||
+-                firstSeen === "NestedPrefixSubset") &&
++            (firstSeen.type === "PrefixSubset" || "nested" in firstSeen) &&
+             (type === "Superset" || type === "Overlap")
+         ) {
+-            // Prefix subset might overshadow some other results (Superset or
+-            // Overlap) that report exponential backtracking. In this case, we
+-            // want to report BOTH the Prefix subset and one Superset or
+-            // Overlap.
+-            seen.set(alternative, type)
++            // Prefix coverage and nested findings do not carry performance
++            // warnings. Retain one Superset or Overlap to report backtracking.
++            seen.set(alternative, result)
+             return true
+         }
+ 
+@@ -1224,6 +1331,7 @@ export default createRule("no-dupe-disjunctions", {
+                                 case "Duplicate":
+                                 case "Subset":
+                                 case "NestedSubset":
++                                case "NestedDuplicate":
+                                     return true
+ 
+                                 case "Overlap":
+@@ -1251,6 +1359,7 @@ export default createRule("no-dupe-disjunctions", {
+                                 case "Duplicate":
+                                 case "Subset":
+                                 case "NestedSubset":
++                                case "NestedDuplicate":
+                                     return true
+ 
+                                 case "Overlap":
+@@ -1313,6 +1422,7 @@ export default createRule("no-dupe-disjunctions", {
+ 
+                 switch (result.type) {
+                     case "NestedSubset":
++                    case "NestedDuplicate":
+                     case "NestedPrefixSubset":
+                         reportedNested.push(result.nested)
+                         context.report({
+diff --git a/tests/lib/rules/no-dupe-disjunctions-continuation.ts b/tests/lib/rules/no-dupe-disjunctions-continuation.ts
+new file mode 100644
+index 0000000..2509c87
+--- /dev/null
++++ b/tests/lib/rules/no-dupe-disjunctions-continuation.ts
+@@ -0,0 +1,216 @@
++import assert from "assert"
++import { RuleTester } from "eslint"
++import rule from "../../../lib/rules/no-dupe-disjunctions"
++
++const tester = new RuleTester({
++    parserOptions: { ecmaVersion: 2020, sourceType: "module" },
++})
++
++const nestedSubset = {
++    message:
++        "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
++    column: 9,
++    endColumn: 10,
++}
++const overlap = {
++    message:
++        "Unexpected overlap. This alternative overlaps with 'a+'. The overlap is 'a'. This ambiguity is likely to cause exponential backtracking.",
++    column: 8,
++    endColumn: 13,
++}
++const equality = {
++    message:
++        "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed.",
++    column: 8,
++    endColumn: 10,
++}
++
++tester.run("no-dupe-disjunctions continuation", rule as any, {
++    valid: [
++        String.raw`/(?:a+|([ab]))(?!\1)/`,
++        String.raw`/(?:a+|(?<letter>[ab]))(?!\k<letter>)/`,
++        String.raw`/(?:a+|(?:(a)|b))(?!\1)/`,
++        String.raw`/(?:a+|(?:([ab])|c))(?!\1)/`,
++        String.raw`/(?:(a)+|[ab])(?=\1)/`,
++        String.raw`/(?:a+x|[ab](x))(?!\1)/`,
++        String.raw`/(?:[abc]*a[abc]*|(?:(?:[ab]|(c))){2})(?!\1)/`,
++        {
++            code: `const fragment = /a|[ab]a/.source`,
++            options: [{ reportUnreachable: "certain" }],
++        },
++    ],
++    invalid: [
++        {
++            code: String.raw`/(?:a+|(?:[ab]|(c)))\1/`,
++            errors: [
++                {
++                    message:
++                        "Unexpected useless element. All paths of '(?:[ab]|(c))' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
++                    column: 12,
++                    endColumn: 13,
++                },
++            ],
++        },
++        {
++            code: String.raw`/(?:(?:a+|(c))|[ab])\1/`,
++            errors: [
++                {
++                    message:
++                        "Unexpected useless element. All paths of '[ab]' that go through 'a' (U+0061) are a strict subset of '(?:a+|(c))'. This element can be removed.",
++                    column: 17,
++                    endColumn: 18,
++                },
++            ],
++        },
++        ...[
++            String.raw`/(?:(?:a+|(c)){1,2}|[ab])\1/`,
++            String.raw`/(?:(c)?a+|[ab])\1/`,
++        ].map((code) => ({
++            code,
++            errors: [
++                {
++                    message: `Unexpected useless element. All paths of '[ab]' that go through 'a' (U+0061) are a strict subset of '${
++                        code.includes("{1,2}") ? "(?:a+|(c)){1,2}" : "(c)?a+"
++                    }'. This element can be removed.`,
++                    column: code.indexOf("[ab]") + 2,
++                    endColumn: code.indexOf("[ab]") + 3,
++                },
++            ],
++        })),
++        ...[
++            String.raw`/\1(?:(?:a+|(c))|[ab]c)/`,
++            String.raw`/(?<=(?:(?:a+|(c))|c[ab])\1)/`,
++        ].map((code) => ({
++            code,
++            errors: [
++                {
++                    message: `Unexpected useless element. All paths of '${
++                        code.includes("?<=") ? "c[ab]" : "[ab]c"
++                    }' that go through 'a' (U+0061) are already covered by '(?:a+|(c))'. This element can be removed.`,
++                    column: code.indexOf("[ab]") + 2,
++                    endColumn: code.indexOf("[ab]") + 3,
++                },
++            ],
++        })),
++        {
++            code: `/(?:a+|[abc])+/`,
++            errors: [overlap, nestedSubset],
++        },
++        ...["all", "trivial", "interesting"].flatMap((report) =>
++            ["none", "certain", "potential"].map(
++                (reportExponentialBacktracking) => ({
++                    code: `/(?:a+|[abc])+/`,
++                    options: [{ report, reportExponentialBacktracking }],
++                    errors:
++                        reportExponentialBacktracking === "none"
++                            ? [nestedSubset]
++                            : [overlap, nestedSubset],
++                }),
++            ),
++        ),
++        {
++            code: `/(?:a+|[ab])+$/`,
++            options: [
++                { report: "all", reportExponentialBacktracking: "certain" },
++            ],
++            errors: [
++                { ...overlap, endColumn: 12 },
++                {
++                    ...nestedSubset,
++                    message:
++                        "Unexpected useless element. All paths of '[ab]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
++                },
++            ],
++        },
++        {
++            code: `const fragment = /a+|[abc]/.source`,
++            options: [{ reportExponentialBacktracking: "certain" }],
++            errors: [{ ...nestedSubset, column: 23, endColumn: 24 }],
++        },
++        {
++            code: `const fragment = /a+|[abc]/.source`,
++            options: [{ reportExponentialBacktracking: "potential" }],
++            errors: [
++                {
++                    ...overlap,
++                    message:
++                        "Unexpected overlap. This alternative overlaps with 'a+'. The overlap is 'a'. This ambiguity might cause exponential backtracking.",
++                    column: 22,
++                    endColumn: 27,
++                },
++                { ...nestedSubset, column: 23, endColumn: 24 },
++            ],
++        },
++        {
++            code: `/ab|(?:ab|a)/`,
++            errors: [equality],
++        },
++        {
++            code: `/(?:ab|(?:ab|a))c/`,
++            errors: [{ ...equality, column: 11, endColumn: 13 }],
++        },
++        {
++            code: `const fragment = /ab|(?:ab|a)/.source`,
++            options: [
++                {
++                    reportUnreachable: "certain",
++                    reportExponentialBacktracking: "none",
++                },
++            ],
++            errors: [{ ...equality, column: 25, endColumn: 27 }],
++        },
++        {
++            code: `/ab|(?:(ab)|a)/`,
++            errors: [
++                {
++                    message:
++                        "Unexpected useless element. All paths of '(?:(ab)|a)' that go through '(ab)' are already covered by 'ab'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.",
++                    column: 8,
++                    endColumn: 12,
++                },
++            ],
++        },
++        {
++            code: `/a+|(?:(a)|b)/`,
++            errors: [
++                {
++                    message:
++                        "Unexpected useless element. All paths of '(?:(a)|b)' that go through '(a)' are a strict subset of 'a+'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.",
++                    column: 8,
++                    endColumn: 11,
++                },
++            ],
++        },
++        {
++            code: String.raw`/(?:a+|([ab]))(?!\1)|c+|[cd]/`,
++            errors: [
++                {
++                    message:
++                        "Unexpected useless element. All paths of '[cd]' that go through 'c' (U+0063) are a strict subset of 'c+'. This element can be removed.",
++                    column: 26,
++                    endColumn: 27,
++                },
++            ],
++        },
++    ],
++})
++
++describe("no-dupe-disjunctions capture dependency witnesses", () => {
++    for (const [original, edited] of [
++        [String.raw`(?:a+|([ab]))(?!\1)`, String.raw`(?:a+|([b]))(?!\1)`],
++        [String.raw`(?:(a)+|[ab])(?=\1)`, String.raw`(?:(a)+|[b])(?=\1)`],
++        [String.raw`(?:a+x|[ab](x))(?!\1)`, String.raw`(?:a+x|[b](x))(?!\1)`],
++    ]) {
++        it(`preserves the necessary path in /${original}/`, () => {
++            const input = original.includes("x") ? "ax" : "a"
++            assert.strictEqual(new RegExp(original).test(input), true)
++            assert.strictEqual(new RegExp(edited).test(input), false)
++        })
++    }
++    it("keeps capture dependencies from other quantifier iterations", () => {
++        const original = String.raw`(?:[abc]*a[abc]*|(?:(?:[ab]|(c))){2})(?!\1)`
++        const edited = String.raw`(?:[abc]*a[abc]*|(?:(?:[b]|(c))){2})(?!\1)`
++        assert.strictEqual(new RegExp(original).test("ac"), true)
++        assert.strictEqual(new RegExp(edited).test("ac"), false)
++    })
++})

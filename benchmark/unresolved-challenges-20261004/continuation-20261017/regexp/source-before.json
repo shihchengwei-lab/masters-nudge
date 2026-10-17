@@ -1,0 +1,6 @@
+{
+  "source": "<SOURCE_ROOT>\\round-10-calibration\\cases\\regexp-404",
+  "created_utc": "2026-10-17T02:33:23.418545+00:00",
+  "head": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+  "status": " M lib/rules/no-dupe-disjunctions.ts\n M tests/lib/rules/no-dupe-disjunctions.ts\n?? tests/lib/rules/no-dupe-disjunctions-nested.ts\n"
+}

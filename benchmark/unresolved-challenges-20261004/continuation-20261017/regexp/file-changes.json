@@ -1,0 +1,150 @@
+[
+  {
+    "event_line": 45,
+    "id": "item_23",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 53,
+    "id": "item_27",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\lib\\rules\\no-dupe-disjunctions.ts",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 61,
+    "id": "item_32",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 65,
+    "id": "item_34",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 67,
+    "id": "item_35",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\lib\\rules\\no-dupe-disjunctions.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 75,
+    "id": "item_40",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\lib\\rules\\no-dupe-disjunctions.ts",
+        "kind": "update"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 80,
+    "id": "item_42",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\lib\\rules\\no-dupe-disjunctions.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 91,
+    "id": "item_48",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404\\tests\\lib\\rules\\no-dupe-disjunctions-continuation.ts",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 118,
+    "id": "item_62",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-report.zh-TW.md",
+        "kind": "add"
+      }
+    ],
+    "status": "completed"
+  },
+  {
+    "event_line": 124,
+    "id": "item_65",
+    "type": "file_change",
+    "changes": [
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-all-types-skip-lib.log",
+        "kind": "add"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-build-types-2.log",
+        "kind": "add"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-lint-2.log",
+        "kind": "add"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-new-tests-lint-final.log",
+        "kind": "add"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-report-audit-1.log",
+        "kind": "add"
+      },
+      {
+        "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\continuation-report.zh-TW.md",
+        "kind": "update"
+      }
+    ],
+    "status": "completed"
+  }
+]

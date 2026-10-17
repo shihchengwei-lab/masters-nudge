@@ -1,0 +1,26 @@
+
+running 4 tests
+test context_enabled_is_an_independent_query ... PROBE_RESULT {"check":"context_enabled_is_an_independent_query","events":0,"span_disabled":true,"passed":true}
+ok
+test field_nested_event_preserves_outer_decision ... PROBE_RESULT {"check":"field_nested_event_preserves_outer_decision","events":1,"passed":true}
+ok
+test pure_global_filter_does_not_enable_rejected_items ... PROBE_RESULT {"check":"pure_global_filter_does_not_enable_rejected_items","fields":0,"span_disabled":true,"passed":true}
+ok
+test wrapped_custom_global_veto_rejects_every_consumer ... PROBE_RESULT {"check":"wrapped_custom_global_veto_rejects_every_consumer","events":0,"passed":true}
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-evaluation-2\checkout\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.09s
+     Running tests\contract_tracing_judge_concerns_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\contract_tracing_judge_concerns_rs-2d60135010ee68e4.exe)

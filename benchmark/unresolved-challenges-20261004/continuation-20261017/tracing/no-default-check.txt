@@ -1,0 +1,13 @@
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+    Checking lazy_static v1.5.0
+    Checking tracing-core v0.1.19 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-core)
+    Checking tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.74s

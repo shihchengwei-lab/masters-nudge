@@ -1,0 +1,28 @@
+
+running 5 tests
+test all_observers_reject_under_global_filter ... PROBE_RESULT {"check":"all_observers_reject_under_global_filter","field_evaluations":0,"span_disabled":true,"passed":true}
+ok
+test boxed_reload_preserves_existing_filter_support ... PROBE_RESULT {"check":"boxed_reload_preserves_existing_filter_support","panicked":false,"passed":true}
+ok
+test current_view_retains_visible_entered_root ... PROBE_RESULT {"check":"current_view_retains_visible_entered_root","observations":[["visible", "visible"]],"passed":true}
+ok
+test same_filter_reload_keeps_existing_span_hidden ... PROBE_RESULT {"check":"same_filter_reload_keeps_existing_span_hidden","enters":0,"passed":true}
+ok
+test shared_arc_keeps_filter_rejection ... PROBE_RESULT {"check":"shared_arc_keeps_filter_rejection","events":0,"passed":true}
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-evaluation-2\checkout\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.69s
+     Running tests\contract_tracing_contract_v2_rs.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\contract_tracing_contract_v2_rs-b127ffa467ff1991.exe)

@@ -1,0 +1,9 @@
+報告檔案連結稽核失敗，與接受測試無關。
+Tool result chunk_id: 7d55ab
+Traceback (most recent call last):
+  File "<stdin>", line 11, in <module>
+AssertionError: continuation-build-types-2.log
+
+後續檢查證實四個成功且無輸出的命令未由 Tee-Object 建立空檔。
+未重新執行已通過的檢查；依已收到的 exit_code: 0 工具結果補存明確標示的執行摘要。
+涉及檔案：continuation-build-types-2.log、continuation-all-types-skip-lib.log、continuation-lint-2.log、continuation-new-tests-lint-final.log。

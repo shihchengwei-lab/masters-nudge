@@ -1,0 +1,149 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling lazy_static v1.5.0
+   Compiling syn v1.0.109
+   Compiling windows-link v0.2.1
+   Compiling crossbeam-utils v0.8.23
+   Compiling serde v1.0.229
+   Compiling autocfg v1.5.1
+   Compiling num-traits v0.2.19
+   Compiling zmij v1.0.23
+   Compiling winapi v0.3.9
+   Compiling memchr v2.8.3
+   Compiling crossbeam-epoch v0.9.21
+   Compiling tracing-core v0.1.19 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-core)
+   Compiling itoa v1.0.18
+   Compiling crossbeam-deque v0.8.8
+   Compiling serde_json v1.0.151
+   Compiling windows-sys v0.61.2
+   Compiling cfg-if v1.0.5
+   Compiling either v1.18.0
+   Compiling regex-syntax v0.8.11
+   Compiling rayon-core v1.13.0
+   Compiling winapi-util v0.1.11
+   Compiling regex-automata v0.4.18
+   Compiling tracing-attributes v0.1.15 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-attributes)
+   Compiling regex-syntax v0.6.29
+   Compiling pin-project-lite v0.2.17
+   Compiling unicode-width v0.1.14
+   Compiling plotters-backend v0.3.7
+   Compiling plotters-svg v0.3.7
+   Compiling regex-automata v0.1.10
+   Compiling textwrap v0.11.0
+   Compiling tracing v0.1.26 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing)
+   Compiling regex v1.13.1
+   Compiling same-file v1.0.6
+   Compiling itertools v0.10.5
+   Compiling csv-core v0.1.13
+   Compiling syn v3.0.6
+   Compiling ryu v1.0.23
+   Compiling log v0.4.34
+   Compiling bitflags v1.3.2
+   Compiling half v1.8.3
+   Compiling cast v0.3.0
+   Compiling criterion-plot v0.4.5
+   Compiling serde_cbor v0.11.2
+   Compiling clap v2.34.0
+   Compiling serde_derive v1.0.229
+   Compiling tracing-log v0.1.2 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-log)
+   Compiling csv v1.4.0
+   Compiling walkdir v2.5.0
+   Compiling rayon v1.12.0
+   Compiling matchers v0.0.1
+   Compiling plotters v0.3.7
+   Compiling tinytemplate v1.2.1
+   Compiling thread_local v1.1.10
+   Compiling ansi_term v0.12.1
+   Compiling atty v0.2.14
+   Compiling chrono v0.4.45
+   Compiling tokio-macros v0.2.6
+   Compiling tracing-serde v0.1.2 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-serde)
+   Compiling sharded-slab v0.1.7
+   Compiling pin-project-lite v0.1.12
+   Compiling bytes v0.5.6
+   Compiling smallvec v1.16.2
+   Compiling oorandom v11.1.5
+   Compiling slab v0.4.12
+   Compiling criterion v0.3.6
+   Compiling tokio v0.2.25
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+   Compiling tracing-futures v0.2.5 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-futures)
+error[E0277]: `S` cannot be sent between threads safely
+   --> tracing-subscriber\tests\filter_continuation_regressions.rs:153:39
+    |
+153 |     tracing::subscriber::with_default(subscriber, || {
+    |     --------------------------------- ^^^^^^^^^^ `S` cannot be sent between threads safely
+    |     |
+    |     required by a bound introduced by this call
+    |
+note: required because it appears within the type `Layered<Filtered<Filtered<Observe, ..., ...>, ..., ...>, ...>`
+   --> tracing-subscriber\src\layer.rs:631:12
+    |
+631 | pub struct Layered<L, I, S = I> {
+    |            ^^^^^^^
+note: required because it appears within the type `Layered<Count, Layered<Filtered<..., ..., ...>, ...>>`
+   --> tracing-subscriber\src\layer.rs:631:12
+    |
+631 | pub struct Layered<L, I, S = I> {
+    |            ^^^^^^^
+note: required by a bound in `tracing::subscriber::with_default`
+   --> tracing\src\subscriber.rs:22:21
+    |
+ 20 | pub fn with_default<T, S>(subscriber: S, f: impl FnOnce() -> T) -> T
+    |        ------------ required by a bound in this function
+ 21 | where
+ 22 |     S: Subscriber + Send + Sync + 'static,
+    |                     ^^^^ required by this bound in `with_default`
+    = note: the full name for the type has been written to '<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-f775b03b8884b8bb.long-type-15539848943581444800.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+help: consider further restricting type parameter `S` with trait `Send`
+    |
+142 |     S: Subscriber + for<'a> LookupSpan<'a> + std::marker::Send,
+    |                                            +++++++++++++++++++
+
+error[E0277]: `S` cannot be shared between threads safely
+   --> tracing-subscriber\tests\filter_continuation_regressions.rs:153:39
+    |
+153 |     tracing::subscriber::with_default(subscriber, || {
+    |     --------------------------------- ^^^^^^^^^^ `S` cannot be shared between threads safely
+    |     |
+    |     required by a bound introduced by this call
+    |
+note: required because it appears within the type `Layered<Filtered<Filtered<Observe, ..., ...>, ..., ...>, ...>`
+   --> tracing-subscriber\src\layer.rs:631:12
+    |
+631 | pub struct Layered<L, I, S = I> {
+    |            ^^^^^^^
+note: required because it appears within the type `Layered<Count, Layered<Filtered<..., ..., ...>, ...>>`
+   --> tracing-subscriber\src\layer.rs:631:12
+    |
+631 | pub struct Layered<L, I, S = I> {
+    |            ^^^^^^^
+note: required by a bound in `tracing::subscriber::with_default`
+   --> tracing\src\subscriber.rs:22:28
+    |
+ 20 | pub fn with_default<T, S>(subscriber: S, f: impl FnOnce() -> T) -> T
+    |        ------------ required by a bound in this function
+ 21 | where
+ 22 |     S: Subscriber + Send + Sync + 'static,
+    |                            ^^^^ required by this bound in `with_default`
+    = note: the full name for the type has been written to '<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-f775b03b8884b8bb.long-type-15539848943581444800.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+help: consider further restricting type parameter `S` with trait `Sync`
+    |
+142 |     S: Subscriber + for<'a> LookupSpan<'a> + std::marker::Sync,
+    |                                            +++++++++++++++++++
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `tracing-subscriber` (test "filter_continuation_regressions") due to 2 previous errors

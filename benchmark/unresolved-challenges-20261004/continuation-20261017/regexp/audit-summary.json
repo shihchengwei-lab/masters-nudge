@@ -1,0 +1,82 @@
+{
+  "case": "regexp-404",
+  "completion": "pass",
+  "base_commit": "9a780beaa03b66e2d0bce27954a5711cb6b1e1db",
+  "initial_arm": "J2",
+  "full_patch_sha256": "8de6e0a1a944cfe07389bf69929f2ba1e0195641c036367c2389a9657ae1e8c5",
+  "continuation_patch_sha256": "bc2210caf4f9d3ae607a07c79d4787eff15cad3a3aac49dbca1b46dcb279e0c7",
+  "matching_all_pass_evaluation": {
+    "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\actor-evaluation-1\\evidence.json",
+    "patch_sha256": "8de6e0a1a944cfe07389bf69929f2ba1e0195641c036367c2389a9657ae1e8c5",
+    "checks": {
+      "reserved": "pass",
+      "regexp_contract.js": "pass",
+      "regexp_direction.js": "pass",
+      "regexp_judge_concerns.js": "pass"
+    },
+    "environment_error": null,
+    "matching_final_patch": true,
+    "all_pass": true
+  },
+  "evaluations": [
+    {
+      "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\actor-evaluation-1\\evidence.json",
+      "patch_sha256": "8de6e0a1a944cfe07389bf69929f2ba1e0195641c036367c2389a9657ae1e8c5",
+      "checks": {
+        "reserved": "pass",
+        "regexp_contract.js": "pass",
+        "regexp_direction.js": "pass",
+        "regexp_judge_concerns.js": "pass"
+      },
+      "environment_error": null,
+      "matching_final_patch": true,
+      "all_pass": true
+    },
+    {
+      "path": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\baseline-evaluation\\evidence.json",
+      "patch_sha256": "05894ccad14d198435bdf54bee7afbaaef3dbcf1626c76962cc5f10ac0c276fa",
+      "checks": {
+        "reserved": "pass",
+        "regexp_contract.js": "pass",
+        "regexp_direction.js": "fail",
+        "regexp_judge_concerns.js": "fail"
+      },
+      "environment_error": null,
+      "matching_final_patch": false,
+      "all_pass": false
+    }
+  ],
+  "frozen_input_changes": [],
+  "existing_test_changes": [],
+  "existing_test_count": 109,
+  "source_head_and_status_unchanged": true,
+  "all_actual_models_match": true,
+  "actual_actor_count": 1,
+  "actual_provider_count": 3,
+  "actor_elapsed_seconds": 771.578,
+  "provider_elapsed_seconds": 166.43799999999464,
+  "actor_usage": {
+    "input_tokens": 5229731,
+    "cached_input_tokens": 5056512,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 33884,
+    "reasoning_output_tokens": 13944
+  },
+  "provider_usage": {
+    "input_tokens": 214220,
+    "cached_input_tokens": 156544,
+    "output_tokens": 7448,
+    "reasoning_output_tokens": 6638
+  },
+  "actor_plus_provider_usage": {
+    "input_tokens": 5443951,
+    "cached_input_tokens": 5213056,
+    "output_tokens": 41332,
+    "reasoning_output_tokens": 20582
+  },
+  "feedback": 1,
+  "delivered": 1,
+  "silence": 2,
+  "faults": 0,
+  "skipped_test_patches": 4
+}

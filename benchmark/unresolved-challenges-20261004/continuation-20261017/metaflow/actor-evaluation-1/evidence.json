@@ -1,0 +1,221 @@
+{
+  "case": "fb-metaflow-stubs",
+  "patch_sha256": "5b618d896439cd9325505b399681dd85933bf7308ffb28603cc42005457babf4",
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "checks": {
+    "reserved": "pass",
+    "annotation-api": "pass",
+    "class-api": "pass",
+    "function-api": "pass",
+    "metaflow_docquotes_input.py": "pass",
+    "metaflow_members_input.py": "pass",
+    "metaflow_review_members_input.py": "pass",
+    "metaflow_typed_dict_keys_input.py": "pass",
+    "reset-api": "pass"
+  },
+  "logs": [
+    {
+      "file": "checkout.txt",
+      "sha256": "5130a3f4ac33479463c89bc098f60feb59199473983654c0b0bfa0eb25be5b8c",
+      "exit_code": 0
+    },
+    {
+      "file": "apply.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "apply-tests.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "reserved.txt",
+      "sha256": "45eda05e48bbf3da8da0501c22de79901d9dc223e6a3057a3e4a97e4ef32486c",
+      "exit_code": 0
+    },
+    {
+      "file": "annotation-api.txt",
+      "sha256": "4fb2fe966a83fe5b86d8491f35a607fdbcdc0991561c2602c6c63093bb3198ac",
+      "exit_code": 0
+    },
+    {
+      "file": "class-api.txt",
+      "sha256": "78e5ad1f02483ab50ba66ac24bec8b5db4a50c469b50bb029775d41040ba9d8e",
+      "exit_code": 0
+    },
+    {
+      "file": "function-api.txt",
+      "sha256": "8786ad1b3a12ab77e9443155d45ca33ad419a6504c6106d33dccea139b0ea7f8",
+      "exit_code": 0
+    },
+    {
+      "file": "metaflow_docquotes_input.py.txt",
+      "sha256": "d05397083b565bbc76902e547e70abfe75e6ae1961ef5915d9d35e1121651f3a",
+      "exit_code": 0
+    },
+    {
+      "file": "metaflow_members_input.py.txt",
+      "sha256": "3f20e9b113b0dd21fa8e75a653f15143a9aabfc2ee9627fc076b852d3a6e8746",
+      "exit_code": 0
+    },
+    {
+      "file": "metaflow_review_members_input.py.txt",
+      "sha256": "4fcce93f81921d3988e2dae906ee92c17f1498b153ee59483ec6909a62663901",
+      "exit_code": 0
+    },
+    {
+      "file": "metaflow_typed_dict_keys_input.py.txt",
+      "sha256": "c579b448cf3f8bb0a1e8d057c301e6644930730e67d941d3bf00e25e0774e764",
+      "exit_code": 0
+    },
+    {
+      "file": "reset-api.txt",
+      "sha256": "2016e49737ed69b10a298bd3dd1453327c7db0fa1e1260f5edb2a6d72191c1ad",
+      "exit_code": 0
+    }
+  ],
+  "delivery_test_paths_replaced_by_fixed_suite": [
+    "test/*",
+    "tests/*"
+  ],
+  "forward_reference_quote_normalizations": 4,
+  "detail": {
+    "annotation-api": [
+      {
+        "passed": true,
+        "check": "annotations"
+      }
+    ],
+    "class-api": [
+      {
+        "passed": true,
+        "check": "classes"
+      }
+    ],
+    "function-api": [
+      {
+        "passed": true,
+        "check": "functions"
+      }
+    ],
+    "metaflow_docquotes_input.py": [
+      {
+        "passed": true,
+        "cases": {
+          "function": {
+            "passed": true,
+            "stub": "def function():\n    \"\"\"Ends with \\\"\"\"\"\n    ...\n\n",
+            "doc": "Ends with \""
+          },
+          "class": {
+            "passed": true,
+            "stub": "class Example:\n    \"\"\"Ends with \\\"\"\"\"\n",
+            "doc": "Ends with \""
+          }
+        }
+      }
+    ],
+    "metaflow_members_input.py": [
+      {
+        "named_tuple_annotated_members": {
+          "passed": true,
+          "fields": [
+            "description",
+            "x"
+          ],
+          "stub": "class Point(typing.NamedTuple):\n    \"\"\"Point(x,)\"\"\"\n    x: int\n    description: type\n"
+        },
+        "typed_dict_inherited_requiredness": {
+          "passed": true,
+          "expected_required": [
+            "x"
+          ],
+          "actual_required": [
+            "x"
+          ],
+          "expected_optional": [
+            "y"
+          ],
+          "actual_optional": [
+            "y"
+          ],
+          "stub": "class Child(typing.TypedDict, total=False):\n    x: typing.Required[int]\n    y: str\n"
+        },
+        "none_annotations": {
+          "passed": true,
+          "function_parameter_preserved": true,
+          "class_annotation_preserved": true,
+          "helper_None_returns_empty_as_required": true,
+          "function_stub": "def f(x: None) -> None:\n    ...\n\n",
+          "class_stub": "class C:\n    x: None\n"
+        },
+        "annotated_property_and_setter": {
+          "passed": true,
+          "decorators": [
+            "property",
+            "value.setter"
+          ],
+          "stub": "class C:\n    @property\n    def value(self) -> int:\n        ...\n\n    @value.setter\n    def value(self, value: int):\n        ...\n\n"
+        },
+        "unannotated_named_tuple": {
+          "passed": true,
+          "fields": [
+            "left",
+            "right"
+          ],
+          "stub": "class Pair(typing.NamedTuple):\n    \"\"\"Pair(left, right)\"\"\"\n    left: typing.Any\n    right: typing.Any\n"
+        },
+        "constrained_typevar": {
+          "passed": true,
+          "errors": [],
+          "stubs": {
+            "round10_probe.pyi": "######################################################################################################\n#                                 Auto-generated Metaflow stub file                                  #\n# MF version: 2.19.8                                                                                 #\n# Generated on 2026-10-17T02:52:49.020337                                                            #\n######################################################################################################\n\nfrom __future__ import annotations\n\nimport typing\nT = typing.TypeVar(\"T\", str, int, contravariant=False, covariant=False)\n\n\ndef convert(value: T) -> T:\n    ...\n\n\n"
+          }
+        }
+      }
+    ],
+    "metaflow_review_members_input.py": [
+      {
+        "passed": true,
+        "cases": {
+          "self_alias": {
+            "passed": true,
+            "stub": "class Node:\n    alias: type\n"
+          },
+          "annotated_metadata": {
+            "passed": true,
+            "stub": "value: typing.Annotated[int, ...]"
+          }
+        }
+      }
+    ],
+    "metaflow_typed_dict_keys_input.py": [
+      {
+        "passed": true,
+        "cases": {
+          "typed_dict_keys": {
+            "passed": true,
+            "expected_fields": [
+              "_id",
+              "name"
+            ],
+            "emitted_fields": [
+              "_id",
+              "name"
+            ],
+            "stub": "class Record(typing.TypedDict):\n    _id: int\n    name: str\n"
+          }
+        },
+        "async_generator_observation_only": "async def values() -> typing.AsyncIterator[int]:\n    ...\n\n"
+      }
+    ],
+    "reset-api": [
+      {
+        "passed": true,
+        "check": "reset"
+      }
+    ]
+  },
+  "elapsed_seconds": 45.656
+}

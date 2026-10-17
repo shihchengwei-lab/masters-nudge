@@ -58,8 +58,8 @@ def compute():
 def render(s):
     n = len(s['common_usage_slots'])
     lines = ['# 九題主要比較', '',
-             '原研究執行十二題、七種配置、每題兩次，共168次。測試後將 Regexp、Metaflow、Tracing 三題另列為未解挑戰：本研究尚無通過完整契約的實作，契約的整體可達成性尚未獲得完整實作佐證。這是事後分類，並非原始預先設定。', '',
-             '**主要比較為九題，每配置18次，共126次；各臂的六次未解挑戰不計入主要完成率與成本。** 失敗與逾時仍保留在九題分母內，沒有重跑或修改答案。', '',
+             '原研究執行十二題、七種配置、每題兩次，共168次。測試後將當時未完成的 Regexp、Metaflow、Tracing 三題另列挑戰；這是事後分類，並非原始預先設定。三題已於 2026-10-17 [續解完成並通過完整固定驗收](../unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)，本報告沿用原研究的九題比較範圍。', '',
+             '**主要比較為九題，每配置18次，共126次；原三題的六次嘗試不計入本報告完成率與成本。** 失敗與逾時仍保留在九題分母內，沒有重跑或修改原答案。', '',
              '| 配置 | 完整交付 | 累計分鐘 | 每完成一份的分鐘（含失敗） |',
              '|---|---:|---:|---:|']
     for a, r in s['arms'].items():
@@ -71,10 +71,10 @@ def render(s):
     lines += ['', '| 比較（前者對後者） | 累計時間變化 | 未快取輸入變化 | 快取輸入變化 | 輸出變化 |', '|---|---:|---:|---:|---:|']
     for pair, r in s['comparisons'].items():
         lines.append('| ' + pair + ' | ' + f"{r['time_change_percent']:+.1f}%" + ' | ' + ' | '.join(f"{r['token_change_percent'][k]:+.1f}%" for k in KEYS) + ' |')
-    lines += ['', '程式碼品味沿用 [覆核複評](taste-review/README.zh-TW.md) 的最終結果，共71組共同完整交付的配對。三題未解挑戰原本就沒有合格配對，因此品味母體與結果不變；不是新增盲評。', '',
+    lines += ['', '程式碼品味沿用 [覆核複評](taste-review/README.zh-TW.md) 的最終結果，共71組共同完整交付的配對。原研究三題挑戰沒有合格配對，因此品味母體與結果不變；本次續解另列成果，沒有新增盲評。', '',
               'I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異。原研究的解題時限、執行器修復、用量缺口與另列的判分／逾時後耗時見 [十二題原始報告](REPORT.zh-TW.md)；本表沿用其時間記帳，不把判分成本加到解題成本。', '',
               '九題清單：' + '、'.join(s['included_cases']) + '。', '',
-              '[三題未解挑戰與 Astra max 探索](../unresolved-challenges-20261004/README.zh-TW.md)保留六份獨立答案、驗收反例、提醒採納與成本。本輪不限時探索不併入七臂排名，也不据此推算單一變因效果。', '',
+              '[三題挑戰歷程](../unresolved-challenges-20261004/README.zh-TW.md)保留六份 Astra max 獨立探索及後續三份成功續解的答案、驗收、提醒處理與成本。續解使用歷史材料，不併入原七臂排名；這些探索不据此推算單一變因效果。', '',
               '原 [十二題數據](results-summary.json)、[CSV](deliveries.csv) 與原始證據保留。從 repo 根目錄執行 `python -X utf8 benchmark/model-comparison-20261004/primary.py --verify`，即可離線重建並核對本頁；不呼叫模型。']
     return '\n'.join(lines).replace('不据此', '不據此') + '\n'
 

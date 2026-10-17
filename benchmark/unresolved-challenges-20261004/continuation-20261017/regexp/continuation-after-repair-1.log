@@ -1,0 +1,12 @@
+(node:40804) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404/tests/lib/rules/no-dupe-disjunctions-continuation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <STUDY_ROOT>\remaining-continuations-20261017\regexp\calibration\cases\regexp-404\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  ........................................................
+  ........................................................
+  ...............................
+
+  143 passing (231ms)
+

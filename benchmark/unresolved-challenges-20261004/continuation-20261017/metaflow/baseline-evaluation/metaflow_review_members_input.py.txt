@@ -1,0 +1,4 @@
+PROBE_RESULT {"passed": false, "cases": {"self_alias": {"passed": true, "stub": "class Node:\n    alias: type\n"}, "annotated_metadata": {"passed": false, "error": "SyntaxError: invalid syntax (<unknown>, line 1)", "stub": "value: typing.Annotated[int, <object object at 0x70a67c6453c0>]"}}}
+
+/usr/local/lib/python3.11/site-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.8.0) or chardet (None)/charset_normalizer (3.1.0) doesn't match a supported version!
+  warnings.warn(

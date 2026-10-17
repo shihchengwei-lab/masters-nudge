@@ -1,0 +1,602 @@
+
+
+(node:31636) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404/tests/lib/rules/no-dupe-disjunctions-continuation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <STUDY_ROOT>\remaining-continuations-20261017\regexp\calibration\cases\regexp-404\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  no-dupe-disjunctions continuation
+    valid
+      1) /(?:a+|([ab]))(?!\1)/
+      2) /(?:a+|(?<letter>[ab]))(?!\k<letter>)/
+      3) /(?:a+|(?:(a)|b))(?!\1)/
+      4) /(?:a+|(?:([ab])|c))(?!\1)/
+      5) /(?:(a)+|[ab])(?=\1)/
+      6) /(?:a+x|[ab](x))(?!\1)/
+      √ const fragment = /a|[ab]a/.source
+    invalid
+      7) /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      8) /(?:a+|[abc])+/
+      9) /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      10) /(?:a+|[abc])+/
+      11) /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      12) /(?:a+|[abc])+/
+      13) /(?:a+|[abc])+/
+      14) /(?:a+|[ab])+$/
+      √ const fragment = /a+|[abc]/.source
+      15) const fragment = /a+|[abc]/.source
+      16) /ab|(?:ab|a)/
+      17) /(?:ab|(?:ab|a))c/
+      18) const fragment = /ab|(?:ab|a)/.source
+      19) /ab|(?:(ab)|a)/
+      √ /a+|(?:(a)|b)/
+      20) /(?:a+|([ab]))(?!\1)|c+|[cd]/
+
+  no-dupe-disjunctions capture dependency witnesses
+    √ preserves the necessary path in /(?:a+|([ab]))(?!\1)/
+    √ preserves the necessary path in /(?:(a)+|[ab])(?=\1)/
+    √ preserves the necessary path in /(?:a+x|[ab](x))(?!\1)/
+
+
+  9 passing (114ms)
+  20 failing
+
+  1) no-dupe-disjunctions continuation
+       valid
+         /(?:a+|([ab]))(?!\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '([ab])' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 10,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 11
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  2) no-dupe-disjunctions continuation
+       valid
+         /(?:a+|(?<letter>[ab]))(?!\k<letter>)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '(?<letter>[ab])' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 19,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 20
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  3) no-dupe-disjunctions continuation
+       valid
+         /(?:a+|(?:(a)|b))(?!\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '(?:(a)|b)' that go through '(a)' are a strict subset of 'a+'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.",
+    line: 1,
+    column: 11,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 14
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  4) no-dupe-disjunctions continuation
+       valid
+         /(?:a+|(?:([ab])|c))(?!\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '(?:([ab])|c)' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 13,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 14
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  5) no-dupe-disjunctions continuation
+       valid
+         /(?:(a)+|[ab])(?=\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[ab]' that go through 'a' (U+0061) are a strict subset of '(a)+'. This element can be removed.",
+    line: 1,
+    column: 11,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 12
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  6) no-dupe-disjunctions continuation
+       valid
+         /(?:a+x|[ab](x))(?!\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[ab](x)' that go through 'a' (U+0061) are a strict subset of 'a+x'. This element can be removed.",
+    line: 1,
+    column: 10,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 11
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  7) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  8) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  9) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  10) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  11) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  12) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  13) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[abc])+/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  14) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|[ab])+$/:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[ab]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 9,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 10
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  15) no-dupe-disjunctions continuation
+       invalid
+         const fragment = /a+|[abc]/.source:
+
+      AssertionError [ERR_ASSERTION]: Should have 2 errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[abc]' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 23,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 24
+  }
+]
+
+1 !== 2
+
+      + expected - actual
+
+      -1
+      +2
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  16) no-dupe-disjunctions continuation
+       invalid
+         /ab|(?:ab|a)/:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed."
+- "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed."
+
+      + expected - actual
+
+      -Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed.
+      +Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed.
+      
+      at assertMessageMatches (node_modules\eslint\lib\rule-tester\rule-tester.js:732:24)
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:813:29)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  17) no-dupe-disjunctions continuation
+       invalid
+         /(?:ab|(?:ab|a))c/:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed."
+- "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed."
+
+      + expected - actual
+
+      -Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed.
+      +Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed.
+      
+      at assertMessageMatches (node_modules\eslint\lib\rule-tester\rule-tester.js:732:24)
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:813:29)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  18) no-dupe-disjunctions continuation
+       invalid
+         const fragment = /ab|(?:ab|a)/.source:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed."
+- "Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed."
+
+      + expected - actual
+
+      -Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are a strict subset of 'ab'. This element can be removed.
+      +Unexpected useless element. All paths of '(?:ab|a)' that go through 'ab' are already covered by 'ab'. This element can be removed.
+      
+      at assertMessageMatches (node_modules\eslint\lib\rule-tester\rule-tester.js:732:24)
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:813:29)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  19) no-dupe-disjunctions continuation
+       invalid
+         /ab|(?:(ab)|a)/:
+
+      AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ "Unexpected useless element. All paths of '(?:(ab)|a)' that go through '(ab)' are a strict subset of 'ab'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove."
+- "Unexpected useless element. All paths of '(?:(ab)|a)' that go through '(ab)' are already covered by 'ab'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove."
+
+      + expected - actual
+
+      -Unexpected useless element. All paths of '(?:(ab)|a)' that go through '(ab)' are a strict subset of 'ab'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.
+      +Unexpected useless element. All paths of '(?:(ab)|a)' that go through '(ab)' are already covered by 'ab'. This element can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.
+      
+      at assertMessageMatches (node_modules\eslint\lib\rule-tester\rule-tester.js:732:24)
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:813:29)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  20) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|([ab]))(?!\1)|c+|[cd]/:
+
+      AssertionError [ERR_ASSERTION]: Should have 1 error but had 2: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '([ab])' that go through 'a' (U+0061) are a strict subset of 'a+'. This element can be removed.",
+    line: 1,
+    column: 10,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 11
+  },
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless element. All paths of '[cd]' that go through 'c' (U+0063) are a strict subset of 'c+'. This element can be removed.",
+    line: 1,
+    column: 26,
+    nodeType: 'Literal',
+    messageId: 'nestedSubset',
+    endLine: 1,
+    endColumn: 27
+  }
+]
+
+2 !== 1
+
+      + expected - actual
+
+      -2
+      +1
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+
+

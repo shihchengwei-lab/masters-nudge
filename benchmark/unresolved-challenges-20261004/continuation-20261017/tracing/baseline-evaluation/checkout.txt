@@ -1,0 +1,3 @@
+HEAD is now at ac4a8dd chore: fix inconsistent terminology
+
+Preparing worktree (detached HEAD ac4a8dd)

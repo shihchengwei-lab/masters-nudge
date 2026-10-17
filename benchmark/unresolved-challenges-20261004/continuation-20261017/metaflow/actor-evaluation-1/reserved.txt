@@ -1,0 +1,27 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.13, pytest-7.2.2, pluggy-1.0.0
+cachedir: /tmp/pytest-cache
+rootdir: /task
+plugins: hypothesis-6.168.1, rerunfailures-11.1.2, asyncio-0.20.3, anyio-4.10.0
+asyncio: mode=Mode.STRICT
+collected 45 items
+
+test/cmd/develop/test_stub_generator.py ...............................  [ 68%]
+test/unit/test_multicore_utils.py .                                      [ 71%]
+test/unit/test_argo_workflows_cli.py ........                            [ 88%]
+test/unit/test_pypi_parsers.py ...                                       [ 95%]
+test/unit/test_local_metadata_provider.py .                              [ 97%]
+test/unit/test_pypi_decorator.py .                                       [100%]
+
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18
+  /usr/local/lib/python3.11/site-packages/_yaml/__init__.py:18: DeprecationWarning: The _yaml extension module is now located at yaml._yaml and its location is subject to change.  To use the LibYAML-based parser and emitter, import from `yaml`: `from yaml import CLoader as Loader, CDumper as Dumper`.
+    warnings.warn(
+
+../usr/local/lib/python3.11/site-packages/requests/__init__.py:109
+  /usr/local/lib/python3.11/site-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.8.0) or chardet (None)/charset_normalizer (3.1.0) doesn't match a supported version!
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 45 passed, 2 warnings in 7.41s ========================
+

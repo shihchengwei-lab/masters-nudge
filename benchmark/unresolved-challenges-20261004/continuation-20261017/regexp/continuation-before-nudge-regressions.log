@@ -1,0 +1,76 @@
+(node:42972) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404/tests/lib/rules/no-dupe-disjunctions-continuation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <STUDY_ROOT>\remaining-continuations-20261017\regexp\calibration\cases\regexp-404\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  ......!.!!......................
+
+  29 passing (88ms)
+  3 failing
+
+  1) no-dupe-disjunctions continuation
+       valid
+         /(?:[abc]+|(?:(?:[ab]|(c))){2})(?!\1)/:
+
+      AssertionError [ERR_ASSERTION]: Should have no errors but had 1: [
+  {
+    ruleId: 'no-dupe-disjunctions continuation',
+    severity: 1,
+    message: "Unexpected useless alternative. This alternative is a strict subset of '[abc]+' and can be removed. Careful! This alternative contains capturing groups which might be difficult to remove.",
+    line: 1,
+    column: 12,
+    nodeType: 'Literal',
+    messageId: 'subset',
+    endLine: 1,
+    endColumn: 31
+  }
+]
+
+1 !== 0
+
+      + expected - actual
+
+      -1
+      +0
+      
+      at testValidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:707:20)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:986:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  2) no-dupe-disjunctions continuation
+       invalid
+         /(?:a+|(?:[ab]|(c)))\1/:
+
+      AssertionError [ERR_ASSERTION]: Should have 1 error but had 0: []
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+  3) no-dupe-disjunctions continuation
+       invalid
+         /(?:(?:a+|(c))|[ab])\1/:
+
+      AssertionError [ERR_ASSERTION]: Should have 1 error but had 0: []
+
+0 !== 1
+
+      + expected - actual
+
+      -0
+      +1
+      
+      at testInvalidTemplate (node_modules\eslint\lib\rule-tester\rule-tester.js:773:24)
+      at Context.<anonymous> (node_modules\eslint\lib\rule-tester\rule-tester.js:997:29)
+      at processImmediate (node:internal/timers:504:21)
+
+
+

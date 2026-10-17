@@ -1,0 +1,5 @@
+執行摘要（成功命令無輸出，Tee-Object 未建立空檔，事後由工具回傳值補存）。
+Command: node node_modules/eslint/bin/eslint.js tests/lib/rules/no-dupe-disjunctions-continuation.ts
+exit_code: 0
+stdout/stderr: empty
+Tool result chunk_id: f4c592

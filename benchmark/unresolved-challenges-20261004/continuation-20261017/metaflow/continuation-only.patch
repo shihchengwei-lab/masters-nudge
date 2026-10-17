@@ -1,0 +1,202 @@
+diff --git a/metaflow/cmd/develop/stub_generator.py b/metaflow/cmd/develop/stub_generator.py
+index 0978dfa..66fb14a 100644
+--- a/metaflow/cmd/develop/stub_generator.py
++++ b/metaflow/cmd/develop/stub_generator.py
+@@ -677,7 +677,7 @@ class StubGenerator:
+                     self._imports.add("typing")
+                     return "typing.Annotated[%s, %s]" % (
+                         format_type(args[0]),
+-                        ", ".join(repr(arg) for arg in args[1:]),
++                        ", ".join(self._format_default(arg) for arg in args[1:]),
+                     )
+ 
+                 typing_name = getattr(value, "_name", None)
+@@ -1355,7 +1355,11 @@ class StubGenerator:
+                     keyword_separator = True
+                 elif kind is inspect.Parameter.VAR_KEYWORD:
+                     prefix = "**"
+-                annotation = self._exploit_annotation(parameter.annotation)
++                # None is an explicit type here; the annotation helper also uses
++                # None to mean "no annotation" for its other callers.
++                annotation = self._exploit_annotation(
++                    type(None) if parameter.annotation is None else parameter.annotation
++                )
+                 text = prefix + parameter.name + annotation
+                 if parameter.default is not inspect.Parameter.empty:
+                     text += (" = " if annotation else "=") + self._format_default(
+diff --git a/test/unit/test_stub_generator_continuation.py b/test/unit/test_stub_generator_continuation.py
+new file mode 100644
+index 0000000..ec67b31
+--- /dev/null
++++ b/test/unit/test_stub_generator_continuation.py
+@@ -0,0 +1,170 @@
++"""Regressions for explicit None annotations and runtime-only metadata."""
++
++import ast
++import inspect
++import sys
++import types
++import typing
++
++import pytest
++
++from metaflow.cmd.develop import stub_generator
++
++
++@pytest.fixture
++def generator(tmp_path, monkeypatch):
++    monkeypatch.setattr(stub_generator, "get_version", lambda: "test")
++    monkeypatch.setenv("METAFLOW_STUBGEN", "1")
++    module = types.ModuleType("metaflow.continuation_example")
++    module.__file__ = str(tmp_path / "continuation_example.py")
++    module.typing = typing
++    monkeypatch.setitem(sys.modules, module.__name__, module)
++    result = stub_generator.StubGenerator(str(tmp_path / "stubs"))
++    result._current_module = result._current_parent_module = module
++    result._current_module_name = module.__name__
++    return result
++
++
++@pytest.mark.parametrize("postponed", [False, True])
++@pytest.mark.parametrize("explicit_signature", [False, True])
++def test_none_parameters_keep_kinds_defaults_and_missing_annotations(
++    generator, postponed, explicit_signature
++):
++    source = """
++def function(pos: None, /, regular: None = None, *args: None,
++             keyword: None = None, missing=0, **kwargs: None) -> None:
++    pass
++"""
++    if postponed:
++        source = "from __future__ import annotations\n" + source
++    exec(source, generator._current_module.__dict__)
++    function = generator._current_module.function
++    arguments = (
++        {"sign": [inspect.signature(function)], "doc": ""}
++        if explicit_signature
++        else {"func": function}
++    )
++    text = generator._generate_function_stub("function", **arguments)
++    node = ast.parse(text).body[0]
++    annotated = (
++        node.args.posonlyargs
++        + node.args.args
++        + [node.args.vararg, node.args.kwonlyargs[0], node.args.kwarg]
++    )
++    assert all(isinstance(arg.annotation, ast.Constant) for arg in annotated)
++    assert all(arg.annotation.value is None for arg in annotated)
++    assert [arg.arg for arg in node.args.posonlyargs] == ["pos"]
++    assert [arg.arg for arg in node.args.args] == ["regular"]
++    assert [arg.arg for arg in node.args.kwonlyargs] == ["keyword", "missing"]
++    assert node.args.kwonlyargs[1].annotation is None
++    assert ast.literal_eval(node.args.defaults[0]) is None
++    assert [ast.literal_eval(value) for value in node.args.kw_defaults] == [None, 0]
++    assert isinstance(node.returns, ast.Constant) and node.returns.value is None
++    for prefix in (": ", " -> ", ""):
++        assert generator._exploit_annotation(None, prefix) == ""
++        assert generator._exploit_annotation(inspect.Parameter.empty, prefix) == ""
++
++
++def test_none_overload_keeps_decorators_and_other_signature(generator):
++    exec("""
++@typing.overload
++def convert(value: None = None) -> None: ...
++@typing.overload
++def convert(value: str) -> str: ...
++def convert(value=None): pass
++""", generator._current_module.__dict__)
++    text = generator._generate_function_stub(
++        "convert", staticmethod(generator._current_module.convert)
++    )
++    first, second = ast.parse(text).body
++    assert isinstance(first.args.args[0].annotation, ast.Constant)
++    assert first.args.args[0].annotation.value is None
++    assert ast.literal_eval(first.args.defaults[0]) is None
++    assert isinstance(first.returns, ast.Constant) and first.returns.value is None
++    assert ast.unparse(second.args.args[0].annotation) == "str"
++    assert ast.unparse(second.returns) == "str"
++    assert not second.args.defaults
++    assert all(
++        [ast.unparse(decorator) for decorator in node.decorator_list]
++        == ["typing.overload", "staticmethod"]
++        for node in (first, second)
++    )
++
++
++@pytest.mark.parametrize("annotated_accessors", [False, True])
++def test_none_property_preserves_accessors_and_field_fallback(
++    generator, annotated_accessors
++):
++    exec("""
++class Example:
++    value: None
++
++    @property
++    def value(self): pass
++
++    @value.setter
++    def value(self, value): pass
++""", generator._current_module.__dict__)
++    clazz = generator._current_module.Example
++    if annotated_accessors:
++        clazz.value.fget.__annotations__["return"] = None
++        clazz.value.fset.__annotations__["value"] = None
++        clazz.value.fset.__annotations__["return"] = None
++    node = ast.parse(generator._generate_class_stub("Example", clazz)).body[0]
++    getter, setter = node.body
++    assert [ast.unparse(d) for d in getter.decorator_list] == ["property"]
++    assert [ast.unparse(d) for d in setter.decorator_list] == ["value.setter"]
++    assert isinstance(getter.returns, ast.Constant) and getter.returns.value is None
++    assert isinstance(setter.args.args[1].annotation, ast.Constant)
++    assert setter.args.args[1].annotation.value is None
++
++
++class InvalidRepr:
++    def __repr__(self):
++        return "<runtime-only metadata>"
++
++
++class RaisingRepr:
++    def __repr__(self):
++        raise RuntimeError("cannot represent metadata")
++
++
++class ExpressionRepr:
++    def __repr__(self):
++        return "record_effect()"
++
++
++@pytest.mark.parametrize("opaque", [object(), InvalidRepr(), RaisingRepr(), ExpressionRepr()])
++def test_annotated_metadata_is_literal_or_placeholder(generator, opaque):
++    annotation = typing.Annotated[
++        list[int], "description", {"units": ["m", 1]}, None, opaque
++    ]
++    text = generator._exploit_annotation(annotation, "")
++    expression = ast.parse(text, mode="eval").body
++    assert ast.unparse(expression.slice.elts[0]) == "list[int]"
++    assert [ast.literal_eval(arg) for arg in expression.slice.elts[1:]] == [
++        "description", {"units": ["m", 1]}, None, Ellipsis
++    ]
++    assert "typing" in generator._imports
++    namespace = {"typing": typing}
++    exec("value: " + text, namespace)
++    assert typing.get_args(namespace["__annotations__"]["value"])[1:] == (
++        "description", {"units": ["m", 1]}, None, Ellipsis
++    )
++
++
++def test_write_out_preserves_none_and_valid_metadata(generator, tmp_path):
++    module = generator._current_module
++    module.metadata = object()
++    exec("""
++def function(value: None, *, data: typing.Annotated[int, metadata]) -> None: pass
++""", module.__dict__)
++    generator._pending_modules = [(module.__name__, module.__name__)]
++    generator.write_out()
++    text = (tmp_path / "stubs" / "continuation_example.pyi").read_text()
++    node = next(node for node in ast.parse(text).body if isinstance(node, ast.FunctionDef))
++    assert isinstance(node.args.args[0].annotation, ast.Constant)
++    assert node.args.args[0].annotation.value is None
++    metadata = node.args.kwonlyargs[0].annotation.slice.elts[1]
++    assert ast.literal_eval(metadata) is Ellipsis
++    assert "import typing" in text

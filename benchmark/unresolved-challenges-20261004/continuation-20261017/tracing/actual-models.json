@@ -1,0 +1,52 @@
+[
+  {
+    "observed_utc": "2026-10-17T02:07:49.4196483Z",
+    "pid": 37932,
+    "parent_pid": 2712,
+    "executable": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe -c project_doc_max_bytes=0 -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" --enable hooks --disable plugins -c mcp_servers.masters_nudge={\\\"command\\\"=\\\"python\\\",\\\"args\\\"=[\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/frozen-plugin/mcp_entry.py\\\"],\\\"enabled\\\"=true,\\\"enabled_tools\\\"=[\\\"review_patch\\\"],\\\"omit_tools_from\\\"=[\\\"code_mode\\\",\\\"deferred\\\"],\\\"default_tools_approval_mode\\\"=\\\"approve\\\",\\\"startup_timeout_sec\\\"=30,\\\"tool_timeout_sec\\\"=1320,\\\"env\\\"={\\\"PYTHONIOENCODING\\\"=\\\"utf-8\\\"},\\\"env_vars\\\"=[\\\"HOME\\\",\\\"LOCALAPPDATA\\\",\\\"MASTERS_NUDGE_ACTIVE\\\",\\\"MASTERS_NUDGE_DATA_DIR\\\",\\\"MASTERS_NUDGE_RUNTIME_DIR\\\",\\\"MASTERS_NUDGE_TEST_MODE\\\",\\\"PATH\\\",\\\"USERPROFILE\\\"]} -c hooks.PostToolUse=[{\\\"matcher\\\"=\\\"^apply_patch$\\\",\\\"hooks\\\"=[{\\\"type\\\"=\\\"mcp_tool\\\",\\\"server\\\"=\\\"masters_nudge\\\",\\\"tool\\\"=\\\"review_patch\\\",\\\"input\\\"={\\\"hook_event_name\\\"=\\\"PostToolUse\\\",\\\"session_id\\\"=\\\"${session_id}\\\",\\\"turn_id\\\"=\\\"${turn_id}\\\",\\\"cwd\\\"=\\\"${cwd}\\\",\\\"transcript_path\\\"=\\\"${transcript_path}\\\",\\\"tool_name\\\"=\\\"${tool_name}\\\",\\\"tool_use_id\\\"=\\\"${tool_use_id}\\\",\\\"tool_input\\\"=\\\"${tool_input}\\\",\\\"tool_response\\\"=\\\"${tool_response}\\\"},\\\"timeout\\\"=1320}]}] -c \"hooks.UserPromptSubmit=[{\\\"hooks\\\"=[{\\\"type\\\"=\\\"command\\\",\\\"command\\\"=\\\"sh \\\\\\\"${PLUGIN_ROOT}/hooks/run_python.sh\\\\\\\" \\\\\\\"${PLUGIN_ROOT}/hook_entry.py\\\\\\\" --host codex_cli\\\",\\\"commandWindows\\\"=\\\"& \\\\\\\"$env:PLUGIN_ROOT\\\\hooks\\\\run_python.cmd\\\\\\\" \\\\\\\"$env:PLUGIN_ROOT\\\\hook_entry.py\\\\\\\" --host codex_cli\\\",\\\"timeout\\\"=120}]}]\" exec --ignore-user-config --ignore-rules --dangerously-bypass-hook-trust --skip-git-repo-check --ephemeral --json -s danger-full-access -m gpt-6.1-sol -C <STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523 -o <STUDY_ROOT>\\tracing-l2-continuation-20261017\\run\\actor-final.txt -",
+    "role": "actor",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:10:43.8914899Z",
+    "pid": 37140,
+    "parent_pid": 4084,
+    "executable": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/calibration/cases/tracing-1523\\\",\\\"--budget\\\",\\\"7837\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/temp/masters-nudge-provider-plmoox40/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\tracing-l2-continuation-20261017\\temp\\masters-nudge-provider-plmoox40\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:11:20.7956149Z",
+    "pid": 32332,
+    "parent_pid": 4084,
+    "executable": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/calibration/cases/tracing-1523\\\",\\\"--budget\\\",\\\"2171\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/temp/masters-nudge-provider-nxwkz32q/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\tracing-l2-continuation-20261017\\temp\\masters-nudge-provider-nxwkz32q\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:12:35.1316680Z",
+    "pid": 24696,
+    "parent_pid": 4084,
+    "executable": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/calibration/cases/tracing-1523\\\",\\\"--budget\\\",\\\"3128\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/temp/masters-nudge-provider-971flfev/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\tracing-l2-continuation-20261017\\temp\\masters-nudge-provider-971flfev\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:14:20.2534487Z",
+    "pid": 38752,
+    "parent_pid": 4084,
+    "executable": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/calibration/cases/tracing-1523\\\",\\\"--budget\\\",\\\"7352\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/tracing-l2-continuation-20261017/temp/masters-nudge-provider-0pypwghz/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\tracing-l2-continuation-20261017\\temp\\masters-nudge-provider-0pypwghz\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  }
+]

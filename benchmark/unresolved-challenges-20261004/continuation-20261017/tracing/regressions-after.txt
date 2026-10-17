@@ -1,0 +1,20 @@
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+error[E0609]: no field `filter_map` on type `sharded_slab::pool::Ref<'_, DataInner>`
+   --> tracing-subscriber\src\registry\sharded.rs:188:53
+    |
+188 |                     if filters.iter().all(|id| span.filter_map.is_enabled(*id)) {
+    |                                                     ^^^^^^^^^^ unknown field
+    |
+    = note: available fields are: `metadata`, `filters`, `parent`, `ref_count`, `extensions`
+
+For more information about this error, try `rustc --explain E0609`.
+error: could not compile `tracing-subscriber` (lib) due to 1 previous error

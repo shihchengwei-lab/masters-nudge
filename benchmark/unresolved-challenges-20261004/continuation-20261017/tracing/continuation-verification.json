@@ -1,0 +1,52 @@
+{
+  "full-tests-final.txt": {
+    "suites": 24,
+    "passed": 184,
+    "failed": 0,
+    "ignored": 3,
+    "sha256": "c2561a9924e448e4e188e07f7e33f737bce91bcb05028a4abee73bd379559c8f"
+  },
+  "registry-only-final.txt": {
+    "suites": 12,
+    "passed": 88,
+    "failed": 0,
+    "ignored": 0,
+    "sha256": "b10ee0132b91d881e2bf2cdc4f74cbbf4b69137a1991d606ac13b9304bea54d8"
+  },
+  "std-only-tests.txt": {
+    "suites": 2,
+    "passed": 15,
+    "failed": 0,
+    "ignored": 0,
+    "sha256": "c624a7a0aab6bd0030eee7bf517dd15ccde6612ed1684cd29f120a6185851ec3"
+  },
+  "registry-env-final.txt": {
+    "suites": 24,
+    "passed": 141,
+    "failed": 0,
+    "ignored": 3,
+    "sha256": "eabab443e02d49aabfa0fb7bd94b9fb02dbcebea1f88298656041902835bfb5b"
+  },
+  "canonical": {
+    "checks": {
+      "reserved": "pass",
+      "tracing_contract_v2.rs": "pass",
+      "tracing_hint_bounds.rs": "pass",
+      "tracing_judge_concerns.rs": "pass"
+    },
+    "reserved": {
+      "passed": 148,
+      "failed": 0
+    },
+    "patch_sha256": "03aa139826be0e426a5b6a52f368051bdbf899112e96fbe14468102b4f28b486"
+  },
+  "no_default_check": {
+    "exit_code": 0
+  },
+  "rustfmt": {
+    "exit_code": 0
+  },
+  "git_diff_check": {
+    "exit_code": 0
+  }
+}

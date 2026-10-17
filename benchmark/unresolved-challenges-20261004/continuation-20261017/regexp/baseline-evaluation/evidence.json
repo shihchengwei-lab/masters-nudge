@@ -1,0 +1,57 @@
+{
+  "case": "regexp-404",
+  "patch_sha256": "05894ccad14d198435bdf54bee7afbaaef3dbcf1626c76962cc5f10ac0c276fa",
+  "evaluator_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28",
+  "checks": {
+    "reserved": "pass",
+    "regexp_contract.js": "pass",
+    "regexp_direction.js": "fail",
+    "regexp_judge_concerns.js": "fail"
+  },
+  "logs": [
+    {
+      "file": "environment-node.txt",
+      "sha256": "ca7be6ab6c020bdf84bb615e44480c2cea6462c94c05474131dd0e45e887f2bb",
+      "exit_code": 0
+    },
+    {
+      "file": "checkout.txt",
+      "sha256": "a6c2b75d2faf40ede13d3a2f2609f432d952fa9e454a7e12a3b773207bc487cd",
+      "exit_code": 0
+    },
+    {
+      "file": "apply.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "apply-tests.txt",
+      "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
+      "exit_code": 0
+    },
+    {
+      "file": "reserved.txt",
+      "sha256": "7f62cc97360289f2f278e6803196ab69bc1139b592262107f4002d5c2d6057ea",
+      "exit_code": 0
+    },
+    {
+      "file": "regexp_contract.js.txt",
+      "sha256": "aab25af04fe225bb4c691ddc514372dc08c9654210654dd3b3316ce44df58015",
+      "exit_code": 0
+    },
+    {
+      "file": "regexp_direction.js.txt",
+      "sha256": "2ceaddf812b8394c510cbfe4b0f6b1a2bbd686e7882652717bdc135882030344",
+      "exit_code": 0
+    },
+    {
+      "file": "regexp_judge_concerns.js.txt",
+      "sha256": "79b6be6659c17b3b2fdc69276af5ede0a136cd7f364c7be09e2d8c7350c18fa8",
+      "exit_code": 0
+    }
+  ],
+  "delivery_test_paths_replaced_by_fixed_suite": [
+    "tests/*"
+  ],
+  "elapsed_seconds": 29.562
+}

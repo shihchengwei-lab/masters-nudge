@@ -1,0 +1,4 @@
+PROBE_RESULT {"passed": true, "check": "functions"}
+
+/usr/local/lib/python3.11/site-packages/requests/__init__.py:109: RequestsDependencyWarning: urllib3 (2.8.0) or chardet (None)/charset_normalizer (3.1.0) doesn't match a supported version!
+  warnings.warn(

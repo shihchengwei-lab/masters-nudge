@@ -1,0 +1,18 @@
+{
+  "set_command": [
+    "<USER_HOME>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-plugin\\masters_nudge_cli.py",
+    "provider",
+    "set",
+    "openai",
+    "--model",
+    "gpt-6.1-sol"
+  ],
+  "set_output": "{\r\n  \"saved\": true,\r\n  \"path\": \"<STUDY_ROOT>\\\\remaining-continuations-20261017\\\\regexp\\\\run\\\\masters-nudge-data\\\\config.json\",\r\n  \"error\": \"\"\r\n}\r\n",
+  "get_output": "{\r\n  \"provider\": \"openai\",\r\n  \"model\": \"gpt-6.1-sol\",\r\n  \"source\": \"config\",\r\n  \"error\": \"\",\r\n  \"path\": \"<STUDY_ROOT>\\\\remaining-continuations-20261017\\\\regexp\\\\run\\\\masters-nudge-data\\\\config.json\"\r\n}\r\n",
+  "runtime": {
+    "model": "gpt-6.1-sol",
+    "reasoning": "xhigh",
+    "strict": true
+  }
+}

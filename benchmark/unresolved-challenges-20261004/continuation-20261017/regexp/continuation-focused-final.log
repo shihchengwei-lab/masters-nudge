@@ -1,0 +1,135 @@
+(node:42020) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404/tests/lib/rules/no-dupe-disjunctions.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <STUDY_ROOT>\remaining-continuations-20261017\regexp\calibration\cases\regexp-404\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  no-dupe-disjunctions
+    valid
+      √ /^\s*(eslint-(?:en|dis)able)(?:\s+(\S|\S[\s\S]*\S))?\s*$/u
+      √ /a|b/
+      √ /(a|b)/
+      √ /(?:a|b)/
+      √ /(?:js|json)$/
+      √ /(?:js|jso?n?)$/
+      √ /(?:js|json)abc/
+      √ /(?:js|json)?abc/
+      √ /(?:yml|ya?ml)$/
+      √ /(?:yml|ya?ml)/
+      √ /<("[^"]*"|'[^']*'|[^'">])*>/g
+      √ /c+|[a-f]/
+      √ /b+(?:\w+|[+-]?\d+)/
+      √ /A+_|A*_/
+      √ /(?:A+|A*)_/
+      √ /\d*\.\d+_|\d+\.\d*_/
+      √ /\d*\.\d+|\d+\.\d*/
+      √ /(?:\d*\.\d+|\d+\.\d*)_/
+      √ 
+            const a = /a|aa/.source;
+            const b = RegExp(`\b(${a})\b`);
+            
+      √ 
+            const a = /a|aa/.source;
+            const b = RegExp(`\b(${a})\b`);
+            
+      √ 
+            const a = /a|aa/.source;
+            const b = RegExp(`\b(${a})\b`);
+            
+    invalid
+      √ /a|a/
+      √ /(a|a)/
+      √ /(?:a|a)/
+      √ /(?=[a-c])|(?=a)/
+      √ /(?=a|a)/
+      √ /(?<=a|a)/
+      √ /(?:[ab]|[ab])/
+      √ /(?:[ab]|[ba])/
+      √ /(?:[\da-z]|[a-z\d])/
+      √ /((?:ab|ba)|(?:ab|ba))/
+      √ /((?:ab|ba)|(?:ba|ab))/
+      √ /(?:(a)|(a))/
+      √ /(?:a|ab)/
+      √ /(?:.|a|b)/
+      √ /.|abc/
+      √ /a|abc/
+      √ /\w|abc|123|_|[A-Z]|\$| /
+      √ /\W|abc|123|_|[A-Z]|\$| /
+      √ /\s|abc|123|_|[A-Z]|\$| /
+      √ /\S|abc|123|_|[A-Z]|\$| /
+      √ /[^\S]|abc|123|_|[A-Z]|\$| /
+      √ /[^\r]|./
+      √ /\s|\S|./
+      √ /(?:ya?ml|yml)$/
+      √ /(?:ya?ml|yml)/
+      √ /(?:\p{Lu}\p{L}*|[A-Z]\w*):/u
+      √ /(?:\p{Lu}\p{L}*|[A-Z]\w*)/u
+      √ /b+(?:\w+|[+-]?\d+)/
+      √ /FOO|foo(?:bar)?/i
+      √ /foo(?:bar)?|foo/
+      √ /(?=[\t ]+[\S]{1,}|[\t ]+['"][\S]|[\t ]+$|$)/
+      √ /\w+(?:\s+(?:\S+|"[^"]*"))*/
+      √ /\b(?:\d|foo|\w+)\b/
+      √ /(?:\d|foo|\w+)a/
+      √ /\d|[a-z]|_|\w/i
+      √ /((?:ab|ba)|(?:ba|ac))/
+      √ /a+|a|b|c/
+      √ /a+|(?:a|b|c)/
+      √ /a+|[abc]/
+      √ /a+|[a-c]/
+      √ /a|aa|ba/
+      √ /a|(a|b)a/
+      √ /a|(?:(a)|b)a/
+      √ /a|[ab]a/
+      √ 
+            const partialPattern = /(?:ac?|\wb?)a/ // overlap but not exp. backtracking
+            const bar = RegExp("^(?:"+partialPattern.source+")+$") // exp backtracking
+            
+      √ 
+            const partialPattern = /(?:ac?|\wb?)a/ // overlap but not exp. backtracking
+            const bar = RegExp("^(?:"+partialPattern.source+")+$") // exp backtracking
+            
+      √ 
+            const partialPattern = /(?:ac?|\wb?)a/ // overlap but not exp. backtracking
+            const bar = RegExp("^(?:"+partialPattern.source+")+$") // exp backtracking
+            
+      √ 
+            const partialPattern = /(?:ac?|\wb?)a/ // overlap but not exp. backtracking
+            const bar = RegExp("^(?:"+partialPattern.source+")+$") // exp backtracking
+            
+      √ 
+            const foo1 = /(?:ac?|\wb?)a/.source;
+            const bar = RegExp(`^(?:${foo1})+$`);
+            
+      √ 
+            const foo2 = /(?:ac?|\wb?)a/.source;
+            const bar = RegExp(`^(?:${foo2})+$`);
+            
+      √ 
+            const foo3 = /(?:ac?|\wb?)a/.source;
+            const bar = RegExp(`^(?:${foo3})+$`);
+            
+      √ 
+            const partialPattern = /(?:(?:ac?|\wb?)a)+/ // overlap and backtracking.
+            const bar = RegExp("^"+partialPattern.source+"$")
+            
+      √ 
+            const foo4 = /(?:ac?|\wb?)a/ // overlap exp.
+            const bar = RegExp("^(?:(?:ac?|\\wb?)a)+$") // overlap exp backtracking
+            
+      √ 
+            const a = /a|aa/.source;
+            const b = RegExp(`\b(${a})\b`);
+            
+      √ 
+            const a = /a|a/.source;
+            const b = RegExp(`\b(${a})\b`);
+            
+      √ 
+            const partial = /a?|a+/.source;
+            const whole = RegExp(`^(?:${partial})+$`);
+            
+
+
+  77 passing (170ms)
+

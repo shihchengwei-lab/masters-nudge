@@ -1,0 +1,47 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.38s
+     Running tests\filter_continuation_regressions.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-625f71938535e096.exe)
+
+running 8 tests
+test wrapped_global_hint_still_bounds_independent_consumers ... ok
+test dynamic_reload_invalidates_pending_decisions_with_unchanged_interest ... ok
+test wrapped_pure_global_filter_does_not_add_a_consumer ... ok
+test custom_subscriber_updates_current_before_reentrant_callbacks ... ok
+test unrelated_cache_rebuilds_preserve_pending_dynamic_decisions ... ok
+test custom_subscriber_current_view_uses_entered_spans_instead_of_parents ... ok
+test registry_current_view_uses_entered_spans_instead_of_parents ... ok
+test wrapped_global_veto_survives_local_acceptance_and_rejection ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\per_layer_filters.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\per_layer_filters-00bf2200dc7f2a00.exe)
+
+running 16 tests
+test a_subscriber_wrapper_can_still_veto_its_layered_inner_subscriber ... ok
+test explicit_callsite_decisions_are_stable_but_sometimes_is_dynamic ... ok
+test static_callsite_interests_cache_only_agreeing_branches ... ok
+test max_level_hints_combine_branches_and_enclosing_bounds ... ok
+test absent_layers_do_not_enable_rejected_items ... ok
+test nested_rejection_disables_items_when_no_consumer_accepts ... ok
+test reload_invalidates_pending_decisions_for_the_first_event ... ok
+test replacing_a_whole_filtered_layer_invalidates_its_pending_decision ... ok
+test dynamic_filters_follow_context_and_changing_state ... ok
+test nested_filters_restrict_subtrees_and_preserve_ancestor_views ... ok
+test global_filters_do_not_count_as_consumers ... ok
+test existing_custom_span_data_gets_the_same_filtered_view ... ok
+test static_filters_are_independent_at_repeated_callsites ... ok
+test unfiltered_siblings_and_global_filters_keep_their_semantics ... ok
+test boxed_layers_downcast_and_reload_filters ... ok
+test explicit_lookup_hides_a_span_but_scope_keeps_its_visible_ancestors ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

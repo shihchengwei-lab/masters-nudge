@@ -1,0 +1,17 @@
+{
+  "task": "tracing-1523 L2 continuation, informed by historical failures",
+  "created_utc": "2026-10-17T02:04:20.268493+00:00",
+  "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+  "initial_patch": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\historical-materials\\L2\\final.patch",
+  "initial_patch_sha256": "171a9a4c89db04d5f80f0d9ce330392e0c7cfa0061e6a751993a318795120895",
+  "actor_model": "gpt-6.1-sol",
+  "actor_reasoning": "xhigh",
+  "provider_model": "gpt-6.1-sol",
+  "provider_reasoning": "xhigh",
+  "actor_timeout_seconds": null,
+  "historical_trial_root": "<STUDY_ROOT>\\astra-max-dual-tracing-2trial-unlimited-20261004",
+  "source_read_only": "<SOURCE_ROOT>\\round-10-calibration\\cases\\tracing-1523",
+  "work": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\calibration\\cases\\tracing-1523",
+  "binary_sha256": "34549ded6e2aee87c911c62d025e52e26c488683d0f489cd68f756baef1a6df6",
+  "evaluator_manifest_sha256": "f37b57bb8f488be4f876268125f6d1994ad03691e83cab740fdb2047bb726a28"
+}

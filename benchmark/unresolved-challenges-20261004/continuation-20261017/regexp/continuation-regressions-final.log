@@ -1,0 +1,93 @@
+(node:20304) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404/tests/lib/rules/no-dupe-disjunctions-continuation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to <STUDY_ROOT>\remaining-continuations-20261017\regexp\calibration\cases\regexp-404\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  no-dupe-disjunctions continuation
+    valid
+      √ /(?:a+|([ab]))(?!\1)/
+      √ /(?:a+|(?<letter>[ab]))(?!\k<letter>)/
+      √ /(?:a+|(?:(a)|b))(?!\1)/
+      √ /(?:a+|(?:([ab])|c))(?!\1)/
+      √ /(?:(a)+|[ab])(?=\1)/
+      √ /(?:a+x|[ab](x))(?!\1)/
+      √ /(?:[abc]*a[abc]*|(?:(?:[ab]|(c))){2})(?!\1)/
+      √ const fragment = /a|[ab]a/.source
+    invalid
+      √ /(?:a+|(?:[ab]|(c)))\1/
+      √ /(?:(?:a+|(c))|[ab])\1/
+      √ /(?:(?:a+|(c)){1,2}|[ab])\1/
+      √ /(?:(c)?a+|[ab])\1/
+      √ /\1(?:(?:a+|(c))|[ab]c)/
+      √ /(?<=(?:(?:a+|(c))|c[ab])\1)/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[abc])+/
+      √ /(?:a+|[ab])+$/
+      √ const fragment = /a+|[abc]/.source
+      √ const fragment = /a+|[abc]/.source
+      √ /ab|(?:ab|a)/
+      √ /(?:ab|(?:ab|a))c/
+      √ const fragment = /ab|(?:ab|a)/.source
+      √ /ab|(?:(ab)|a)/
+      √ /a+|(?:(a)|b)/
+      √ /(?:a+|([ab]))(?!\1)|c+|[cd]/
+
+  no-dupe-disjunctions capture dependency witnesses
+    √ preserves the necessary path in /(?:a+|([ab]))(?!\1)/
+    √ preserves the necessary path in /(?:(a)+|[ab])(?=\1)/
+    √ preserves the necessary path in /(?:a+x|[ab](x))(?!\1)/
+    √ keeps capture dependencies from other quantifier iterations
+
+  no-dupe-disjunctions nested elements
+    valid
+      √ /c+|[a-f]/
+      √ /a+|[^abc]/
+      √ /a+|[ab]+/
+      √ /(?:a+|[ab]{2})$/
+      √ /a.|.a|[ab]{1,2}/
+      √ /aa+|[ab]{2}/
+      √ /a+|(?:[ab]{2}){2}/
+      √ /(?:a|[ab]a)b/
+      √ /[ab]a|a/
+      √ /(?:ab|ac)|(?:ad|ae)/
+      √ /a+|(?:ba|c)/
+      √ const fragment = /a|[ab]a/.source
+    invalid
+      √ /😀+|[😀x]/u
+      √ /a+|(?:(a)|b)c?/
+      √ /a+|(?:a|b)?/
+      √ const fragment = /a+|[ab]c?/.source
+      √ const fragment = /a+|[ab]c?/.source
+      √ /a.|.a|[ab]{2}/
+      √ /a.|.a|(?:a|b){2}/
+      √ /a|[ab]/
+      √ /ab|a[bc]/
+      √ /a+|(?:aa|ab|b)/
+      √ /a+|[abc]/
+      √ /a+|[a-f]/
+      √ /f+|[a-f]/
+      √ /a|[ab]a/
+      √ /a+|[abc]/
+      √ /a+|(?:a|b)c?/
+      √ /a+|(?:(?:a)|b)/
+      √ /a+|(?:(a)|b)/
+      √ /a+|([ab])/
+      √ /[a-z]+|[a-z!]/
+      √ /\d+|[\d!]/
+      √ /a+|b+|[abc]/i
+      √ /(?<=a|[ab]a)/
+      √ /(?<=a|a[ab])/
+      √ const fragment = /a|[ab]a/.source
+
+
+  74 passing (193ms)
+

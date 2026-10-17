@@ -1,0 +1,6 @@
+{
+  "source": "<SOURCE_ROOT>\\round-10-calibration\\cases\\fb-metaflow-stubs",
+  "created_utc": "2026-10-17T02:33:33.663154+00:00",
+  "head": "d7c0640016ec199a0620a296fbb45f3fc1ebadb7",
+  "status": " M metaflow/cmd/develop/stub_generator.py\n?? test/cmd/develop/test_stub_generator.py\n?? test/unit/test_stub_generator_runtime.py\n"
+}

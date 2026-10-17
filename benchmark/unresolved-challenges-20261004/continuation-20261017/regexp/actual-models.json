@@ -1,0 +1,42 @@
+[
+  {
+    "observed_utc": "2026-10-17T02:35:57.0949049Z",
+    "pid": 39208,
+    "parent_pid": 39400,
+    "executable": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe -c project_doc_max_bytes=0 -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" --enable hooks --disable plugins -c mcp_servers.masters_nudge={\\\"command\\\"=\\\"python\\\",\\\"args\\\"=[\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/frozen-plugin/mcp_entry.py\\\"],\\\"enabled\\\"=true,\\\"enabled_tools\\\"=[\\\"review_patch\\\"],\\\"omit_tools_from\\\"=[\\\"code_mode\\\",\\\"deferred\\\"],\\\"default_tools_approval_mode\\\"=\\\"approve\\\",\\\"startup_timeout_sec\\\"=30,\\\"tool_timeout_sec\\\"=1320,\\\"env\\\"={\\\"PYTHONIOENCODING\\\"=\\\"utf-8\\\"},\\\"env_vars\\\"=[\\\"HOME\\\",\\\"LOCALAPPDATA\\\",\\\"MASTERS_NUDGE_ACTIVE\\\",\\\"MASTERS_NUDGE_DATA_DIR\\\",\\\"MASTERS_NUDGE_RUNTIME_DIR\\\",\\\"MASTERS_NUDGE_TEST_MODE\\\",\\\"PATH\\\",\\\"USERPROFILE\\\"]} -c hooks.PostToolUse=[{\\\"matcher\\\"=\\\"^apply_patch$\\\",\\\"hooks\\\"=[{\\\"type\\\"=\\\"mcp_tool\\\",\\\"server\\\"=\\\"masters_nudge\\\",\\\"tool\\\"=\\\"review_patch\\\",\\\"input\\\"={\\\"hook_event_name\\\"=\\\"PostToolUse\\\",\\\"session_id\\\"=\\\"${session_id}\\\",\\\"turn_id\\\"=\\\"${turn_id}\\\",\\\"cwd\\\"=\\\"${cwd}\\\",\\\"transcript_path\\\"=\\\"${transcript_path}\\\",\\\"tool_name\\\"=\\\"${tool_name}\\\",\\\"tool_use_id\\\"=\\\"${tool_use_id}\\\",\\\"tool_input\\\"=\\\"${tool_input}\\\",\\\"tool_response\\\"=\\\"${tool_response}\\\"},\\\"timeout\\\"=1320}]}] -c \"hooks.UserPromptSubmit=[{\\\"hooks\\\"=[{\\\"type\\\"=\\\"command\\\",\\\"command\\\"=\\\"sh \\\\\\\"${PLUGIN_ROOT}/hooks/run_python.sh\\\\\\\" \\\\\\\"${PLUGIN_ROOT}/hook_entry.py\\\\\\\" --host codex_cli\\\",\\\"commandWindows\\\"=\\\"& \\\\\\\"$env:PLUGIN_ROOT\\\\hooks\\\\run_python.cmd\\\\\\\" \\\\\\\"$env:PLUGIN_ROOT\\\\hook_entry.py\\\\\\\" --host codex_cli\\\",\\\"timeout\\\"=120}]}]\" exec --ignore-user-config --ignore-rules --dangerously-bypass-hook-trust --skip-git-repo-check --ephemeral --json -s danger-full-access -m gpt-6.1-sol -C <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\calibration\\cases\\regexp-404 -o <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\run\\actor-final.txt -",
+    "role": "actor",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:38:35.3247463Z",
+    "pid": 22360,
+    "parent_pid": 36372,
+    "executable": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404\\\",\\\"--budget\\\",\\\"4482\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/temp/masters-nudge-provider-peo54mz5/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\temp\\masters-nudge-provider-peo54mz5\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:41:42.5115783Z",
+    "pid": 34260,
+    "parent_pid": 36372,
+    "executable": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404\\\",\\\"--budget\\\",\\\"5025\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/temp/masters-nudge-provider-t88ulcca/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\temp\\masters-nudge-provider-t88ulcca\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  },
+  {
+    "observed_utc": "2026-10-17T02:43:49.0313059Z",
+    "pid": 34276,
+    "parent_pid": 36372,
+    "executable": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe",
+    "command_line": "<STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-cli\\codex.exe -c features.shell_tool=false -c features.view_image=false -c features.plugins=false -c features.multi_agent=false -c model_reasoning_effort=\\\"xhigh\\\" -c web_search=\\\"disabled\\\" -c project_doc_max_bytes=0 -c mcp_servers.readrepo.command=\\\"<USER_HOME>/AppData/Local/Programs/Python/Python312/python.exe\\\" -c mcp_servers.readrepo.args=[\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/frozen-plugin/masters_nudge/read_only_repo_mcp.py\\\",\\\"--root\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/calibration/cases/regexp-404\\\",\\\"--budget\\\",\\\"691\\\",\\\"--audit\\\",\\\"<STUDY_ROOT>/remaining-continuations-20261017/regexp/temp/masters-nudge-provider-pj23d4ty/reads.jsonl\\\"] -c mcp_servers.readrepo.env={PYTHONIOENCODING=\\\"utf-8\\\"} -c mcp_servers.readrepo.required=true -c mcp_servers.readrepo.enabled_tools=[\\\"search_repo\\\",\\\"read_file\\\"] -c mcp_servers.readrepo.default_tools_approval_mode=\\\"approve\\\" exec --skip-git-repo-check --ephemeral --ignore-user-config --json -s read-only -m gpt-6.1-sol --output-schema <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\frozen-plugin\\nudge-schema.json -o <STUDY_ROOT>\\remaining-continuations-20261017\\regexp\\temp\\masters-nudge-provider-pj23d4ty\\output.json -",
+    "role": "provider",
+    "expected_model_present": true,
+    "expected_effort_present": true
+  }
+]

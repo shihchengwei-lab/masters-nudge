@@ -1,0 +1,50 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.92s
+     Running tests\filter_continuation_regressions.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-f775b03b8884b8bb.exe)
+
+running 5 tests
+
+thread 'custom_subscriber_current_view_uses_entered_spans_instead_of_parents' (39696) panicked at tracing-subscriber\tests\filter_continuation_regressions.rs:186:5:
+assertion `left == right` failed
+  left: [View { current: None, lookup: None, scope: [] }, View { current: Some("not_entered"), lookup: Some("not_entered"), scope: ["not_entered"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("not_entered"), lookup: Some("not_entered"), scope: ["not_entered"] }, View { current: None, lookup: None, scope: [] }]
+ right: [View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: None, lookup: None, scope: [] }, View { current: None, lookup: None, scope: [] }]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test custom_subscriber_current_view_uses_entered_spans_instead_of_parents ... FAILED
+
+thread 'registry_current_view_uses_entered_spans_instead_of_parents' (39204) panicked at tracing-subscriber\tests\filter_continuation_regressions.rs:186:5:
+assertion `left == right` failed
+  left: [View { current: None, lookup: None, scope: [] }, View { current: Some("not_entered"), lookup: Some("not_entered"), scope: ["not_entered"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("not_entered"), lookup: Some("not_entered"), scope: ["not_entered"] }, View { current: None, lookup: None, scope: [] }]
+ right: [View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: Some("other"), lookup: Some("other"), scope: ["other"] }, View { current: None, lookup: None, scope: [] }, View { current: None, lookup: None, scope: [] }]
+test registry_current_view_uses_entered_spans_instead_of_parents ... FAILED
+
+thread 'wrapped_global_hint_still_bounds_independent_consumers' (39424) panicked at tracing-subscriber\tests\filter_continuation_regressions.rs:98:5:
+assertion `left == right` failed
+  left: None
+ right: Some(LevelFilter::INFO)
+test wrapped_global_hint_still_bounds_independent_consumers ... FAILED
+
+thread 'wrapped_global_veto_survives_local_acceptance_and_rejection' (22524) panicked at tracing-subscriber\tests\filter_continuation_regressions.rs:79:21:
+assertion failed: tracing::info_span!(target: "blocked", "blocked_span").is_disabled()
+test wrapped_global_veto_survives_local_acceptance_and_rejection ... FAILED
+test wrapped_pure_global_filter_does_not_add_a_consumer ... ok
+
+failures:
+
+failures:
+    custom_subscriber_current_view_uses_entered_spans_instead_of_parents
+    registry_current_view_uses_entered_spans_instead_of_parents
+    wrapped_global_hint_still_bounds_independent_consumers
+    wrapped_global_veto_survives_local_acceptance_and_rejection
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p tracing-subscriber --test filter_continuation_regressions`

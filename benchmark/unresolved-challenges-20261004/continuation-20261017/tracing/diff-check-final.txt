@@ -1,0 +1,9 @@
+warning: in the working copy of 'tracing-subscriber/src/filter/layer_filters.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/src/layer.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/src/registry/mod.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/src/registry/sharded.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/src/registry/stack.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/src/reload.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/tests/contract_tracing_contract_v2_rs.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/tests/contract_tracing_hint_bounds_rs.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tracing-subscriber/tests/filter_continuation_regressions.rs', LF will be replaced by CRLF the next time Git touches it

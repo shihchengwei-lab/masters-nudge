@@ -1,0 +1,35 @@
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\calibration\cases\tracing-1523\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.23s
+     Running tests\filter_continuation_regressions.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\actor-build\debug\deps\filter_continuation_regressions-f775b03b8884b8bb.exe)
+
+running 6 tests
+test custom_subscriber_current_view_uses_entered_spans_instead_of_parents ... ok
+
+thread 'custom_subscriber_updates_current_before_reentrant_callbacks' (32016) panicked at tracing-subscriber\tests\filter_continuation_regressions.rs:275:5:
+assertion `left == right` failed
+  left: [View { current: None, lookup: None, scope: [] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: None, lookup: None, scope: [] }]
+ right: [View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: Some("visible"), lookup: Some("visible"), scope: ["visible"] }, View { current: None, lookup: None, scope: [] }]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test custom_subscriber_updates_current_before_reentrant_callbacks ... FAILED
+test registry_current_view_uses_entered_spans_instead_of_parents ... ok
+test wrapped_global_hint_still_bounds_independent_consumers ... ok
+test wrapped_global_veto_survives_local_acceptance_and_rejection ... ok
+test wrapped_pure_global_filter_does_not_add_a_consumer ... ok
+
+failures:
+
+failures:
+    custom_subscriber_updates_current_before_reentrant_callbacks
+
+test result: FAILED. 5 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p tracing-subscriber --test filter_continuation_regressions`

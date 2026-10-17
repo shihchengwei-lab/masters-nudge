@@ -1,0 +1,348 @@
+
+running 89 tests
+test filter::env::directive::test::directive_ordering_by_field_num ... ignored
+test field::delimited::test::delimited_new_visitor ... ok
+test field::delimited::test::delimited_visitor ... ok
+test filter::env::directive::test::parse_directives_with_invalid_span_chars ... ok
+test filter::env::directive::test::parse_directives_invalid_crate ... ok
+test filter::env::directive::test::parse_directives_global_bare_warn_mixed ... ok
+test filter::env::directive::test::parse_directives_invalid_level ... ok
+test filter::env::directive::test::parse_directives_global_bare_warn_uc ... ok
+test filter::env::directive::test::parse_directives_string_level ... ok
+test filter::env::directive::test::parse_directives_empty_level ... ok
+test filter::env::directive::test::parse_directives_global_bare_warn_lc ... ok
+test filter::env::directive::test::parse_directives_valid ... ok
+test filter::env::directive::test::parse_directives_with_dash_in_target_name ... ok
+test filter::env::directive::test::parse_directives_ralith_mixed ... ok
+test filter::env::directive::test::parse_directives_ralith ... ok
+test filter::env::directive::test::parse_directives_global ... ok
+test filter::env::directive::test::parse_directives_ralith_uc ... ok
+test filter::env::directive::test::directive_ordering_by_target_len ... ok
+test filter::env::directive::test::parse_level_directives ... ok
+test filter::env::directive::test::parse_numeric_level_directives ... ok
+test filter::env::directive::test::parse_uppercase_level_directives ... ok
+test filter::env::directive::test::parse_directives_with_dash_in_span_name ... ok
+test filter::env::directive::test::parse_directives_with_special_characters_in_span_name ... ok
+test filter::env::directive::test::parse_directives_valid_with_spans ... ok
+test filter::env::directive::test::directive_ordering_by_span ... ok
+test filter::env::tests::callsite_off ... ok
+test filter::env::tests::callsite_enabled_includes_span_directive_multiple_fields ... ok
+test filter::env::directive::test::directive_ordering_uses_lexicographic_when_equal ... ok
+test filter::env::tests::callsite_enabled_includes_span_directive ... ok
+test fmt::fmt_layer::test::fmt_layer_downcasts_to_parts ... ok
+test fmt::fmt_layer::test::fmt_layer_downcasts ... ok
+test filter::env::tests::callsite_enabled_no_span_directive ... ok
+test fmt::fmt_layer::test::is_lookup_span ... ok
+test fmt::fmt_layer::test::impls ... ok
+test fmt::format::json::test::json_disabled_span_list_event ... ok
+test fmt::format::json::test::json ... ok
+test fmt::format::json::test::json_disabled_current_span_event ... ok
+test fmt::fmt_layer::test::synthesize_span_close ... ok
+test fmt::format::json::test::json_nested_span ... ok
+test fmt::format::json::test::json_flattened_event ... ok
+test filter::env::tests::callsite_enabled_includes_span_directive_field ... ok
+test fmt::format::test::format_nanos ... ok
+test fmt::format::test::fmt_span_combinations ... ok
+test fmt::fmt_layer::test::synthesize_span_none ... ok
+test fmt::fmt_layer::test::synthesize_span_close_no_timing ... ok
+test fmt::format::test::disable_everything ... ok
+test fmt::format::json::test::json_no_span ... ok
+test fmt::fmt_layer::test::synthesize_span_active ... ok
+test fmt::format::test::overridden_parents ... ok
+test fmt::fmt_layer::test::synthesize_span_full ... ok
+test fmt::format::test::with_ansi_false ... ok
+test fmt::format::test::with_ansi_true ... ok
+test fmt::format::test::without_level ... ok
+test fmt::test::is_lookup_span ... ok
+test fmt::test::subscriber_downcasts ... ok
+test fmt::fmt_layer::test::make_writer_based_on_meta ... ok
+test fmt::test::subscriber_downcasts_to_parts ... ok
+test fmt::format::test::overridden_parents_in_scope ... ok
+test layer::tests::downcasts_to_layer ... ok
+test layer::tests::downcasts_to_subscriber ... ok
+test fmt::format::json::test::json_span_event_with_no_fields ... ok
+test fmt::format::json::test::json_span_event_show_correct_context ... ok
+test layer::tests::three_layers_are_subscriber ... ok
+test filter::env::tests::roundtrip ... ok
+test layer::tests::layer_is_subscriber ... ok
+test layer::tests::two_layers_are_subscriber ... ok
+test registry::extensions::tests::clear_drops_elements ... ok
+test registry::extensions::tests::clear_retains_capacity ... ok
+test registry::extensions::tests::test_extensions ... ok
+test fmt::test::impls ... ok
+test fmt::writer::test::combinators_or_else_chain ... ok
+test registry::stack::tests::pop_first_span ... ok
+test registry::stack::tests::pop_last_span ... ok
+test registry::tests::spanref_scope_fromroot_iteration_order ... ok
+test fmt::writer::test::combinators_and ... ok
+test fmt::writer::test::combinators_level_filters ... ok
+test fmt::writer::test::custom_writer_closure ... ok
+test fmt::writer::test::custom_writer_struct ... ok
+test registry::sharded::tests::child_closes_grandparent ... ok
+test registry::sharded::tests::multiple_layers_can_access_closed_span ... ok
+test registry::sharded::tests::single_layer_can_access_closed_span ... ok
+test fmt::format::json::test::record_works ... ok
+test layer::tests::context_event_span ... ok
+test registry::sharded::tests::spans_are_removed_from_registry ... ok
+test registry::sharded::tests::child_closes_parent ... ok
+test fmt::writer::test::combinators_or_else ... ok
+test registry::sharded::tests::spans_are_only_closed_when_the_last_ref_drops ... ok
+test registry::sharded::tests::span_enter_guards_are_dropped_out_of_order ... ok
+test registry::tests::spanref_scope_iteration_order ... ok
+
+test result: ok. 88 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 18 tests
+test downcasts_to_layer ... ok
+test registry_tests::max_level_hints::plf_only_unhinted_nested_outer ... ok
+test registry_tests::max_level_hints::plf_only_picks_max ... ok
+test registry_tests::max_level_hints::many_plf_only_picks_max ... ok
+test downcasts_to_subscriber ... ok
+test registry_tests::max_level_hints::mixed_interleaved ... ok
+test registry_tests::max_level_hints::mixed_with_unfiltered ... ok
+test layer_is_subscriber ... ok
+test registry_tests::max_level_hints::nested_plf_only_picks_max ... ok
+test registry_tests::max_level_hints::unhinted_nested_inner ... ok
+test three_layers_are_subscriber ... ok
+test registry_tests::max_level_hints::unhinted_nested_inner_mixed ... ok
+test two_layers_are_subscriber ... ok
+test registry_tests::context_event_span ... ok
+test registry_tests::max_level_hints::plf_only_unhinted ... ok
+test registry_tests::max_level_hints::mixed_layered ... ok
+test registry_tests::max_level_hints::plf_only_unhinted_nested_inner ... ok
+test registry_tests::max_level_hints::mixed_with_unfiltered_layered ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test mixed_layered ... ok
+test layered_layer_filters ... ok
+test out_of_order ... ok
+test layer_filters ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test duplicate_spans ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test field_filter_events ... ignored
+test field_filter_spans ... ignored
+test record_after_created ... ok
+
+test result: ok. 1 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test level_filter_event ... ok
+test add_directive_enables_event ... ok
+test not_order_dependent ... ok
+test level_filter_event_with_target ... ok
+test span_name_filter_is_dynamic ... ok
+test same_name_spans ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test log_is_enabled ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test fmt_sets_max_level_hint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test layered_layer_filters ... ok
+test mixed_layered ... ok
+test out_of_order ... ok
+test layer_filters ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test layer_filter_interests_are_cached ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 10 tests
+test global_filter_interests_are_cached ... ok
+test global_filters_affect_layer_filters ... ok
+test basic_layer_filters_spans ... ok
+test basic_layer_filters ... ok
+test global_filters_layers_still_work ... ok
+test trees::basic_trees ... ok
+test filter_scopes::filters_span_scopes ... ok
+test filter_fn ... ok
+test filter_scopes::filters_interleaved_span_scopes ... ok
+test trees::filter_span_scopes ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 1 test
+test multiple_layer_filter_interests_are_cached ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test registry_sets_max_level_hint ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test future_with_subscriber ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test same_length_targets ... ok
+test same_num_fields_event ... ok
+test same_num_fields_and_name_len ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test layer_filters ... ok
+test out_of_order ... ok
+test layered_layer_filters ... ok
+test mixed_layered ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test init_ext_works ... ok
+test builders_are_init_ext ... ok
+test layered_is_init_ext ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+warning: tracing-opentelemetry\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-opentelemetry` (manifest) generated 1 warning
+warning: tracing-subscriber\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing-subscriber` (manifest) generated 1 warning
+warning: tracing\Cargo.toml: `default_features` is deprecated in favor of `default-features` and will not work in the 2024 edition
+(in the `criterion` dependency)
+warning: `tracing` (manifest) generated 1 warning
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling syn v1.0.109
+   Compiling lazy_static v1.5.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling windows-link v0.2.1
+   Compiling autocfg v1.5.1
+   Compiling serde v1.0.229
+   Compiling num-traits v0.2.19
+   Compiling memchr v2.8.3
+   Compiling crossbeam-epoch v0.9.21
+   Compiling winapi v0.3.9
+   Compiling zmij v1.0.23
+   Compiling tracing-core v0.1.19 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-core)
+   Compiling serde_json v1.0.151
+   Compiling itoa v1.0.18
+   Compiling crossbeam-deque v0.8.8
+   Compiling windows-sys v0.61.2
+   Compiling rayon-core v1.13.0
+   Compiling cfg-if v1.0.5
+   Compiling regex-syntax v0.8.11
+   Compiling either v1.18.0
+   Compiling regex-automata v0.4.18
+   Compiling winapi-util v0.1.11
+   Compiling tracing-attributes v0.1.15 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-attributes)
+   Compiling pin-project-lite v0.2.17
+   Compiling unicode-width v0.1.14
+   Compiling plotters-backend v0.3.7
+   Compiling regex-syntax v0.6.29
+   Compiling regex-automata v0.1.10
+   Compiling plotters-svg v0.3.7
+   Compiling textwrap v0.11.0
+   Compiling tracing v0.1.26 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing)
+   Compiling same-file v1.0.6
+   Compiling regex v1.13.1
+   Compiling itertools v0.10.5
+   Compiling csv-core v0.1.13
+   Compiling syn v3.0.6
+   Compiling bitflags v1.3.2
+   Compiling ryu v1.0.23
+   Compiling log v0.4.34
+   Compiling cast v0.3.0
+   Compiling half v1.8.3
+   Compiling serde_cbor v0.11.2
+   Compiling criterion-plot v0.4.5
+   Compiling tracing-log v0.1.2 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-log)
+   Compiling csv v1.4.0
+   Compiling clap v2.34.0
+   Compiling serde_derive v1.0.229
+   Compiling walkdir v2.5.0
+   Compiling rayon v1.12.0
+   Compiling plotters v0.3.7
+   Compiling matchers v0.0.1
+   Compiling tinytemplate v1.2.1
+   Compiling thread_local v1.1.10
+   Compiling atty v0.2.14
+   Compiling ansi_term v0.12.1
+   Compiling chrono v0.4.45
+   Compiling tracing-serde v0.1.2 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-serde)
+   Compiling tokio-macros v0.2.6
+   Compiling sharded-slab v0.1.7
+   Compiling slab v0.4.12
+   Compiling oorandom v11.1.5
+   Compiling smallvec v1.16.2
+   Compiling bytes v0.5.6
+   Compiling pin-project-lite v0.1.12
+   Compiling tokio v0.2.25
+   Compiling criterion v0.3.6
+   Compiling tracing-futures v0.2.5 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-futures)
+   Compiling tracing-subscriber v0.2.20 (<STUDY_ROOT>\tracing-l2-continuation-20261017\baseline-evaluation\checkout\tracing-subscriber)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 10s
+     Running unittests src\lib.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\tracing_subscriber-246e4e438881e184.exe)
+     Running tests\benchmark_public_layer_tests.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\benchmark_public_layer_tests-285108b9fa4fb63a.exe)
+     Running tests\cached_layer_filters_dont_break_other_layers.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\cached_layer_filters_dont_break_other_layers-f5a57ee1312d51de.exe)
+     Running tests\duplicate_spans.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\duplicate_spans-ba1f1565ffc438c9.exe)
+     Running tests\field_filter.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\field_filter-2e32bda78308c964.exe)
+     Running tests\filter.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\filter-5c8e4447a821b972.exe)
+     Running tests\filter_log.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\filter_log-d13b5c6b24ef6e88.exe)
+     Running tests\fmt_max_level_hint.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\fmt_max_level_hint-cc5cdf4831a496e4.exe)
+     Running tests\hinted_layer_filters_dont_break_other_layers.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\hinted_layer_filters_dont_break_other_layers-1c084fa62b6da58b.exe)
+     Running tests\layer_filter_interests_are_cached.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\layer_filter_interests_are_cached-f9be2e5e32fa058b.exe)
+     Running tests\layer_filters\main.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\layer_filters-c2bf1c5e52dc4494.exe)
+     Running tests\multiple_layer_filter_interests_cached.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\multiple_layer_filter_interests_cached-d178fd243b015602.exe)
+     Running tests\registry_max_level_hint.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\registry_max_level_hint-c586eb63680190a1.exe)
+     Running tests\registry_with_subscriber.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\registry_with_subscriber-441cccd7b9003fb7.exe)
+     Running tests\reload.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\reload-d6c148586404f4d2.exe)
+     Running tests\same_len_filters.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\same_len_filters-64aecd694726b42c.exe)
+     Running tests\support.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\support-31a56a025d6464a6.exe)
+     Running tests\unhinted_layer_filters_dont_break_other_layers.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\unhinted_layer_filters_dont_break_other_layers-b8e90b8fbc1aa3cd.exe)
+     Running tests\utils.rs (<STUDY_ROOT>\tracing-l2-continuation-20261017\round-10-evaluation-builds\tracing-1523\debug\deps\utils-ea0e2601f2b00f7e.exe)

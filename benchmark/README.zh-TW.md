@@ -4,13 +4,15 @@
 
 Actor 是寫程式並驗證結果的模型，Provider 是唯讀程式並提出提醒的模型。測試使用 **12 道程式修改任務、七種配置，每題每配置各跑兩次，共 168 份交付**，執行日期為 2026-09-30 至 10-04。每次從相同題目基底獨立開始，使用固定驗收。程式碼品味保留匿名盲評為初評，另以完整流程的維護成本覆核為複評；最終採用複評結果。
 
-## 九題主要比較與三題未解挑戰
+## 九題主要比較與三題後續解答
 
-**主要成績採九題、每配置18次；原十二題的168次紀錄全部保留。** Regexp、Metaflow、Tracing 在七臂及雙 Astra max 不限時探索中均未完成完整契約，維護者確認原作者實作先前也未全數通過。三題契約的整體可達成性尚未獲得完整實作佐證，另列為未解挑戰，不計入主要完成率與成本。「未解」不是不可能的證明，也不表示其他人尚未解決。
+**Regexp、Metaflow、Tracing 已於 2026-10-17 續解完成，三題全部通過完整固定驗收。** 本次以 Sol xhigh 同時擔任 Actor 與 Provider，帶入先前兩次探索的反例與成功部分，分別從 J2、K1、L2 續作；結果為 Regexp 4/4、Metaflow 9/9、Tracing 4/4 組檢查通過。實作、成本與提醒處理見[三題續解資料包](unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)。
+
+**原主要比較仍採九題、每配置18次；原十二題的168次紀錄全部保留。** 三題在原七臂及雙 Astra max 不限時探索中均未完成完整契約，當時另列為未解挑戰。本次續解確認已有完整通過實作，原研究的答案、判分與比較範圍仍按當時紀錄呈現。
 
 這是結果出來後的分類調整，並非預先設定的排除。九題仍保留失敗與逾時；從24次扣除三題的6次後，各臂完成數不變。耗時改用九題全部18次，用量改用七臂共同16個完整位置，不能沿用十二題的成本百分比。詳見[九題主要報告](model-comparison-20261004/PRIMARY.zh-TW.md)與[可重建統計](model-comparison-20261004/primary-summary.json)。
 
-[未解挑戰資料包](unresolved-challenges-20261004/README.zh-TW.md)包含三題各兩次 Astra max Actor＋Provider、Actor不限時的探索，公開實際修改、提醒採納、驗收反例及成本。這六份不併入七臂排名，也不推算單一變因效果。
+[挑戰歷程](unresolved-challenges-20261004/README.zh-TW.md)連結原六次 Astra max 不限時探索與本次三份成功續解，公開實際修改、提醒採納、驗收與成本。續解使用歷史材料，另列成果，不併入原七臂排名；這些探索沒有相應對照，不據此推算單一變因效果。
 
 ## 結果：初評與複評
 
@@ -34,7 +36,8 @@ Actor 是寫程式並驗證結果的模型，Provider 是唯讀程式並提出�
 | 材料 | 用途 |
 |---|---|
 | [九題主要報告](model-comparison-20261004/PRIMARY.zh-TW.md)／[主要數據](model-comparison-20261004/primary-summary.json) | 九題完成率、18次耗時與共同16位置的Token |
-| [三題未解挑戰](unresolved-challenges-20261004/README.zh-TW.md) | 六次 Astra max 不限時探索、失敗反例與來源查驗 |
+| [三題挑戰歷程](unresolved-challenges-20261004/README.zh-TW.md) | 原六次 Astra max 不限時探索、失敗反例與來源查驗 |
+| [三題成功續解](unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md) | 2026-10-17 完整解答、修補前後驗收、提醒處理與成本 |
 | [十二題原始對比報告](model-comparison-20261004/REPORT.zh-TW.md) | 各配置條件、逐題完成度、品味初評、時間與 Token |
 | [覆核報告](model-comparison-20261004/taste-review/README.zh-TW.md)／[逐組複評](model-comparison-20261004/taste-review/reassessment.json) | 品味最終結果、改判理由與程式依據 |
 | [測試方法與審計說明](model-comparison-20261004/HARNESS.zh-TW.md) | 啟動、固定驗收、匿名評審、補查與統計重建 |
@@ -50,8 +53,9 @@ python -X utf8 .\benchmark\model-comparison-20261004\aggregate.py --verify
 python -X utf8 .\benchmark\model-comparison-20261004\taste-review\verify.py
 python -X utf8 .\benchmark\model-comparison-20261004\primary.py --verify
 python -X utf8 .\benchmark\unresolved-challenges-20261004\verify.py
+python -X utf8 .\benchmark\unresolved-challenges-20261004\continuation-20261017\verify.py
 ```
 
-四個指令都不呼叫模型，只用資料包內的材料核對統計與指紋，不需要原研究電腦的磁碟。第一個重建初評與原交付統計，第二個核對已記錄的複評判斷與彙總，第三個重建九題主要數據，第四個核對探索證據；不會自動重新判斷品味。`protocol/`、`harness/` 與工具程式保留測試當時的快照，用於查驗實際條件；日常工具的行為以 [SPEC](../SPEC.zh-TW.md) 與現行原始碼為準。重新執行模型測試還需要題目專案、依賴與 Codex CLI，這些不包含在資料包內。
+五個指令都不呼叫模型，只用資料包內的材料核對統計與指紋，不需要原研究電腦的磁碟。第一個重建初評與原交付統計，第二個核對已記錄的複評判斷與彙總，第三個重建九題主要數據，第四個核對原六份探索，第五個核對三份成功續解；不會自動重新判斷品味。`protocol/`、`harness/` 與工具程式保留測試當時的快照，用於查驗實際條件；日常工具的行為以 [SPEC](../SPEC.zh-TW.md) 與現行原始碼為準。重新執行模型測試還需要題目專案、依賴與 Codex CLI，這些不包含在資料包內。
 
 這份對比沒有逐則一致的誤報、內容品質與採納標註，不能由提醒送達數推算那些比率、F1 或準確率。[Element 案例](../docs/examples/element-sessions.zh-TW.md)提供一組可追溯的提醒、程式修改與評審依據。

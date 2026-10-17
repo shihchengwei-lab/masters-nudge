@@ -22,7 +22,7 @@ Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗�
 
 核心基準使用 **九道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完整交付、程式結構及成本。每題每配置各跑兩次，每配置18次，共126次；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
-其餘三題 Regexp、Metaflow、Tracing 在七種配置中皆無實作通過完整驗收契約，另列為[未解挑戰](benchmark/unresolved-challenges-20261004/README.zh-TW.md)。
+**先前未解的 Regexp、Metaflow、Tracing 三題，現在都已通過完整固定驗收。** 2026-10-17，以 Sol xhigh 同時擔任 Actor 與 Provider，帶入先前失敗反例與成功部分，從既有實作續解：Regexp 通過 4/4 組檢查、Metaflow 9/9、Tracing 4/4；Actor 用時分別為12分52秒、7分20秒、17分27秒，包含 Provider 與測試等待。[續解結果、程式與證據](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)另列呈現；九題比較沿用原研究範圍，[先前失敗探索](benchmark/unresolved-challenges-20261004/README.zh-TW.md)完整保留。
 
 **Sol xhigh 搭配 Sol xhigh Provider，維持直接實作的 13/18 完整交付，並在共同完成的11組程式碼比較中取得7勝、0敗、4平。** 品味評估採**匿名初評＋完整流程覆核**。這項結構收益的代價是累計時間增加48.9%、未快取輸入 Token 增加74.3%。相對 Sol medium Provider，完整交付與結構覆核結果也改善，累計時間增加3.7%。各組結果如下：
 

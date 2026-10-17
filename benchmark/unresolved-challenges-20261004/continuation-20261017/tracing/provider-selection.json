@@ -1,0 +1,28 @@
+{
+  "set_command": [
+    "<USER_HOME>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\masters_nudge_cli.py",
+    "provider",
+    "set",
+    "openai",
+    "--model",
+    "gpt-6.1-sol"
+  ],
+  "set_output": "{\r\n  \"saved\": true,\r\n  \"path\": \"<STUDY_ROOT>\\\\tracing-l2-continuation-20261017\\\\run\\\\masters-nudge-data\\\\config.json\",\r\n  \"error\": \"\"\r\n}\r\n",
+  "get_command": [
+    "<USER_HOME>\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\frozen-plugin\\masters_nudge_cli.py",
+    "provider",
+    "get",
+    "--host",
+    "codex"
+  ],
+  "get_output": "{\r\n  \"provider\": \"openai\",\r\n  \"model\": \"gpt-6.1-sol\",\r\n  \"source\": \"config\",\r\n  \"error\": \"\",\r\n  \"path\": \"<STUDY_ROOT>\\\\tracing-l2-continuation-20261017\\\\run\\\\masters-nudge-data\\\\config.json\"\r\n}\r\n",
+  "imported_runtime": {
+    "model": "gpt-6.1-sol",
+    "reasoning": "xhigh",
+    "strict": true,
+    "data": "<STUDY_ROOT>\\tracing-l2-continuation-20261017\\run\\masters-nudge-data"
+  },
+  "runtime_test": false
+}

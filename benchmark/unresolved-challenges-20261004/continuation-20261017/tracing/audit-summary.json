@@ -1,0 +1,68 @@
+{
+  "base_commit": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+  "full_patch_sha256": "03aa139826be0e426a5b6a52f368051bdbf899112e96fbe14468102b4f28b486",
+  "continuation_patch_sha256": "65421d0a98dfa85105655b9b1d03260d049ce7e410b1ffcd74758d9c636ad4c2",
+  "continuation_stat": " tracing-subscriber/src/filter/layer_filters.rs     |  43 ++-\n tracing-subscriber/src/layer.rs                    |  71 ++++-\n tracing-subscriber/src/registry/mod.rs             |   2 +\n tracing-subscriber/src/registry/sharded.rs         |  16 +\n tracing-subscriber/src/registry/stack.rs           |   6 +-\n tracing-subscriber/src/reload.rs                   |  20 ++\n .../tests/filter_continuation_regressions.rs       | 346 +++++++++++++++++++++\n 7 files changed, 482 insertions(+), 22 deletions(-)\n",
+  "existing_test_file_count": 69,
+  "existing_test_changes": [],
+  "frozen_input_changes": [],
+  "source_head_and_status_unchanged": true,
+  "source_after": {
+    "head": "ac4a8dd27c0b28c36b9cf77cdc52b595168d1c5f",
+    "status": " M tracing-subscriber/src/filter/env/mod.rs\n M tracing-subscriber/src/filter/layer_filters.rs\n M tracing-subscriber/src/filter/level.rs\n M tracing-subscriber/src/filter/mod.rs\n M tracing-subscriber/src/layer.rs\n M tracing-subscriber/src/registry/mod.rs\n M tracing-subscriber/src/registry/sharded.rs\n M tracing-subscriber/src/reload.rs\n M tracing-subscriber/tests/support.rs\n M tracing/tests/event.rs\n M tracing/tests/support/event.rs\n M tracing/tests/support/field.rs\n M tracing/tests/support/metadata.rs\n M tracing/tests/support/mod.rs\n M tracing/tests/support/span.rs\n M tracing/tests/support/subscriber.rs\n?? tracing-subscriber/src/layer/tests.rs\n?? tracing-subscriber/tests/benchmark_public_layer_tests.rs\n?? tracing-subscriber/tests/cached_layer_filters_dont_break_other_layers.rs\n?? tracing-subscriber/tests/hinted_layer_filters_dont_break_other_layers.rs\n?? tracing-subscriber/tests/independent_filters.rs\n?? tracing-subscriber/tests/layer_filter_interests_are_cached.rs\n?? tracing-subscriber/tests/layer_filters/filter_scopes.rs\n?? tracing-subscriber/tests/layer_filters/main.rs\n?? tracing-subscriber/tests/layer_filters/trees.rs\n?? tracing-subscriber/tests/multiple_layer_filter_interests_cached.rs\n?? tracing-subscriber/tests/unhinted_layer_filters_dont_break_other_layers.rs\n"
+  },
+  "actor_usage": {
+    "input_tokens": 7133348,
+    "cached_input_tokens": 6939904,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 42313,
+    "reasoning_output_tokens": 18995
+  },
+  "provider_usage": {
+    "input_tokens": 383120,
+    "cached_input_tokens": 279808,
+    "output_tokens": 7012,
+    "reasoning_output_tokens": 5212
+  },
+  "actor_plus_provider_usage": {
+    "input_tokens": 7516468,
+    "cached_input_tokens": 7219712,
+    "output_tokens": 49325,
+    "reasoning_output_tokens": 24207
+  },
+  "actor_elapsed_seconds": 1047.297,
+  "provider_elapsed_seconds": 205.92199999999139,
+  "attempts": [
+    {
+      "id": "af5b074b5c814fb8998fb9e191cac82e",
+      "outcome": "silence",
+      "delivered": 0,
+      "started": 1792203042.925916,
+      "finished": 1792203061.9042714
+    },
+    {
+      "id": "8293e9447b714cd18301e0a500e27152",
+      "outcome": "feedback",
+      "delivered": 1,
+      "started": 1792203080.3021462,
+      "finished": 1792203129.418244
+    },
+    {
+      "id": "6141bc40df0746508441fccf2bde2270",
+      "outcome": "feedback",
+      "delivered": 1,
+      "started": 1792203154.5065947,
+      "finished": 1792203258.8925555
+    },
+    {
+      "id": "a16154136e07408c97ce9d7b1743b5c7",
+      "outcome": "feedback",
+      "delivered": 1,
+      "started": 1792203260.1187987,
+      "finished": 1792203293.918705
+    }
+  ],
+  "actual_actor_count": 1,
+  "actual_provider_count": 4,
+  "all_observed_models_match": true
+}
