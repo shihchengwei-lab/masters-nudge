@@ -20,4 +20,4 @@ python -X utf8 .\benchmark\unresolved-challenges-20261004\continuation-20261017\
 
 五個指令分別核對十二題主要報告與原始紀錄、71組品味複評、九題補充分析、原六份探索與三份成功續解，都不呼叫模型。`evidence.zip`、`source-index.json`、`data/`、`harness/` 與 `protocol/` 保存答案、初評原票、執行紀錄及測試快照；`taste-review/` 保存最終複評、逐組理由與還原程式。離線查驗不依賴原研究磁碟。重新跑模型則需要另備題目專案、依賴與 CLI 二進位，這些未加入 repo。
 
-測試中的 xhigh Provider 使用實驗設定；日常產品的 Provider 仍固定 medium。配置與產品設定差異見報告，工具行為見 [SPEC](../../SPEC.zh-TW.md)。[測試材料入口](../README.zh-TW.md)列出報告、數據與查驗程式。
+測試中的 xhigh Provider 當時使用實驗設定；現行產品模型預設 `auto`、深度預設 `medium`，可由使用者選擇。研究的模型、深度與工具快照保持當時條件，配置與產品設定差異見報告，工具行為見 [SPEC](../../SPEC.zh-TW.md)。[測試材料入口](../README.zh-TW.md)列出報告、數據與查驗程式。

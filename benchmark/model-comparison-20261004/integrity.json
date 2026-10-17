@@ -8,11 +8,11 @@
   "evidence_zip_sha256": "ab203fe2fc0fdbc9c2393ba17157cac59f3056a283f3b313844ef6b990203fda",
   "outputs": {
     "results-summary.json": "4b0d087ab96348701f5bd82f75875c317be703312da00b6abdebcb3e9184de30",
-    "REPORT.zh-TW.md": "becc32182f1c0d9bb4c17dc18b38d2a88c89f146c5734f03124e9b05f4eb5133",
+    "REPORT.zh-TW.md": "83eadc3134c6023dc3f209f1a13c2f62af183eb276ad96e500a690292c7fdcca",
     "deliveries.csv": "89ffe5b5ff52130ed81511b66df4bcb243758568d98f9f458f0620ff7412f981"
   },
   "aggregate_source_sha256": "32a99de13c9b06105a72b356f620ebb62261663b1281a7953a6f12c816097a1b",
-  "report_template_sha256": "19415d1f2d4b131cbd414ceba6b885a0a5fb726837cdfa49d600bbbf70dec054",
+  "report_template_sha256": "cbd1ca7c3fe45a4d6a9b7593159e93414876935a6486c11b0c43e3263fc31334",
   "taste_reassessment_sha256": "34a7064cc5bdd32313b19466d2e2e88b4f6a1040ad5e3923e546b1b93ee24b69",
   "source_index_sha256": "e1853d5e75a5db481ef40d6d0f2701687ae51e311ea20b9935a90434c4643e8c",
   "collection_sha256": "3c059f6e0b55cbfd521ceaba4c23edd6b5d184321abda1a601ad5c9ee40f419e",

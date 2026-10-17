@@ -18,7 +18,8 @@ from masters_nudge.runtime import RuntimePaths, RuntimeSettings
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--model", default="gpt-5.6-sol")
+    parser.add_argument("--model", default="", help="Model ID; omit or use auto for Codex's recommended model")
+    parser.add_argument("--reasoning-effort", default="medium")
     parser.add_argument("--indirect", action="store_true", help="use a call whose implementation requires repository reading")
     parser.add_argument("--transport-read-check", action="store_true", help="explicit real-MCP capability check, not feedback-effect evidence")
     args = parser.parse_args()
@@ -32,7 +33,8 @@ def main():
         if args.indirect:
             (repo / "view.py").write_text('from job import label\n\ndef view(job):\n    return label(job)\n', encoding="utf-8")
         paths = RuntimePaths(ROOT, root / "data", root / "settings", root / "error.log")
-        core = NudgeCore(RuntimeSettings("openai", args.model, paths, strict=True))
+        model = "" if args.model == "auto" else args.model
+        core = NudgeCore(RuntimeSettings("openai", model, paths, strict=True, reasoning_effort=args.reasoning_effort))
         if args.transport_read_check:
             from masters_nudge.providers import call_codex_result
             def checked_dispatch(**kwargs):
@@ -55,7 +57,7 @@ def main():
             fault = str(exc)
         attempts = core.journal.recent()
         report = {"scope": "explicit real-MCP capability check" if args.transport_read_check else "real Provider; synthetic batch, no Actor",
-                  "model": args.model,
+                  "model": model or "auto", "reasoning_effort": args.reasoning_effort,
                   "source": code, "result": result, "fault": fault, "attempts": attempts}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

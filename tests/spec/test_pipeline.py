@@ -86,6 +86,15 @@ class PipelineTests(unittest.TestCase):
         for field in ("task_contract", "before_structure", "batch_change", "current_structure", "tool_result"):
             self.assertIn(field, packet)
 
+    def test_configured_effort_reaches_the_provider(self):
+        from dataclasses import replace
+        settings = replace(self.settings, reasoning_effort="xhigh")
+        self.adapter = CodexAdapter(NudgeCore(settings, dispatch=self.dispatch))
+        self.prompt()
+        self.batch()
+        self.assertEqual(self.calls[0]["model"], settings.model)
+        self.assertEqual(self.calls[0]["reasoning_effort"], "xhigh")
+
     def test_required_material_over_target_still_calls_provider_without_repo_budget(self):
         self.prompt("t" * 12000)
         patch = "*** Begin Patch\n*** Update File: job.py\n@@\n+" + "x" * 9000 + "\n*** End Patch"

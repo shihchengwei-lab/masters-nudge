@@ -91,7 +91,7 @@ Hook 與 MCP 共用 Python 入口。只有 `py` 或 `python3` 的環境，需要
 
 Windows 的寫程式聊天還需要已啟用、受支援的 [Windows 沙箱執行方式](https://learn.chatgpt.com/docs/windows/windows-sandbox)。
 
-外掛版本記載於[外掛清單](plugins/masters-nudge/.codex-plugin/plugin.json)。Provider 深度固定 medium；測試中的 xhigh Provider 使用實驗設定。預設 Provider 模型為 `gpt-5.6-sol`，儲存的模型選擇覆蓋預設。
+外掛版本記載於[外掛清單](plugins/masters-nudge/.codex-plugin/plugin.json)。Provider 模型預設 `auto`，跟隨 Codex 當前推薦模型，repo 不寫死某一代模型；使用者自行指定的模型則固定保留。思考深度預設 `medium`，可自行設定或請 Agent 調整。各代模型的能力、支援深度、等待時間與用量不同，由使用者選擇合適組合，詳見 [Codex 模型選擇](https://learn.chatgpt.com/docs/models#configure-your-default-local-model)。
 
 ## 安裝、啟用與第一次使用
 
@@ -100,13 +100,16 @@ Windows 的寫程式聊天還需要已啟用、受支援的 [Windows 沙箱執�
 3. 依 Codex 的提示檢查並信任外掛 Hook。CLI 可輸入 `/hooks`，核對 Masters’ Nudge 的 `UserPromptSubmit`、`PostToolUse` 與 `Interrupt`，詳見[官方 Hook 說明](https://learn.chatgpt.com/docs/hooks)。
 更新已安裝的版本後，重新開啟 Codex；若 hook 被標為「已修改」，檢查新命令後重新信任，再開始新對話。
 
-4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，並將 Provider 設為 gpt-6.1-sol。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。
+4. 開啟新對話，請 Codex：「檢查 Masters’ Nudge 是否已就緒，顯示 Provider 模型與思考深度。」外掛提供設定與診斷技能；就緒檢查會列出依賴、登入、啟用狀態，並使用 Codex 實際載入的 MCP 命令檢查初始化與工具探索；不呼叫 Provider。
 5. 在自己的 Git 專案開啟新對話，交給 Actor 一項正常的程式修改。完成一次產品程式的 `apply_patch` 後，請 Codex：「顯示 Masters’ Nudge 最近的提醒紀錄。」`feedback` 表示已產生建議，`silence` 表示正常判斷後沒有建議；工具故障會另列原因。若有建議，可核對 Actor 上下文中的四欄提醒與後續程式改動。
+
+需要調整時，可請 Agent 設定你選擇的模型與深度，或改回 `auto` 搭配 `medium`；兩項可以分開修改。儲存後重新開啟 Codex，或重新連線 Nudge MCP，使常駐服務載入設定。這只影響 Provider，不更換 Actor。
 
 如果已下載本 repo，也可在 repo 根目錄用 PowerShell 手動設定與查詢：
 
 ```powershell
-python masters_nudge_cli.py provider set openai --model gpt-6.1-sol
+python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium
+python masters_nudge_cli.py provider get --host codex
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```

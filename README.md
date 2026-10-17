@@ -91,7 +91,7 @@ Hooks and MCP share one Python entry point. Environments with only `py` or `pyth
 
 On Windows, the coding chat requires an enabled, supported [Windows sandbox implementation](https://learn.chatgpt.com/docs/windows/windows-sandbox).
 
-The plugin version is declared in the [plugin manifest](plugins/masters-nudge/.codex-plugin/plugin.json). Provider reasoning is fixed at medium; the xhigh Provider in the comparison used an experimental setting. The default Provider model is `gpt-5.6-sol`; saved selections override it.
+The plugin version is declared in the [plugin manifest](plugins/masters-nudge/.codex-plugin/plugin.json). The Provider model defaults to `auto`, following Codex's current recommended model without a model ID pinned in this repo. A user-selected model stays pinned. Reasoning effort defaults to `medium` and is configurable. Model generations differ in capability, supported efforts, wait time and usage; choose the combination yourself or ask your Agent to adjust it. See [Codex model selection](https://learn.chatgpt.com/docs/models#configure-your-default-local-model).
 
 ## Install, enable, and try it
 
@@ -100,13 +100,16 @@ The plugin version is declared in the [plugin manifest](plugins/masters-nudge/.c
 3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit`, `PostToolUse`, and `Interrupt` hooks. See the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
 After updating an installed version, restart Codex. If a hook is marked modified, review and trust its new command before starting a new chat.
 
-4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and set its Provider to gpt-6.1-sol.” The plugin supplies configuration and diagnostic skills; readiness checks dependencies, login, enablement and MCP tool discovery without calling the Provider.
+4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and show its Provider model and reasoning effort.” The plugin supplies configuration and diagnostic skills; readiness checks dependencies, login, enablement and MCP tool discovery without calling the Provider.
 5. Start a new chat in your own Git project and give the Actor a normal code change. After a product-code `apply_patch`, ask Codex: “Show recent Masters’ Nudge attempts.” `feedback` means a suggestion was produced; `silence` means a successful judgment found no suggestion. Faults have separate reasons. For feedback, inspect the four-field suggestion in the Actor context and the subsequent code changes.
+
+To change the selection, ask your Agent to set a model and effort you choose, or to use `auto` with `medium`. Each setting can change independently. After saving, restart Codex or reconnect the Nudge MCP so its persistent process loads the selection. This changes the Provider only, not the Actor.
 
 If you downloaded this repo, you can also configure and inspect the tool manually from its root in PowerShell:
 
 ```powershell
-python masters_nudge_cli.py provider set openai --model gpt-6.1-sol
+python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium
+python masters_nudge_cli.py provider get --host codex
 python masters_nudge_cli.py doctor --host codex
 python masters_nudge_cli.py recent-nudges --limit 10
 ```

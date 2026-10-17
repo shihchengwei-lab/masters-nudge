@@ -175,7 +175,11 @@ Windows 中斷期間缺少 `hook/completed` 的既有重現屬 Host 執行限制
 
 只支援 OpenAI／Codex；Claude 與 Ollama 沒有現行執行路徑，也沒有失敗後自動換 Provider。
 
-Provider 模型可由管理指令儲存；Actor 模型由外部執行環境決定。Provider 未設定時預設 `gpt-5.6-sol`，深度固定 medium。七臂研究明確設定 Sol／Astra 與 Actor 深度；I 另以封存工具覆寫 Provider 為 xhigh，正式產品仍固定 medium。
+Provider 模型與深度可由管理指令儲存；Actor 模型由外部執行環境決定。未指定模型或選擇 `auto` 時，啟動 Provider 不傳 `--model`，由 Codex 採用當前推薦模型；不解析版本號猜測最新模型，也不覆蓋使用者已指定的模型。深度預設 `medium`，可改為該模型支援的值；不同模型與世代的支援及效果以當前 Codex 資訊為準，不維護寫死的模型／深度對照表。CLI 不支援的組合依既有 Provider 故障路徑回報，不自動改模型或深度。
+
+設定檔保存 `provider`、`model` 與 `reasoning_effort`；空模型表示 `auto`，舊設定檔未含深度時採 `medium`。只修改模型會保留深度，只修改深度會保留模型；`provider reset` 恢復 `auto`／`medium`。常駐 MCP 於啟動載入設定，變更後須重連服務或重新開啟 Codex。使用者可直接設定或請 Agent 調整，管理技能在儲存後讀回確認。
+
+七臂研究明確設定各配置的模型與深度；I 當時以封存工具覆寫 Provider 為 xhigh。歷史工具快照、原始結果與判分保持當時條件。
 
 必須具備 Python 3.10+、Git、可啟動且已登入的 Codex CLI，以及支援現行事件、MCP Hook 與 `turn_id` 的 Host。`doctor` 只檢查依賴、登入、外掛啟用及必要檔案，完整事件與反饋送達仍需實測。
 

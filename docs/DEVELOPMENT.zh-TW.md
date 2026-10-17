@@ -34,7 +34,9 @@
 | `MASTERS_NUDGE_TEST_MODE=1` | 將故障向測試執行器拋出；一般使用只回故障狀態並讓 Actor 繼續 |
 | `MASTERS_NUDGE_ACTIVE=1` | Provider 子程序的重入防護，避免自己的工具動作再次觸發 Nudge |
 
-模型設定只改 Provider。未設定時是 `gpt-5.6-sol`，Provider 深度固定 medium；七臂研究顯式指定自己的配置；I 的 xhigh Provider 使用實驗工具覆寫，沒有改動正式預設。`provider reset` 移除儲存選擇並恢復程式預設，沒有更換 Actor。
+模型與思考深度設定只改 Provider。預設模型為 `auto`：不傳 `--model`，交由 Codex 選擇當前推薦模型；指定的模型 ID 固定保留。深度預設 `medium`，可由使用者或其 Agent 設定為模型支援的值。七臂研究使用明確的封存配置，不跟隨現行預設變動。
+
+可用 `python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium` 設定，或只傳其中一個選項以保留另一項；`provider get` 同時回傳模型模式與深度。設定檔新增 `reasoning_effort`，缺少此欄的舊設定採 `medium`；舊版程式會拒絕此新增欄位，回退前須移除此欄，舊版仍使用原本固定深度。`provider reset` 移除儲存選擇，恢復 `auto`／`medium`。常駐 MCP 在啟動載入設定，儲存後重連服務或重啟 Codex生效，Actor不變。
 
 `recent-nudges` 讀取送達、原材料、讀取紀錄與可用用量；送達紀錄不是採納追蹤。不要從不存在的欄位推論完成率、誤報率或 Actor 採納率。
 
