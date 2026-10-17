@@ -230,7 +230,7 @@ class SettingsPackageTests(unittest.TestCase):
         })
         user_hook = hooks["UserPromptSubmit"][0]["hooks"][0]
         self.assertEqual(user_hook["type"], "command")
-        self.assertEqual(hooks["Interrupt"][0]["hooks"][0], user_hook)
+        self.assertEqual(hooks["Interrupt"][0]["hooks"][0], {**user_hook, "timeout": 3})
 
     def test_clean_package_starts_hook_and_reports_fault_without_actor_context(self):
         with tempfile.TemporaryDirectory() as raw:
