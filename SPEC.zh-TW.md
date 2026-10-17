@@ -1,6 +1,6 @@
 # Masters’ Nudge 工具規格
 
-狀態：2026-10-03 核對的工具規格。外掛清單版本為 `0.6.1+codex.20261004190000`。現行提示採 2026-10-01 定稿。
+狀態：2026-10-18 核對的工具規格。版本以[外掛清單](plugins/masters-nudge/.codex-plugin/plugin.json)為準。現行提示採 2026-10-01 定稿。
 
 本檔定義工具責任與行為。實際模型判斷、契約完成、程式碼品味與成本另見[模型配置對比報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)及[測試方法與原始數據](benchmark/README.zh-TW.md)。固定 Provider 提示在 [buddy-prompt.txt](buddy-prompt.txt)，輸出形狀在 [nudge-schema.json](nudge-schema.json)；修改規格時須一起核對實作，不能把未實現的草案寫成現況。
 
@@ -127,7 +127,7 @@ First check REQUIRED against the latest task contract and use it to determine th
 
 `UserPromptSubmit` 用命令記錄任務；`PostToolUse` 呼叫 Codex 已連線的常駐 Nudge MCP。`Interrupt` 將該輪未完成的判斷記為中斷故障；Provider 等待流程讀取這項紀錄並清理程序，不交付中斷後的結果。MCP 取消通知或斷線也會停止進行中的判斷。Windows Provider 在建立時即歸屬 Job Object，呼叫端遭強制終止時由作業系統回收整個程序樹。Provider 的查庫 MCP 是另一個服務，不與 Actor 接入 MCP 混為一條路徑。
 
-Provider 預設判斷期限 **1,200 秒**；每個 Hook 上限 **1,320 秒**，保留最後 **20 秒**記錄結果。輪到等待批次時，Provider 可用期限取 1,200 秒與剩餘時間中的較小值。Windows 優先直接啟動原生 `codex.exe`，找不到時才使用命令包裝檔。傳輸層收尾後才交回結果或故障。
+Provider 預設判斷期限 **1,200 秒**；`PostToolUse` 上限 **1,320 秒**，保留最後 **20 秒**記錄結果。`UserPromptSubmit` 上限 **120 秒**；`Interrupt` 上限 **3 秒**。輪到等待批次時，Provider 可用期限取 1,200 秒與剩餘時間中的較小值。Windows 優先直接啟動原生 `codex.exe`，找不到時才使用命令包裝檔。傳輸層收尾後才交回結果或故障。
 
 ## 7. 呼叫與反饋時機
 

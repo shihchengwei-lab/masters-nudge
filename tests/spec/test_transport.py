@@ -77,7 +77,8 @@ class TransportTests(unittest.TestCase):
             (json_text({"segments": [{"path": "src/狀態.py", "start": 2,
                                        "lines": ['狀態 = "完成"']}], "truncated": False}),
              "", None, (MaterialLine(**line),)),
-            (json_text({"error": "read denied"}), "read denied", None, ()),
+            (json_text({"error": "read denied"}), "read denied", "mcp_read", ()),
+            ("", "read denied", "mcp_read", ()),
             ("x" * 1501, "", "mcp_budget", ()),
         )
         for text, fault, expected_fault, expected_materials in cases:
@@ -96,6 +97,8 @@ class TransportTests(unittest.TestCase):
                         with self.assertRaises(ToolFault) as caught:
                             self.call()
                         self.assertEqual(caught.exception.kind, expected_fault)
+                        if expected_fault == "mcp_read":
+                            self.assertEqual(caught.exception.evidence["trace"][-1]["fault"], fault)
                     else:
                         result = self.call()
                         self.assertEqual(result.materials, expected_materials)
