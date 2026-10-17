@@ -311,6 +311,23 @@ def render(summary):
     arms = summary['arms']
     cases = read(ROOT / 'protocol/evaluation/cases.json')
     case_map = {case['id']: case for case in cases}
+    review = read(ROOT / 'taste-review/reassessment.json')
+    final_counts = review['reassessed_counts_left_right_tie']
+    assert digest(encoded(summary)) == review['source_initial_summary_sha256']
+    assert set(final_counts) == set(summary['pairs'])
+    assert sum(sum(row.values()) for row in final_counts.values()) == review['scope']['taste_eligible_pairs_reviewed'] == 71
+    final_taste_rows = []
+    for name, row in final_counts.items():
+        left, right = name.split('-')
+        assert sum(row.values()) == summary['pairs'][name]['pairs']
+        relation = left + ' > ' + right if row['left'] > row['right'] else right + ' > ' + left if row['left'] < row['right'] else left + ' = ' + right
+        final_taste_rows.append([name, sum(row.values()), row['left'], row['right'], row['tie'], relation])
+    main_cost_rows = []
+    for left, right in [('B', 'A'), ('F', 'C'), ('I', 'C'), ('I', 'F')]:
+        main_cost_rows.append([left + '-' + right, arms[left]['completed'] - arms[right]['completed'],
+            f"{(arms[left]['seconds'] / arms[right]['seconds'] - 1) * 100:+.1f}%",
+            *[f"{(arms[left]['common_19_tokens'][key] / arms[right]['common_19_tokens'][key] - 1) * 100:+.1f}%"
+              for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')]])
     changes = {
         'RANK_COMPLETED': summary['rankings']['completed'],
         'RANK_FUNCTIONAL': summary['rankings']['functional'],
@@ -330,6 +347,8 @@ def render(summary):
             [[arm, *[f"{row['common_19_tokens'][key]:,}" for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')]] for arm, row in arms.items()]),
         'TASTE_TABLE': table(['直接比較', '共同完整配對', '前者勝', '後者勝', '持平', '本批關係'],
             [[name, row['pairs'], row['votes'].get(name[0], 0), row['votes'].get(name[-1], 0), row['votes'].get('tie', 0), row['relation']] for name, row in summary['pairs'].items()]),
+        'FINAL_TASTE_TABLE': table(['直接比較', '共同完整配對', '前者勝', '後者勝', '持平', '最終關係'], final_taste_rows),
+        'MAIN_COST_TABLE': table(['比較（前者對後者）', '完整交付增加份數', '24次累計時間', '共同19位置未快取輸入', '快取輸入', '輸出'], main_cost_rows),
         'NUDGE_TABLE': table(['臂', '收到提醒的交付', '送達提醒', 'Provider 故障', '執行規則通過', '超時'],
             [[arm, f"{row['received_feedback_deliveries']}/24", row['provider_feedback'], row['provider_faults'], f"{row['execution_status'].get('pass',0)}/24", len(row['timeouts'])] for arm, row in arms.items()]),
         'SCORE_TABLE': table(['臂', '原凍結完成', '相容性補查後完整交付', '功能通過、不計交付時間'],
@@ -339,9 +358,9 @@ def render(summary):
         'COMMON_FOUR': table(['直接比較', '前者勝', '後者勝', '持平'],
             [[name, row['common_four_votes'].get(name[0], 0), row['common_four_votes'].get(name[-1], 0), row['common_four_votes'].get('tie', 0)] for name, row in summary['pairs'].items()]),
         'UNMEASURED_PAIRS': '、'.join(summary['unmeasured_taste_pairs']),
-        'I_COST_TABLE': table(['I 相對', '完整交付變化', 'I 勝／對方勝／持平', '24 份時間變化', 'Token 配對數', '未快取輸入變化', '快取輸入變化', '輸出變化'],
+        'I_COST_TABLE': table(['I 相對', '完整交付變化', 'I 勝／對方勝／持平，最終複評', '24 份時間變化', 'Token 配對數', '未快取輸入變化', '快取輸入變化', '輸出變化'],
             [[ref, arms['I']['completed'] - arms[ref]['completed'],
-              '/'.join(str(summary['pairs'][ref + '-I']['votes'].get(a, 0)) for a in ('I', ref, 'tie')),
+              '/'.join(str(final_counts[ref + '-I'][key]) for key in ('right', 'left', 'tie')),
               f"{row['time_change_percent']:+.1f}%", row['usage_slots'],
               *[f"{row['token_change_percent'][key]:+.1f}%" for key in ('uncached_input_tokens', 'cached_input_tokens', 'output_tokens')]]
              for ref in 'CF' for row in [summary['I_comparisons'][ref + '-I']]]),
@@ -401,6 +420,7 @@ def main():
                  'outputs': {name: digest(content) for name, content in expected.items()},
                  'aggregate_source_sha256': sha(ROOT / 'aggregate.py'),
                  'report_template_sha256': sha(ROOT / 'REPORT.template.zh-TW.md'),
+                 'taste_reassessment_sha256': sha(ROOT / 'taste-review/reassessment.json'),
                  'source_index_sha256': sha(ROOT / 'source-index.json'),
                  'collection_sha256': sha(ROOT / 'collection.json'),
                  'collect_source_sha256': sha(ROOT / 'collect.py'),

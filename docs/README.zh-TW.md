@@ -11,7 +11,8 @@
 | [開發說明](DEVELOPMENT.zh-TW.md) | 原始碼責任、外掛入口、設定與驗證流程 |
 | [測試方法與原始數據](../benchmark/README.zh-TW.md) | 模型配置對比的條件、結果與原始證據入口 |
 | [三題成功續解](../benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md) | Regexp、Metaflow、Tracing 完整解答、歷史反例、提醒處理與成本 |
-| [模型配置對比報告](../benchmark/model-comparison-20261004/REPORT.zh-TW.md) | 契約完成、品味、時間與 Token |
+| [十二題主要比較](../benchmark/model-comparison-20261004/REPORT.zh-TW.md) | 每配置24次完成率與時間、共同19位置Token、原71組最終品味 |
+| [九題補充分析](../benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) | 事後子集，每配置18次、共同16位置Token |
 | [測試 harness](../benchmark/model-comparison-20261004/HARNESS.zh-TW.md) | 執行流程、固定驗收、盲評與離線重建 |
 | [Element 真實紀錄聊天對照](examples/element-live-recording.zh-TW.md) | 新的一組有／無 Nudge 重跑，實際送達的提醒、下一次修改與完整原始紀錄 |
 | [Element 有／無工具案例](examples/element-sessions.zh-TW.md) | 同配置 A1／B1 的原始提醒、採納前後程式與匿名評審依據 |

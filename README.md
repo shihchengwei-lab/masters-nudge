@@ -20,38 +20,38 @@ In Element’s device selection and bulk sign-out task, **both implementations p
 
 ## Results and costs
 
-The core benchmark compares direct implementation with structural feedback across **nine code-change tasks and seven model configurations**, measuring complete delivery, code structure and cost. Each task was attempted twice per configuration: 18 attempts per configuration, 126 total, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
+The main benchmark compares direct implementation with structural feedback across **twelve code-change tasks and seven model configurations**, measuring complete delivery, code structure and cost. Each task was attempted twice per configuration: 24 attempts per configuration, 168 total, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
 
-**The three previously unresolved tasks—Regexp, Metaflow and Tracing—have now all passed their full fixed acceptance checks.** On October 17, 2026, a Sol xhigh Actor with a Sol xhigh Provider continued from earlier implementations using both prior failures and successful parts: Regexp passed 4/4 check groups, Metaflow 9/9 and Tracing 4/4. Actor time, including Provider and test waits, was 12m52s, 7m20s and 17m27s respectively. See the [continuation results, code and evidence](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md). These informed continuations are reported separately from the nine-task comparison; the [earlier failed attempts](benchmark/unresolved-challenges-20261004/README.zh-TW.md) remain available.
+**The three previously unresolved tasks—Regexp, Metaflow and Tracing—have now all passed their full fixed acceptance checks.** On October 17, 2026, a Sol xhigh Actor with a Sol xhigh Provider continued from earlier implementations using both prior failures and successful parts: Regexp passed 4/4 check groups, Metaflow 9/9 and Tracing 4/4. Actor time, including Provider and test waits, was 12m52s, 7m20s and 17m27s respectively. See the [continuation results, code and evidence](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md). These informed continuations are reported separately; the earlier failed attempts remain in the twelve-task benchmark and the [challenge history](benchmark/unresolved-challenges-20261004/README.zh-TW.md).
 
-**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/18 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Taste assessment uses **Anonymous initial evaluation + whole-flow review**. The trade-off for this structural gain was +48.9% total time and +74.3% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with +3.7% total time. The comparisons are:
+**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/24 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Taste assessment uses **Anonymous initial evaluation + whole-flow review**. The trade-off for this structural gain was +26.9% total time and +73.1% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with 0.6% less total time. The comparisons are:
 
 | Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
 |---|---|---|---|
-| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +24.3% | +84.2% |
-| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +43.6% | +50.7% |
-| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +48.9% | +74.3% |
-| I vs F: Provider medium → xhigh | 5 / 0 / 4 | +3.7% | +15.7% |
+| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +14.2% | +88.9% |
+| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +27.7% | +51.1% |
+| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +26.9% | +73.1% |
+| I vs F: Provider medium → xhigh | 5 / 0 / 4 | −0.6% | +14.5% |
 
-Anonymous initial evaluation compares X/Y implementations with their order swapped between judgments. Whole-flow review then examines the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across 71 jointly completed task/attempt pairs. Time covers all 18 core attempts per configuration; tokens include Actor and Provider usage at the 16 positions with complete records across all seven configurations.
+Anonymous initial evaluation compares X/Y implementations with their order swapped between judgments. Whole-flow review then examines the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across the same 71 jointly completed task/attempt pairs. Time covers all 24 attempts per configuration, including failures; tokens include Actor and Provider usage at the 19 positions with complete records across all seven configurations.
 
 Complete deliveries were:
 
 | Configuration | Coding model | Feedback model | Complete deliveries |
 |---|---|---|---|
-| A | Sol medium | None | 6/18 |
-| B | Sol medium | Sol medium | 8/18 |
-| C | Sol xhigh | None | 13/18 |
-| D | Sol medium | Astra medium | 8/18 |
-| E | Sol xhigh | Astra medium | 10/18 |
-| F | Sol xhigh | Sol medium | 11/18 |
-| I | Sol xhigh | Sol xhigh | 13/18 |
+| A | Sol medium | None | 6/24 |
+| B | Sol medium | Sol medium | 8/24 |
+| C | Sol xhigh | None | 13/24 |
+| D | Sol medium | Astra medium | 8/24 |
+| E | Sol xhigh | Astra medium | 10/24 |
+| F | Sol xhigh | Sol medium | 11/24 |
+| I | Sol xhigh | Sol xhigh | 13/24 |
 
-Complete delivery includes functionality, execution rules, the 30-minute deadline and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the lowest time per completed delivery; I pairs the same 13/18 delivery count with stronger reviewed structure. The jointly completed sample differs between taste comparisons.
+Complete delivery includes functionality, execution rules, the 30-minute deadline and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the lowest time per completed delivery; I pairs the same 13/24 delivery count with stronger reviewed structure. The jointly completed sample differs between taste comparisons.
 
-See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [nine-task primary report](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) for task results, costs and detailed methods. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
+See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [twelve-task main report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for all 168 attempts, task results, costs and detailed methods. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
 
-The [full twelve-task report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) contains all 168 attempts, individual results and experimental details.
+The [post hoc nine-task subset](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md), with 18 attempts per configuration, is retained as supplementary analysis. It excludes the three tasks no configuration completed in the original study; the main results above cover all twelve tasks.
 
 ## What the tool does
 

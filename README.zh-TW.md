@@ -20,38 +20,38 @@ Element 的多裝置勾選與批次登出任務中，**兩份都通過固定驗�
 
 ## 效果與代價
 
-核心基準使用 **九道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完整交付、程式結構及成本。每題每配置各跑兩次，每配置18次，共126次；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
+主要基準使用 **十二道程式修改任務、七種模型配置**，比較直接實作與加入結構提醒的完整交付、程式結構及成本。每題每配置各跑兩次，每配置24次，共168次；測試日期為 2026-09-30 至 10-04。Sol 指 GPT-6.1 Sol，Astra 指 GPT-6 Astra；medium 與 xhigh 是不同的思考深度。寫程式的模型稱為 Actor，提供提醒的模型稱為 Provider。
 
-**先前未解的 Regexp、Metaflow、Tracing 三題，現在都已通過完整固定驗收。** 2026-10-17，以 Sol xhigh 同時擔任 Actor 與 Provider，帶入先前失敗反例與成功部分，從既有實作續解：Regexp 通過 4/4 組檢查、Metaflow 9/9、Tracing 4/4；Actor 用時分別為12分52秒、7分20秒、17分27秒，包含 Provider 與測試等待。[續解結果、程式與證據](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)另列呈現；九題比較沿用原研究範圍，[先前失敗探索](benchmark/unresolved-challenges-20261004/README.zh-TW.md)完整保留。
+**先前未解的 Regexp、Metaflow、Tracing 三題，現在都已通過完整固定驗收。** 2026-10-17，以 Sol xhigh 同時擔任 Actor 與 Provider，帶入先前失敗反例與成功部分，從既有實作續解：Regexp 通過 4/4 組檢查、Metaflow 9/9、Tracing 4/4；Actor 用時分別為12分52秒、7分20秒、17分27秒，包含 Provider 與測試等待。[續解結果、程式與證據](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)另列呈現；原研究的失敗仍計入十二題比較，[先前探索紀錄](benchmark/unresolved-challenges-20261004/README.zh-TW.md)完整保留。
 
-**Sol xhigh 搭配 Sol xhigh Provider，維持直接實作的 13/18 完整交付，並在共同完成的11組程式碼比較中取得7勝、0敗、4平。** 品味評估採**匿名初評＋完整流程覆核**。這項結構收益的代價是累計時間增加48.9%、未快取輸入 Token 增加74.3%。相對 Sol medium Provider，完整交付與結構覆核結果也改善，累計時間增加3.7%。各組結果如下：
+**Sol xhigh 搭配 Sol xhigh Provider，維持直接實作的 13/24 完整交付，並在共同完成的11組程式碼比較中取得7勝、0敗、4平。** 品味評估採**匿名初評＋完整流程覆核**。這項結構收益的代價是累計時間增加26.9%、未快取輸入 Token 增加73.1%。相對 Sol medium Provider，完整交付與結構覆核結果也改善，累計時間減少0.6%。各組結果如下：
 
 | 比較條件 | 前者品味：勝／敗／持平 | 累計時間 | 未快取輸入 Token |
 |---|---|---|---|
-| B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +24.3% | +84.2% |
-| F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +43.6% | +50.7% |
-| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +48.9% | +74.3% |
-| I 對 F：Provider medium→xhigh | 5／0／4 | +3.7% | +15.7% |
+| B 對 A：Sol medium＋Sol medium 對直接做 | 5／1／0 | +14.2% | +88.9% |
+| F 對 C：Sol xhigh＋Sol medium 對直接做 | 3／3／2 | +27.7% | +51.1% |
+| I 對 C：Sol xhigh＋Sol xhigh 對直接做 | 7／0／4 | +26.9% | +73.1% |
+| I 對 F：Provider medium→xhigh | 5／0／4 | −0.6% | +14.5% |
 
-匿名初評比較 X/Y，並交換呈現順序；完整流程覆核則在已知配置下檢查同一批程式，將新增狀態、轉接、同步與相容處理納入完整流程的維護成本。I 對 C 的兩場初評勝利改為持平，得到最終7／0／4。表格採用全部71組共同完整交付的同題／同次序複評結果。時間涵蓋核心九題每配置全部18次嘗試，Token 使用七種配置共同16個有完整用量的位置，包含 Actor 與 Provider。
+匿名初評比較 X/Y，並交換呈現順序；完整流程覆核則在已知配置下檢查同一批程式，將新增狀態、轉接、同步與相容處理納入完整流程的維護成本。I 對 C 的兩場初評勝利改為持平，得到最終7／0／4。表格沿用原71組共同完整交付的同題／同次序複評結果。時間涵蓋十二題每配置全部24次嘗試，包含失敗；Token 使用七種配置共同19個有完整用量的位置，包含 Actor 與 Provider。
 
 完整交付結果如下：
 
 | 配置 | 寫程式的模型 | 提供提醒的模型 | 完整交付 |
 |---|---|---|---|
-| A | Sol medium | 無 | 6/18 |
-| B | Sol medium | Sol medium | 8/18 |
-| C | Sol xhigh | 無 | 13/18 |
-| D | Sol medium | Astra medium | 8/18 |
-| E | Sol xhigh | Astra medium | 10/18 |
-| F | Sol xhigh | Sol medium | 11/18 |
-| I | Sol xhigh | Sol xhigh | 13/18 |
+| A | Sol medium | 無 | 6/24 |
+| B | Sol medium | Sol medium | 8/24 |
+| C | Sol xhigh | 無 | 13/24 |
+| D | Sol medium | Astra medium | 8/24 |
+| E | Sol xhigh | Astra medium | 10/24 |
+| F | Sol xhigh | Sol medium | 11/24 |
+| I | Sol xhigh | Sol xhigh | 13/24 |
 
-完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。C 的每份完整交付耗時最低；I 在同樣13/18的完整交付下，取得更好的結構覆核結果。各組品味比較的共同完成樣本不同。
+完整交付包含功能、執行規則、30 分鐘時限及相同原條款的相容性補查。完成份數為 **C = I > F > E > B = D > A**。C 的每份完整交付耗時最低；I 在同樣13/24的完整交付下，取得更好的結構覆核結果。各組品味比較的共同完成樣本不同。
 
-最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；逐題完成、成本與詳細方法見[九題主要報告](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
+最終品味評比與程式依據見[程式碼覆核報告](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md)；全部168次嘗試、逐題完成、成本與詳細方法見[十二題主要報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)。[測試方法與數據](benchmark/README.zh-TW.md)說明如何查驗題目、程式修改、驗收與評審紀錄，並離線重建統計。
 
-[十二題完整報告](benchmark/model-comparison-20261004/REPORT.zh-TW.md)保留全部168次嘗試、逐題結果與實驗細節。
+[九題事後子集分析](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md)保留為補充，每配置18次，排除原研究中所有配置均未完成的三題；上方主要結果涵蓋全部十二題。
 
 ## 工具做了什麼
 

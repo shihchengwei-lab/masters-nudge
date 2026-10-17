@@ -1,4 +1,4 @@
-"""Rebuild the post-study nine-task comparison; never alter original records."""
+"""Rebuild the supplementary post-study nine-task subset; retain original records."""
 import argparse
 import hashlib
 import json
@@ -45,7 +45,7 @@ def compute():
             'token_change_percent': {k: (arms[left]['tokens'][k] / arms[right]['tokens'][k] - 1) * 100
                                      for k in KEYS}}
     review = read(ROOT / 'taste-review/reassessment.json')
-    return {'method': 'Post-study classification, not preregistered; original 12-task records retained.',
+    return {'method': 'Supplementary post-study nine-task subset, not preregistered; the primary comparison includes all original 12 tasks.',
             'included_cases': cases, 'excluded_unresolved_cases': list(EXCLUDED),
             'deliveries': len(rows), 'attempts_per_arm': 18, 'arms': arms,
             'common_usage_slots': slots,
@@ -57,9 +57,10 @@ def compute():
 
 def render(s):
     n = len(s['common_usage_slots'])
-    lines = ['# 九題主要比較', '',
-             '原研究執行十二題、七種配置、每題兩次，共168次。測試後將當時未完成的 Regexp、Metaflow、Tracing 三題另列挑戰；這是事後分類，並非原始預先設定。三題已於 2026-10-17 [續解完成並通過完整固定驗收](../unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)，本報告沿用原研究的九題比較範圍。', '',
-             '**主要比較為九題，每配置18次，共126次；原三題的六次嘗試不計入本報告完成率與成本。** 失敗與逾時仍保留在九題分母內，沒有重跑或修改原答案。', '',
+    lines = ['# 九題補充分析：事後選取的子集', '',
+             '**主要比較採完整十二題、每配置24次、共168次，見[十二題主要報告](REPORT.zh-TW.md)。** 本頁保留九題事後子集，回答「至少有配置曾完成的題目上，各配置表現如何」。', '',
+             '原研究結束後，將所有配置均未完成的 Regexp、Metaflow、Tracing 另列挑戰，形成此九題子集；這不是預先設定的排除。三題已於 2026-10-17 [續解完成並通過完整固定驗收](../unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md)，原研究的失敗仍計入十二題主要比較。', '',
+             '**本補充分析為九題，每配置18次，共126次；原三題的六次嘗試不計入此子集的完成率與成本。** 九題內的失敗與逾時仍保留在分母，沒有重跑或修改原答案。', '',
              '| 配置 | 完整交付 | 累計分鐘 | 每完成一份的分鐘（含失敗） |',
              '|---|---:|---:|---:|']
     for a, r in s['arms'].items():
@@ -72,7 +73,8 @@ def render(s):
     for pair, r in s['comparisons'].items():
         lines.append('| ' + pair + ' | ' + f"{r['time_change_percent']:+.1f}%" + ' | ' + ' | '.join(f"{r['token_change_percent'][k]:+.1f}%" for k in KEYS) + ' |')
     lines += ['', '程式碼品味沿用 [覆核複評](taste-review/README.zh-TW.md) 的最終結果，共71組共同完整交付的配對。原研究三題挑戰沒有合格配對，因此品味母體與結果不變；本次續解另列成果，沒有新增盲評。', '',
-              'I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異。原研究的解題時限、執行器修復、用量缺口與另列的判分／逾時後耗時見 [十二題原始報告](REPORT.zh-TW.md)；本表沿用其時間記帳，不把判分成本加到解題成本。', '',
+              '九題子集與十二題主要比較的完成數相同，但完成率分母、總耗時與 Token 用量位置不同，兩者的成本百分比應分開解讀。', '',
+              'I–F 使用相同 CLI，F/I 對 C 含 CLI 版本差異。原研究的解題時限、執行器修復、用量缺口與另列的判分／逾時後耗時見 [十二題主要報告](REPORT.zh-TW.md)；本表沿用其時間記帳，不把判分成本加到解題成本。', '',
               '九題清單：' + '、'.join(s['included_cases']) + '。', '',
               '[三題挑戰歷程](../unresolved-challenges-20261004/README.zh-TW.md)保留六份 Astra max 獨立探索及後續三份成功續解的答案、驗收、提醒處理與成本。續解使用歷史材料，不併入原七臂排名；這些探索不据此推算單一變因效果。', '',
               '原 [十二題數據](results-summary.json)、[CSV](deliveries.csv) 與原始證據保留。從 repo 根目錄執行 `python -X utf8 benchmark/model-comparison-20261004/primary.py --verify`，即可離線重建並核對本頁；不呼叫模型。']

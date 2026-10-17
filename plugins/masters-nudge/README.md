@@ -6,9 +6,9 @@ An optional structural second opinion while Codex writes code. Passing tests can
 
 In a recorded Element device-selection task, a delivered suggestion was followed by a change requiring the selection list and its updater together, choosing their source together. Both the with- and without-plugin answers passed fixed acceptance. The with-plugin run took about 87.5 seconds longer.
 
-The broader study has mixed outcomes. With a Sol xhigh Actor and Sol medium Provider, reviewed structure was better in 3 paired deliveries, worse in 3, and tied in 2; cumulative attempt time increased 43.6%. Provider effort is fixed at **medium** in this package.
+The twelve-task study has mixed outcomes. With a Sol xhigh Actor and Sol medium Provider, reviewed structure was better in 3 paired deliveries, worse in 3, and tied in 2; cumulative time across all 24 attempts increased 27.7%. Provider effort is fixed at **medium** in this package.
 
-See the [recorded adoption case](https://github.com/shihchengwei-lab/masters-nudge/blob/main/docs/examples/element-live-recording.zh-TW.md) and [study results and limitations](https://github.com/shihchengwei-lab/masters-nudge/blob/main/benchmark/model-comparison-20261004/PRIMARY.zh-TW.md).
+See the [recorded adoption case](https://github.com/shihchengwei-lab/masters-nudge/blob/main/docs/examples/element-live-recording.zh-TW.md) and [study results and limitations](https://github.com/shihchengwei-lab/masters-nudge/blob/main/benchmark/model-comparison-20261004/REPORT.zh-TW.md). The [post hoc nine-task subset](https://github.com/shihchengwei-lab/masters-nudge/blob/main/benchmark/model-comparison-20261004/PRIMARY.zh-TW.md) is supplementary analysis.
 
 ## Requirements
 
