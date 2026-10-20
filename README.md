@@ -6,9 +6,9 @@ English | [繁體中文](README.zh-TW.md)
 >
 > Green light means it passes now. What about six months later?
 
-AI can implement a feature and pass its tests while the code still depends on synchronization, special branches, and local patches to stay correct. As requirements change, those workarounds can keep growing.
+AI can finish a feature and pass its tests while the code still relies on synchronized state, special cases and local patches. Those workarounds can grow as requirements change.
 
-Masters’ Nudge aims to improve this: it adds a short structural suggestion while AI writes code, bringing an alternative data and responsibility arrangement into the next generation and making a better structure more likely.
+Masters’ Nudge adds a short structural suggestion while Codex writes code. After an edit, a read-only feedback model—the Provider—reviews the task and related code. The coding model—the Actor—decides whether to adopt the suggestion, then continues implementation and verification. When the Provider finds no useful direction, it stays silent.
 
 ## Watch the Actor receive a nudge and make its next edit
 
@@ -20,51 +20,13 @@ In Element’s device selection and bulk sign-out task, **both implementations p
 
 ## Results and costs
 
-The main benchmark compares direct implementation with structural feedback across **twelve code-change tasks and seven model configurations**, measuring complete delivery, code structure and cost. Each task was attempted twice per configuration: 24 attempts per configuration, 168 total, from September 30 to October 4, 2026. Sol means GPT-6.1 Sol; Astra means GPT-6 Astra. Medium and xhigh are reasoning-depth settings. The coding model is the Actor; the feedback model is the Provider.
+With **GPT-6.1 Sol xhigh as both Actor and Provider**, complete delivery matched direct implementation at **13/24 attempts**. In the **11 jointly completed code comparisons**, structural review found **7 wins, 0 losses and 4 ties**.
 
-**The three previously unresolved tasks—Regexp, Metaflow and Tracing—have now all passed their full fixed acceptance checks.** On October 17, 2026, a Sol xhigh Actor with a Sol xhigh Provider continued from earlier implementations using both prior failures and successful parts: Regexp passed 4/4 check groups, Metaflow 9/9 and Tracing 4/4. Actor time, including Provider and test waits, was 12m52s, 7m20s and 17m27s respectively. See the [continuation results, code and evidence](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md). These informed continuations are reported separately; the earlier failed attempts remain in the twelve-task benchmark and the [challenge history](benchmark/unresolved-challenges-20261004/README.zh-TW.md).
+The trade-off was **26.9% more total time** and **73.1% more non-cached input tokens**. The benchmark covered twelve tasks and seven configurations, with 24 attempts per configuration. Token comparison uses 19 matched attempts with complete usage records.
 
-**Sol xhigh with a Sol xhigh Provider maintained direct implementation’s 13/24 complete deliveries and achieved 7 wins, 0 losses and 4 ties in the 11 jointly completed code comparisons.** Taste assessment uses **Anonymous initial evaluation + whole-flow review**. The trade-off for this structural gain was +26.9% total time and +73.1% non-cached input tokens. Compared with a Sol medium Provider, it also improved completion and reviewed structure with 0.6% less total time. The comparisons are:
+[Main benchmark](benchmark/model-comparison-20261004/REPORT.zh-TW.md) · [Code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) · [Methods and data](benchmark/README.zh-TW.md)
 
-| Comparison | Taste: wins / losses / ties | Total time | Non-cached input tokens |
-|---|---|---|---|
-| B vs A: Sol medium + Sol medium vs direct | 5 / 1 / 0 | +14.2% | +88.9% |
-| F vs C: Sol xhigh + Sol medium vs direct | 3 / 3 / 2 | +27.7% | +51.1% |
-| I vs C: Sol xhigh + Sol xhigh vs direct | 7 / 0 / 4 | +26.9% | +73.1% |
-| I vs F: Provider medium → xhigh | 5 / 0 / 4 | −0.6% | +14.5% |
-
-Anonymous initial evaluation compares X/Y implementations with their order swapped between judgments. Whole-flow review then examines the same implementations with configurations known, weighing whole-flow maintenance cost: added state, adapters, synchronization and compatibility work. In I versus C, two initial wins became ties, producing the final 7/0/4 result. The table uses final review results across the same 71 jointly completed task/attempt pairs. Time covers all 24 attempts per configuration, including failures; tokens include Actor and Provider usage at the 19 positions with complete records across all seven configurations.
-
-Complete deliveries were:
-
-| Configuration | Coding model | Feedback model | Complete deliveries |
-|---|---|---|---|
-| A | Sol medium | None | 6/24 |
-| B | Sol medium | Sol medium | 8/24 |
-| C | Sol xhigh | None | 13/24 |
-| D | Sol medium | Astra medium | 8/24 |
-| E | Sol xhigh | Astra medium | 10/24 |
-| F | Sol xhigh | Sol medium | 11/24 |
-| I | Sol xhigh | Sol xhigh | 13/24 |
-
-Complete delivery includes functionality, execution rules, the 30-minute deadline and uniform compatibility checks for original requirements. Delivery count is **C = I > F > E > B = D > A**. C has the lowest time per completed delivery; I pairs the same 13/24 delivery count with stronger reviewed structure. The jointly completed sample differs between taste comparisons.
-
-See the [code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) for all final taste comparisons and their code evidence, and the [twelve-task main report](benchmark/model-comparison-20261004/REPORT.zh-TW.md) for all 168 attempts, task results, costs and detailed methods. The [methods and data](benchmark/README.zh-TW.md) explain how to audit tasks, code changes, acceptance checks, and judgments, and reconstruct statistics offline.
-
-The [post hoc nine-task subset](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md), with 18 attempts per configuration, is retained as supplementary analysis. It excludes the three tasks no configuration completed in the original study; the main results above cover all twelve tasks.
-
-## What the tool does
-
-The coding model is the Actor; the feedback model is the Provider. After an Actor edit, the Provider reads the task and related code and returns one short structural suggestion. It enters the Actor's context automatically. The Actor decides whether to adopt it and continues implementation and verification.
-
-```mermaid
-flowchart LR
-    A["Actor completes apply_patch"] --> B["Provider reads task, edit, and related code"]
-    B -->|Concrete direction| C["One four-field suggestion enters Actor context"]
-    B -->|No concrete direction| D["Silence"]
-    C --> E["Actor judges, implements, and verifies"]
-    D --> E
-```
+Separate follow-up work continued from earlier implementations and completed Regexp, Metaflow and Tracing. See the [continuation results](benchmark/unresolved-challenges-20261004/continuation-20261017/README.zh-TW.md), [challenge history](benchmark/unresolved-challenges-20261004/README.zh-TW.md) and [supplementary nine-task analysis](benchmark/model-comparison-20261004/PRIMARY.zh-TW.md).
 
 ## Why a nudge can help
 
@@ -81,38 +43,18 @@ The Provider uses five taste criteria to find that direction: make invalid state
 - The Provider supports OpenAI/Codex only. Edits must arrive as explicit `apply_patch` content; opaque shell writes are unsupported.
 - On the qualified Windows platform, interruption stops the Provider and preserves an interrupted fault; see [qualification](docs/qualification/README.zh-TW.md). Codex can still omit the matching `PostToolUse` completion event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
 
-## Requirements
+## Get started
 
-Supported installed platform: **Windows 11 x64**. Linux and macOS installed workflows are not qualified.
+Supported platform: **Windows 11 x64**. Requires Python 3.10+ available as `python`, a Git workspace, a signed-in Codex CLI and a supported [Windows sandbox](https://learn.chatgpt.com/docs/windows/windows-sandbox).
 
-Requires the `python` command in the Codex launch environment to run Python 3.10+, a Git workspace, an executable and signed-in Codex CLI, and an Actor runtime supporting `UserPromptSubmit`, synchronous MCP `PostToolUse`, `Interrupt`, and `turn_id`.
+1. In Codex desktop’s Plugins page, choose **Add → Add Marketplace → Add from a repository**. Enter `https://github.com/shihchengwei-lab/masters-nudge`, select **Sync**, then install and enable Masters’ Nudge.
+2. Review and trust the plugin hooks when Codex prompts you.
+3. Start a new chat and ask: **“Check whether Masters’ Nudge is ready and show its Provider model and reasoning effort.”**
+4. In your Git project, request a normal code change. After the edit, ask: **“Show recent Masters’ Nudge attempts.”** You can inspect the suggestion and the Actor’s subsequent changes.
 
-Hooks and MCP share one Python entry point. Environments with only `py` or `python3` must first make `python` resolve to Python 3.10+ in Codex; restart Codex after changing PATH.
+The Provider defaults to model `auto` and reasoning effort `medium`. Ask Codex to change either setting. Restart Codex after configuration changes or plugin updates, and review any updated hook commands when prompted.
 
-On Windows, the coding chat requires an enabled, supported [Windows sandbox implementation](https://learn.chatgpt.com/docs/windows/windows-sandbox).
-
-The plugin version is declared in the [plugin manifest](plugins/masters-nudge/.codex-plugin/plugin.json). The Provider model defaults to `auto`, following Codex's current recommended model without a model ID pinned in this repo. A user-selected model stays pinned. Reasoning effort defaults to `medium` and is configurable. Model generations differ in capability, supported efforts, wait time and usage; choose the combination yourself or ask your Agent to adjust it. See [Codex model selection](https://learn.chatgpt.com/docs/models#configure-your-default-local-model).
-
-## Install, enable, and try it
-
-1. Make sure Python, Git, and Codex CLI are installed. If the CLI is not signed in, run `codex login` in PowerShell.
-2. In the Codex desktop Plugins page, choose **Add → Add Marketplace → Add from a repository**, enter `https://github.com/shihchengwei-lab/masters-nudge`, and select **Sync**. The repo's [marketplace](.agents/plugins/marketplace.json) exposes Masters’ Nudge; open it, install it, and enable it. See the [official installation steps](https://developers.openai.com/learn/developers-codex-plugin).
-3. Review and trust the plugin hooks when Codex prompts you. In the CLI, use `/hooks` to inspect Masters’ Nudge's `UserPromptSubmit`, `PostToolUse`, and `Interrupt` hooks. See the [official hook guidance](https://learn.chatgpt.com/docs/hooks).
-After updating an installed version, restart Codex. If a hook is marked modified, review and trust its new command before starting a new chat.
-
-4. Open a new chat and ask Codex: “Check whether Masters’ Nudge is ready and show its Provider model and reasoning effort.” The plugin supplies configuration and diagnostic skills; readiness checks dependencies, login, enablement and MCP tool discovery without calling the Provider.
-5. Start a new chat in your own Git project and give the Actor a normal code change. After a product-code `apply_patch`, ask Codex: “Show recent Masters’ Nudge attempts.” `feedback` means a suggestion was produced; `silence` means a successful judgment found no suggestion. Faults have separate reasons. For feedback, inspect the four-field suggestion in the Actor context and the subsequent code changes.
-
-To change the selection, ask your Agent to set a model and effort you choose, or to use `auto` with `medium`. Each setting can change independently. After saving, restart Codex or reconnect the Nudge MCP so its persistent process loads the selection. This changes the Provider only, not the Actor.
-
-If you downloaded this repo, you can also configure and inspect the tool manually from its root in PowerShell:
-
-```powershell
-python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium
-python masters_nudge_cli.py provider get --host codex
-python masters_nudge_cli.py doctor --host codex
-python masters_nudge_cli.py recent-nudges --limit 10
-```
+See the [detailed guide](docs/DEVELOPMENT.zh-TW.md#手動設定與診斷) for manual commands, configuration and diagnostics.
 
 ## Privacy
 

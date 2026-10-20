@@ -44,6 +44,26 @@ Journal 的生命週期以自身的輪次／評審 UUID、持久化期限與終�
 
 歷史保存政策是保留原始證據並限制資料庫容量：96 MiB 停止接收新評審，128 MiB 為 SQLite 資料頁硬限（暫存回滾檔與 `error.log` 另計）。容量故障不呼叫新 Provider，也不自動刪除資料。離線封存須先停止所有使用該資料目錄的 Codex／Nudge 程序，備份並驗證 `feedback.sqlite3`，再移走該資料庫；下一次啟動建立新庫。不要在仍有評審執行時換掉資料庫。
 
+## 手動設定與診斷
+
+以下指令供已下載 repo 的使用者，從 repo 根目錄以 PowerShell 執行。外掛版本記載於[外掛清單](../plugins/masters-nudge/.codex-plugin/plugin.json)。
+
+Codex 啟動環境的 `python` 必須指向 Python 3.10+。只有 `py` 或 `python3` 的環境，需要先讓 `python` 可用；修改 PATH 後重新開啟 Codex。Hook 與 MCP 共用這個 Python 入口。Actor 執行環境須支援 `UserPromptSubmit`、同步 MCP `PostToolUse`、`Interrupt` 與 `turn_id`。
+
+```powershell
+codex login
+python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium
+python masters_nudge_cli.py provider get --host codex
+python masters_nudge_cli.py doctor --host codex
+python masters_nudge_cli.py recent-nudges --limit 10
+```
+
+就緒診斷檢查依賴、登入與啟用狀態，並透過 Codex 實際載入的 MCP 檢查初始化與工具探索，不呼叫 Provider。最近紀錄中的 `feedback` 表示已產生建議，`silence` 表示成功判斷後沒有建議；故障另列原因。若有建議，可核對 Actor 上下文中的四欄提醒與後續程式改動。
+
+在 Codex CLI 輸入 `/hooks`，可核對 Masters’ Nudge 的三項 Hook 是否啟用並受信任。更新外掛後重新開啟 Codex；若 Hook 被標為已修改，檢查新命令並重新信任，再開始新對話。模型與深度的獨立設定、MCP 重連及舊版相容性見前節「設定與本機資料」。
+
+官方說明：[外掛安裝](https://developers.openai.com/learn/developers-codex-plugin) · [Hook](https://learn.chatgpt.com/docs/hooks) · [模型選擇](https://learn.chatgpt.com/docs/models#configure-your-default-local-model)。
+
 ## 修改後如何核對
 
 先確認 Python 與 Git 已可用。從 repo 根目錄執行 PowerShell：
