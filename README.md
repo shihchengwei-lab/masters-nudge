@@ -22,7 +22,7 @@ In Element’s device selection and bulk sign-out task, **both implementations p
 
 With **GPT-6.1 Sol xhigh as both Actor and Provider**, complete delivery matched direct implementation at **13/24 attempts**. In the **11 jointly completed code comparisons**, structural review found **7 wins, 0 losses and 4 ties**.
 
-The trade-off was **26.9% more total time** and **73.1% more non-cached input tokens**. The benchmark covered twelve tasks and seven configurations, with 24 attempts per configuration. Token comparison uses 19 matched attempts with complete usage records.
+The trade-off was **26.9% more total time** and **73.1% more non-cached input tokens**. The benchmark covered twelve tasks and seven configurations, with 24 attempts per configuration. Time includes all attempts; token comparison uses 19 matched task/attempt positions with complete usage records across all seven configurations, counting both Actor and Provider usage. These figures apply to the xhigh configuration above; the current Provider default is medium.
 
 [Main benchmark](benchmark/model-comparison-20261004/REPORT.zh-TW.md) · [Code-review results](benchmark/model-comparison-20261004/taste-review/README.zh-TW.md) · [Methods and data](benchmark/README.zh-TW.md)
 
@@ -32,14 +32,22 @@ Separate follow-up work continued from earlier implementations and completed Reg
 
 The Actor's next generation is shaped by the task, existing code, and its preceding approach. When a problem appears, adding another condition or special case offers a readily available continuation of the same local repair path.
 
-A nudge injects a concrete alternative data and responsibility arrangement into that context. Removing the need for a workaround through structure becomes another candidate direction for subsequent generation. The aim is to influence the Actor's next token choices and increase the probability of adopting a better structure.
+A nudge injects a concrete alternative data and responsibility arrangement into that context. Removing the need for a workaround through structure becomes another candidate direction for subsequent generation. The design expectation is that this influences the Actor's next token choices and increases the probability of adopting a better structure.
 
-The Provider uses five taste criteria to find that direction: make invalid states unrepresentable, keep causality one-way and behavior predictable, give facts one authoritative source, and keep necessary complexity at real boundaries. Suggestions name checkable alternative relations so the Actor can judge and implement them. See the [behavior specification](SPEC.zh-TW.md) for the two selection steps, four-field format, and character limits.
+The Provider uses five taste criteria to find that direction, with no fixed priority:
+
+1. **Invalid states**: make invalid states impossible to construct, including states forbidden by explicit task constraints.
+2. **Causal direction**: let causes produce effects in one direction; avoid competing update orders.
+3. **Local predictability**: make local behavior easy to understand and predict; avoid hidden side effects and dependencies.
+4. **Single source**: give each fact one authoritative source; derive views instead of synchronizing copies.
+5. **Necessary complexity**: keep necessary complexity at real boundaries and the core path direct; abstractions should simplify the whole path while keeping responsibilities clear.
+
+Suggestions name checkable alternative relations so the Actor can judge and implement them. See the [behavior specification](SPEC.zh-TW.md) for the two selection steps, four-field format, and character limits.
 
 ## Limitations
 
 - The Actor evaluates feedback, implements changes and verifies complete delivery.
-- A turn stops after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use.
+- Provider calls stop for the turn after three suggestions or two silences, whichever comes first. Recognized test-only edits are skipped without a Provider call or allowance use.
 - The Provider supports OpenAI/Codex only. Edits must arrive as explicit `apply_patch` content; opaque shell writes are unsupported.
 - On the qualified Windows platform, interruption stops the Provider and preserves an interrupted fault; see [qualification](docs/qualification/README.zh-TW.md). Codex can still omit the matching `PostToolUse` completion event. See the [reproduction and tracking](https://github.com/openai/codex/issues/46765).
 
