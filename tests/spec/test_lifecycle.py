@@ -124,7 +124,7 @@ class JournalLifecycleTests(unittest.TestCase):
             try:
                 other = Journal(self.root)
                 barrier.wait(timeout=3)
-                outcomes.append(other.finish(self.session, attempt, task, outcome, reason='internal'))
+                outcomes.append((outcome, other.finish(self.session, attempt, task, outcome, reason='internal')))
             except Exception as exc:
                 errors.append(exc)
         workers = [threading.Thread(target=finish, args=(outcome,)) for outcome in ('silence', 'fault')]
@@ -134,11 +134,15 @@ class JournalLifecycleTests(unittest.TestCase):
             worker.join(5)
         self.assertFalse(any(worker.is_alive() for worker in workers))
         self.assertEqual(errors, [])
-        self.assertEqual(sorted(outcomes), [False, True])
-        self.assertEqual(len(Journal(self.root).recent()), 1)
+        self.assertEqual(sorted(success for _, success in outcomes), [False, True])
+        winner, = [outcome for outcome, success in outcomes if success]
         self.assertEqual(journal.unresolved(), [])
         with journal.connect() as db:
             self.assertEqual(db.execute("SELECT COUNT(*) FROM work_reviews").fetchone()[0], 0)
+            row = db.execute("SELECT silence_count,fault FROM work_rounds").fetchone()
+            self.assertEqual(tuple(row), (1, None) if winner == 'silence' else (0, 'internal'))
+        # A concurrent writer can make the optional summary unavailable.
+        self.assertTrue(all(row['outcome'] == winner for row in journal.recent()))
 
     def test_storage_failure_rolls_back_and_corruption_is_not_silence(self):
         journal = Journal(self.root)
