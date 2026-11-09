@@ -65,14 +65,20 @@ def main():
                                 text=True, encoding="utf-8", timeout=30, **_provider_process_kwargs()) if writer.returncode == 0 else None
         replies = [json.loads(line) for line in result.stdout.splitlines()] if result and result.returncode == 0 else []
         records = [json.loads(line) for line in audit.read_text(encoding="utf-8").splitlines()] if audit.exists() else []
+        recorded_lines = [
+            [{"path": segment["path"], "line": segment["start"] + offset, "text": line}
+             for segment in json.loads(record["text"]).get("segments", [])
+             for offset, line in enumerate(segment["lines"])] if record["text"] else []
+            for record in records
+        ]
         exact = all(line["text"] == files[line["path"]].splitlines()[line["line"] - 1]
-                    for record in records for line in record["lines"])
+                    for lines in recorded_lines for line in lines)
         checks = {"sandbox_created_files": writer.returncode == 0,
                   "service_completed": result is not None and result.returncode == 0,
                   "only_two_tools": len(replies) >= 2 and {tool["name"] for tool in replies[1]["result"]["tools"]} == {"search_repo", "read_file"},
                   "every_call_recorded": len(records) == len(calls) + 1,
                   "no_read_fault": bool(records) and not any(record["fault"] for record in records),
-                  "new_file_range_returned": bool(records) and [line["line"] for line in records[-1]["lines"]] == list(range(1, 7)),
+                  "new_file_range_returned": bool(records) and [line["line"] for line in recorded_lines[-1]] == list(range(1, 7)),
                   "verbatim_file_lines": exact, "shared_budget": used + sum(len(record["text"]) for record in records) <= MATERIAL_MAX_CHARS}
         report = {"scope": "recorded MCP read regression; no new Provider or Actor judgment", "record": str(args.record),
                   "record_sha256": hashlib.sha256(args.record.read_bytes()).hexdigest(), "calls": calls,

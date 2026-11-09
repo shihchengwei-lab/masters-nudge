@@ -32,15 +32,18 @@ def main():
         (repo / "job.py").write_text(code, encoding="utf-8")
         if args.indirect:
             (repo / "view.py").write_text('from job import label\n\ndef view(job):\n    return label(job)\n', encoding="utf-8")
-        paths = RuntimePaths(ROOT, root / "data", root / "settings", root / "error.log")
+        paths = RuntimePaths(ROOT, root / "data", root / "settings")
         model = "" if args.model == "auto" else args.model
         core = NudgeCore(RuntimeSettings("openai", model, paths, strict=True, reasoning_effort=args.reasoning_effort))
-        if args.transport_read_check:
-            from masters_nudge.providers import call_codex_result
-            def checked_dispatch(**kwargs):
+        from masters_nudge.providers import call_codex_result
+        trace = []
+        def checked_dispatch(**kwargs):
+            if args.transport_read_check:
                 kwargs["system_prompt"] += '\nTransport capability check only: use read_file to read job.py before returning JSON. This check is not an engineering-effect evaluation.\n'
-                return call_codex_result(**kwargs)
-            core.dispatch = checked_dispatch
+            run = call_codex_result(**kwargs)
+            trace.extend(run.trace)
+            return run
+        core.dispatch = checked_dispatch
         adapter = CodexAdapter(core)
         common = {"session_id": "probe", "turn_id": "turn-1", "cwd": str(repo), "transcript_path": None}
         adapter.process(dict(common, hook_event_name="UserPromptSubmit",
@@ -58,12 +61,12 @@ def main():
         attempts = core.journal.recent()
         report = {"scope": "explicit real-MCP capability check" if args.transport_read_check else "real Provider; synthetic batch, no Actor",
                   "model": model or "auto", "reasoning_effort": args.reasoning_effort,
-                  "source": code, "result": result, "fault": fault, "attempts": attempts}
+                  "source": code, "result": result, "fault": fault, "attempts": attempts, "trace": trace}
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"output": str(args.output), "fault": fault,
                           "outcome": attempts[0]["outcome"] if attempts else None}, ensure_ascii=True))
-        did_read = any(entry["name"] == "read_file" for attempt in attempts for entry in attempt["detail"].get("trace", []))
+        did_read = any(entry["name"] == "read_file" for entry in trace)
         return int(fault is not None or (args.transport_read_check and not did_read))
 
 

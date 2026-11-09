@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from masters_nudge.plugin_inventory import package_files
 from masters_nudge.providers import _provider_process_kwargs
+from masters_nudge.storage import SCHEMA_VERSION, recent_nudges
 from tools.verify_spec_actor import SOURCE, TASK, actor_workspace, packaged_hook_overrides, runtime_helpers
 
 
@@ -104,14 +105,17 @@ def read_journal(data):
     """Observation must not create or migrate the journal under test."""
     path = data / "feedback.sqlite3"
     if not path.exists():
-        return {"attempts": [], "rounds": [], "batches": []}
+        return {"attempts": [], "rounds": [], "pending": []}
     with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+        if db.execute("PRAGMA user_version").fetchone()[0] != SCHEMA_VERSION:
+            return {"attempts": [], "rounds": [], "pending": []}
         db.row_factory = sqlite3.Row
-        result = {table: [dict(row) for row in db.execute(f"SELECT * FROM {table}")]
-                  for table in ("attempts", "rounds", "batches")}
-    for row in result["attempts"]:
-        row["detail"] = json.loads(row["detail"])
-    return result
+        return {
+            "attempts": recent_nudges(data),
+            "rounds": [dict(row) for row in db.execute("SELECT turn,request FROM work_rounds")],
+            "pending": [dict(row) for row in db.execute(
+                "SELECT id,state FROM work_reviews WHERE state IN ('queued','running')")],
+        }
 
 
 def completed_turn(events, turn_id):
@@ -205,7 +209,7 @@ def main():
             report["turn_id"] = turn_id
             if args.mode == "interrupt":
                 def pending():
-                    return [row for row in read_journal(data)["attempts"] if row["outcome"] is None]
+                    return read_journal(data)["pending"]
                 client.wait(lambda: bool(pending()) or completed_turn(client.events, turn_id), 120)
                 report["pending_at_interrupt"] = pending()
                 if not report["pending_at_interrupt"]:

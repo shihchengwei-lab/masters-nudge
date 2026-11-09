@@ -25,7 +25,7 @@
 
 ## 設定與本機資料
 
-預設設定是使用者目錄下 `.masters-nudge/config.json`，紀錄是 `.masters-nudge/data/feedback.sqlite3`，故障紀錄是同資料目錄的 `error.log`。
+預設設定是使用者目錄下 `.masters-nudge/config.json`，工作狀態及近期摘要在 `.masters-nudge/data/feedback.sqlite3`，故障透過 Hook／MCP 回應與程序標準錯誤回報。
 
 | 環境變數 | 現行用途 |
 |---|---|
@@ -38,11 +38,13 @@
 
 可用 `python masters_nudge_cli.py provider set openai --model auto --reasoning-effort medium` 設定，或只傳其中一個選項以保留另一項；`provider get` 同時回傳模型模式與深度。設定檔新增 `reasoning_effort`，缺少此欄的舊設定採 `medium`；舊版程式會拒絕此新增欄位，回退前須移除此欄，舊版仍使用原本固定深度。`provider reset` 移除儲存選擇，恢復 `auto`／`medium`。常駐 MCP 在啟動載入設定，儲存後重連服務或重啟 Codex生效，Actor不變。
 
-`recent-nudges` 讀取送達、原材料、讀取紀錄與可用用量；送達紀錄不是採納追蹤。不要從不存在的欄位推論完成率、誤報率或 Actor 採納率。
+`recent-nudges` 讀取有限的近期摘要，包括結果、原因和送出狀態。送出只表示外掛已寫出回覆。不要從不存在的欄位推論完成率、誤報率或 Actor 採納率。
 
 Journal 的生命週期以自身的輪次／評審 UUID、持久化期限與終止事實為準，無須 Host 的 `HookCompleted`。中斷、換輪和到期共用終止路徑；初始化及下一次工作會復原遺棄紀錄，排隊等待也執行期限檢查。MCP 佇列上限 64 個未完成請求，每行上限 1 Mi 字元，拒收不阻塞取消通知。
 
-歷史保存政策是保留原始證據並限制資料庫容量：96 MiB 停止接收新評審，128 MiB 為 SQLite 資料頁硬限（暫存回滾檔與 `error.log` 另計）。容量故障不呼叫新 Provider，也不自動刪除資料。離線封存須先停止所有使用該資料目錄的 Codex／Nudge 程序，備份並驗證 `feedback.sqlite3`，再移走該資料庫；下一次啟動建立新庫。不要在仍有評審執行時換掉資料庫。
+工作庫的容量由現行會話、未收尾審查和欄位上限決定。摘要循環覆寫，超時回合的空間可供下一個會話使用。
+
+從舊版切換前先關閉使用相同資料目錄的 Codex／Nudge 程序。如需保留舊版完整審查歷史，先備份並驗證 `feedback.sqlite3`。新版本首次寫入時用單一 SQLite 交易替換舊表，回收頁面供新工作使用，需有足夠的磁碟空間容納回滾檔。檔案大小可能維持在原先的高水位。切換後重新提交提示，建立新的任務交接。
 
 ## 手動設定與診斷
 

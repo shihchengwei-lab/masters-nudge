@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from masters_nudge.providers import _provider_process_kwargs
 from masters_nudge.plugin_inventory import package_files
-from masters_nudge.storage import Journal
+from masters_nudge.storage import recent_nudges
 
 SOURCE = '''def new_job():
     return {"status": "pending", "is_done": False}
@@ -96,13 +96,11 @@ def runtime_helpers(binary: Path, *, windows: bool) -> dict:
     return {runner.name: {"path": str(runner), "sha256": hashlib.sha256(runner.read_bytes()).hexdigest()}}
 
 
-def trial_invalid_reason(fault: str, exit_code: int, batches: list, attempts: list, *, require_attempts: bool = True) -> str:
+def trial_invalid_reason(fault: str, exit_code: int, attempts: list, *, require_attempts: bool = True) -> str:
     if fault:
         return fault
     if exit_code:
         return f"Actor 或啟動環境結束碼 {exit_code}"
-    if require_attempts and not batches:
-        return "未收到原生 PostToolUse，沒有測到工具"
     if require_attempts and not attempts:
         return "沒有明確修改觸發 Provider，沒有測到完整工具"
     if any(attempt["outcome"] not in ("feedback", "silence") for attempt in attempts):
@@ -202,8 +200,8 @@ def main():
         process.stdin.close()
         invalid = ""
         while process.poll() is None:
-            if args.mode == "formal" and (data / "error.log").exists():
-                invalid = (data / "error.log").read_text(encoding="utf-8")
+            if args.mode == "formal" and any("Masters' Nudge:" in line for line in stderr):
+                invalid = next(line.strip() for line in stderr if "Masters' Nudge:" in line)
                 break
             if time.monotonic() - started > 240:
                 invalid = "Actor 超時"
@@ -223,14 +221,10 @@ def main():
         # read failure must not erase the run's evidence with the temporary tree.
         (args.output / ("actor.txt" if args.human_output else "actor.jsonl")).write_text("".join(stdout), encoding="utf-8")
         (args.output / "stderr.txt").write_text("".join(stderr), encoding="utf-8")
-        attempts = Journal(data).recent() if (data / "feedback.sqlite3").exists() else []
-        batches = []
-        if (data / "feedback.sqlite3").exists():
-            with Journal(data).connect() as db:
-                batches = [dict(row) for row in db.execute("SELECT * FROM batches ORDER BY received")]
-        if not invalid and (data / "error.log").exists():
-            invalid = (data / "error.log").read_text(encoding="utf-8")
-        invalid = trial_invalid_reason(invalid, process.returncode, batches, attempts,
+        attempts = recent_nudges(data)
+        if not invalid:
+            invalid = next((line.strip() for line in stderr if "Masters' Nudge:" in line), "")
+        invalid = trial_invalid_reason(invalid, process.returncode, attempts,
                                        require_attempts=args.arm == "nudge")
         final_files, capture_errors = capture_sources(workspace)
         if capture_errors:
@@ -254,13 +248,13 @@ def main():
                   "split_state": args.split_state,
                   "state_source": (workspace / "state.py").read_text(encoding="utf-8") if args.split_state else None,
                   "elapsed_seconds": time.monotonic() - started, "exit_code": process.returncode,
-                  "invalid": invalid, "attempts": attempts, "batches": batches,
+                  "invalid": invalid, "attempts": attempts,
                   "contract_exit_code": verification.returncode if verification else None,
                   "contract_stderr": verification.stderr if verification else None,
                   "actor_final": (root / "final.txt").read_text(encoding="utf-8") if (root / "final.txt").exists() else ""}
         (args.output / "result.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"output": str(args.output), "invalid": invalid, "attempts": len(attempts),
-                          "batches": len(batches), "contract_exit_code": report["contract_exit_code"]}, ensure_ascii=True))
+                          "contract_exit_code": report["contract_exit_code"]}, ensure_ascii=True))
         return int(bool(invalid) or (args.arm == "nudge" and not attempts) or report["contract_exit_code"] != 0)
 
 
